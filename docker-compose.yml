@@ -1,0 +1,12 @@
+name: domotiapp-lovelace-dev
+
+services:
+  homeassistant:
+    container_name: ha-scene
+    image: ghcr.io/home-assistant/home-assistant:2026.8
+    restart: "no"
+    ports:
+      - "8127:8123"
+    volumes:
+      - ./.ha-dev-config:/config
+      - ./custom_components/domotiapp_lovelace:/config/custom_components/domotiapp_lovelace

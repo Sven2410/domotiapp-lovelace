@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "DomotiApp Lovelace",
+        "description": "There is nothing to configure. Confirm to install the card; it will then be available on every dashboard."
+      }
+    },
+    "abort": {
+      "already_configured": "DomotiApp Lovelace has already been added."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Clean up stored scenes",
+        "description": "Choose the light group whose stored scenes you want to delete. Each entry shows how many lights are configured per scene, so you can see whether there is work in it.\n\nNothing is deleted yet; you will be asked to confirm.",
+        "data": {
+          "groep": "Light group"
+        }
+      },
+      "confirm": {
+        "title": "Delete scenes",
+        "description": "You are about to delete the stored scenes of:\n\n**{groep}**\n\nThis cannot be undone. Afterwards the data can only be recovered from a backup.\n\nThe light group itself and the card remain; the scenes can be set up again.",
+        "data": {
+          "bevestigd": "Yes, delete the scenes of this light group"
+        }
+      }
+    },
+    "error": {
+      "bevestiging_vereist": "Tick the box to confirm, or close this dialog to delete nothing."
+    },
+    "abort": {
+      "niets_opgeslagen": "There is nothing stored to clean up yet.",
+      "niet_gevonden": "This light group is no longer in storage; nothing was deleted.",
+      "niet_geladen": "DomotiApp Lovelace is not loaded. Try again once the integration is running.",
+      "opslag_onbruikbaar": "The storage file does not have the expected shape, so there is nothing to clean up per light group. See the repair issue for the way out."
+    }
+  },
+  "issues": {
+    "corrupte_opslag": {
+      "title": "Stored scenes are unreadable",
+      "description": "The stored scenes for {entity_id} do not match the expected format and have therefore been preserved untouched: {reden}\n\nThe scenes for this room cannot be edited while this is the case. Remove the storage for this light group via Configure on DomotiApp Lovelace; after that the scene can be set up again. Until then the old values remain in .storage/domotiapp_lovelace.scenes."
+    },
+    "opslag_onbruikbaar": {
+      "title": "Stored scenes are unusable",
+      "description": "The storage file {opslagsleutel} can be read, but its contents do not have the expected shape: {reden}.\n\nNothing is read or written while this is the case, so the file stays intact. Every scene card reports that the storage is unreadable.\n\nHow to recover: restore .storage/domotiapp_lovelace.scenes from a backup, or delete the file to start fresh. Then restart Home Assistant or reload the integration. If you deleted the file, the scenes can be set up again per room."
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "DomotiApp Lovelace",
+        "description": "Er valt niets in te stellen. Bevestig om de kaart te installeren; hij is daarna beschikbaar op elk dashboard."
+      }
+    },
+    "abort": {
+      "already_configured": "DomotiApp Lovelace is al toegevoegd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opgeslagen scenes opruimen",
+        "description": "Kies de lichtgroep waarvan u de opgeslagen scenes wilt verwijderen. Achter elke groep staat het aantal ingestelde lampen per scene, zodat u ziet of er werk in zit.\n\nEr wordt nog niets verwijderd; u krijgt eerst een bevestiging.",
+        "data": {
+          "groep": "Lichtgroep"
+        }
+      },
+      "confirm": {
+        "title": "Scenes verwijderen",
+        "description": "U staat op het punt de opgeslagen scenes te verwijderen van:\n\n**{groep}**\n\nDit is niet ongedaan te maken. De gegevens zijn daarna alleen nog uit een backup terug te halen.\n\nDe lichtgroep zelf en de kaart blijven bestaan; de scenes kunnen daarna opnieuw worden ingesteld.",
+        "data": {
+          "bevestigd": "Ja, verwijder de scenes van deze lichtgroep"
+        }
+      }
+    },
+    "error": {
+      "bevestiging_vereist": "Zet het vinkje aan om te bevestigen, of sluit dit scherm om niets te verwijderen."
+    },
+    "abort": {
+      "niets_opgeslagen": "Er is nog niets opgeslagen om op te ruimen.",
+      "niet_gevonden": "Deze lichtgroep staat niet meer in de opslag; er is niets verwijderd.",
+      "niet_geladen": "DomotiApp Lovelace is niet geladen. Probeer het opnieuw zodra de integratie draait.",
+      "opslag_onbruikbaar": "Het opslagbestand heeft niet de verwachte vorm, dus er valt niets per lichtgroep op te ruimen. Zie de reparatiemelding voor de weg hieruit."
+    }
+  },
+  "issues": {
+    "corrupte_opslag": {
+      "title": "Opgeslagen scenes zijn onleesbaar",
+      "description": "De opgeslagen scenes van {entity_id} voldoen niet aan het verwachte formaat en zijn daarom onaangeroerd bewaard: {reden}\n\nDe scenes van deze kamer zijn niet te bewerken zolang dit zo is. Verwijder de opslag van deze lichtgroep via Configureren bij DomotiApp Lovelace; daarna kan de scene opnieuw worden ingesteld. De oude waarden staan tot dat moment nog in .storage/domotiapp_lovelace.scenes."
+    },
+    "opslag_onbruikbaar": {
+      "title": "De opgeslagen scenes zijn onbruikbaar",
+      "description": "Het opslagbestand {opslagsleutel} kan wel gelezen worden, maar de inhoud heeft niet de verwachte vorm: {reden}.\n\nEr wordt in deze toestand niets gelezen en niets geschreven, zodat het bestand intact blijft. Alle scenekaarten melden dat de opslag onleesbaar is.\n\nZo komt u eruit: zet .storage/domotiapp_lovelace.scenes terug uit een backup, of verwijder het bestand om met een schone lei te beginnen. Herstart daarna Home Assistant of herlaad de integratie. Hebt u het bestand verwijderd, dan kunnen de scenes per kamer opnieuw worden ingesteld."
+    }
+  }
+}

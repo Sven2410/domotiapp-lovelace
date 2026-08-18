@@ -1,0 +1,12 @@
+{
+  "domain": "domotiapp_lovelace",
+  "name": "DomotiApp Lovelace",
+  "codeowners": ["@Sven2410"],
+  "config_flow": true,
+  "dependencies": ["http", "frontend", "lovelace"],
+  "documentation": "https://github.com/Sven2410/domotiapp-lovelace",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/Sven2410/domotiapp-lovelace/issues",
+  "version": "0.1.0"
+}
