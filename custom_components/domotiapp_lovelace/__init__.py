@@ -31,7 +31,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from . import loader, resource, websocket
+from . import loader, migratie, resource, websocket
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -39,6 +39,9 @@ from .alarm import voorbeeld as alarm_voorbeeld
 from .alarm import websocket as alarm_websocket
 from .alarm.const import DATA_PLANNER as ALARM_DATA_PLANNER
 from .alarm.const import DATA_STORE as ALARM_DATA_STORE
+from .alarm.const import LEGACY_STORAGE_KEY as ALARM_LEGACY_STORAGE_KEY
+from .alarm.const import STORAGE_KEY as ALARM_STORAGE_KEY
+from .alarm.const import STORAGE_VERSION as ALARM_STORAGE_VERSION
 from .alarm.store import AlarmStore
 from .const import (
     CARD_FILENAME,
@@ -50,8 +53,11 @@ from .const import (
     DATA_STORE,
     DOMAIN,
     HASH_LENGTE,
+    LEGACY_STORAGE_KEY,
     LOADER_URL_PATH,
     SNAPSHOT_ENTITY_ID_PREFIX,
+    STORAGE_KEY,
+    STORAGE_VERSION,
 )
 from .store import SceneStore
 
@@ -119,6 +125,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # elkaar, dan evalueert de browser de bundel twee keer en klopt de
     # cachebusting uit SPEC 16.2 niet meer. Deze aanroep gooit nooit.
     data[DATA_RESOURCE_ID] = await resource.async_zorg_voor_resource(hass, js_url)
+
+    # Wie van de losse pakketten komt neemt zijn scenes en wekkers mee. Vóór de
+    # opslaglagen, want die lezen meteen. Raakt niets aan als ons eigen bestand
+    # er al is -- en ook niet als het oude er nooit was. Zie migratie.py.
+    await migratie.async_neem_over(hass, STORAGE_KEY, LEGACY_STORAGE_KEY, STORAGE_VERSION)
+    await migratie.async_neem_over(
+        hass, ALARM_STORAGE_KEY, ALARM_LEGACY_STORAGE_KEY, ALARM_STORAGE_VERSION
+    )
 
     # Opslaglaag: één instantie voor alle config entries.
     if DATA_STORE not in data:

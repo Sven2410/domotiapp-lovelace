@@ -40,7 +40,6 @@ from homeassistant.util import uuid as uuid_util
 
 from . import abonnement
 from .const import (
-    LEGACY_STORAGE_KEY,
     STORAGE_KEY,
     STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
@@ -96,8 +95,6 @@ class AlarmStore:
         """Lees de opslag. Gooit nooit; markeert wat er mis is."""
         rauw = await self._store.async_load()
         if rauw is None:
-            rauw = await self._async_lees_oude_opslag()
-        if rauw is None:
             # Nog nooit opgeslagen, of geval A (HA heeft het bestand al
             # weggezet als .corrupt en een CRITICAL repair issue aangemaakt).
             _LOGGER.debug("Geen opslag gevonden; begin met een lege lijst")
@@ -147,40 +144,6 @@ class AlarmStore:
     # --- toestand -------------------------------------------------------
 
     @property
-    async def _async_lees_oude_opslag(self) -> dict | None:
-        """Neem eenmalig de wekkers over van de losse alarmintegratie.
-
-        Dit pakket komt voort uit `domotiapp_alarm`, dat zijn wekkers in een
-        bestand met een andere naam bewaart. Wie overstapt heeft zijn wekkers al
-        staan, en die opnieuw laten invoeren omdat het pakket een andere naam
-        kreeg is geen migratie maar een straf.
-
-        Alleen-lezend, en alleen als ons eigen bestand nog niet bestaat. Het
-        origineel wordt niet aangeraakt en niet verwijderd: wie terugstapt vindt
-        zijn wekkers terug waar hij ze liet staan.
-
-        Gooit nooit. Een onleesbaar oud bestand is geen reden om zonder wekkers
-        te starten -- dan begin je leeg, precies zoals zonder dit bestand.
-        """
-        oud = Store(self.hass, STORAGE_VERSION, LEGACY_STORAGE_KEY)
-        try:
-            data = await oud.async_load()
-        except Exception as fout:  # noqa: BLE001 - overnemen mag nooit fataal zijn
-            _LOGGER.warning(
-                "De opslag %s van de vorige integratie kon niet gelezen worden; "
-                "er wordt leeg begonnen: %s",
-                LEGACY_STORAGE_KEY,
-                fout,
-            )
-            return None
-
-        if data is not None:
-            _LOGGER.info(
-                "Wekkers overgenomen uit %s. Het oorspronkelijke bestand blijft staan.",
-                LEGACY_STORAGE_KEY,
-            )
-        return data
-
     def onbruikbaar(self) -> str | None:
         """De reden dat de hele opslag onbruikbaar is, of `None` (geval C)."""
         return self._onbruikbaar

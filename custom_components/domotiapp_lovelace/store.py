@@ -28,7 +28,6 @@ from .const import (
     DOMAIN,
     ISSUE_CORRUPT_GROUP_PREFIX,
     ISSUE_STORE_UNUSABLE,
-    LEGACY_STORAGE_KEY,
     SCENE_COUNT,
     STORAGE_KEY,
     STORAGE_MINOR_VERSION,
@@ -487,8 +486,6 @@ class SceneStore:
             return
 
         ruw = await self._store.async_load()
-        if ruw is None:
-            ruw = await self._async_lees_oude_opslag()
         self._groups = {}
         self._corrupt = {}
         self._onbruikbaar = None
@@ -528,45 +525,6 @@ class SceneStore:
         self._geladen = True
         self._werk_meldingen_bij()
 
-    async def _async_lees_oude_opslag(self) -> dict[str, Any] | None:
-        """Neem eenmalig de scenes over van de losse scene-integratie.
-
-        Dit pakket komt voort uit `domotiapp_scene`, dat zijn scenes in een
-        bestand met een andere naam bewaart. Wie overstapt heeft zijn kamers al
-        ingesteld, en die opnieuw laten invoeren omdat het pakket een andere
-        naam kreeg is geen migratie maar een straf.
-
-        Alleen-lezend, en alleen als ons eigen bestand nog niet bestaat. Het
-        origineel wordt niet aangeraakt en niet verwijderd: zolang de oude
-        integratie nog geinstalleerd is blijft die gewoon werken, en wie
-        terugstapt vindt zijn scenes terug waar hij ze liet staan. De eerste
-        schrijfronde hier legt de overgenomen data vast onder onze eigen sleutel.
-
-        Gooit nooit. Een onleesbaar oud bestand is geen reden om zonder scenes
-        te starten -- dan begin je leeg, precies zoals zonder dit bestand.
-        """
-        oud = Store(self.hass, STORAGE_VERSION, LEGACY_STORAGE_KEY)
-        try:
-            data = await oud.async_load()
-        except Exception as fout:  # noqa: BLE001 - overnemen mag nooit fataal zijn
-            _LOGGER.warning(
-                "De opslag %s van de vorige integratie kon niet gelezen worden; "
-                "er wordt leeg begonnen: %s",
-                LEGACY_STORAGE_KEY,
-                fout,
-            )
-            return None
-
-        if data is None:
-            return None
-
-        _LOGGER.info(
-            "Scenes overgenomen uit %s. Het oorspronkelijke bestand blijft staan.",
-            LEGACY_STORAGE_KEY,
-        )
-        return data
-
-    @callback
     def _werk_meldingen_bij(self) -> None:
         """Maak reparatiemeldingen aan (SPEC 18.2, geval B regel 4 en geval C regel 3)."""
         if self._onbruikbaar is not None:
