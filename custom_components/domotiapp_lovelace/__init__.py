@@ -31,7 +31,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from . import resource, websocket
+from . import loader, resource, websocket
+from .alarm import afvuren as alarm_afvuren
+from .alarm import meldingen as alarm_meldingen
+from .alarm import planner as alarm_planner_mod
+from .alarm import voorbeeld as alarm_voorbeeld
+from .alarm import websocket as alarm_websocket
+from .alarm.const import DATA_PLANNER as ALARM_DATA_PLANNER
+from .alarm.const import DATA_STORE as ALARM_DATA_STORE
+from .alarm.store import AlarmStore
 from .const import (
     CARD_FILENAME,
     CARD_URL_PATH,
@@ -41,20 +49,18 @@ from .const import (
     DATA_STATIC_PATH_REGISTERED,
     DATA_STORE,
     DOMAIN,
+    HASH_LENGTE,
+    LOADER_URL_PATH,
     SNAPSHOT_ENTITY_ID_PREFIX,
 )
 from .store import SceneStore
 
 _LOGGER = logging.getLogger(__name__)
 
-# Lengte van de hash in de ?v= (SPEC 16.2).
-_HASH_LENGTE = 12
-
-
 def _bereken_hash(pad: Path) -> str:
     """SHA-256 van het bundelbestand, afgekapt. Blokkerende I/O."""
     digest = hashlib.sha256(pad.read_bytes()).hexdigest()
-    return digest[:_HASH_LENGTE]
+    return digest[:HASH_LENGTE]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -87,17 +93,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data[DATA_STATIC_PATH_REGISTERED] = True
         _LOGGER.debug("Statisch pad geregistreerd op %s", CARD_URL_PATH)
 
+    # De lader die in index.html terechtkomt. Zijn URL is CONSTANT en de hash zit
+    # in zijn antwoord, niet in zijn adres. Daarmee kan een verouderde
+    # index.html -- die HA zonder cachevalidatie serveert en die zijn service
+    # worker stale-while-revalidate teruggeeft -- ons niet meer op een oude
+    # bundel zetten. Dit is de route uit de wekkerintegratie; zie loader.py voor
+    # de meting waar hij uit voortkomt.
+    loader.async_registreer(hass, bundel_hash)
+
     # UrlManager houdt een frozenset bij, dus een tweede identieke add() is
-    # onschadelijk. Een gewijzigde bundel levert wél een andere URL op; de
-    # oude moet dan weg, anders staan er twee import()s in index.html.
+    # onschadelijk. `vorige_url` blijft staan voor precies één geval: een
+    # installatie die binnen dezelfde HA-run nog de gehashte URL geregistreerd
+    # had, moet die kwijt, anders staan er twee import()s in index.html.
     vorige_url = data.get(DATA_JS_URL)
-    if vorige_url is not None and vorige_url != js_url:
+    if vorige_url is not None and vorige_url != LOADER_URL_PATH:
         remove_extra_js_url(hass, vorige_url)
 
-    if vorige_url != js_url:
-        add_extra_js_url(hass, js_url)
-        data[DATA_JS_URL] = js_url
-        _LOGGER.debug("Kaart aangemeld bij de frontend als %s", js_url)
+    if vorige_url != LOADER_URL_PATH:
+        add_extra_js_url(hass, LOADER_URL_PATH)
+        data[DATA_JS_URL] = LOADER_URL_PATH
+        _LOGGER.debug("Lader aangemeld bij de frontend als %s", LOADER_URL_PATH)
 
     # De tweede laadroute (SPEC 16.5). Bewust met dezelfde `js_url`-variabele
     # en niet met een opnieuw opgebouwde string: lopen de twee URL's uit
@@ -112,6 +127,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data[DATA_STORE] = store
 
     websocket.async_register(hass)
+
+    # ---- de wekkerkant ------------------------------------------------
+    #
+    # Eén op één overgenomen uit de losse wekkerintegratie. Zijn sleutels in
+    # hass.data dragen een `alarm_`-voorvoegsel, want beide kanten hadden een
+    # `store` en een `ws_registered`; zie alarm/const.py.
+    if ALARM_DATA_STORE not in data:
+        alarm_store = AlarmStore(hass)
+        await alarm_store.async_load()
+        data[ALARM_DATA_STORE] = alarm_store
+
+    alarm_websocket.async_register(hass)
+
+    # Reparatiemeldingen voor onleesbare opslag. Idempotent: meldingen die er
+    # niet meer horen te zijn worden opgeruimd.
+    alarm_meldingen.async_werk_reparatiemeldingen_bij(hass, data[ALARM_DATA_STORE])
+
+    # De planner. Ná de frontend-registratie, zodat een inhaalslag het laden van
+    # de kaarten niet ophoudt.
+    if ALARM_DATA_PLANNER not in data:
+        alarm_planner = alarm_planner_mod.Planner(hass)
+        data[ALARM_DATA_PLANNER] = alarm_planner
+        await alarm_planner.async_start()
 
     data[DATA_ENTRY_COUNT] = data.get(DATA_ENTRY_COUNT, 0) + 1
 
@@ -188,6 +226,23 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data[DATA_ENTRY_COUNT] = max(0, data.get(DATA_ENTRY_COUNT, 0) - 1)
 
     if data[DATA_ENTRY_COUNT] == 0:
+        # Eerst de wekkerkant, en in deze volgorde. Een planner-listener die na
+        # het loslaten van de opslag nog vuurt zou lezen op een Store die er niet
+        # meer is; een afgaande wekker heeft timers lopen die anders tikken over
+        # een losgelaten hass.data -- en zonder stoptimer speelt de muziek door
+        # zonder dat er nog iemand is die hem afzet.
+        if (alarm_planner := data.pop(ALARM_DATA_PLANNER, None)) is not None:
+            alarm_planner.async_stop()
+            _LOGGER.debug("Wekkerplanner gestopt en listeners opgezegd")
+
+        if gestopt := await alarm_afvuren.async_stop_alles(hass):
+            _LOGGER.debug("%d afgaande wekker(s) gestopt bij unload", gestopt)
+
+        await alarm_voorbeeld.async_stop_alles(hass)
+
+        if data.pop(ALARM_DATA_STORE, None) is not None:
+            _LOGGER.debug("Wekkeropslag losgelaten")
+
         if js_url := data.pop(DATA_JS_URL, None):
             remove_extra_js_url(hass, js_url)
             _LOGGER.debug("Kaart afgemeld bij de frontend: %s", js_url)

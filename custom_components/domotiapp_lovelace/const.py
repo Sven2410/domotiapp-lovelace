@@ -24,6 +24,18 @@ DATA_RESOURCE_ID: Final = "resource_id"
 # importeert; de andere drie (`js`, `css`, `html`) doen dat niet.
 RESOURCE_TYPE: Final = "module"
 
+# De lader die in index.html terechtkomt, overgenomen uit de wekkerintegratie.
+# Hij staat onder /api/ omdat HA's service worker dat pad als enige NOOIT cachet,
+# en zijn URL verandert NOOIT -- daar berust de hele constructie op. In
+# index.html een gehashte URL zetten werkte niet: dat document wordt zelf
+# gecachet, en dan kreeg de klant na een update de oude hash terug. Zie
+# loader.py voor de meting waar dit uit voortkomt.
+LOADER_URL_PATH: Final = f"/api/{DOMAIN}/loader.js"
+DATA_LOADER_REGISTERED: Final = "loader_hash"
+
+# Lengte van de hash in de ?v=.
+HASH_LENGTE: Final = 12
+
 # --- Opslag (SPEC 10.4 en 10.6) -----------------------------------------
 STORAGE_KEY: Final = f"{DOMAIN}.scenes"
 STORAGE_VERSION: Final = 1

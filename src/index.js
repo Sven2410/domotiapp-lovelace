@@ -40,6 +40,7 @@ import "./cards/cover-card.js";
 import "./cards/person-card.js";
 import "./cards/waste-card.js";
 import "./scene/scene-card.js";
+import "./alarm/alarm-card.js";
 
 import { startRegistratie } from "./registratie.js";
 

@@ -35,6 +35,12 @@ jobs:
       - name: Registratieregel
         run: npm run check:registratie
 
+      # Bewaakt dat elke keuzelijst in de wekkereditor in een eigen vak staat
+      # met een eigen achtergrond. Overgenomen uit de wekkerintegratie, waar
+      # dit een gemeten fout was en geen smaakkwestie.
+      - name: Bedieningselementen
+        run: npm run check:controls
+
       - name: Toon het verschil bij een mislukking
         if: failure()
         run: |
