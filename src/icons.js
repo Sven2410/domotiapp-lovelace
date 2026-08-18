@@ -263,9 +263,11 @@ export const icons = {
   pencil: draw(`<path d="M4.5 19.5h3.2L18.4 8.8a1.9 1.9 0 0 0 0-2.7l-.5-.5a1.9 1.9 0 0 0-2.7 0L4.5 16.3z"/>
     <path d="m14.6 6.8 2.6 2.6"/>`),
 
-  /* Genummerde ringen voor de drie scenes van de scenekaart. Getekend in
-     dezelfde 1.6px-lijn als de rest, zodat een verse scenekaart naast een
-     knopkaart uit dezelfde set komt in plaats van uit de mdi-bibliotheek. */
+  /* Genummerde ringen, 1 tot en met 10.
+     Getekend in dezelfde 1.6px-lijn als de rest, in een ring van r=8.6 zodat ze
+     naast elk ander icoon uit de set even zwaar staan. De drie eerste zijn ook
+     de standaardiconen van de scenekaart; de rest is er voor kanalen, zones,
+     stappen -- alles waar een cijfer duidelijker is dan een plaatje. */
   een: draw(`<circle cx="12" cy="12" r="8.6"/>
     <path d="M10.6 9.9 12.4 8.6v6.9"/>`),
 
@@ -274,6 +276,32 @@ export const icons = {
 
   drie: draw(`<circle cx="12" cy="12" r="8.6"/>
     <path d="M10 9.5a2 2 0 1 1 1.8 2.6 2.1 2.1 0 1 1-1.7 2.7"/>`),
+
+  vier: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M13.4 8.6 9.7 13.3h5"/>
+    <path d="M13.4 8.6v6.9"/>`),
+
+  vijf: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M14 8.7h-3.6v3.1h1.4a2.1 2.1 0 1 1-2 2.8"/>`),
+
+  zes: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M13.8 9a2.2 2.2 0 0 0-3.7 1.7v2.4"/>
+    <circle cx="12.1" cy="13.4" r="2.1"/>`),
+
+  zeven: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M9.7 8.7h4.6l-2.8 6.8"/>`),
+
+  acht: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <circle cx="12" cy="10.3" r="1.7"/>
+    <circle cx="12" cy="13.8" r="1.9"/>`),
+
+  negen: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M10.2 15a2.2 2.2 0 0 0 3.7-1.7v-2.4"/>
+    <circle cx="11.9" cy="10.6" r="2.1"/>`),
+
+  tien: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="M8.6 10.3 10 9.2v5.7"/>
+    <ellipse cx="13.9" cy="12.1" rx="1.7" ry="2.8"/>`),
 };
 
 /**

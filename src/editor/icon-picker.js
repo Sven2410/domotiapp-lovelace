@@ -27,7 +27,8 @@ const GROUPS = [
   ["Afval", ["bin", "binWheeled", "calendar"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
   ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "warning", "check", "close", "clock", "gaugeArrow"]],
-  ["Overig", ["star", "moon", "leaf", "cog", "dots", "plus", "minus", "chevronRight", "chevronDown", "question"]],
+  ["Cijfers", ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
+  ["Overig", ["star", "moon", "leaf", "cog", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil"]],
 ];
 
 const css = /* css */ `

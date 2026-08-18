@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><title>Cijfers</title>
+<style>
+ body{background:#0c0c0a;color:#e8e4de;font-family:system-ui;margin:0;padding:30px}
+ .rij{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+ .p{text-align:center}
+ .groot{width:96px;height:96px;display:grid;place-items:center;border-radius:20px;
+   color:#198fd9;background:color-mix(in srgb,#198fd9 14%,transparent);
+   border:1px solid color-mix(in srgb,#198fd9 32%,transparent)}
+ .groot svg{width:56px;height:56px}
+ .klein{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;margin-top:10px;
+   color:#198fd9;background:color-mix(in srgb,#198fd9 14%,transparent);
+   border:1px solid color-mix(in srgb,#198fd9 32%,transparent)}
+ .klein svg{width:20px;height:20px}
+ small{display:block;color:rgba(232,228,222,.38);font-size:11px;margin-top:6px}
+</style></head><body>
+<h2 style="font-weight:300">Cijfers &mdash; groot ter controle, klein zoals ze op een kaart staan</h2>
+<div class="rij" id="r"></div>
+<script type="module">
+const { icons } = await import(`../src/icons.js?t=${Date.now()}`);
+const namen=["een","twee","drie","vier","vijf","zes","zeven","acht","negen","tien"];
+document.getElementById("r").innerHTML = namen.map((n,i)=>
+ `<div class="p"><div class="groot">${icons[n]??"?"}</div>
+  <div class="klein">${icons[n]??"?"}</div><small>${i+1} &middot; ${n}</small></div>`).join("");
+</script></body></html>
