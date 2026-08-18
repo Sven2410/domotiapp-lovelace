@@ -28,7 +28,9 @@ from custom_components.domotiapp_lovelace.alarm.const import (
     STORAGE_VERSION,
 )
 
-pytest_plugins = "pytest_homeassistant_custom_component"
+# `pytest_plugins` staat bewust NIET hier maar in tests/conftest.py: pytest
+# staat het alleen nog in de bovenste conftest toe, omdat het hoe dan ook de
+# hele testverzameling raakt en niet alleen wat eronder staat.
 
 BUNDEL = (
     Path(__file__).parent.parent.parent
