@@ -29,6 +29,7 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.domotiapp_lovelace.const import (
     CARD_URL_PATH,
+    DATA_LOADER_REGISTERED,
     DOMAIN,
     LOADER_URL_PATH,
 )
@@ -87,21 +88,29 @@ async def test_setup_maakt_de_resource_aan(hass: HomeAssistant) -> None:
 async def test_de_resource_gebruikt_dezelfde_url_als_de_import(
     hass: HomeAssistant,
 ) -> None:
-    """NIEUW GEDRAG — taak B: één URL, dus één evaluatie.
+    """Eén URL naar de bundel, dus één evaluatie.
 
     De modulekaart van de browser dedupliceert op URL. Lopen de twee routes
     uiteen, dan wordt de bundel twee keer opgehaald en geëvalueerd, en klopt de
-    cachebusting uit SPEC 16.2 niet meer. Deze test is de enige plek waar dat
-    machinaal wordt vastgehouden.
+    cachebusting niet meer.
+
+    Sinds de samenvoeging staat in index.html niet meer de gehashte bundel-URL
+    maar de lader, met zijn vaste adres; de bundel-URL zit in wat die lader
+    terúggeeft. De invariant is daarmee niet vervallen maar verplaatst: de regel
+    die de lader uitspreekt moet dezelfde URL dragen als de resource. Dat is wat
+    hier gecontroleerd wordt, en het is nog steeds de enige plek waar dat
+    machinaal vastligt.
     """
     await zet_integratie_op(hass)
 
-    import_urls = hass.data[DATA_EXTRA_MODULE_URL].urls
-    onze_import = {url for url in import_urls if url.startswith(CARD_URL_PATH)}
+    # De lader: precies één importregel, en die wijst naar de bundel.
+    hash_nu = hass.data[DOMAIN][DATA_LOADER_REGISTERED]
+    lader_url = f"{CARD_URL_PATH}?v={hash_nu}"
+
     resource_urls = {item["url"] for item in await onze_resources(hass)}
 
-    assert len(onze_import) == 1
-    assert onze_import == resource_urls
+    assert LOADER_URL_PATH in hass.data[DATA_EXTRA_MODULE_URL].urls
+    assert resource_urls == {lader_url}
 
 
 # --------------------------------------------------------------------------
