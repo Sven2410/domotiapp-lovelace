@@ -68,6 +68,7 @@ import {
   stopToestand,
   subtitel,
 } from "./weergave.js";
+import { vormtaal } from "../scene/vormtaal.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -408,12 +409,14 @@ class DomotiappAlarmCard extends LitElement {
 
   // --- tekenen ---------------------------------------------------------
 
-  static styles = css`
+  static styles = [
+    vormtaal,
+    css`
     /* unsafeCSS en niet de constante rechtstreeks: lit weigert een gewone
        string in een css-template en gooit dan — op modulescope, wat SPEC 19.4
        verbiedt. De waarde is onze eigen constante en komt nergens van buiten. */
     :host {
-      --domotiapp-accent: ${unsafeCSS(ACCENT)};
+      --domotiapp-accent: var(--dac-accent-hi, ${unsafeCSS(ACCENT)});
       /* De kaart meet zich aan zijn eigen breedte en niet aan het venster: in een
          bubble pop-up is de kaart smal terwijl het venster breed is. Gemeten in
          fase 8 bij 244 px: de naam werd tot een enkele letter platgeknepen en de
@@ -437,11 +440,11 @@ class DomotiappAlarmCard extends LitElement {
        wat die knoppen onklikbaar maakte. */
     .mededeling {
       padding: 16px;
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-m, 14px);
+      color: var(--dac-ink-2);
+      font-size: 13.5px;
     }
     .mededeling.fout {
-      color: var(--error-color);
+      color: var(--dac-bad);
     }
 
     /* --- de lijst --- */
@@ -450,7 +453,7 @@ class DomotiappAlarmCard extends LitElement {
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      border-bottom: 1px solid var(--divider-color);
+      border-bottom: 1px solid var(--dac-border);
     }
     button.tikvlak {
       display: flex;
@@ -471,7 +474,7 @@ class DomotiappAlarmCard extends LitElement {
       font-size: 28px;
       line-height: 1.1;
       font-weight: 400;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
       font-variant-numeric: tabular-nums;
       min-width: 82px;
       flex: 0 0 auto;
@@ -498,22 +501,22 @@ class DomotiappAlarmCard extends LitElement {
     }
     .rij.uit .tijd,
     .rij.uit .naam {
-      color: var(--secondary-text-color);
+      color: var(--dac-ink-2);
     }
     .tekst {
       flex: 1;
       min-width: 0;
     }
     .naam {
-      color: var(--primary-text-color);
-      font-size: var(--ha-font-size-m, 14px);
+      color: var(--dac-ink);
+      font-size: 13.5px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
     .sub {
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-s, 12px);
+      color: var(--dac-ink-2);
+      font-size: 11.5px;
     }
 
     /* --- de schakelaar; eigen knop, zie de kop van dit bestand --- */
@@ -556,14 +559,14 @@ class DomotiappAlarmCard extends LitElement {
       border-radius: 50%;
       background: none;
       cursor: pointer;
-      color: var(--secondary-text-color);
+      color: var(--dac-ink-2);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0;
     }
     button.icoonknop:hover {
-      background: var(--divider-color);
+      background: var(--dac-border);
     }
     .icoon {
       width: 24px;
@@ -599,8 +602,8 @@ class DomotiappAlarmCard extends LitElement {
       align-items: center;
       gap: 8px;
       padding: 0 16px 12px 16px;
-      border-bottom: 1px solid var(--divider-color);
-      font-size: var(--ha-font-size-s, 12px);
+      border-bottom: 1px solid var(--dac-border);
+      font-size: 11.5px;
     }
     .onderrij .boodschap {
       /* Een ondergrens in plaats van flex 1: onder de 8em gaan de knoppen naar
@@ -611,11 +614,11 @@ class DomotiappAlarmCard extends LitElement {
          wekkernaam is invoer van de klant en heeft geen bovengrens. */
       min-width: 0;
       overflow-wrap: anywhere;
-      color: var(--secondary-text-color);
+      color: var(--dac-ink-2);
     }
     .onderrij.fout .boodschap,
     .onderrij.fout .icoon {
-      color: var(--error-color);
+      color: var(--dac-bad);
     }
     button.tekstknop {
       /* Hier stond in de eerste opzet van fase 9 een flex 0 0 auto, geleend van de
@@ -626,29 +629,29 @@ class DomotiappAlarmCard extends LitElement {
          zijn tekstbreedte geknepen worden, dus er valt niets te krimpen. Volgens
          valkuil 34, derde rij, gaat zo'n regel eruit in plaats van dat er een
          test bij verzonnen wordt. */
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 16px;
       background: none;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
       padding: 6px 14px;
       cursor: pointer;
-      font-size: var(--ha-font-size-s, 12px);
+      font-size: 11.5px;
       font-family: inherit;
       white-space: nowrap;
     }
     button.tekstknop:hover {
-      background: var(--divider-color);
+      background: var(--dac-border);
     }
     button.tekstknop.gevaar {
-      color: var(--error-color);
-      border-color: var(--error-color);
+      color: var(--dac-bad);
+      border-color: var(--dac-bad);
     }
 
     /* De bevestigingsregel mag niet in het niets opgaan tussen de wekkers: hij
        vraagt iets onomkeerbaars. Zelfde vorm als een melding, met de tekst in de
        primaire kleur in plaats van de secundaire. */
     .onderrij.bevestiging .boodschap {
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
     }
 
     /* --- kopbalk (SPEC 3.1 en 3.2) ---
@@ -660,9 +663,9 @@ class DomotiappAlarmCard extends LitElement {
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-m, 14px);
-      border-bottom: 1px solid var(--divider-color);
+      color: var(--dac-ink-2);
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--dac-border);
     }
     .kop.leeg {
       border-bottom: none;
@@ -686,7 +689,7 @@ class DomotiappAlarmCard extends LitElement {
          leunen bij de knop die de wekker uitzet. */
       box-sizing: border-box;
       border: none;
-      border-radius: var(--ha-card-border-radius, 12px);
+      border-radius: var(--dac-radius);
       cursor: pointer;
       background: var(--domotiapp-accent);
       color: #fff;
@@ -700,7 +703,7 @@ class DomotiappAlarmCard extends LitElement {
       font-variant-numeric: tabular-nums;
     }
     .stopknop .stop-naam {
-      font-size: var(--ha-font-size-l, 16px);
+      font-size: 15px;
       opacity: 0.9;
       margin-top: 4px;
     }
@@ -710,7 +713,8 @@ class DomotiappAlarmCard extends LitElement {
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-  `;
+  `,
+  ];
 
   render() {
     if (!this._config) {
@@ -735,7 +739,7 @@ class DomotiappAlarmCard extends LitElement {
     // de kaart een stopknop te zijn en niet een formulier.
     const stop = this._stop();
     if (this._editorVoor !== undefined && !stop) {
-      return html`<ha-card>
+      return html`<div class="card surface">
         <domotiapp-alarm-editor
           .hass=${this.hass}
           .person=${this._config.person}
@@ -747,9 +751,9 @@ class DomotiappAlarmCard extends LitElement {
             this._sluitEditor();
           }}
         ></domotiapp-alarm-editor>
-      </ha-card>`;
+      </div>`;
     }
-    return html`<ha-card>
+    return html`<div class="card surface">
       ${stop ? this._stopknop(stop) : this._lijst()}
       ${this._tijdelijkeMelding
         ? html`<div class="onderrij">
@@ -757,13 +761,13 @@ class DomotiappAlarmCard extends LitElement {
             <span class="boodschap">${this._tijdelijkeMelding}</span>
           </div>`
         : nothing}
-    </ha-card>`;
+    </div>`;
   }
 
   _mededeling(tekst, isFout) {
-    return html`<ha-card>
+    return html`<div class="card surface">
       <div class="mededeling ${isFout ? "fout" : ""}">${tekst}</div>
-    </ha-card>`;
+    </div>`;
   }
 
   /**
@@ -914,13 +918,16 @@ class DomotiappAlarmCardEditor extends LitElement {
     this._config = { ...config };
   }
 
-  static styles = css`
+  static styles = [
+    vormtaal,
+    css`
     .uitleg {
       padding: 0 0 12px 0;
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-s, 12px);
+      color: var(--dac-ink-2);
+      font-size: 11.5px;
     }
-  `;
+  `,
+  ];
 
   static _SCHEMA = [
     {

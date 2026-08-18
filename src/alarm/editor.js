@@ -44,6 +44,7 @@ import {
   wisselDag,
   zomertijdWaarschuwing,
 } from "./editorlogica.js";
+import { vormtaal } from "../scene/vormtaal.js";
 
 const DAGEN = [
   [1, "ma"],
@@ -273,9 +274,11 @@ export class DomotiappAlarmEditor extends LitElement {
 
   // --- tekenen ----------------------------------------------------------
 
-  static styles = css`
+  static styles = [
+    vormtaal,
+    css`
     :host {
-      --domotiapp-accent: ${unsafeCSS(ACCENT)};
+      --domotiapp-accent: var(--dac-accent-hi, ${unsafeCSS(ACCENT)});
       display: block;
       /* De editor meet zich aan zijn EIGEN breedte, niet aan die van het venster.
          Een kaart in een bubble pop-up is smal terwijl het venster breed is, dus
@@ -289,26 +292,26 @@ export class DomotiappAlarmEditor extends LitElement {
     }
     .blok {
       padding: 12px 16px;
-      border-bottom: 1px solid var(--divider-color);
+      border-bottom: 1px solid var(--dac-border);
     }
     .kop {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      border-bottom: 1px solid var(--divider-color);
+      border-bottom: 1px solid var(--dac-border);
     }
     .kop h2 {
       margin: 0;
       flex: 1;
-      font-size: var(--ha-font-size-l, 16px);
+      font-size: 15px;
       font-weight: 500;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
     }
     label.veld {
       display: block;
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-s, 12px);
+      color: var(--dac-ink-2);
+      font-size: 11.5px;
       margin-bottom: 6px;
     }
     /* --- native invoervelden: het VAK is van ons, de CONTROL niet ---
@@ -341,7 +344,7 @@ export class DomotiappAlarmEditor extends LitElement {
     .vak {
       display: block;
       padding: 10px;
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 6px;
       background: var(--card-background-color, #fff);
     }
@@ -367,9 +370,9 @@ export class DomotiappAlarmEditor extends LitElement {
       padding: 0;
       border: 0;
       margin: 0;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
       font-family: inherit;
-      font-size: var(--ha-font-size-m, 14px);
+      font-size: 13.5px;
     }
     /* Een input heeft geen uitklappaneel, dus die mag het vak eronder laten
        zien. Een select niet — zie het blok hieronder. Ze staan bewust apart in
@@ -405,7 +408,7 @@ export class DomotiappAlarmEditor extends LitElement {
     }
     .vak select option {
       background-color: var(--card-background-color, #fff);
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
     }
     /* Het gemarkeerde item houdt de accentkleur die de dagknoppen ook gebruiken.
        Dat is de enige plek waar #026FA1 hier voorkomt en het is een accent, zoals
@@ -458,13 +461,13 @@ export class DomotiappAlarmEditor extends LitElement {
       flex: 1 1 0;
       min-width: 38px;
       padding: 8px 0;
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 18px;
       background: none;
-      color: var(--secondary-text-color);
+      color: var(--dac-ink-2);
       cursor: pointer;
       font-family: inherit;
-      font-size: var(--ha-font-size-s, 12px);
+      font-size: 11.5px;
     }
     .dagen button[aria-pressed="true"] {
       background: var(--domotiapp-accent);
@@ -487,18 +490,18 @@ export class DomotiappAlarmEditor extends LitElement {
       min-width: 8em;
     }
     button.knop {
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 18px;
       background: none;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
       padding: 9px 16px;
       cursor: pointer;
       font-family: inherit;
-      font-size: var(--ha-font-size-m, 14px);
+      font-size: 13.5px;
       white-space: nowrap;
     }
     button.knop:hover:not(:disabled) {
-      background: var(--divider-color);
+      background: var(--dac-border);
     }
     button.knop:disabled {
       opacity: 0.45;
@@ -524,12 +527,12 @@ export class DomotiappAlarmEditor extends LitElement {
       display: flex;
       gap: 8px;
       align-items: flex-start;
-      color: var(--secondary-text-color);
-      font-size: var(--ha-font-size-s, 12px);
+      color: var(--dac-ink-2);
+      font-size: 11.5px;
       margin-top: 8px;
     }
     .waarschuwing.fout {
-      color: var(--error-color);
+      color: var(--dac-bad);
     }
     .icoon {
       width: 18px;
@@ -541,7 +544,7 @@ export class DomotiappAlarmEditor extends LitElement {
       margin-top: 8px;
       max-height: 260px;
       overflow-y: auto;
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 6px;
     }
     .treffer {
@@ -557,19 +560,19 @@ export class DomotiappAlarmEditor extends LitElement {
       box-sizing: border-box;
       padding: 8px 10px;
       border: none;
-      border-bottom: 1px solid var(--divider-color);
+      border-bottom: 1px solid var(--dac-border);
       background: none;
-      color: var(--primary-text-color);
+      color: var(--dac-ink);
       cursor: pointer;
       text-align: left;
       font-family: inherit;
-      font-size: var(--ha-font-size-s, 12px);
+      font-size: 11.5px;
     }
     .treffer:last-child {
       border-bottom: none;
     }
     .treffer:hover {
-      background: var(--divider-color);
+      background: var(--dac-border);
     }
     .treffer img,
     .gekozen img {
@@ -578,7 +581,7 @@ export class DomotiappAlarmEditor extends LitElement {
       border-radius: 4px;
       object-fit: cover;
       flex: 0 0 auto;
-      background: var(--divider-color);
+      background: var(--dac-border);
     }
     /* De naam van een treffer is vrije tekst uit Music Assistant en heeft geen
        bovengrens; hij moet dus kunnen krimpen. Zonder deze twee regels loopt de
@@ -600,7 +603,7 @@ export class DomotiappAlarmEditor extends LitElement {
          die niet mag afbreken kan niet onder zijn tekstbreedte geknepen worden.
          Dat is exact valkuil 34, derde rij, en dezelfde bevinding als bij
          button.tekstknop in fase 9. */
-      color: var(--secondary-text-color);
+      color: var(--dac-ink-2);
       margin-left: auto;
       white-space: nowrap;
     }
@@ -609,10 +612,10 @@ export class DomotiappAlarmEditor extends LitElement {
       align-items: center;
       gap: 10px;
       padding: 8px;
-      border: 1px solid var(--divider-color);
+      border: 1px solid var(--dac-border);
       border-radius: 6px;
-      color: var(--primary-text-color);
-      font-size: var(--ha-font-size-s, 12px);
+      color: var(--dac-ink);
+      font-size: 11.5px;
     }
     /* WIKKELEN, en dat is de kern van de reparatie uit fase 8.
        Er staan drie knoppen zodra een voorbeeld speelt, en die pasten niet in een
@@ -640,7 +643,8 @@ export class DomotiappAlarmEditor extends LitElement {
     .voet .voorbeeld {
       margin-right: auto;
     }
-  `;
+  `,
+  ];
 
   _svg(pad) {
     return html`<svg class="icoon" viewBox="0 0 24 24" aria-hidden="true">

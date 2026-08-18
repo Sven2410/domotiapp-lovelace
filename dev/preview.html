@@ -184,6 +184,13 @@ const log = (msg, cls = "") => {
 
 /** Wat de Python-kant zou bewaren, hier in het geheugen. */
 const wsOpslag = {};
+/** Twee wekkers voor Sven, zodat de wekkerkaart iets te tonen heeft. */
+const wsWekkers = {
+  "person.sven": [
+    { id: "a1", time: "07:00", days: [1, 2, 3, 4, 5], enabled: true, label: "Werk" },
+    { id: "a2", time: "09:30", days: [6, 7], enabled: false, label: "Weekend" },
+  ],
+};
 // Dezelfde standaardiconen als DEFAULT_ICONS in de Python-kant en in
 // src/scene/const.js. Lopen die uit elkaar, dan toont de kaart iets anders dan
 // er in de opslag staat.
@@ -228,6 +235,20 @@ const hass = {
       case "domotiapp_lovelace/snapshot/create":
         return { snapshot_entity_id: "scene.werkbank_snapshot" };
       case "domotiapp_lovelace/snapshot/close":
+        return {};
+      // ---- de wekkerkant ----
+      case "domotiapp_lovelace/alarms/get":
+        return { alarms: wsWekkers[bericht.person] ?? [], ringing: null, message: null };
+      case "domotiapp_lovelace/alarms/save":
+      case "domotiapp_lovelace/alarms/set_enabled":
+      case "domotiapp_lovelace/alarms/delete":
+      case "domotiapp_lovelace/alarms/clear_message":
+        return { alarms: wsWekkers[bericht.person] ?? [], ringing: null, message: null };
+      case "domotiapp_lovelace/entities/list":
+        return { speakers: [], lights: [] };
+      case "domotiapp_lovelace/sound/search":
+        return { results: [] };
+      case "domotiapp_lovelace/updates/subscribe":
         return {};
       default:
         throw Object.assign(new Error(`onbekend commando ${bericht.type}`), { code: "unknown" });
@@ -348,6 +369,9 @@ const COLUMNS = [
     { type: "custom:domotiapp-entities-card", columns: 2, items: [
       { entity: "cover.garagedeur", name: "Oude vorm" },
       { entity: "alarm_control_panel.alarm", name: "blijft werken" } ] },
+  ]],
+  ["Wekkers", [
+    { type: "custom:domotiapp-alarm-card", person: "person.sven" },
   ]],
   ["Scenes", [
     // De scenekaart uit de integratie: drie scenes bij een lichtgroep, plus het
