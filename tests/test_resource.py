@@ -265,7 +265,7 @@ async def test_yaml_resourcemodus_laat_de_setup_niet_falen(
 
     # De eerste laadroute doet het nog steeds.
     import_urls = hass.data[DATA_EXTRA_MODULE_URL].urls
-    assert any(url.startswith(CARD_URL_PATH) for url in import_urls)
+    assert LOADER_URL_PATH in import_urls
 
 
 async def test_een_kapotte_collectie_laat_de_setup_niet_falen(
@@ -299,7 +299,7 @@ async def test_een_kapotte_collectie_laat_de_setup_niet_falen(
     await hass.async_block_till_done()
 
     import_urls = hass.data[DATA_EXTRA_MODULE_URL].urls
-    assert any(url.startswith(CARD_URL_PATH) for url in import_urls)
+    assert LOADER_URL_PATH in import_urls
 
 
 # --------------------------------------------------------------------------
@@ -310,14 +310,15 @@ async def test_een_kapotte_collectie_laat_de_setup_niet_falen(
 async def test_de_import_in_index_html_blijft_bestaan(hass: HomeAssistant) -> None:
     """REGRESSIEWACHT — de eerste laadroute mag niet verdwijnen.
 
-    Slaagt ook op de code van vóór fase 9, en dat is de bedoeling: de resource
-    komt erbíj. `add_extra_js_url` dekt HA's ingebouwde panelen, waar
-    Lovelace-resources niet geladen worden.
+    `add_extra_js_url` dekt HA's ingebouwde panelen, waar Lovelace-resources niet
+    geladen worden; de resource dekt een browser met een verouderde index. Wat er
+    in index.html staat is sinds de samenvoeging niet meer de gehashte bundel-URL
+    maar de lader met zijn vaste adres -- zie loader.py voor het waarom.
     """
     await zet_integratie_op(hass)
 
     import_urls = hass.data[DATA_EXTRA_MODULE_URL].urls
-    assert verwachte_url() in import_urls
+    assert LOADER_URL_PATH in import_urls
 
 
 @pytest.mark.parametrize("aantal_reloads", [1, 3])

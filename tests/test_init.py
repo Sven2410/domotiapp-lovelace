@@ -202,7 +202,7 @@ async def test_de_lader_url_verandert_niet_als_de_bundel_verandert(
     body_voor = await (await client.get(LOADER_URL_PATH)).text()
 
     # Doe alsof de bundel is bijgewerkt: dezelfde setup, andere hash.
-    import custom_components.domotiapp_lovelace.alarm as integratie
+    import custom_components.domotiapp_lovelace as integratie
 
     monkeypatch.setattr(integratie, "_bereken_hash", lambda pad: "beefbeefbeef")
 
@@ -402,7 +402,7 @@ async def test_setup_gaat_niet_stuk_zonder_lovelace_opslag(
     index-import er staat, zodat "setup faalt niet" niet triviaal waar is in
     code die de resource helemaal niet aanraakt.
     """
-    from custom_components.domotiapp_lovelace.alarm import resource as resource_module
+    from custom_components.domotiapp_lovelace import resource as resource_module
 
     async def stuk(*args, **kwargs):
         raise RuntimeError("opslag onbruikbaar")
