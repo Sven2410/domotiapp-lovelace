@@ -27,7 +27,11 @@ from homeassistant.components.lovelace.resources import (
 )
 from homeassistant.core import HomeAssistant
 
-from custom_components.domotiapp_lovelace.const import CARD_URL_PATH, DOMAIN
+from custom_components.domotiapp_lovelace.const import (
+    CARD_URL_PATH,
+    DOMAIN,
+    LOADER_URL_PATH,
+)
 
 from .conftest import zet_integratie_op
 
