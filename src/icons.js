@@ -183,6 +183,31 @@ export const icons = {
   volumeMute: draw(`<path d="M4.4 9.4h3.2L12 5.9v12.2L7.6 14.6H4.4z"/>
     <path d="m15.8 9.8 4.4 4.4M20.2 9.8l-4.4 4.4"/>`),
 
+  search: draw(`<circle cx="10.6" cy="10.6" r="6.2"/><path d="m15.2 15.2 4.4 4.4"/>`),
+
+  shuffle: draw(`<path d="M3.6 7.6h3c1.2 0 2.3.6 3 1.6l4.2 5.6c.7 1 1.8 1.6 3 1.6h2.4"/>
+    <path d="M3.6 16.4h3c1.2 0 2.3-.6 3-1.6"/>
+    <path d="M13.8 9.2c.7-1 1.8-1.6 3-1.6h2.4"/>
+    <path d="m17 5.4 2.2 2.2-2.2 2.2"/><path d="m17 14.2 2.2 2.2-2.2 2.2"/>`),
+
+  repeat: draw(`<path d="M7.4 7.4h9.2a2.6 2.6 0 0 1 2.6 2.6v1.2"/>
+    <path d="m9.6 5.2-2.2 2.2 2.2 2.2"/>
+    <path d="M16.6 16.6H7.4a2.6 2.6 0 0 1-2.6-2.6v-1.2"/>
+    <path d="m14.4 18.8 2.2-2.2-2.2-2.2"/>`),
+
+  /* Herhalen van één nummer: dezelfde lus met een 1 erin, want het verschil
+     moet ook op 17px te zien zijn zonder de lus zwaarder te maken. */
+  repeatOne: draw(`<path d="M7.4 7.4h9.2a2.6 2.6 0 0 1 2.6 2.6v1.2"/>
+    <path d="m9.6 5.2-2.2 2.2 2.2 2.2"/>
+    <path d="M16.6 16.6H7.4a2.6 2.6 0 0 1-2.6-2.6v-1.2"/>
+    <path d="m14.4 18.8 2.2-2.2-2.2-2.2"/>
+    <path d="M10.9 10.9 12.4 9.9v4.4"/>`),
+
+  /* Speakers koppelen: één speaker met een tweede die half achter hem staat. */
+  speakers: draw(`<rect x="3.6" y="3.8" width="8.8" height="16.4" rx="2"/>
+    <circle cx="8" cy="14.4" r="2.6"/><path d="M8 7.6h.1"/>
+    <path d="M15.6 6.6h4.8v10.8h-4.8"/>`),
+
   music: draw(`<path d="M9.6 17.4V6.4l8.2-1.6v11"/>
     <ellipse cx="7.6" cy="17.6" rx="2.2" ry="1.9"/>
     <ellipse cx="15.8" cy="15.8" rx="2.2" ry="1.9"/>`),

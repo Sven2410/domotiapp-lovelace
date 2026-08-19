@@ -25,6 +25,18 @@
  *
  * Het icoon en de kaart zijn twee knoppen, zoals overal in de familie: op het
  * icoon tikken start of pauzeert, op de kaart tikken opent de speler.
+ *
+ * ## De derde regel
+ *
+ * Shuffle, herhalen, zoeken en speakers staan apart van vorige/afspelen/volgende.
+ * Die drie raak je aan terwijl je luistert; deze vier stel je één keer in of
+ * gebruik je om iets nieuws te kiezen. Alles bij elkaar op één regel maakt van
+ * een kaart een afstandsbediening.
+ *
+ * Zoeken en groeperen verschijnen alleen bij een speler van Music Assistant --
+ * daar komt de bibliotheek vandaan, en de speakerlijst komt uit het MA-label.
+ * Het zoekscherm zelf staat in `src/media/zoekscherm.js` en vult het hele
+ * scherm; deze kaart opent het alleen.
  */
 
 import { DacCard, registerCard, registerEditor, toneValue, TONES, INCOMPLETE } from "../base.js";
@@ -42,16 +54,21 @@ import {
   stateOf,
 } from "../ha.js";
 import {
+  extraVoor,
+  herhaalStand,
   isActief,
   isGedempt,
   isSpelend,
   isUit,
   knoppenVoor,
   mediaIcoon,
+  shuffleAan,
+  volgendeHerhaling,
   volumePct,
   volumeVoor,
   watSpeeltEr,
 } from "./media-logica.js";
+import { toonZoekscherm } from "../media/zoekscherm.js";
 
 /** Het icoon en het voorleeslabel per knop. */
 const KNOPPEN = {
@@ -60,6 +77,10 @@ const KNOPPEN = {
   play: { icon: "play", label: "Afspelen of pauzeren" },
   stop: { icon: "stop", label: "Stoppen" },
   next: { icon: "next", label: "Volgende" },
+  shuffle: { icon: "shuffle", label: "Willekeurig" },
+  repeat: { icon: "repeat", label: "Herhalen" },
+  search: { icon: "search", label: "Zoeken in Music Assistant" },
+  speakers: { icon: "speakers", label: "Speakers koppelen" },
 };
 
 class MediaCard extends DacCard {
@@ -131,6 +152,20 @@ class MediaCard extends DacCard {
       font-size: 11.5px; color: var(--dac-ink-2);
     }
 
+    /* ---- derde regel ---- */
+    .extra { display: flex; align-items: center; gap: 6px; }
+    .extra[hidden] { display: none; }
+    .extra .k { width: 30px; height: 30px; }
+    .extra .k .icon { width: 16px; height: 16px; }
+    /* Aan is aan: een shuffle die aanstaat draagt de kleur van de kaart, net
+       als een brandende chip. Anders moet je de stand uit het icoon raden. */
+    .extra .k[aria-pressed="true"] {
+      color: var(--tone);
+      background: color-mix(in srgb, var(--tone) 16%, transparent);
+      border-color: color-mix(in srgb, var(--tone) 36%, transparent);
+    }
+    .extra .rek { flex: 1 1 auto; }
+
     .top.unavailable, .vol.unavailable { opacity: .42; }
     .top.unavailable .k, .top.unavailable .chip,
     .vol.unavailable .slider, .vol.unavailable .k { pointer-events: none; }
@@ -140,7 +175,13 @@ class MediaCard extends DacCard {
     if (!config.entity) {
       return { ...config, [INCOMPLETE]: "Kies een mediaspeler." };
     }
-    return { show_artwork: true, show_volume: true, show_controls: true, ...config };
+    return {
+      show_artwork: true,
+      show_volume: true,
+      show_controls: true,
+      show_search: true,
+      ...config,
+    };
   }
 
   watched() {
@@ -161,6 +202,7 @@ class MediaCard extends DacCard {
           <span class="ctl"></span>
         </div>
         <div class="vol" hidden></div>
+        <div class="extra" hidden></div>
       </div>`;
   }
 
@@ -197,9 +239,11 @@ class MediaCard extends DacCard {
     };
     this.on(this.$(".ctl"), "click", klik);
     this.on(this.$(".vol"), "click", klik);
+    this.on(this.$(".extra"), "click", klik);
     // Anders leest een tik op een knop ook als een tik op de kaart.
     this.on(this.$(".ctl"), "pointerdown", (e) => e.stopPropagation());
     this.on(this.$(".vol"), "pointerdown", (e) => e.stopPropagation());
+    this.on(this.$(".extra"), "pointerdown", (e) => e.stopPropagation());
 
     this.sliders_ = new Map();
   }
@@ -228,6 +272,30 @@ class MediaCard extends DacCard {
         return roep("volume_down");
       case "vol+":
         return roep("volume_up");
+      case "shuffle":
+        return this.hass.callService(
+          "media_player",
+          "shuffle_set",
+          { shuffle: !shuffleAan(st) },
+          { entity_id: id }
+        );
+      case "repeat":
+        return this.hass.callService(
+          "media_player",
+          "repeat_set",
+          { repeat: volgendeHerhaling(herhaalStand(st)) },
+          { entity_id: id }
+        );
+      case "search":
+      case "speakers":
+        // Eén scherm voor allebei: zoeken staat bovenaan, de speakers eronder.
+        // Twee knoppen die hetzelfde scherm openen is geen dubbeling maar twee
+        // deuren -- je weet welke je zoekt voordat je hem opendoet.
+        return toonZoekscherm(
+          this.hass,
+          id,
+          nameOf(this.hass, id, this.config.name)
+        );
       default:
         return undefined;
     }
@@ -264,6 +332,7 @@ class MediaCard extends DacCard {
 
     this.paintKnoppen_(st, dood);
     this.paintVolume_(st, dood);
+    this.paintExtra_(st, dood);
   }
 
   paintKnoppen_(st, dood) {
@@ -353,6 +422,52 @@ class MediaCard extends DacCard {
     this.text(".pct", gedempt ? "Gedempt" : `${pct}%`);
   }
 
+  paintExtra_(st, dood) {
+    const box = this.$(".extra");
+    const soorten =
+      dood || this.config.show_controls === false
+        ? []
+        : extraVoor(st, { zoeken: this.config.show_search !== false });
+    box.hidden = !soorten.length;
+    const sig = soorten.join(",");
+    if (box.dataset.sig !== sig) {
+      box.dataset.sig = sig;
+      box.innerHTML = soorten
+        .map((soort, i) =>
+          // De rek duwt zoeken en speakers naar rechts, weg van shuffle en
+          // herhalen: instellen links, iets nieuws kiezen rechts.
+          `${soort === "search" && i > 0 ? `<span class="rek"></span>` : ""}` +
+          `<button class="k" type="button" data-k="${soort}"` +
+          ` aria-label="${KNOPPEN[soort].label}">${resolve(KNOPPEN[soort].icon)}</button>`
+        )
+        .join("");
+    }
+    if (!soorten.length) return;
+
+    const shuffleKnop = box.querySelector('[data-k="shuffle"]');
+    if (shuffleKnop) shuffleKnop.setAttribute("aria-pressed", String(shuffleAan(st)));
+
+    const herhaalKnop = box.querySelector('[data-k="repeat"]');
+    if (herhaalKnop) {
+      const stand = herhaalStand(st);
+      const wens = stand === "one" ? "repeatOne" : "repeat";
+      if (herhaalKnop.dataset.icon !== wens) {
+        herhaalKnop.dataset.icon = wens;
+        herhaalKnop.innerHTML = resolve(wens);
+      }
+      herhaalKnop.setAttribute("aria-pressed", String(stand !== "off"));
+      herhaalKnop.setAttribute(
+        "aria-label",
+        { off: "Herhalen: uit", all: "Herhalen: alles", one: "Herhalen: dit nummer" }[stand]
+      );
+    }
+
+    // Staat het zoekscherm open op déze speler, dan houdt het zijn hass bij --
+    // anders weet het niet wie er meespeelt in de groep.
+    const scherm = document.querySelector("domotiapp-media-browser");
+    if (scherm?.hasAttribute("open")) scherm.hass = this.hass;
+  }
+
   /** Hang een schuif aan zodra hij bestaat, en niet twee keer. */
   attach_(el, soort, opts) {
     if (!el || this.sliders_.has(soort)) return;
@@ -369,7 +484,8 @@ class MediaCard extends DacCard {
   }
 
   getCardSize() {
-    return volumeVoor(stateOf(this.hass, this.config?.entity)).length ? 2 : 1;
+    const st = stateOf(this.hass, this.config?.entity);
+    return 1 + (volumeVoor(st).length ? 1 : 0) + (extraVoor(st).length ? 1 : 0);
   }
 
   getGridOptions() {
@@ -394,6 +510,7 @@ class MediaEditor extends DacEditor {
       show_artwork: true,
       show_volume: true,
       show_controls: true,
+      show_search: true,
       icon_tap_action: { action: "toggle" },
       tap_action: { action: "more-info" },
     };
@@ -413,6 +530,7 @@ class MediaEditor extends DacEditor {
       { name: "show_artwork", selector: sel.bool() },
       { name: "show_controls", selector: sel.bool() },
       { name: "show_volume", selector: sel.bool() },
+      { name: "show_search", selector: sel.bool() },
       { name: "icon_tap_action", selector: sel.action("toggle") },
       { name: "icon_hold_action", selector: sel.action("more-info") },
       { name: "tap_action", selector: sel.action("more-info") },
@@ -428,6 +546,7 @@ class MediaEditor extends DacEditor {
         show_artwork: "Albumhoes tonen",
         show_controls: "Knoppen tonen",
         show_volume: "Volume tonen",
+        show_search: "Zoeken en groeperen tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
         tap_action: "Tikken op de kaart",
@@ -443,6 +562,8 @@ class MediaEditor extends DacEditor {
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+    if (s.name === "show_search")
+      return "De zoekknop opent Music Assistant over het hele scherm. Alleen bij een speler van Music Assistant; groeperen komt erbij als de speler dat aankan.";
     return undefined;
   }
 }

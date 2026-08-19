@@ -53,12 +53,18 @@ LABEL_SPEAKER_NAAM: Final = "Music Assistant Wekker"
 LABEL_LAMP_NAAM: Final = "Verlichting Wekker"
 
 # --- Music Assistant ----------------------------------------------------
-MA_DOMAIN: Final = "music_assistant"
-# Het attribuut waarin MA het spelertype zet. Let op: extra state attributes
-# verdwijnen zodra een entiteit unavailable is (SPEC 7.2), dus dit is nooit de
-# enige zeef.
-ATTR_MASS_PLAYER_TYPE: Final = "mass_player_type"
-MASS_PLAYER_TYPE_GROUP: Final = "group"
+#
+# Doorgegeven uit `..ma`, waar ook de mediakaart ze vandaan haalt. Twee keer
+# dezelfde tekenreeks intypen is precies hoe twee kanten van hetzelfde pakket
+# stilletjes uit elkaar lopen. De namen blijven hier bestaan omdat de wekkerkant
+# ze overal zo importeert.
+from ..ma import (  # noqa: E402
+    ATTR_MASS_PLAYER_TYPE,
+    MASS_PLAYER_TYPE_GROUP,
+    MA_DOMAIN,
+)
+
+__all_ma__ = (MA_DOMAIN, ATTR_MASS_PLAYER_TYPE, MASS_PLAYER_TYPE_GROUP)
 
 # --- Planner (SPEC 13.4) ------------------------------------------------
 # Het respijtvenster: een gemiste wekker gaat alsnog af als hij minder dan zoveel
@@ -156,7 +162,9 @@ VOORBEELD_MAX_MINUTEN: Final = 5
 # Zoekopdracht (SPEC 15.6).
 SEARCH_LIMIT_DEFAULT: Final = 10
 SEARCH_LIMIT_MAX: Final = 50
-SEARCH_TIMEOUT_SECONDEN: Final = 10
+# De time-out staat nu bij het zoeken zelf, in `..ma` (ZOEK_TIMEOUT_SECONDEN):
+# de mediakaart zoekt in dezelfde bibliotheek en mag niet een andere geduldgrens
+# hebben dan de wekker.
 
 # --- Meldingen (SPEC 11.7 en 14.2.1) ------------------------------------
 SEVERITY_ERROR: Final = "error"
