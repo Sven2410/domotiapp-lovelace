@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DomotiApp &mdash; alarmpaneel en codepaneel</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 26px 20px 26px; background: #0c0c0a; color: #e8e4de;
+    font-family: Roboto, "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  h1 { font-size: 20px; font-weight: 300; margin: 0 0 4px; }
+  p.lead { margin: 0 0 22px; font-size: 13px; color: rgba(232,228,222,.62); max-width: 720px; }
+  .cols { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); align-items: start; max-width: 1100px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  h2 { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(232,228,222,.38); margin: 6px 0 0; }
+  small.uitleg { font-size: 11.5px; color: rgba(232,228,222,.5); }
+  /* Het logboek staat ONDER de kaarten en niet als vaste balk over de pagina:
+     een balk die meegroeit met het aantal regels verschuift de kaarten eronder,
+     en dan klik je naast wat je net hebt opgemeten. */
+  #log { margin-top: 26px; max-width: 1100px; font: 11px/1.5 ui-monospace, monospace; }
+  #log b { color: #8fb9d6; display: block; margin-bottom: 6px; }
+  #loglines div { color: rgba(232,228,222,.72); }
+  #loglines .err { color: #d03b3b; }
+</style>
+</head>
+<body>
+<h1>Alarmpaneel en codepaneel</h1>
+<p class="lead">
+  Een pagina met vaste hoogte, zodat een gemeten positie ook een tel later nog
+  klopt. Links een paneel met een <b>eigen</b> code (1234 is goed, de rest wordt
+  stil geweigerd &mdash; precies zoals de echte doen). Rechts een paneel zonder
+  eigen code, waar de code van DomotiApp bijspringt (4711).
+</p>
+<div class="cols" id="cols"></div>
+<div id="log"><b>Service-aanroepen</b><div id="loglines"></div></div>
+
+<script type="module">
+import "./ha-form-stub.js";
+
+if (!customElements.get("home-assistant")) {
+  customElements.define("home-assistant", class extends HTMLElement {});
+}
+await import(`../custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js?t=${Date.now()}`);
+
+const S = (entity_id, state, attributes = {}) => [entity_id, { entity_id, state, attributes }];
+
+const states = Object.fromEntries([
+  // Zoals Alarmo het meldt: eigen code, geen thuismodus (26 = afwezig,
+  // trigger, custom bypass), en geen code nodig om in te schakelen.
+  S("alarm_control_panel.eigen_code", "disarmed", {
+    friendly_name: "Paneel met eigen code", supported_features: 26,
+    code_format: "number", code_arm_required: false,
+  }),
+  // Geen eigen code; hier springt de code van DomotiApp bij.
+  S("alarm_control_panel.zonder_code", "disarmed", {
+    friendly_name: "Paneel zonder eigen code", supported_features: 7,
+  }),
+]);
+
+const log = (msg, cls = "") => {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.textContent = `${new Date().toLocaleTimeString("nl")}  ${msg}`;
+  document.getElementById("loglines").prepend(el);
+};
+
+/** Hoe vaak er een verkeerde code van DomotiApp is ingevoerd. */
+let mis = 0;
+
+const hass = {
+  states,
+  language: "nl",
+  locale: { language: "nl" },
+  themes: {},
+  async callWS(bericht) {
+    log(`ws ${bericht.type}`);
+    switch (bericht.type) {
+      case "domotiapp_lovelace/panel/code/status":
+        return { has_code: true };
+      case "domotiapp_lovelace/panel/code/verify": {
+        if (mis >= 5) {
+          throw Object.assign(
+            new Error("Te vaak een verkeerde code. Wacht een minuut en probeer het opnieuw."),
+            { code: "te_veel_pogingen" }
+          );
+        }
+        const goed = bericht.code === "4711";
+        mis = goed ? 0 : mis + 1;
+        return { ok: goed };
+      }
+      default:
+        throw new Error(`onbekend commando ${bericht.type}`);
+    }
+  },
+  callService(domain, service, data, target) {
+    const alles = { ...data, ...(target ?? {}) };
+    log(`${domain}.${service}  ${JSON.stringify(alles)}`);
+    for (const id of [].concat(alles.entity_id ?? [])) {
+      const st = states[id];
+      if (!st) continue;
+      // Een paneel met een eigen code weigert STIL: de aanroep slaagt en er
+      // verandert niets. Dat is het geval waar de kaart doorheen moet kijken.
+      //
+      // Alleen waar het paneel ook echt een code wil: bij uitschakelen altijd,
+      // bij inschakelen alleen als `code_arm_required` aanstaat. Anders zou deze
+      // nabootsing strenger zijn dan de echte, en dan test je de verkeerde regel.
+      const wilCode =
+        st.attributes.code_format &&
+        (service === "alarm_disarm" || st.attributes.code_arm_required !== false);
+      if (wilCode && alles.code !== "1234") {
+        log(`${id} weigerde de code stil`, "err");
+        continue;
+      }
+      const next = { ...st, attributes: { ...st.attributes } };
+      if (service === "alarm_disarm") next.state = "disarmed";
+      if (service === "alarm_arm_away") next.state = "armed_away";
+      if (service === "alarm_arm_home") next.state = "armed_home";
+      states[id] = next;
+    }
+    push();
+  },
+  formatEntityState: (st) => st.state,
+  localize: () => undefined,
+};
+
+const kaarten = [];
+const snapshot = () => ({ ...hass, states: { ...states } });
+const push = () => {
+  const verse = snapshot();
+  for (const k of kaarten) k.hass = verse;
+};
+
+function maak(config) {
+  const el = document.createElement(config.type.replace(/^custom:/, ""));
+  el.setConfig(config);
+  el.hass = snapshot();
+  kaarten.push(el);
+  return el;
+}
+
+const KOLOMMEN = [
+  ["Eigen code van het paneel", [
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.eigen_code" },
+  ], "Inschakelen gaat zonder code (code_arm_required: false). Uitschakelen vraagt om 1234; alles anders wordt stil geweigerd en dat hoort de kaart te melden."],
+  ["Code van DomotiApp", [
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.zonder_code" },
+  ], "Het paneel kent geen code; DomotiApp vraagt 4711 bij uitschakelen. Inschakelen gaat zonder."],
+  ["DomotiApp, altijd een code", [
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.zonder_code",
+      name: "Ook bij inschakelen", code_arm: "altijd" },
+  ], "Dezelfde entiteit, maar met code_arm: altijd."],
+];
+
+const cols = document.getElementById("cols");
+for (const [titel, configs, uitleg] of KOLOMMEN) {
+  const col = document.createElement("div");
+  col.className = "col";
+  const h = document.createElement("h2");
+  h.textContent = titel;
+  col.appendChild(h);
+  for (const cfg of configs) col.appendChild(maak(cfg));
+  const u = document.createElement("small");
+  u.className = "uitleg";
+  u.textContent = uitleg;
+  col.appendChild(u);
+  cols.appendChild(col);
+}
+
+log("proefpagina geladen");
+</script>
+</body>
+</html>

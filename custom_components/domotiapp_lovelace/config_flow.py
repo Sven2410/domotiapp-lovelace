@@ -44,10 +44,17 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import DATA_STORE, DOMAIN
+from .paneelcode import DATA_CODE_STORE
 from .store import StoreUnusableError
 
 CONF_GROEP = "groep"
 CONF_BEVESTIGD = "bevestigd"
+CONF_CODE = "code"
+CONF_HERHAAL = "herhaal"
+CONF_WISSEN = "wissen"
+
+# Korter dan vier cijfers is geen code maar een formaliteit.
+CODE_MIN_LENGTE = 4
 
 
 class DomotiappSceneConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -81,10 +88,85 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
         self._gekozen: str | None = None
 
     # ----------------------------------------------------------------------
-    # Stap init — de keuzelijst
+    # Stap init — het menu
     # ----------------------------------------------------------------------
 
     async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Twee dingen vallen er te doen: een alarmcode zetten, of opruimen."""
+        return self.async_show_menu(step_id="init", menu_options=["alarmcode", "scenes"])
+
+    # ----------------------------------------------------------------------
+    # Stap alarmcode — de code voor de alarmpaneelkaart
+    # ----------------------------------------------------------------------
+
+    async def async_step_alarmcode(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Zet of wis de code die de alarmpaneelkaart vraagt.
+
+        Deze stap staat achter HA's eigen admin-controle op de options flow, en
+        dat is met opzet de enige plek waar de code te zetten is: in een
+        kaarteditor zou hij in het dashboard belanden, en daarmee in elke backup
+        en elke export.
+
+        De code wordt hier NIET bewaard maar meteen gehasht doorgegeven aan de
+        store; wat er terugkomt is alleen "er is er een".
+        """
+        store = self.hass.data.get(DOMAIN, {}).get(DATA_CODE_STORE)
+        if store is None:
+            return self.async_abort(reason="niet_geladen")
+
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_CODE, default=""): str,
+                vol.Optional(CONF_HERHAAL, default=""): str,
+                vol.Optional(CONF_WISSEN, default=False): bool,
+            }
+        )
+        placeholders = {
+            "stand": "Er staat nu een code ingesteld."
+            if store.heeft_code
+            else "Er staat nog geen code ingesteld."
+        }
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="alarmcode",
+                data_schema=schema,
+                description_placeholders=placeholders,
+            )
+
+        def opnieuw(fout: str) -> ConfigFlowResult:
+            return self.async_show_form(
+                step_id="alarmcode",
+                data_schema=schema,
+                description_placeholders=placeholders,
+                errors={"base": fout},
+            )
+
+        if user_input.get(CONF_WISSEN):
+            await store.async_zet_code(None)
+            return self.async_create_entry(title="", data={})
+
+        code = (user_input.get(CONF_CODE) or "").strip()
+        herhaal = (user_input.get(CONF_HERHAAL) or "").strip()
+        if not code:
+            return opnieuw("code_leeg")
+        if len(code) < CODE_MIN_LENGTE:
+            return opnieuw("code_te_kort")
+        if code != herhaal:
+            return opnieuw("code_ongelijk")
+
+        await store.async_zet_code(code)
+        return self.async_create_entry(title="", data={})
+
+    # ----------------------------------------------------------------------
+    # Stap scenes — de keuzelijst van het opruimoverzicht
+    # ----------------------------------------------------------------------
+
+    async def async_step_scenes(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Toon alle opgeslagen groepen, of meld dat er niets is."""
@@ -117,7 +199,7 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
         ]
 
         return self.async_show_form(
-            step_id="init",
+            step_id="scenes",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_GROEP): SelectSelector(

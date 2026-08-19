@@ -13,28 +13,41 @@
  * ís status. Een alarm dat afgaat is kritiek en hoort er kritiek uit te zien.
  * De kleur komt nooit alleen -- er staat altijd een woord bij.
  *
- * GEEN CODE-VELD. Vraagt jouw paneel een pincode bij het in- of uitschakelen,
- * dan werkt deze kaart niet: hij stuurt de opdracht zonder code. Dat is een
- * bewuste beperking en geen omissie -- een pincode op een dashboardkaart is een
- * pincode die op tafel ligt.
+ * DE CODE
+ *
+ * Uitschakelen kan om een code vragen, inschakelen niet. Dat is de standaard, en
+ * hij komt uit twee mogelijke bronnen -- de kaart kiest zelf welke:
+ *
+ * 1. **Het paneel zelf.** Meldt de entiteit `code_format`, dan heeft je
+ *    alarmsysteem een eigen code (Alarmo, de manual-integratie, een systeem van
+ *    een merk). De kaart toont het codepaneel en stuurt de ingetikte code mee
+ *    met de service. Of er ook bij inschakelen een code nodig is, zegt het
+ *    paneel met `code_arm_required` -- daar gaat deze kaart niet over.
+ * 2. **DomotiApp zelf.** Heeft je paneel geen eigen code, dan kun je er een
+ *    instellen bij de integratie (Configureren -> Alarmcode). Die staat gehasht
+ *    aan de serverkant, en de kaart vraagt hem alleen bij uitschakelen.
+ *
+ * Wat er in geen van beide gevallen gebeurt: een code in de dashboardconfig.
+ * Die zou met een rechterklik te lezen zijn, in elke backup staan en meegaan als
+ * je het dashboard deelt.
+ *
+ * En wat het niet is: een slot op Home Assistant. Wie kan inloggen, kan
+ * `alarm_control_panel.alarm_disarm` ook rechtstreeks aanroepen. Dit houdt tegen
+ * dat iemand die langsloopt het alarm van de muur af uitzet.
  */
 
 import { DacCard, registerCard, registerEditor, rowsFor, TONES, INCOMPLETE } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, isDead, localizeState, moreInfo, nameOf, stateOf } from "../ha.js";
-
-/**
- * De drie standen, met de dienst die erbij hoort.
- *
- * `alarm_arm_home` heet bij Home Assistant "home" en niet "stay"; wat de klant
- * leest is "Thuis", want zo zegt hij het zelf.
- */
-const STANDEN = [
-  { sleutel: "disarmed", label: "Uitgeschakeld", dienst: "alarm_disarm", icoon: "lockOpen" },
-  { sleutel: "armed_away", label: "Afwezig", dienst: "alarm_arm_away", icoon: "away" },
-  { sleutel: "armed_home", label: "Thuis", dienst: "alarm_arm_home", icoon: "house" },
-];
+import { vraagCode } from "../codepad.js";
+import {
+  STANDEN,
+  beschikbareStanden,
+  codeSoort,
+  heeftCodeNodig,
+  standVan,
+} from "./alarm-logica.js";
 
 /** Hoe elke toestand van het paneel eruitziet. */
 const UITERLIJK = {
@@ -79,7 +92,7 @@ class AlarmPanelCard extends DacCard {
     }
 
     /* ---- de drie knoppen ---- */
-    .standen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .standen { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: 6px; }
     .stand {
       display: flex; align-items: center; justify-content: center; gap: 7px;
       min-height: 38px; padding: 0 8px; cursor: pointer; font: inherit; font-size: 12.5px;
@@ -111,11 +124,16 @@ class AlarmPanelCard extends DacCard {
     if (!config.entity) {
       return { ...config, [INCOMPLETE]: "Kies een alarmpaneel." };
     }
-    return { ...config };
+    return { code_arm: "paneel", ...config };
   }
 
   watched() {
     return [this.config.entity];
+  }
+
+  /** De standen die dit paneel aankan; zie `beschikbareStanden`. */
+  standen_() {
+    return beschikbareStanden(stateOf(this.hass, this.config.entity));
   }
 
   uiterlijk_() {
@@ -141,8 +159,9 @@ class AlarmPanelCard extends DacCard {
           <span class="chip"></span>
           <span class="txt"><span class="nm"></span><span class="st"></span></span>
         </div>
-        <div class="standen" role="group" aria-label="Alarmstand">
-          ${STANDEN.map(
+        <div class="standen" role="group" aria-label="Alarmstand"
+             style="--n:${this.standen_().length}">
+          ${this.standen_().map(
             (s) => `<button class="stand" type="button" data-stand="${s.sleutel}"
               aria-pressed="false">${resolve(s.icoon)}<span>${s.label}</span></button>`
           ).join("")}
@@ -158,19 +177,119 @@ class AlarmPanelCard extends DacCard {
       })
     );
 
-    // Eén luisteraar voor de drie knoppen: ze veranderen niet van samenstelling,
-    // maar dit scheelt drie opruimacties bij elke aankoppeling.
+    // Eén luisteraar voor alle knoppen: dat scheelt een opruimactie per knop bij
+    // elke aankoppeling, en de knoppen kunnen van samenstelling veranderen zodra
+    // het paneel meer standen gaat melden.
     this.on(this.$(".standen"), "click", (e) => {
       const knop = e.target.closest("[data-stand]");
       if (!knop) return;
       e.stopPropagation();
-      const stand = STANDEN.find((s) => s.sleutel === knop.dataset.stand);
-      if (!stand) return;
-      this.hass.callService("alarm_control_panel", stand.dienst, {
-        entity_id: this.config.entity,
-      });
+      this.kies_(knop.dataset.stand);
     });
     this.on(this.$(".standen"), "pointerdown", (e) => e.stopPropagation());
+
+    // Heeft DomotiApp zelf een code? Eén vraag per aankoppeling; het antwoord is
+    // een enkele boolean en verandert alleen als een admin hem omzet.
+    this.eigenCode_ = false;
+    this.hass
+      ?.callWS?.({ type: "domotiapp_lovelace/panel/code/status" })
+      .then((antwoord) => {
+        this.eigenCode_ = Boolean(antwoord?.has_code);
+      })
+      .catch(() => {
+        // Oudere integratie of geen verbinding: dan is er geen eigen code, en
+        // valt de kaart terug op wat het paneel zelf zegt.
+        this.eigenCode_ = false;
+      });
+  }
+
+  /**
+   * Een stand gekozen: meteen doen, of eerst om de code vragen.
+   *
+   * De code gaat NOOIT als tekst het dashboard in. Bij een paneel met een eigen
+   * code wordt hij doorgegeven aan de service; bij een code van DomotiApp gaat
+   * hij naar de server om gecontroleerd te worden, en pas daarna volgt de
+   * opdracht -- zonder code, want het paneel kent er geen.
+   */
+  kies_(sleutel) {
+    const stand = standVan(sleutel);
+    if (!stand) return;
+    const st = stateOf(this.hass, this.config.entity);
+
+    if (!heeftCodeNodig(st, sleutel, this.config.code_arm, this.eigenCode_)) {
+      this.voerUit_(stand);
+      return;
+    }
+
+    vraagCode({
+      titel: nameOf(this.hass, this.config.entity, this.config.name),
+      actie: sleutel === "disarmed" ? "Uitschakelen" : `Inschakelen — ${stand.label}`,
+      soort: codeSoort(st) === "text" ? "text" : "number",
+      onOk: (code) => this.metCode_(stand, code),
+    });
+  }
+
+  /** Zonder code: gewoon de dienst aanroepen. */
+  voerUit_(stand) {
+    this.hass.callService("alarm_control_panel", stand.dienst, {
+      entity_id: this.config.entity,
+    });
+  }
+
+  /**
+   * Met code. Geeft terug of het gelukt is, zodat het codepaneel het kan zeggen.
+   *
+   * Het lastige geval is een paneel dat een verkeerde code STIL weigert -- dat
+   * doen er meer dan één: de service slaagt, en er gebeurt niets. Vandaar dat we
+   * daarna kijken of de toestand ook echt verandert. Gebeurt dat niet binnen drie
+   * seconden, dan is het antwoord "er is niets veranderd" en niet "gelukt".
+   */
+  async metCode_(stand, code) {
+    const id = this.config.entity;
+    const st = stateOf(this.hass, id);
+    const vorige = st?.state;
+
+    // Code van DomotiApp: eerst laten controleren aan de serverkant.
+    if (!codeSoort(st)) {
+      try {
+        const antwoord = await this.hass.callWS({
+          type: "domotiapp_lovelace/panel/code/verify",
+          code,
+        });
+        if (!antwoord?.ok) return { ok: false, fout: "Die code klopt niet." };
+      } catch (fout) {
+        return {
+          ok: false,
+          fout: fout?.message ?? "De code kon niet gecontroleerd worden.",
+        };
+      }
+      this.voerUit_(stand);
+      return { ok: await this.veranderdeBinnen_(vorige, 3000) };
+    }
+
+    // Code van het paneel zelf: meesturen en het paneel laten oordelen.
+    try {
+      await this.hass.callService(
+        "alarm_control_panel",
+        stand.dienst,
+        { code },
+        { entity_id: id }
+      );
+    } catch (fout) {
+      return { ok: false, fout: fout?.message ?? "Het paneel weigerde de opdracht." };
+    }
+    if (await this.veranderdeBinnen_(vorige, 3000)) return { ok: true };
+    return { ok: false, fout: "Het paneel deed niets. Klopt de code?" };
+  }
+
+  /** Wacht tot de toestand verandert, of tot de tijd om is. */
+  async veranderdeBinnen_(vorige, ms) {
+    const stap = 150;
+    for (let gewacht = 0; gewacht < ms; gewacht += stap) {
+      await new Promise((r) => setTimeout(r, stap));
+      if (stateOf(this.hass, this.config.entity)?.state !== vorige) return true;
+    }
+    return false;
   }
 
   paint() {
@@ -197,6 +316,23 @@ class AlarmPanelCard extends DacCard {
     this.text(".nm", nameOf(this.hass, c.entity, c.name));
     this.text(".st", nu.tekst);
     top.setAttribute("aria-label", `${this.$(".nm").textContent}, ${nu.tekst}`);
+
+    // De standen die het paneel kent, kunnen veranderen: Alarmo meldt een modus
+    // pas zodra hij aanstaat voor dat gebied. Dan hoort de knop erbij te komen
+    // in plaats van pas na een herlaadbeurt.
+    const standen = this.standen_();
+    const doos = this.$(".standen");
+    const sig = standen.map((s) => s.sleutel).join(",");
+    if (doos.dataset.sig !== sig) {
+      doos.dataset.sig = sig;
+      doos.style.setProperty("--n", String(standen.length));
+      doos.innerHTML = standen
+        .map(
+          (s) => `<button class="stand" type="button" data-stand="${s.sleutel}"
+            aria-pressed="false">${resolve(s.icoon)}<span>${s.label}</span></button>`
+        )
+        .join("");
+    }
 
     // Welke knop staat ingedrukt? Tijdens het inschakelen is dat de stand waar
     // het paneel naartoe gaat, en die weet alleen het paneel zelf niet -- dan
@@ -230,23 +366,40 @@ class AlarmPanelEditor extends DacEditor {
     return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "shield" }];
   }
 
+  defaults() {
+    return { code_arm: "paneel" };
+  }
+
   schema() {
     return [
       { name: "entity", selector: sel.entity("alarm_control_panel") },
       { name: "name", selector: sel.text() },
+      {
+        name: "code_arm",
+        selector: sel.select([
+          { value: "paneel", label: "Volg het paneel (meestal: alleen bij uitschakelen)" },
+          { value: "altijd", label: "Altijd, ook bij inschakelen" },
+          { value: "nooit", label: "Nooit bij inschakelen" },
+        ]),
+      },
     ];
   }
 
   label(s) {
     return (
-      { entity: "Alarmpaneel", name: "Naam (overschrijft die van het paneel)" }[s.name] ??
-      super.label(s)
+      {
+        entity: "Alarmpaneel",
+        name: "Naam (overschrijft die van het paneel)",
+        code_arm: "Code bij inschakelen",
+      }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "entity")
-      return "Drie knoppen: Uitgeschakeld, Afwezig en Thuis. Vraagt je paneel een pincode, dan werkt deze kaart niet — hij stuurt geen code mee.";
+      return "De kaart toont alleen de standen die je paneel aankan: Uitgeschakeld, Afwezig en Thuis.";
+    if (s.name === "code_arm")
+      return "Uitschakelen vraagt altijd om de code, als er een is. De code stel je in bij de integratie (Configureren → Alarmcode), of hij komt uit je alarmsysteem zelf.";
     return undefined;
   }
 }

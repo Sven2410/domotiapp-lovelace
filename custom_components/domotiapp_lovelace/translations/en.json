@@ -12,23 +12,42 @@
   },
   "options": {
     "step": {
-      "init": {
-        "title": "Clean up stored scenes",
-        "description": "Choose the light group whose stored scenes you want to delete. Each entry shows how many lights are configured per scene, so you can see whether there is work in it.\n\nNothing is deleted yet; you will be asked to confirm.",
-        "data": {
-          "groep": "Light group"
-        }
-      },
       "confirm": {
         "title": "Delete scenes",
         "description": "You are about to delete the stored scenes of:\n\n**{groep}**\n\nThis cannot be undone. Afterwards the data can only be recovered from a backup.\n\nThe light group itself and the card remain; the scenes can be set up again.",
         "data": {
           "bevestigd": "Yes, delete the scenes of this light group"
         }
+      },
+      "scenes": {
+        "title": "Clean up stored scenes",
+        "description": "Choose the light group whose stored scenes you want to delete. Each entry shows how many lights are configured per scene, so you can see whether there is work in it.\n\nNothing is deleted yet; you will be asked to confirm.",
+        "data": {
+          "groep": "Light group"
+        }
+      },
+      "init": {
+        "title": "DomotiApp Lovelace",
+        "menu_options": {
+          "alarmcode": "Set alarm code",
+          "scenes": "Clean up stored scenes"
+        }
+      },
+      "alarmcode": {
+        "title": "Alarm code",
+        "description": "The alarm panel card asks for this code before it disarms. Arming needs no code.\n\n{stand}\n\nThe code is stored hashed and cannot be read back — not even by you. If you forget it, simply set a new one here.\n\n**Note:** this locks the card, not Home Assistant. Anyone who can log in to Home Assistant can disarm from the developer tools. If your alarm system has a code of its own, use that one — the card passes it through.",
+        "data": {
+          "code": "New code (at least 4 characters)",
+          "herhaal": "Repeat",
+          "wissen": "Remove the code (the card will stop asking)"
+        }
       }
     },
     "error": {
-      "bevestiging_vereist": "Tick the box to confirm, or close this dialog to delete nothing."
+      "bevestiging_vereist": "Tick the box to confirm, or close this dialog to delete nothing.",
+      "code_leeg": "Enter a code, or tick the box to remove the existing one.",
+      "code_te_kort": "A code shorter than four characters is too easy to guess.",
+      "code_ongelijk": "The two codes do not match. Try again."
     },
     "abort": {
       "niets_opgeslagen": "There is nothing stored to clean up yet.",

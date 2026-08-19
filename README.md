@@ -72,9 +72,28 @@ entiteiten: rook, koolmonoxide, warmte, temperatuur en batterij. Vul in wat je
 melder heeft. Eén regel zegt wat er aan de hand is — rook verslaat een lege
 batterij, een lege batterij verslaat "alles rustig".
 
-De **alarmpaneelkaart** (`custom:domotiapp-alarm-panel-card`) heeft drie knoppen:
-Uitgeschakeld, Afwezig en Thuis. Vraagt je paneel een pincode, dan werkt deze
-kaart niet: hij stuurt er geen mee.
+De **alarmpaneelkaart** (`custom:domotiapp-alarm-panel-card`) toont de standen die
+je paneel aankan: Uitgeschakeld, Afwezig en Thuis.
+
+**Met een code.** Uitschakelen kan om een code vragen, inschakelen niet — dat is
+de standaard. De code komt uit een van twee plekken, en de kaart kiest zelf:
+
+1. **Je alarmsysteem zelf.** Meldt de entiteit `code_format`, dan heeft je paneel
+   een eigen code (Alarmo, de `manual`-integratie, een systeem van een merk). De
+   kaart toont het codepaneel en stuurt de code mee.
+2. **DomotiApp.** Heeft je paneel geen eigen code, stel er dan een in bij de
+   integratie: *Instellingen → Apparaten & diensten → DomotiApp Lovelace →
+   Configureren → Alarmcode*. Die staat gehasht op de server en is daarna niet
+   meer uit te lezen — ook niet door jou.
+
+> **Wat dit wel en niet is.** Het is een slot op de kaart, niet op Home Assistant.
+> Wie kan inloggen, kan het alarm ook via de ontwikkelaarstools uitschakelen. Het
+> houdt tegen dat iemand die langsloopt het alarm van de muur af uitzet. Wil je
+> een slot dat ook tegen een ingelogde gebruiker beschermt, gebruik dan de code
+> van je alarmsysteem zelf.
+
+Na vijf verkeerde pogingen binnen een minuut gaat er een minuut lang niets meer
+doorheen.
 
 De **weersvoorspellingkaart** (`custom:domotiapp-forecast-card`) vraagt alleen de
 weerentiteit. Per dag of per uur; wat je bron niet levert, komt er niet op.
