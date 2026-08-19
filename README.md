@@ -68,6 +68,11 @@ Zit het geluid ergens anders dan het beeld (een tv met een soundbar eronder),
 vul dan **Geluid van** in op de kaart: de volumeregeling gaat dan naar die
 speler.
 
+De mediakaart heeft twee vormen. **Rij** is één rasterrij hoog, om er zes onder
+elkaar te zetten. **Groot** is telefoonformaat — grote hoes, grote knoppen — voor
+waar de kaart alle ruimte krijgt, zoals een bubble-pop-up of een eigen kolom. In
+die vorm is de hoes zelf de knop die start en pauzeert.
+
 > **Eenmalig instellen:** maak in Home Assistant een label **`Music Assistant
 > Media`** aan (*Instellingen → Gebieden, labels en zones → Labels*) en plak het
 > op de Music Assistant-speakers die op de kaart mogen meespelen. Zonder dat

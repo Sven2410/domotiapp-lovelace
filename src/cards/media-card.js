@@ -26,6 +26,17 @@
  * Het icoon en de kaart zijn twee knoppen, zoals overal in de familie: op het
  * icoon tikken start of pauzeert, op de kaart tikken opent de speler.
  *
+ * ## Twee vormen
+ *
+ * **Rij** is de standaard: één rasterrij hoog, bedoeld om er zes onder elkaar te
+ * zetten. **Groot** is telefoonformaat -- grote hoes, grote knoppen -- en is er
+ * voor waar de kaart alle ruimte krijgt: een bubble-pop-up, een kolom van één
+ * kaart, een tablet aan de muur. Dezelfde kaart, dezelfde logica; alleen de
+ * maten verschillen, en dat scheelt een tweede kaart die uit de pas gaat lopen.
+ *
+ * In de grote vorm is de hoes de knop die start en pauzeert. De chip is dan weg:
+ * een icoon van 40 pixels naast een hoes van 260 is ruis.
+ *
  * ## De derde regel
  *
  * Shuffle, herhalen, zoeken en speakers staan apart van vorige/afspelen/volgende.
@@ -166,6 +177,49 @@ class MediaCard extends DacCard {
     }
     .extra .rek { flex: 1 1 auto; }
 
+    /* ================= groot: telefoonformaat ================= */
+    :host([layout="groot"]) .card { padding: 16px; gap: 14px; justify-content: flex-start; }
+
+    .hoesgroot {
+      width: 100%; aspect-ratio: 1 / 1; max-height: min(46vh, 320px);
+      border-radius: var(--dac-radius); overflow: hidden; cursor: pointer;
+      display: grid; place-items: center;
+      background: color-mix(in srgb, var(--tone) 12%, var(--dac-surface));
+      border: 1px solid var(--dac-border);
+      transition: transform 220ms ease, border-color 220ms ease;
+    }
+    .hoesgroot:active { transform: scale(.99); }
+    .hoesgroot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hoesgroot .icon { width: 64px; height: 64px; color: var(--tone); opacity: .8; }
+    :host(:not([layout="groot"])) .hoesgroot { display: none; }
+
+    /* De naam en wat er speelt komen onder de hoes te staan, gecentreerd, en
+       een maat groter -- dit is de kaart waar je vanaf twee meter naar kijkt. */
+    :host([layout="groot"]) .top { flex-direction: column; gap: 2px; text-align: center; }
+    :host([layout="groot"]) .chip { display: none; }
+    :host([layout="groot"]) .txt { width: 100%; align-items: center; }
+    :host([layout="groot"]) .nm { font-size: 18px; font-weight: 600; white-space: normal; }
+    :host([layout="groot"]) .st { font-size: 13.5px; }
+
+    :host([layout="groot"]) .ctl { width: 100%; justify-content: center; gap: 14px; }
+    :host([layout="groot"]) .ctl .k { width: 54px; height: 54px; }
+    :host([layout="groot"]) .ctl .k .icon { width: 24px; height: 24px; }
+    /* Afspelen is de knop waar je met je duim naartoe gaat, dus die is groter. */
+    :host([layout="groot"]) .ctl .k.hoofd { width: 72px; height: 72px; }
+    :host([layout="groot"]) .ctl .k.hoofd .icon { width: 30px; height: 30px; }
+
+    :host([layout="groot"]) .vol { gap: 12px; }
+    :host([layout="groot"]) .vol .k { width: 44px; height: 44px; }
+    :host([layout="groot"]) .vol .k .icon { width: 20px; height: 20px; }
+    :host([layout="groot"]) .vol .slider { height: 44px; }
+    :host([layout="groot"]) .vol .slider .track { border-radius: 12px; }
+    :host([layout="groot"]) .pct { font-size: 13.5px; min-width: 46px; }
+
+    :host([layout="groot"]) .extra { justify-content: center; gap: 14px; padding-top: 2px; }
+    :host([layout="groot"]) .extra .k { width: 46px; height: 46px; }
+    :host([layout="groot"]) .extra .k .icon { width: 20px; height: 20px; }
+    :host([layout="groot"]) .extra .rek { display: none; }
+
     .top.unavailable, .vol.unavailable { opacity: .42; }
     .top.unavailable .k, .top.unavailable .chip,
     .vol.unavailable .slider, .vol.unavailable .k { pointer-events: none; }
@@ -176,6 +230,7 @@ class MediaCard extends DacCard {
       return { ...config, [INCOMPLETE]: "Kies een mediaspeler." };
     }
     return {
+      layout: "row",
       show_artwork: true,
       show_volume: true,
       show_controls: true,
@@ -194,10 +249,16 @@ class MediaCard extends DacCard {
     return this.config.tone ? toneValue(this.config.tone) : TONES.accent;
   }
 
+  groot_() {
+    return this.config.layout === "groot";
+  }
+
   template() {
     if (this.config.bare) this.setAttribute("bare", "");
+    this.setAttribute("layout", this.groot_() ? "groot" : "row");
     return `
       <div class="card surface" style="--tone:${this.tone_()}">
+        ${this.groot_() ? `<div class="hoesgroot" role="button" tabindex="0"></div>` : ""}
         <div class="top" data-on="false">
           <span class="chip" role="button" tabindex="0"></span>
           <span class="txt"><span class="nm"></span><span class="st"></span></span>
@@ -228,6 +289,20 @@ class MediaCard extends DacCard {
     );
     this.on(chip, "click", (e) => e.stopPropagation());
     this.on(chip, "pointerdown", (e) => e.stopPropagation());
+
+    // In de grote vorm is de hoes de knop: tikken start of pauzeert, net als de
+    // chip in de rijvorm. Dat is dezelfde afspraak, alleen groter.
+    const hoes = this.$(".hoesgroot");
+    if (hoes) {
+      this.teardown_.push(
+        bindActions(hoes, {
+          onTap: () => fire("icon_tap_action", defaultTapAction(c.entity)),
+          onHold: () => fire("icon_hold_action", { action: "more-info" }),
+        })
+      );
+      this.on(hoes, "click", (e) => e.stopPropagation());
+      this.on(hoes, "pointerdown", (e) => e.stopPropagation());
+    }
 
     // Eén luisteraar voor alle knoppen samen, want wélke knoppen er staan
     // verandert met de toestand van de speler. Ze per stuk aanhangen zou bij
@@ -329,11 +404,21 @@ class MediaCard extends DacCard {
     }
     chip.style.setProperty("--tone", aan && !pic ? this.tone_() : "var(--dac-ink-3)");
 
+    // De grote hoes: de albumhoes als die er is, anders het icoon op formaat.
+    const hoes = this.$(".hoesgroot");
+    if (hoes && hoes.dataset.icon !== wens) {
+      hoes.dataset.icon = wens;
+      hoes.innerHTML = pic
+        ? `<img src="${pic}" alt="" loading="lazy" />`
+        : resolve(c.icon || mediaIcoon(st), "speaker");
+    }
+
     const naam = nameOf(this.hass, c.entity, c.name);
     const speelt = watSpeeltEr(st, (s) => localizeState(this.hass, s));
     this.text(".nm", naam);
     this.text(".st", speelt);
     chip.setAttribute("aria-label", `${naam} afspelen of pauzeren`);
+    this.$(".hoesgroot")?.setAttribute("aria-label", `${naam} afspelen of pauzeren`);
     top.setAttribute("aria-label", `${naam}, ${speelt}`);
 
     this.paintKnoppen_(st, dood);
@@ -496,13 +581,19 @@ class MediaCard extends DacCard {
   }
 
   getCardSize() {
+    if (this.config?.layout === "groot") return 8;
     const st = stateOf(this.hass, this.config?.entity);
     return 1 + (volumeVoor(st).length ? 1 : 0) + (extraVoor(st).length ? 1 : 0);
   }
 
   getGridOptions() {
-    // "auto": de volumeregel hoort de kaarten eronder op te schuiven in plaats
-    // van een lege regel achter te laten zodra de speler uit gaat.
+    // "auto": de kaart is zo hoog als zijn inhoud. Dat geldt voor allebei de
+    // vormen -- de rijvorm groeit met de volumeregel mee, en de grote vorm met
+    // de hoes. Een vast aantal rasterrijen zou bij de een een strook leeg laten
+    // en bij de ander de hoes afkappen.
+    if (this.config?.layout === "groot") {
+      return { columns: 12, rows: "auto", min_columns: 6, min_rows: 6 };
+    }
     return { columns: 12, rows: "auto", min_columns: 4, min_rows: 1 };
   }
 
@@ -519,6 +610,7 @@ class MediaCard extends DacCard {
 class MediaEditor extends DacEditor {
   defaults() {
     return {
+      layout: "row",
       show_artwork: true,
       show_volume: true,
       show_controls: true,
@@ -539,6 +631,13 @@ class MediaEditor extends DacEditor {
     return [
       { name: "entity", selector: sel.entity("media_player") },
       { name: "name", selector: sel.text() },
+      {
+        name: "layout",
+        selector: sel.select([
+          { value: "row", label: "Rij (één rasterrij hoog)" },
+          { value: "groot", label: "Groot (telefoonformaat, grote knoppen)" },
+        ]),
+      },
       { name: "volume_entity", selector: sel.entity("media_player") },
       { name: "show_artwork", selector: sel.bool() },
       { name: "show_controls", selector: sel.bool() },
@@ -556,6 +655,7 @@ class MediaEditor extends DacEditor {
       {
         entity: "Mediaspeler",
         name: "Naam (overschrijft die van de speler)",
+        layout: "Vorm",
         volume_entity: "Geluid van (optioneel)",
         show_artwork: "Albumhoes tonen",
         show_controls: "Knoppen tonen",
@@ -572,6 +672,8 @@ class MediaEditor extends DacEditor {
   helper(s) {
     if (s.name === "entity")
       return "Welke knoppen er verschijnen leest de kaart uit de speler zelf: wat hij niet kan, komt er niet op.";
+    if (s.name === "layout")
+      return "Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.";
     if (s.name === "volume_entity")
       return "Zit het geluid ergens anders dan het beeld — een tv met een soundbar eronder — kies dan hier de speler die het volume regelt. Leeg laten betekent: de speler zelf.";
     if (s.name === "show_artwork")
