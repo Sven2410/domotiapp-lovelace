@@ -31,7 +31,9 @@
 import { meldAan } from "../registratie.js";
 import { sheet, tokens, baseCss } from "../theme.js";
 import { resolve } from "../icons.js";
-import { bindActions } from "../ha.js";
+import { bindActions, stateOf } from "../ha.js";
+import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
 
 /** Hoe lang we wachten met zoeken nadat er een toets is losgelaten. */
 const TIK_PAUZE_MS = 350;
@@ -104,18 +106,30 @@ const css = /* css */ `
   .rond .icon { width: 18px; height: 18px; }
 
   /* ------------------------------------------------------------ zoeken */
+  /* De zoekbalk is breed en heeft het woord "zoeken" erin -- op een tablet zie
+     je anders een leeg vak en weet je niet of er iets gebeurt. */
   .zoek { flex: 0 0 auto; padding: 14px 16px 8px; display: flex; gap: 10px; align-items: center; }
   .zoek .veld {
-    flex: 1 1 auto; display: flex; align-items: center; gap: 10px;
-    padding: 0 14px; height: 46px; border-radius: var(--dac-radius-pill);
+    flex: 1 1 auto; display: flex; align-items: center; gap: 12px;
+    padding: 0 18px; height: 56px; border-radius: var(--dac-radius-pill);
     background: var(--dac-surface); border: 1px solid var(--dac-border);
   }
+  .zoek .veld .icon { width: 20px; height: 20px; }
+  .zoekknop {
+    flex: 0 0 auto; height: 56px; padding: 0 26px; cursor: pointer;
+    font: inherit; font-size: 15px; font-weight: 600;
+    border-radius: var(--dac-radius-pill); color: var(--dac-accent-hi);
+    background: color-mix(in srgb, var(--dac-accent-hi) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
+    transition: background 160ms ease;
+  }
+  .zoekknop:hover { background: color-mix(in srgb, var(--dac-accent-hi) 28%, transparent); }
   .zoek .veld:focus-within { border-color: var(--dac-accent-hi); }
   .zoek .veld .icon { width: 18px; height: 18px; color: var(--dac-ink-3); flex: 0 0 auto; }
   .zoek input {
     flex: 1 1 auto; min-width: 0; height: 100%;
     background: none; border: 0; outline: none;
-    font: inherit; font-size: 15px; color: var(--dac-ink);
+    font: inherit; font-size: 16px; color: var(--dac-ink);
   }
   .zoek input::placeholder { color: var(--dac-ink-3); }
 
@@ -194,23 +208,44 @@ const css = /* css */ `
     font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
     color: var(--dac-ink-3);
   }
-  .sprekers { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sprekers button {
-    display: flex; align-items: center; gap: 8px; padding: 7px 13px 7px 9px;
-    cursor: pointer; font: inherit; font-size: 12.5px;
-    border-radius: var(--dac-radius-pill);
-    background: var(--dac-surface); border: 1px solid var(--dac-border); color: var(--dac-ink-2);
+  /* Per speaker een regel: aan- of uitzetten links, en zijn eigen volume
+     ernaast. Dat laatste is geen luxe -- in een groep staat de een in de keuken
+     naast je en de ander twee kamers verderop. */
+  .sprekers {
+    display: grid; gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
-  .sprekers button .icon { width: 15px; height: 15px; }
-  /* Meespelen is aan, en dat draagt de accentkleur -- net als een aanstaande
-     schakelaar elders in de familie. */
-  .sprekers button[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--dac-accent-hi) 20%, transparent);
-    border-color: color-mix(in srgb, var(--dac-accent-hi) 48%, transparent);
-    color: var(--dac-ink);
+  .spreker {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 10px 4px 4px; border-radius: var(--dac-radius-pill);
+    background: var(--dac-surface); border: 1px solid var(--dac-border);
   }
-  .sprekers button[data-zelf="true"] { opacity: .75; cursor: default; }
-  .sprekers button[disabled] { opacity: .4; cursor: not-allowed; }
+  .spreker[data-mee="true"] {
+    background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
+    border-color: color-mix(in srgb, var(--dac-accent-hi) 40%, transparent);
+  }
+  .mee {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 0;
+    padding: 6px 10px; cursor: pointer; font: inherit; font-size: 12.5px;
+    background: none; border: 0; border-radius: var(--dac-radius-pill);
+    color: var(--dac-ink-2); text-align: left;
+  }
+  .spreker[data-mee="true"] .mee { color: var(--dac-ink); font-weight: 600; }
+  .mee .icon { width: 15px; height: 15px; flex: 0 0 auto; }
+  .mee span {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+  }
+  .spreker[data-zelf="true"] .mee { cursor: default; }
+  .mee[disabled] { opacity: .4; cursor: not-allowed; }
+
+  ${sliderCss}
+  .spreker .slider { height: 28px; flex: 1 1 60px; min-width: 60px; }
+  .spreker .slider .track { border-radius: 8px; }
+  .spreker .pct {
+    flex: 0 0 auto; min-width: 34px; text-align: right;
+    font-size: 11px; color: var(--dac-ink-2); font-variant-numeric: tabular-nums;
+  }
+  .spreker .stil { flex: 1 1 auto; font-size: 11px; color: var(--dac-ink-3); text-align: right; }
 
   /* ---------------------------------------------------------------- menu */
   .menu {
@@ -312,9 +347,11 @@ class MediaBrowser extends HTMLElement {
         <div class="zoek">
           <label class="veld">
             ${resolve("search")}
-            <input type="search" placeholder="Zoek een nummer, album, artiest of afspeellijst"
-                   autocomplete="off" spellcheck="false" enterkeyhint="search" />
+            <input type="search" placeholder="Zoeken naar een nummer, album, artiest of afspeellijst"
+                   autocomplete="off" spellcheck="false" enterkeyhint="search"
+                   aria-label="Zoeken in Music Assistant" />
           </label>
+          <button class="zoekknop" type="button">Zoeken</button>
         </div>
         <nav class="soorten">
           ${SOORTEN.map(
@@ -339,6 +376,11 @@ class MediaBrowser extends HTMLElement {
     });
 
     const veld = this.$("input");
+    this.aan_(this.$(".zoekknop"), "click", () => {
+      clearTimeout(this.timer_);
+      this.zoek_();
+      veld.focus();
+    });
     this.aan_(veld, "input", () => this.tikPauze_());
     this.aan_(veld, "keydown", (e) => {
       if (e.key === "Enter") {
@@ -359,8 +401,8 @@ class MediaBrowser extends HTMLElement {
     });
 
     this.aan_(this.$(".sprekers"), "click", (e) => {
-      const knop = e.target.closest("[data-speaker]");
-      if (knop) this.wisselSpeaker_(knop.dataset.speaker);
+      const knop = e.target.closest("button[data-speaker]");
+      if (knop && !knop.disabled) this.wisselSpeaker_(knop.dataset.speaker);
     });
 
     this.leegMelding_(
@@ -566,45 +608,124 @@ class MediaBrowser extends HTMLElement {
 
     voet.hidden = false;
     const groep = this.groepNu_();
-    // Alleen opnieuw tekenen als er iets aan verandert. Elke hertekening gooit
-    // de knop weg waar iemand net op stond -- en daarmee de focus.
+
+    // Alleen opnieuw opbouwen als de samenstelling verandert. Elke hertekening
+    // gooit de knop weg waar iemand net op stond -- en daarmee de focus. De
+    // volumes worden daaronder los bijgewerkt, zonder iets te hertekenen.
     const sig = lijst.entities
       .map((s) => `${s.entity_id}:${s.entity_id === this.entity_ || groep.has(s.entity_id)}`)
       .join("|");
-    if (this.sprekerSig_ === sig) return;
-    this.sprekerSig_ = sig;
-    this.$(".sprekers").innerHTML = lijst.entities
-      .map((s) => {
-        const zelf = s.entity_id === this.entity_;
-        const mee = zelf || groep.has(s.entity_id);
-        return `<button type="button" data-speaker="${s.entity_id}" data-zelf="${zelf}"
-                  aria-pressed="${mee}" ${!zelf && !s.can_group ? "disabled" : ""}
-                  title="${zelf ? "Deze kaart" : s.can_group ? "" : "Deze speaker laat zich niet koppelen"}">
-                  ${resolve(mee ? "volume" : "speaker")}${this.veilig_(s.name)}</button>`;
-      })
-      .join("");
+    if (this.sprekerSig_ !== sig) {
+      this.sprekerSig_ = sig;
+      this.schuiven_?.forEach((off) => off());
+      this.schuiven_ = new Map();
+      this.$(".sprekers").innerHTML = lijst.entities
+        .map((s) => {
+          const zelf = s.entity_id === this.entity_;
+          const mee = zelf || groep.has(s.entity_id);
+          const kanVolume = kan(stateOf(this.hass, s.entity_id), KENMERK.VOLUME_SET);
+          return `
+            <div class="spreker" data-speaker="${s.entity_id}" data-zelf="${zelf}" data-mee="${mee}">
+              <button class="mee" type="button" data-speaker="${s.entity_id}"
+                      aria-pressed="${mee}" ${!zelf && !s.can_group ? "disabled" : ""}
+                      title="${zelf ? "Deze speler" : s.can_group ? "Laat deze speaker meespelen" : "Deze speaker laat zich niet koppelen"}">
+                ${resolve(mee ? "volume" : "speaker")}<span>${this.veilig_(s.name)}</span>
+              </button>
+              ${
+                mee && kanVolume
+                  // Zonder eigen klassenaam: `sliderHtml("spreker")` gaf de schuif
+                  // dezelfde klasse als de regel eromheen, en dan erft hij de
+                  // pilvorm én komt hij mee uit `querySelectorAll(".spreker")`.
+                  ? `${sliderHtml()}<span class="pct tnum"></span>`
+                  : mee
+                    ? `<span class="stil">geen volumeregeling</span>`
+                    : ""
+              }
+            </div>`;
+        })
+        .join("");
+
+      // Elke schuif regelt zijn eigen speaker, en schrijft pas bij loslaten.
+      for (const rij of this.shadowRoot.querySelectorAll(".spreker")) {
+        const el = rij.querySelector(".slider");
+        if (!el) continue;
+        const id = rij.dataset.speaker;
+        el.setAttribute("aria-label", `Volume ${rij.querySelector("span")?.textContent ?? ""}`);
+        const off = bindSlider(el, {
+          value: () => volumePct(stateOf(this.hass, id)),
+          onInput: (v) => this.zetSchuif_(el, v),
+          onCommit: (v) =>
+            this.hass.callService(
+              "media_player",
+              "volume_set",
+              { volume_level: v / 100 },
+              { entity_id: id }
+            ),
+        });
+        this.schuiven_.set(id, off);
+      }
+    }
+
+    // De standen bijwerken: dat mag wél elke keer, want er wordt niets vervangen.
+    for (const rij of this.shadowRoot.querySelectorAll(".spreker")) {
+      const id = rij.dataset.speaker;
+      const el = rij.querySelector(".slider");
+      if (!el || el.classList.contains("dragging")) continue;
+      const st = stateOf(this.hass, id);
+      const pct = volumePct(st);
+      this.zetSchuif_(el, pct, isGedempt(st));
+    }
+  }
+
+  zetSchuif_(el, pct, gedempt = false) {
+    el.style.setProperty("--v", `${pct}%`);
+    el.setAttribute("aria-valuenow", String(pct));
+    const label = el.parentElement.querySelector(".pct");
+    if (label) label.textContent = gedempt ? "gedempt" : `${pct}%`;
   }
 
   wisselSpeaker_(entityId) {
     if (entityId === this.entity_) return;
     const groep = this.groepNu_();
+
     if (groep.has(entityId)) {
       // Loskoppelen doe je bij de speaker zelf: hij verlaat de groep.
       this.hass.callService("media_player", "unjoin", {}, { entity_id: entityId });
-    } else {
-      // Koppelen doe je bij de speler van deze kaart: die wordt de baas van de
-      // groep, en dat is ook de speler waar de muziek al op staat.
-      this.hass.callService(
-        "media_player",
-        "join",
-        { group_members: [entityId] },
-        { entity_id: this.entity_ }
-      );
+      return;
     }
+
+    // Koppelen doe je bij de speler van deze kaart: die wordt de baas van de
+    // groep, en dat is ook de speler waar de muziek al op staat.
+    this.hass.callService(
+      "media_player",
+      "join",
+      { group_members: [entityId] },
+      { entity_id: this.entity_ }
+    );
+
+    // EN METEEN HET VOLUME GELIJKZETTEN.
+    //
+    // Dit is geen nettigheid maar een veiligheid. Een speaker die uit een
+    // vorige sessie op vol volume staat, begint bij het koppelen op vol volume
+    // -- in een slaapkamer, om elf uur 's avonds, en een kleine speaker kan er
+    // stuk van gaan. Wat je hoort hoort te zijn wat de schuif aangeeft, dus
+    // krijgt de nieuwe speaker het volume van de speler waar hij bij komt.
+    const nu = volumePct(stateOf(this.hass, this.entity_));
+    const erbij = stateOf(this.hass, entityId);
+    if (!kan(erbij, KENMERK.VOLUME_SET)) return;
+    if (volumePct(erbij) === nu) return;
+    this.hass.callService(
+      "media_player",
+      "volume_set",
+      { volume_level: nu / 100 },
+      { entity_id: entityId }
+    );
   }
 
   disconnectedCallback() {
     clearTimeout(this.timer_);
+    this.schuiven_?.forEach((off) => off());
+    this.schuiven_ = null;
     if (this.escape_) document.removeEventListener("keydown", this.escape_, true);
     this.trefferBinding_?.();
     for (const fn of this.opruimen_) fn();

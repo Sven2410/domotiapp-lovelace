@@ -195,13 +195,18 @@ export const icons = {
     <path d="M16.6 16.6H7.4a2.6 2.6 0 0 1-2.6-2.6v-1.2"/>
     <path d="m14.4 18.8 2.2-2.2-2.2-2.2"/>`),
 
-  /* Herhalen van één nummer: dezelfde lus met een 1 erin, want het verschil
-     moet ook op 17px te zien zijn zonder de lus zwaarder te maken. */
+  /* Herhalen van één nummer: dezelfde lus, met een 1 die je ook op 16px als een
+     1 leest. De eerste poging was een kaal streepje in het midden, en dat werd
+     op de kaart aangezien voor een lus met een streep erdoor -- "wat doet dat?"
+     is dan een terechte vraag. Nu staat de 1 in een uitgespaard vlak, met een
+     schuine aanzet en een voetje, zoals een cijfer hoort. */
   repeatOne: draw(`<path d="M7.4 7.4h9.2a2.6 2.6 0 0 1 2.6 2.6v1.2"/>
     <path d="m9.6 5.2-2.2 2.2 2.2 2.2"/>
     <path d="M16.6 16.6H7.4a2.6 2.6 0 0 1-2.6-2.6v-1.2"/>
     <path d="m14.4 18.8 2.2-2.2-2.2-2.2"/>
-    <path d="M10.9 10.9 12.4 9.9v4.4"/>`),
+    <rect x="9.2" y="8.5" width="5.6" height="7" rx="1.4" fill="var(--icoon-vlak, #12120f)" stroke="none"/>
+    <path d="M10.9 10.6 12.3 9.5v5"/>
+    <path d="M11 14.5h2.6"/>`),
 
   /* Speakers koppelen: één speaker met een tweede die half achter hem staat. */
   speakers: draw(`<rect x="3.6" y="3.8" width="8.8" height="16.4" rx="2"/>

@@ -73,6 +73,16 @@ export function knoppenVoor(st) {
 }
 
 /**
+ * Op welke speler het volume slaat.
+ *
+ * Meestal de speler zelf. Maar bij een tv met een soundbar eronder zit het
+ * geluid niet in de tv: de tv speelt, de soundbar bepaalt hoe hard. Dan vul je
+ * die soundbar in als geluidsentiteit, en gaat alles op de volumeregel -- de
+ * schuif, dempen, de stapjes -- naar hem toe in plaats van naar de speler.
+ */
+export const geluidsSpeler = (config) => config?.volume_entity || config?.entity;
+
+/**
  * Wat er op de volumeregel hoort te staan.
  *
  * Een schuif als de speler een niveau aanneemt, anders twee knoppen als hij
@@ -139,10 +149,10 @@ export function extraVoor(st, { zoeken = true } = {}) {
   const uit = [];
   if (kan(st, KENMERK.SHUFFLE_SET)) uit.push("shuffle");
   if (kan(st, KENMERK.REPEAT_SET)) uit.push("repeat");
+  // Eén knop voor Music Assistant, niet twee. Het groeperen zat achter een
+  // eigen icoon naast de zoekknop, en dat bleek dubbelop: het zoekscherm toont
+  // de speakers onderin, dus wie op zoeken tikt komt ze vanzelf tegen.
   if (zoeken && isMaSpeler(st)) uit.push("search");
-  // Groeperen vraagt twee dingen: de speler moet het kunnen, en het moet een
-  // MA-speler zijn -- de speakerlijst komt uit het MA-label.
-  if (zoeken && isMaSpeler(st) && kan(st, KENMERK.GROUPING)) uit.push("speakers");
   return uit;
 }
 

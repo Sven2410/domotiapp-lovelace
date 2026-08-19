@@ -57,8 +57,16 @@ de speler zelf: wat een speler niet kan, komt niet op de kaart.
 
 Op de mediakaart zit een **zoekknop** die Music Assistant over het hele scherm
 opent: zoeken in je hele bibliotheek en al je providers, tikken speelt meteen af,
-vasthouden geeft de keuze tussen nu, hierna en achteraan in de wachtrij. Onderin
-staan je speakers om samen te laten spelen.
+vasthouden geeft de keuze tussen nu, hierna en achteraan in de wachtrij.
+
+Onderin dat scherm staat een regel per speaker. Aantikken laat hem meespelen, en
+wie meespeelt krijgt daar **zijn eigen volumeschuif** naast. Een speaker die bij
+de groep komt neemt meteen het volume over van de speler waar hij bij komt —
+anders begint een speaker die nog op vol volume stond daar ook op.
+
+Zit het geluid ergens anders dan het beeld (een tv met een soundbar eronder),
+vul dan **Geluid van** in op de kaart: de volumeregeling gaat dan naar die
+speler.
 
 > **Eenmalig instellen:** maak in Home Assistant een label **`Music Assistant
 > Media`** aan (*Instellingen → Gebieden, labels en zones → Labels*) en plak het
