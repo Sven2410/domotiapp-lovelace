@@ -650,6 +650,12 @@ const COLUMNS = [
     { type: "custom:domotiapp-media-card", entity: "media_player.tv_kamer",
       volume_entity: "media_player.soundbar", tone: "solar" },
   ]],
+  ["Mediaspeler groot", [
+    // Telefoonformaat: voor in een bubble-pop-up of een eigen kolom.
+    { type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken", layout: "groot" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.ma_keuken", layout: "groot",
+      tone: "teal", name: "Keuken groot" },
+  ]],
   ["Wekkers", [
     { type: "custom:domotiapp-alarm-card", person: "person.sven" },
   ]],
