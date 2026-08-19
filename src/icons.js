@@ -166,6 +166,27 @@ export const icons = {
     <circle cx="15.8" cy="14.1" r="2.9"/>
     <path d="M6.2 12.2h4.4M6.2 16h4.4"/>`),
 
+  /* ---- media. Getekend op de maat waarop ze werkelijk staan: 17px in een
+     knop van 34. Een pauzeteken met drie strepen valt daar uit elkaar. ---- */
+  play: draw(`<path d="M8.6 5.8 18.4 12l-9.8 6.2z"/>`),
+
+  pause: draw(`<path d="M9.6 5.8v12.4M14.4 5.8v12.4"/>`),
+
+  next: draw(`<path d="m6.4 6.4 8.2 5.6-8.2 5.6z"/><path d="M17.6 6.2v11.6"/>`),
+
+  prev: draw(`<path d="m17.6 6.4-8.2 5.6 8.2 5.6z"/><path d="M6.4 6.2v11.6"/>`),
+
+  volume: draw(`<path d="M4.4 9.4h3.2L12 5.9v12.2L7.6 14.6H4.4z"/>
+    <path d="M15.4 9.6a3.4 3.4 0 0 1 0 4.8"/>
+    <path d="M17.9 7.1a7 7 0 0 1 0 9.8"/>`),
+
+  volumeMute: draw(`<path d="M4.4 9.4h3.2L12 5.9v12.2L7.6 14.6H4.4z"/>
+    <path d="m15.8 9.8 4.4 4.4M20.2 9.8l-4.4 4.4"/>`),
+
+  music: draw(`<path d="M9.6 17.4V6.4l8.2-1.6v11"/>
+    <ellipse cx="7.6" cy="17.6" rx="2.2" ry="1.9"/>
+    <ellipse cx="15.8" cy="15.8" rx="2.2" ry="1.9"/>`),
+
   leaf: draw(`<path d="M4.6 19.6c-1.4-7.6 3.4-14 14.9-15.2 1.1 8.4-3.3 15.3-14.9 15.2Z"/>
     <path d="M4.2 20.4c2.6-4.6 6-7.6 10.4-9.6"/>`),
 
@@ -355,6 +376,12 @@ export function defaultIcon(entityId, attrs = {}) {
       return "star";
     case "weather":
       return "cloudSun";
+    case "media_player":
+      // Een tv is geen speaker. Wat er hangt is uit de entiteit zelf te lezen,
+      // dus dat hoeft niemand in te stellen.
+      if (attrs.device_class === "tv") return "tv";
+      if (attrs.device_class === "receiver") return "radio";
+      return "speaker";
     default:
       return "question";
   }

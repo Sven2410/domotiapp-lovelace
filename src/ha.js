@@ -112,6 +112,33 @@ export function isOn(st) {
 }
 
 /**
+ * Kan hier een schakelaar op?
+ *
+ * Een schuifschakelaar belooft twee standen die blijven staan. Dat klopt voor
+ * een lamp, een stopcontact of een automatisering; niet voor een scene, een
+ * script of een sensor -- die hebben geen "uit" om naartoe te schuiven. Een
+ * schakelaar op een sensor is geen instelling die iemand bewust kiest maar een
+ * kaart die liegt, dus de kaarten laten hem daar weg, ook als de config erom
+ * vraagt.
+ *
+ * `media_player` staat er niet bij: die heeft een eigen kaart met een aan/uit
+ * die het apparaat zelf aangeeft via `supported_features`.
+ */
+const SCHAKELBAAR = new Set([
+  "light",
+  "switch",
+  "fan",
+  "input_boolean",
+  "automation",
+  "siren",
+  "humidifier",
+  "remote",
+  "water_heater",
+]);
+
+export const kanSchakelen = (entityId) => SCHAKELBAAR.has(domainOf(entityId));
+
+/**
  * Has anything this card draws actually changed?
  *
  * Home Assistant hands a card a fresh hass object on every state change in the

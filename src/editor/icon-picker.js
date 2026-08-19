@@ -24,6 +24,7 @@ const GROUPS = [
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
   ["Personen", ["person", "people", "away"]],
   ["Apparaten", ["tv", "speaker", "camera", "car", "washer", "dishwasher", "printer", "fan", "airco", "radio"]],
+  ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "music", "speaker", "tv", "radio"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
   ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "warning", "check", "close", "clock", "gaugeArrow"]],

@@ -20,10 +20,25 @@
  * tikken schakelt, op de regel tikken doet wat jij instelt -- meestal openen of
  * navigeren. Dat is het verschil tussen een lijst die je kunt bedienen en een
  * lijst waar je alleen naar kunt kijken.
+ *
+ * TWEE MANIEREN OM DE TOESTAND TE TONEN
+ *
+ * Standaard staat de toestand als tweede regel onder de naam. Zet je `Status
+ * rechts` aan, dan staat hij rechts op de regel in plaats van eronder -- de
+ * vorm die Home Assistants eigen entiteitenkaart heeft, en die in een kolom van
+ * één entiteit per regel rustiger leest omdat alle waarden onder elkaar
+ * uitkomen.
+ *
+ * En een regel die een lamp of een stopcontact aanstuurt kan in plaats van een
+ * tekst een schuifschakelaar krijgen. Die vertelt hetzelfde -- aan of uit --
+ * maar je kunt hem ook bedienen, en dat scheelt de omweg via het icoon. Waar
+ * een schakelaar staat, staat geen statustekst: dat zou twee keer hetzelfde
+ * zeggen.
  */
 
 import { DacCard, registerCard, registerEditor, rowsFor, toneValue, TONES, INCOMPLETE } from "../base.js";
 import { resolve, defaultIcon } from "../icons.js";
+import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import "../editor/entities-editor.js";
 import {
   attrsOf,
@@ -33,6 +48,7 @@ import {
   isDead,
   isOn,
   isStateless,
+  kanSchakelen,
   lightTone,
   localizeState,
   nameOf,
@@ -113,6 +129,20 @@ class EntitiesCard extends DacCard {
     }
     .st:empty { display: none; }
 
+    /* Rechts uitgelijnd: de naam neemt de ruimte, de waarde staat tegen de rand
+       aan. Zo komen de waarden van een lijst onder elkaar uit in plaats van
+       ergens midden in de regel te eindigen. */
+    .txt { flex: 1 1 auto; }
+    .st.rechts {
+      flex: 0 0 auto; margin-left: auto; padding-left: 10px;
+      max-width: 55%; text-align: right; font-size: 12px;
+    }
+
+    ${toggleCss}
+    .toggle { width: 42px; height: 24px; }
+    .toggle .knob { width: 18px; height: 18px; }
+    .toggle[aria-checked="true"] .knob { --knob: 20px; }
+
     .it.unavailable { opacity: .42; pointer-events: none; }
 
     /* Onder de 260px passen twee namen niet meer naast elkaar zonder te
@@ -127,7 +157,7 @@ class EntitiesCard extends DacCard {
     if (!rows.some((r) => r.items.length)) {
       return { ...config, [INCOMPLETE]: "Voeg een rij toe en kies daar entiteiten in." };
     }
-    return { show_state: true, ...config, rows };
+    return { show_state: true, state_position: "below", ...config, rows };
   }
 
   watched() {
@@ -146,10 +176,22 @@ class EntitiesCard extends DacCard {
     return lightTone(stateOf(this.hass, item.entity)) ?? TONES.lit;
   }
 
+  /**
+   * Hoort er een schakelaar op deze regel?
+   *
+   * Alleen als jij het vraagt, en alleen op iets met twee standen die blijven
+   * staan -- zie `kanSchakelen` in ha.js. Een schakelaar op een sensor belooft
+   * een "uit" die niet bestaat.
+   */
+  metSchakelaar_(item) {
+    return Boolean(item.toggle) && kanSchakelen(item.entity);
+  }
+
   template() {
     const c = this.config;
     if (c.bare) this.setAttribute("bare", "");
     this.style.containerType = "inline-size";
+    const rechts = c.state_position === "right";
 
     const rows = c.rows
       .map(
@@ -157,10 +199,12 @@ class EntitiesCard extends DacCard {
       <div class="row" style="--cols:${row.columns}">
         ${row.items
           .map(
-            (_, i) => `
+            (item, i) => `
           <div class="it" role="button" tabindex="0" data-r="${r}" data-i="${i}">
             <span class="chip" role="button" tabindex="0"></span>
-            <span class="txt"><span class="nm"></span><span class="st"></span></span>
+            <span class="txt"><span class="nm"></span>${rechts ? "" : `<span class="st"></span>`}</span>
+            ${rechts ? `<span class="st rechts"></span>` : ""}
+            ${this.metSchakelaar_(item) ? toggleHtml({ label: "Aan of uit" }) : ""}
           </div>`
           )
           .join("")}
@@ -197,6 +241,19 @@ class EntitiesCard extends DacCard {
       // Anders telt een tik op het icoon ook als een tik op de regel.
       this.on(chip, "click", (e) => e.stopPropagation());
       this.on(chip, "pointerdown", (e) => e.stopPropagation());
+
+      const schakelaar = el.querySelector(".toggle");
+      if (!schakelaar) return;
+      this.teardown_.push(
+        bindToggle(schakelaar, {
+          value: () => isOn(stateOf(this.hass, item.entity)),
+          set: (aan) =>
+            this.hass.callService("homeassistant", aan ? "turn_on" : "turn_off", {
+              entity_id: item.entity,
+            }),
+          disabled: () => isDead(stateOf(this.hass, item.entity)),
+        })
+      );
     });
   }
 
@@ -234,9 +291,19 @@ class EntitiesCard extends DacCard {
       this.text(el.querySelector(".nm"), name);
       chip.setAttribute("aria-label", `${name} schakelen`);
 
+      const schakelaar = el.querySelector(".toggle");
+      if (schakelaar) {
+        setToggle(schakelaar, on);
+        schakelaar.style.setProperty("--tone", tone);
+        schakelaar.setAttribute("aria-label", `${name} aan of uit`);
+      }
+
       const stEl = el.querySelector(".st");
       const toon = item.show_state ?? this.config.show_state;
-      if (toon === false) {
+      // Waar een schakelaar staat zegt de stand al wat de tekst zou zeggen.
+      if (schakelaar) {
+        stEl.textContent = "";
+      } else if (toon === false) {
         stEl.textContent = "";
       } else if (dead) {
         stEl.textContent = "Niet bereikbaar";

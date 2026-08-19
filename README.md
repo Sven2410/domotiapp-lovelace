@@ -2,8 +2,8 @@
 
 De kaartenfamilie van DomotiApp, geleverd als integratie. Eén installatie, één
 bundel, één versienummer — de knop-, licht-, klimaat-, rolluik-, entiteiten-,
-personen-, afval-, scheidings- en headerkaart, plus de **scenekaart** met zijn
-opslag per lichtgroep.
+media-, personen-, afval-, scheidings- en headerkaart, plus de **scenekaart** met
+zijn opslag per lichtgroep en de **wekkerkaart**.
 
 ## Waarom een integratie en geen losse kaartresource
 
@@ -49,6 +49,16 @@ Alle kaarten heten nog `custom:domotiapp-*-card`, zoals ze heetten. De scenekaar
 is `custom:domotiapp-scene-card` en verwacht een **lichtgroep-helper** in het
 `light`-domein: **Instellingen → Apparaten & diensten → Helpers → Helper
 aanmaken → Groep → Lichtgroep**.
+
+De **mediaspelerkaart** (`custom:domotiapp-media-card`) toont wat er speelt, de
+knoppen die de speler aankan en het volume. Welke knoppen dat zijn leest hij uit
+de speler zelf: wat een speler niet kan, komt niet op de kaart.
+
+De **knopkaart** en de **entiteitenkaart** kunnen een schuifschakelaar tonen
+(instelling *Schakelaar tonen*), voor wat twee standen heeft die blijven staan —
+een lamp, een stopcontact, een schakelaar. Op een scene of een script verschijnt
+hij niet: daar valt niets aan of uit te zetten. Op de entiteitenkaart kun je
+daarnaast kiezen of de status onder de naam staat of rechts op de regel.
 
 De scenes horen bij die lichtgroep, niet bij het dashboard. Zet je de kaart
 ergens anders neer, dan gaan ze mee. Verwijder je een kamer, dan blijven ze

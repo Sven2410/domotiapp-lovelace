@@ -1,4 +1,4 @@
-# CLAUDE.md — DomotiApp Scene
+# CLAUDE.md — DomotiApp Lovelace
 
 Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 `SPEC.md` gaat over **wat** we bouwen en is bindend.
@@ -41,8 +41,10 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
   leest het rapport uit de repo.
 - **Kleuren lopen via HA-themavariabelen, nooit hardcoded.** Uitzondering:
   iconen mogen vaste kleuren en gradients dragen.
-- **Tags en releases maakt de eigenaar zelf, zonder `v`-prefix.** Claude Code
-  maakt ze nooit.
+- **Tags en releases zonder `v`-prefix.** Sinds 19 augustus 2026 mag Claude Code
+  ze zelf zetten: versie in `manifest.json` omhoog, bundel opnieuw bouwen en
+  meecommitten, tag, `gh release create` met de wijzigingen in gewone taal.
+  Mergen blijft de eigenaar zelf doen.
 - **`SPEC.md` is bindend.** Wijkt een opdracht ervan af, dan wint `SPEC.md` en
   meld je dat. Blijkt `SPEC.md` ergens niet uitvoerbaar of feitelijk onjuist,
   dan **wijzig je hem niet zelf**: melden en stoppen. (Uitzondering: een ronde
@@ -53,9 +55,9 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 
 ## Omgeving
 
-- Windows 11, PowerShell, `C:\dev\domotiapp-scene`.
+- Windows 11, PowerShell, `C:\dev\domotiapp-lovelace`.
 - **Testinstance:** container `ha-scene`, compose-project
-  `domotiapp-scene-dev`, **poort 8127**, image gepind op `2026.8`.
+  `domotiapp-lovelace-dev`, **poort 8127**, image gepind op `2026.8`.
   Config in `.ha-dev-config/` (gitignored).
 - **De poorten 8123, 8124, 8125 en 8126 zijn bezet door andere projecten en
   mogen nooit gebruikt worden.**
@@ -102,7 +104,7 @@ npm test                   # JS-unittests (node --test), geen jsdom
 Draai ze in Linux:
 
 ```bash
-MSYS_NO_PATHCONV=1 docker run --rm -v "C:/dev/domotiapp-scene:/app" -w /app \
+MSYS_NO_PATHCONV=1 docker run --rm -v "C:/dev/domotiapp-lovelace:/app" -w /app \
   python:3.14-slim sh -c "pip install -q -r requirements-test.txt && python -m pytest -q"
 ```
 
