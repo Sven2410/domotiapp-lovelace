@@ -344,6 +344,8 @@ class EntitiesEditor extends HTMLElement {
     wrap.className = "dac-ed";
     this.append(style, wrap);
 
+    wrap.appendChild(this.kaartBlok_());
+
     this.rows_.forEach((row, r) => wrap.appendChild(this.rijBlok_(row, r)));
 
     if (!this.rows_.length) {
@@ -384,6 +386,46 @@ class EntitiesEditor extends HTMLElement {
       onClick(e);
     });
     return el;
+  }
+
+  /* ------------------------------------------------- kaartbrede instelling */
+
+  /**
+   * Wat voor de hele kaart geldt, en dus niet per rij of per entiteit.
+   *
+   * Alleen de plaats van de toestand staat hier. Alles wat over één entiteit
+   * gaat hoort bij die entiteit -- dat is de hele reden dat deze editor uit
+   * blokken bestaat in plaats van uit twee lange lijsten.
+   */
+  kaartBlok_() {
+    const form = document.createElement("ha-form");
+    form.hass = this.hass_;
+    form.schema = [
+      {
+        name: "state_position",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "below", label: "Onder de naam" },
+              { value: "right", label: "Rechts op de regel" },
+            ],
+          },
+        },
+      },
+    ];
+    form.computeLabel = () => "Waar de status staat";
+    form.computeHelper = () =>
+      "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar tonen geen tekst.";
+    form.data = { state_position: this.rest_.state_position ?? "below" };
+    form.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      const v = e.detail.value?.state_position;
+      if (v === "right") this.rest_.state_position = "right";
+      else delete this.rest_.state_position;
+      this.emit_();
+    });
+    return form;
   }
 
   /* --------------------------------------------------------------- rij */
@@ -554,6 +596,7 @@ class EntitiesEditor extends HTMLElement {
     rest.hass = this.hass_;
     rest.schema = [
       { name: "name", selector: { text: {} } },
+      { name: "toggle", selector: { boolean: {} } },
       { name: "show_state", selector: { boolean: {} } },
       { name: "icon_tap_action", selector: { ui_action: { default_action: "toggle" } } },
       { name: "icon_hold_action", selector: { ui_action: { default_action: "more-info" } } },
@@ -563,21 +606,28 @@ class EntitiesEditor extends HTMLElement {
     rest.computeLabel = (s) =>
       ({
         name: "Naam (overschrijft die van de entiteit)",
+        toggle: "Schakelaar tonen",
         show_state: "Status tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
         tap_action: "Tikken op de regel",
         hold_action: "Vasthouden op de regel",
       })[s.name] ?? s.name;
-    rest.computeHelper = (s) =>
-      s.name === "icon_tap_action"
-        ? "Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert."
-        : undefined;
+    rest.computeHelper = (s) => {
+      if (s.name === "icon_tap_action")
+        return "Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert.";
+      if (s.name === "toggle")
+        return "Een schuifschakelaar rechts op de regel, in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.";
+      return undefined;
+    };
     rest.addEventListener("value-changed", (e) => {
       e.stopPropagation();
       const v = e.detail.value;
       if (v.name) item.name = v.name;
       else delete item.name;
+      // `true` is hier de uitzondering, dus alleen die blijft staan.
+      if (v.toggle === true) item.toggle = true;
+      else delete item.toggle;
       // `false` moet blijven staan, alleen de standaard mag weg.
       if (v.show_state === false) item.show_state = false;
       else delete item.show_state;
@@ -606,6 +656,7 @@ class EntitiesEditor extends HTMLElement {
     kleur.value = item.tone ?? "";
     rest.data = {
       name: item.name ?? "",
+      toggle: item.toggle ?? false,
       show_state: item.show_state ?? true,
       icon_tap_action: item.icon_tap_action,
       icon_hold_action: item.icon_hold_action,

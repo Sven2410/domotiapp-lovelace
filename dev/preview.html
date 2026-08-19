@@ -161,6 +161,40 @@ const states = Object.fromEntries([
   S("sensor.mijnafvalwijzer_papier", dPlus(16), { friendly_name: "Afvalbeheer Mijnafvalwijzer Papier" }),
   S("sensor.mijnafvalwijzer_restafval", dPlus(23), { friendly_name: "Afvalbeheer Mijnafvalwijzer Restafval" }),
 
+  // Vier mediaspelers die samen dekken wat een speler kan zijn. De maskers zijn
+  // die van Home Assistant zelf; de kaart hoort er verschillende knoppen bij te
+  // tekenen zonder dat er iets ingesteld wordt.
+  S("media_player.sonos_keuken", "playing", {
+    friendly_name: "Sonos keuken",
+    // pauze|volume|dempen|vorige|volgende|aan|uit|spelen|stop|shuffle|repeat
+    supported_features: 1 | 4 | 8 | 16 | 32 | 128 | 256 | 16384 | 4096 | 32768 | 262144,
+    media_title: "Teardrop", media_artist: "Massive Attack",
+    volume_level: 0.34,
+    entity_picture: "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 fill=%27%23121210%27/%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%2712%27 fill=%27%23222%27 stroke=%27%23999%27/%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%273%27 fill=%27%23999%27/%3E%3C/svg%3E",
+  }),
+  S("media_player.tv_woonkamer", "off", {
+    friendly_name: "Tv woonkamer", device_class: "tv",
+    supported_features: 128 | 256 | 1024 | 8,   // aan|uit|volumestapjes|dempen
+  }),
+  S("media_player.radio_keuken", "playing", {
+    friendly_name: "Radio keuken",
+    supported_features: 4 | 8 | 4096,           // volume|dempen|stop, geen pauze
+    media_title: "NPO Radio 2", app_name: "TuneIn",
+    volume_level: 0.62, is_volume_muted: true,
+  }),
+  S("media_player.chromecast", "idle", {
+    friendly_name: "Chromecast slaapkamer",
+    supported_features: 1 | 4 | 8 | 32 | 512 | 16384,  // geen vorige, geen aan/uit
+    app_name: "Netflix", volume_level: 0.5,
+  }),
+
+  S("switch.tuinpomp", "off", { friendly_name: "Druppelslang achtertuin" }),
+  S("input_boolean.automatische_beregening", "on", { friendly_name: "Automatische beregening" }),
+  S("input_boolean.handmatige_beregening", "off", { friendly_name: "Handmatige beregening" }),
+  S("sensor.volgende_cyclus", "Over 10 uur", { friendly_name: "Volgende cyclus" }),
+  S("sensor.beregening", "Niet actief", { friendly_name: "Beregening" }),
+  S("sensor.beregening_tijd", "0", { friendly_name: "Beregening tijd", unit_of_measurement: "min" }),
+
   S("input_boolean.slapen", "off", { friendly_name: "Slapen" }),
   S("scene.radio", "unknown", { friendly_name: "Radio" }),
   S("alarm_control_panel.alarm", "disarmed", { friendly_name: "Alarm" }),
@@ -269,6 +303,20 @@ const hass = {
         next.state = "on";
         next.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
       }
+      // De mediaspeler antwoordt ook, anders lijkt elke knop dood.
+      if (service === "media_play") next.state = "playing";
+      if (service === "media_pause") next.state = "paused";
+      if (service === "media_stop") next.state = "idle";
+      if (service === "volume_set") next.attributes.volume_level = data.volume_level;
+      if (service === "volume_mute") next.attributes.is_volume_muted = data.is_volume_muted;
+      if (service === "volume_up") {
+        next.attributes.volume_level = Math.min(1, (st.attributes.volume_level ?? 0) + 0.05);
+      }
+      if (service === "volume_down") {
+        next.attributes.volume_level = Math.max(0, (st.attributes.volume_level ?? 0) - 0.05);
+      }
+      if (service === "media_next_track") next.attributes.media_title = "Het nummer hierna";
+      if (service === "media_previous_track") next.attributes.media_title = "Het nummer hiervoor";
       if (service === "open_cover") next.state = "open";
       if (service === "close_cover") next.state = "closed";
       if (service === "set_cover_position") next.attributes.current_position = data.position;
@@ -370,6 +418,53 @@ const COLUMNS = [
       { entity: "cover.garagedeur", name: "Oude vorm" },
       { entity: "alarm_control_panel.alarm", name: "blijft werken" } ] },
   ]],
+  ["Mediaspelers", [
+    // Elke speler laat andere knoppen zien, en niemand heeft iets ingesteld.
+    { type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.radio_keuken", tone: "pink" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.tv_woonkamer", tone: "house" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.chromecast" },
+    // Zonder hoes, met een eigen icoon: het gekozen icoon hoort te winnen.
+    { type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken",
+      icon: "music", show_artwork: false, name: "Zonder hoes" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.bestaat_niet", name: "Weg" },
+  ]],
+  ["Schakelaars", [
+    // De vorm uit de schermafdruk: status rechts, een schakelaar waar het kan,
+    // tekst waar het niet kan.
+    { type: "custom:domotiapp-entities-card", state_position: "right", rows: [
+      { columns: 1, items: [
+        { entity: "input_boolean.automatische_beregening", name: "Automatische beregening",
+          icon: "cog", toggle: true } ] },
+      { columns: 1, items: [
+        { entity: "input_boolean.handmatige_beregening", name: "Handmatige beregening",
+          icon: "drop", toggle: true } ] },
+      { columns: 1, items: [
+        { entity: "sensor.volgende_cyclus", name: "Volgende cyclus", icon: "clock" } ] },
+      { columns: 1, items: [
+        { entity: "sensor.beregening", name: "Beregening", icon: "stop" } ] },
+      { columns: 1, items: [
+        { entity: "sensor.beregening_tijd", name: "Beregening tijd", icon: "gaugeArrow" } ] },
+    ] },
+    // Dezelfde schakelaars met de toestand onder de naam, en naast elkaar in
+    // twee kolommen -- daar moeten ze ook passen.
+    { type: "custom:domotiapp-entities-card", rows: [
+      { columns: 2, items: [
+        { entity: "light.spots_sven", name: "Spots", icon: "bulb", toggle: true },
+        { entity: "switch.tuinpomp", name: "Pomp", icon: "drop", toggle: true } ] },
+      { columns: 1, items: [
+        // Een scene kan geen schakelaar dragen: die hoort er niet te komen.
+        { entity: "scene.radio", name: "Radio (geen schakelaar)", icon: "radio", toggle: true } ] },
+    ] },
+    // De knopkaart met een schakelaar.
+    { type: "custom:domotiapp-button-card", entity: "switch.tuinpomp", icon: "drop",
+      tone: "water", toggle: true },
+    { type: "custom:domotiapp-button-card", entity: "input_boolean.slapen", icon: "moon",
+      tone: "house", toggle: true },
+    // En een scene met toggle aan: die hoort geen schakelaar te krijgen.
+    { type: "custom:domotiapp-button-card", entity: "scene.radio", icon: "radio",
+      tone: "pink", toggle: true },
+  ]],
   ["Wekkers", [
     { type: "custom:domotiapp-alarm-card", person: "person.sven" },
   ]],
@@ -433,6 +528,18 @@ for (const t of [
     tap_action: { action: "navigate", navigation_path: "#x" } }));
 }
 cols.lastElementChild.appendChild(tiles);
+
+// Een tegel en een compacte pil met schakelaar: op een tegel staat hij ergens
+// anders dan op een rij, en hij hoort er even zwaar te staan.
+const tegelSchakel = document.createElement("div");
+tegelSchakel.className = "grid2";
+tegelSchakel.append(
+  make({ type: "custom:domotiapp-button-card", layout: "tile", entity: "switch.tuinpomp",
+         name: "Pomp", icon: "drop", tone: "water", toggle: true }),
+  make({ type: "custom:domotiapp-button-card", layout: "compact", entity: "input_boolean.slapen",
+         name: "Slapen", icon: "moon", tone: "house", toggle: true })
+);
+cols.lastElementChild.appendChild(tegelSchakel);
 
 const compact = document.createElement("div");
 compact.className = "grid2";
@@ -507,7 +614,14 @@ cols.append(
   editor("Editor — knopkaart", "domotiapp-button-card-editor", {
     type: "custom:domotiapp-button-card", entity: "light.spots_sven",
   }),
+  editor("Editor — mediaspeler", "domotiapp-media-card-editor", {
+    type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken",
+  }),
   editor("Editor — nieuwe kaart", "domotiapp-entities-card-editor", { rows: [] }),
+  editor("Editor — entiteiten met schakelaar", "domotiapp-entities-card-editor", {
+    state_position: "right",
+    rows: [{ columns: 1, items: [{ entity: "switch.tuinpomp", toggle: true }] }],
+  }),
   editor("Editor — bestaande kaart", "domotiapp-entities-card-editor", {
     rows: [
       { columns: 1, items: [{ entity: "sensor.eredivisie" }] },

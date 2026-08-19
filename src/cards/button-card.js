@@ -25,11 +25,20 @@
  * entiteit meebrengt, en dat is weer specifieker dan wat het domein oplevert.
  *
  * Een kaart zonder entiteit mag en is nuttig: dat is een navigatieknop.
+ *
+ * Staat er een `switch` of een `input_boolean` achter, dan kan er een
+ * schuifschakelaar rechts op de kaart. Dezelfde knop die een script start hoort
+ * er anders uit te zien dan een die een stopcontact bedient: bij een script
+ * hoort een knop, bij twee standen die blijven staan hoort een schakelaar die
+ * laat zien in welke stand hij staat. Het icoon blijft gewoon schakelen, dus je
+ * hebt er twee manieren voor -- dat is geen dubbelop maar dezelfde afspraak als
+ * elders in de familie: het icoon schakelt, de kaart doet wat jij instelt.
  */
 
 import { DacCard, registerCard, registerEditor, toneValue, TONES } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve, defaultIcon } from "../icons.js";
+import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import {
   attrsOf,
   bindActions,
@@ -38,6 +47,7 @@ import {
   isDead,
   isOn,
   isStateless,
+  kanSchakelen,
   lightTone,
   localizeState,
   nameOf,
@@ -114,6 +124,16 @@ class ButtonCard extends DacCard {
     :host([layout="compact"]) .chip .icon, :host([layout="compact"]) .chip ha-icon { width: 17px; height: 17px; }
     :host([layout="compact"]) .nm { font-size: 13px; }
 
+    ${toggleCss}
+
+    /* De schakelaar staat rechts op de rij. Op een tegel is er rechts geen
+       ruimte naast de tekst, dus staat hij bovenin naast het icoon -- daar waar
+       op een rij het icoon zelf staat, en dus waar je hand al is. */
+    :host([layout="tile"]) .toggle { position: absolute; top: 14px; right: 14px; margin: 0; }
+    :host([layout="compact"]) .toggle { width: 40px; height: 23px; }
+    :host([layout="compact"]) .toggle .knob { width: 17px; height: 17px; }
+    :host([layout="compact"]) .toggle[aria-checked="true"] .knob { --knob: 19px; }
+
     /* Een vleug identiteitskleur op een tegel, zodat je hem van een afstand
        herkent voordat de tekst leesbaar is. Alleen op de tegelvorm: in een rij
        zou het net het oplichten worden dat er juist uit moest. */
@@ -158,6 +178,17 @@ class ButtonCard extends DacCard {
     return lightTone(stateOf(this.hass, c.entity)) ?? TONES.lit;
   }
 
+  /**
+   * Hoort er een schakelaar op deze kaart?
+   *
+   * Alleen als jij dat vraagt, en alleen op iets dat twee standen heeft die
+   * blijven staan. Een schakelaar op een scene of een sensor belooft een "uit"
+   * die er niet is; zie `kanSchakelen` in ha.js.
+   */
+  metSchakelaar_() {
+    return Boolean(this.config.toggle) && kanSchakelen(this.config.entity);
+  }
+
   template() {
     const c = this.config;
     this.setAttribute("layout", ["row", "tile", "compact"].includes(c.layout) ? c.layout : "row");
@@ -170,6 +201,7 @@ class ButtonCard extends DacCard {
           ${c.show_name === false ? "" : `<span class="nm"></span>`}
           ${c.show_state === false ? "" : `<span class="st"></span>`}
         </span>
+        ${this.metSchakelaar_() ? toggleHtml({ label: "Aan of uit" }) : ""}
       </div>`;
   }
 
@@ -203,6 +235,19 @@ class ButtonCard extends DacCard {
     // Anders telt een tik op het icoon ook als een tik op de kaart.
     this.on(chip, "click", (e) => e.stopPropagation());
     this.on(chip, "pointerdown", (e) => e.stopPropagation());
+
+    const schakelaar = this.$(".toggle");
+    if (!schakelaar) return;
+    this.teardown_.push(
+      bindToggle(schakelaar, {
+        value: () => isOn(stateOf(this.hass, c.entity)),
+        set: (aan) =>
+          this.hass.callService("homeassistant", aan ? "turn_on" : "turn_off", {
+            entity_id: c.entity,
+          }),
+        disabled: () => isDead(stateOf(this.hass, c.entity)),
+      })
+    );
   }
 
   paint() {
@@ -241,6 +286,18 @@ class ButtonCard extends DacCard {
     }
 
     this.text(".nm", nameOf(this.hass, c.entity, c.name));
+
+    const schakelaar = this.$(".toggle");
+    if (schakelaar) {
+      setToggle(schakelaar, on);
+      // De schakelaar draagt dezelfde kleur als de chip, ook als de lamp
+      // erachter van kleur verandert.
+      schakelaar.style.setProperty("--tone", this.tone_());
+      schakelaar.setAttribute(
+        "aria-label",
+        `${nameOf(this.hass, c.entity, c.name)} aan of uit`
+      );
+    }
 
     const stEl = this.$(".st");
     if (stEl) this.text(stEl, this.secondary_(st, dead));
@@ -307,6 +364,7 @@ class ButtonEditor extends DacEditor {
       show_state: true,
       show_name: true,
       show_icon: true,
+      toggle: false,
       icon_tap_action: { action: "toggle" },
       tap_action: { action: "more-info" },
     };
@@ -333,6 +391,7 @@ class ButtonEditor extends DacEditor {
           { value: "compact", label: "Compact" },
         ]),
       },
+      { name: "toggle", selector: sel.bool() },
       { name: "show_icon", selector: sel.bool() },
       { name: "show_name", selector: sel.bool() },
       { name: "show_state", selector: sel.bool() },
@@ -350,6 +409,7 @@ class ButtonEditor extends DacEditor {
         entity: "Entiteit",
         name: "Naam (overschrijft die van de entiteit)",
         layout: "Vorm",
+        toggle: "Schakelaar tonen",
         show_icon: "Icoon tonen",
         show_name: "Naam tonen",
         show_state: "Status tonen",
@@ -365,6 +425,8 @@ class ButtonEditor extends DacEditor {
   helper(s) {
     if (s.name === "entity")
       return "Mag leeg blijven: zonder entiteit wordt dit een navigatieknop.";
+    if (s.name === "toggle")
+      return "Een schuifschakelaar rechts op de kaart, voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar. Op een scene of een script verschijnt hij niet.";
     if (s.name === "icon_tap_action")
       return "Handig: het icoon schakelt de lichtgroep, de kaart navigeert naar de ruimte.";
     if (s.name === "tap_action")
