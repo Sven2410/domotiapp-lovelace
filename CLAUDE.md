@@ -8,8 +8,9 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 ## Werkafspraken
 
 - **Fases met een duidelijk stoppunt.** Elke ronde eindigt met een PR waarin het
-  bewijs in de beschrijving staat. **De eigenaar merget zelf; Claude Code merget
-  nooit.** `main` is altijd de laatste geverifieerde staat.
+  bewijs in de beschrijving staat. Sinds 19 augustus 2026 mag Claude Code die
+  zelf mergen, maar **pas als alle CI-checks groen zijn** -- `main` is en blijft
+  de laatste geverifieerde staat.
 - **Branch per ronde:** `fase-<N>/<korte-naam>`, één PR naar `main`.
 - **Een test telt pas als hij aantoonbaar faalt op de code van vóór de fix.**
   Toon dat ook — draai de nieuwe test tegen de oude code en plak de uitvoer.
