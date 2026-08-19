@@ -55,6 +55,7 @@ import {
 } from "../ha.js";
 import {
   extraVoor,
+  geluidsSpeler,
   herhaalStand,
   isActief,
   isGedempt,
@@ -77,10 +78,9 @@ const KNOPPEN = {
   play: { icon: "play", label: "Afspelen of pauzeren" },
   stop: { icon: "stop", label: "Stoppen" },
   next: { icon: "next", label: "Volgende" },
-  shuffle: { icon: "shuffle", label: "Willekeurig" },
+  shuffle: { icon: "shuffle", label: "Willekeurig afspelen" },
   repeat: { icon: "repeat", label: "Herhalen" },
   search: { icon: "search", label: "Zoeken in Music Assistant" },
-  speakers: { icon: "speakers", label: "Speakers koppelen" },
 };
 
 class MediaCard extends DacCard {
@@ -185,7 +185,9 @@ class MediaCard extends DacCard {
   }
 
   watched() {
-    return [this.config.entity];
+    // De geluidsentiteit hoort erbij: verandert daar het volume, dan moet de
+    // schuif meebewegen ook al doet de speler zelf niets.
+    return [this.config.entity, this.config.volume_entity].filter(Boolean);
   }
 
   tone_() {
@@ -266,12 +268,23 @@ class MediaCard extends DacCard {
         return roep(isSpelend(st) ? "media_pause" : "media_play");
       case "stop":
         return roep("media_stop");
-      case "mute":
-        return roep("volume_mute", { is_volume_muted: !isGedempt(st) });
+      case "mute": {
+        const geluid = geluidsSpeler(this.config);
+        return this.hass.callService(
+          "media_player",
+          "volume_mute",
+          { is_volume_muted: !isGedempt(stateOf(this.hass, geluid)) },
+          { entity_id: geluid }
+        );
+      }
       case "vol-":
-        return roep("volume_down");
       case "vol+":
-        return roep("volume_up");
+        return this.hass.callService(
+          "media_player",
+          soort === "vol+" ? "volume_up" : "volume_down",
+          {},
+          { entity_id: geluidsSpeler(this.config) }
+        );
       case "shuffle":
         return this.hass.callService(
           "media_player",
@@ -287,15 +300,8 @@ class MediaCard extends DacCard {
           { entity_id: id }
         );
       case "search":
-      case "speakers":
-        // Eén scherm voor allebei: zoeken staat bovenaan, de speakers eronder.
-        // Twee knoppen die hetzelfde scherm openen is geen dubbeling maar twee
-        // deuren -- je weet welke je zoekt voordat je hem opendoet.
-        return toonZoekscherm(
-          this.hass,
-          id,
-          nameOf(this.hass, id, this.config.name)
-        );
+        // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
+        return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name));
       default:
         return undefined;
     }
@@ -363,7 +369,11 @@ class MediaCard extends DacCard {
 
   paintVolume_(st, dood) {
     const box = this.$(".vol");
-    const delen = this.config.show_volume === false || dood ? [] : volumeVoor(st);
+    // Het volume kan bij een ándere entiteit horen dan de speler: een tv met een
+    // soundbar eronder. Dan bepaalt die soundbar wat er te regelen valt.
+    const geluid = geluidsSpeler(this.config);
+    const gst = geluid === this.config.entity ? st : stateOf(this.hass, geluid);
+    const delen = this.config.show_volume === false || dood ? [] : volumeVoor(gst);
     box.hidden = !delen.length;
     if (!delen.length) {
       box.dataset.sig = "";
@@ -388,8 +398,8 @@ class MediaCard extends DacCard {
       box.querySelector(".slider")?.setAttribute("aria-label", "Volume");
     }
 
-    const gedempt = isGedempt(st);
-    const pct = volumePct(st);
+    const gedempt = isGedempt(gst);
+    const pct = volumePct(gst);
 
     const mute = box.querySelector('[data-k="mute"]');
     if (mute) {
@@ -404,14 +414,16 @@ class MediaCard extends DacCard {
     const el = box.querySelector(".slider");
     if (el) {
       this.attach_(el, "volume", {
-        value: () => volumePct(stateOf(this.hass, this.config.entity)),
+        value: () => volumePct(stateOf(this.hass, geluidsSpeler(this.config))),
         onInput: (v) => this.setSlider_(el, v),
         onCommit: (v) =>
-          this.hass.callService("media_player", "volume_set", {
-            entity_id: this.config.entity,
-            volume_level: v / 100,
-          }),
-        disabled: () => isDead(stateOf(this.hass, this.config.entity)),
+          this.hass.callService(
+            "media_player",
+            "volume_set",
+            { volume_level: v / 100 },
+            { entity_id: geluidsSpeler(this.config) }
+          ),
+        disabled: () => isDead(stateOf(this.hass, geluidsSpeler(this.config))),
       });
       // Tijdens het slepen niet overschrijven: dan trilt de schuif tussen waar
       // je vinger is en wat de speler net terugmeldde.
@@ -527,6 +539,7 @@ class MediaEditor extends DacEditor {
     return [
       { name: "entity", selector: sel.entity("media_player") },
       { name: "name", selector: sel.text() },
+      { name: "volume_entity", selector: sel.entity("media_player") },
       { name: "show_artwork", selector: sel.bool() },
       { name: "show_controls", selector: sel.bool() },
       { name: "show_volume", selector: sel.bool() },
@@ -543,6 +556,7 @@ class MediaEditor extends DacEditor {
       {
         entity: "Mediaspeler",
         name: "Naam (overschrijft die van de speler)",
+        volume_entity: "Geluid van (optioneel)",
         show_artwork: "Albumhoes tonen",
         show_controls: "Knoppen tonen",
         show_volume: "Volume tonen",
@@ -558,6 +572,8 @@ class MediaEditor extends DacEditor {
   helper(s) {
     if (s.name === "entity")
       return "Welke knoppen er verschijnen leest de kaart uit de speler zelf: wat hij niet kan, komt er niet op.";
+    if (s.name === "volume_entity")
+      return "Zit het geluid ergens anders dan het beeld — een tv met een soundbar eronder — kies dan hier de speler die het volume regelt. Leeg laten betekent: de speler zelf.";
     if (s.name === "show_artwork")
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")

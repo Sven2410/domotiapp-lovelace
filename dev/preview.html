@@ -226,6 +226,17 @@ const states = Object.fromEntries([
   // Een paneel zonder eigen code: hier springt de code van DomotiApp bij.
   S("alarm_control_panel.kopo", "disarmed", { friendly_name: "KOPO", supported_features: 7 }),
 
+  // Een tv zonder eigen volume, met een soundbar die het geluid doet.
+  S("media_player.tv_kamer", "playing", {
+    friendly_name: "Tv kamer", mass_player_type: "player",
+    supported_features: 1 | 16 | 32 | 16384 | 32768 | 262144 | 524288,
+    media_title: "Chernobyl", media_series_title: "Aflevering 3",
+  }),
+  S("media_player.soundbar", "playing", {
+    friendly_name: "Soundbar", supported_features: 4 | 8 | 1024,
+    volume_level: 0.22,
+  }),
+
   S("switch.tuinpomp", "off", { friendly_name: "Druppelslang achtertuin" }),
   S("input_boolean.automatische_beregening", "on", { friendly_name: "Automatische beregening" }),
   S("input_boolean.handmatige_beregening", "off", { friendly_name: "Handmatige beregening" }),
@@ -354,6 +365,7 @@ const hass = {
           entities: [
             { entity_id: "media_player.ma_keuken", name: "Keuken (MA)", can_group: true },
             { entity_id: "media_player.ma_woonkamer", name: "Woonkamer (MA)", can_group: true },
+            { entity_id: "media_player.tv_kamer", name: "Tv kamer", can_group: true },
             { entity_id: "media_player.sonos_keuken", name: "Sonos keuken", can_group: false },
           ],
           filtered_out: 0,
@@ -633,6 +645,10 @@ const COLUMNS = [
     // Zoeken uitgezet: dan blijven alleen shuffle en herhalen over.
     { type: "custom:domotiapp-media-card", entity: "media_player.ma_keuken",
       show_search: false, name: "Zonder zoeken" },
+    // De tv speelt, de soundbar bepaalt hoe hard: het volume hoort dus bij een
+    // andere entiteit dan de speler.
+    { type: "custom:domotiapp-media-card", entity: "media_player.tv_kamer",
+      volume_entity: "media_player.soundbar", tone: "solar" },
   ]],
   ["Wekkers", [
     { type: "custom:domotiapp-alarm-card", person: "person.sven" },
