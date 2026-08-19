@@ -33,6 +33,7 @@ export const KENMERK = {
   PLAY: 16384,
   SHUFFLE_SET: 32768,
   REPEAT_SET: 262144,
+  GROUPING: 524288,
 };
 
 /** Kan deze speler dat? Een speler zonder `supported_features` kan niets. */
@@ -96,6 +97,54 @@ export const volumePct = (st) =>
   Math.round(Math.min(1, Math.max(0, Number(st?.attributes?.volume_level ?? 0))) * 100);
 
 export const isGedempt = (st) => Boolean(st?.attributes?.is_volume_muted);
+
+/**
+ * Is dit een speler van Music Assistant?
+ *
+ * `mass_player_type` zet MA op elke speler die van hem is. Dat is de enige zeef
+ * die de kaart zelf kan uitvoeren -- het platform van een entiteit staat in het
+ * entity registry en dat is serverwerk. Hij is goed genoeg voor waar hij voor
+ * gebruikt wordt: bepalen of de zoekknop en het groeperen zin hebben.
+ *
+ * LET OP: dit attribuut verdwijnt zodra een entiteit `unavailable` is. Een
+ * weggevallen speaker verliest dus zijn zoekknop. Dat is de juiste kant om op
+ * te falen: zoeken op een speaker die er niet is, levert alleen een foutmelding.
+ */
+export const isMaSpeler = (st) => Boolean(st?.attributes?.mass_player_type);
+
+export const shuffleAan = (st) => Boolean(st?.attributes?.shuffle);
+
+/** `off`, `all` of `one` -- de drie standen die `media_player.repeat_set` kent. */
+export const herhaalStand = (st) => {
+  const stand = st?.attributes?.repeat;
+  return ["off", "all", "one"].includes(stand) ? stand : "off";
+};
+
+/** Uit -> alles -> één -> uit. De volgorde die elke muziekspeler heeft. */
+export const volgendeHerhaling = (stand) =>
+  ({ off: "all", all: "one", one: "off" })[herhaalStandNaam(stand)] ?? "all";
+
+const herhaalStandNaam = (stand) => (["off", "all", "one"].includes(stand) ? stand : "off");
+
+/**
+ * De knoppen op de derde regel: shuffle, herhalen, zoeken, speakers.
+ *
+ * Ze staan bewust niet bij vorige/afspelen/volgende. Die drie zijn wat je
+ * tijdens het luisteren aanraakt; deze vier stel je één keer in of gebruik je om
+ * iets nieuws te kiezen. Zeven knoppen op één regel van 56 pixels is geen kaart
+ * meer maar een afstandsbediening.
+ */
+export function extraVoor(st, { zoeken = true } = {}) {
+  if (!staatAan(st)) return [];
+  const uit = [];
+  if (kan(st, KENMERK.SHUFFLE_SET)) uit.push("shuffle");
+  if (kan(st, KENMERK.REPEAT_SET)) uit.push("repeat");
+  if (zoeken && isMaSpeler(st)) uit.push("search");
+  // Groeperen vraagt twee dingen: de speler moet het kunnen, en het moet een
+  // MA-speler zijn -- de speakerlijst komt uit het MA-label.
+  if (zoeken && isMaSpeler(st) && kan(st, KENMERK.GROUPING)) uit.push("speakers");
+  return uit;
+}
 
 /**
  * Wat er onder de naam staat.

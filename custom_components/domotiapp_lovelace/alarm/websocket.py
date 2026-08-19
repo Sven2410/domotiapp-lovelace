@@ -11,7 +11,6 @@ registry-entry-ID gebeurt server-side (SPEC 6.2).
 
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import logging
 from collections.abc import Callable, Coroutine
@@ -25,15 +24,14 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import dt as dt_util
 
+from .. import ma
 from . import abonnement, afvuren, entiteiten, planner, radiomodus, voorbeeld, volgende
 from .const import (
     DATA_STORE,
     DATA_WS_REGISTERED,
     DOMAIN,
-    MA_DOMAIN,
     SEARCH_LIMIT_DEFAULT,
     SEARCH_LIMIT_MAX,
-    SEARCH_TIMEOUT_SECONDEN,
     VOLUME_PCT_MAX,
     VOLUME_PCT_MIN,
 )
@@ -361,9 +359,19 @@ async def _handle_search(hass, connection, msg) -> None:
 
     De kaart praat niet rechtstreeks met Music Assistant: dan zou de kaart de
     MA-config-entry moeten opzoeken en zou de filtering in twee talen bestaan.
+
+    Het aanroepen zelf staat in `..ma`, want de mediaspelerkaart zoekt met
+    hetzelfde commando in dezelfde bibliotheek. Wat hier blijft is wat alleen de
+    wekker aangaat: `endless` per treffer.
     """
-    entries = hass.config_entries.async_loaded_entries(MA_DOMAIN)
-    if not entries:
+    try:
+        antwoord = await ma.zoek(
+            hass,
+            msg["query"],
+            media_types=msg.get("media_types"),
+            limit=msg["limit"],
+        )
+    except ma.MANietBeschikbaar:
         connection.send_error(
             msg["id"],
             websocket_api.ERR_NOT_FOUND,
@@ -371,35 +379,11 @@ async def _handle_search(hass, connection, msg) -> None:
             "geluid gekozen worden.",
         )
         return
-    if len(entries) > 1:
-        _LOGGER.debug(
-            "Er zijn %d Music Assistant-config-entries; de eerste wordt gebruikt (%s)",
-            len(entries),
-            entries[0].entry_id,
-        )
-
-    data: dict[str, Any] = {
-        "config_entry_id": entries[0].entry_id,
-        "name": msg["query"],
-        "limit": msg["limit"],
-    }
-    if msg.get("media_types"):
-        data["media_type"] = msg["media_types"]
-
-    try:
+    except TimeoutError:
         # Time-out van 10 s (SPEC 15.6): een trage zoekopdracht mag de editor niet
         # laten hangen. MA's eigen zoekopdracht ging in fase 0b in tientallen
         # milliseconden, maar RadioBrowser was wisselvallig en gaf minutenlang
         # fouten.
-        async with asyncio.timeout(SEARCH_TIMEOUT_SECONDEN):
-            antwoord = await hass.services.async_call(
-                MA_DOMAIN,
-                "search",
-                data,
-                blocking=True,
-                return_response=True,
-            )
-    except TimeoutError:
         connection.send_error(
             msg["id"],
             websocket_api.ERR_HOME_ASSISTANT_ERROR,
@@ -410,41 +394,23 @@ async def _handle_search(hass, connection, msg) -> None:
         connection.send_error(msg["id"], websocket_api.ERR_HOME_ASSISTANT_ERROR, str(fout))
         return
 
-    connection.send_result(msg["id"], {"results": _plat(antwoord or {})})
+    connection.send_result(msg["id"], {"results": _met_endless(ma.treffers(antwoord))})
 
 
-def _plat(antwoord: dict[str, Any]) -> list[dict[str, Any]]:
-    """Eén platte lijst uit de acht emmers van MA (SPEC 15.6).
+def _met_endless(treffers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Zet er per treffer bij of hij uit zichzelf blijft doorspelen (SPEC 15.6).
 
-    De kaart toont een zoekresultaat en niet acht koppen; `media_type` per treffer
-    houdt het onderscheid vast.
-
-    **`endless` wordt hier bepaald en niet in de kaart** (SPEC 15.6, fase 4c). Het
-    antwoord hangt af van `SIMILAR_TRACKS_PROVIDERS`, en die lijst staat in
-    `const.py` omdat `afvuren.py` hem gebruikt om te beslissen of `radio_mode`
-    meegaat. Zou de kaart de vraag zelf beantwoorden, dan bestaat die lijst twee
-    keer en kan de editor "dit speelt door" beloven terwijl het afvuren
-    `radio_mode` weglaat. Eén bron, één antwoord — zie `radiomodus.py`.
+    **Dit hoort hier en niet in de kaart** (fase 4c). Het antwoord hangt af van
+    `SIMILAR_TRACKS_PROVIDERS`, en die lijst staat in `const.py` omdat
+    `afvuren.py` hem gebruikt om te beslissen of `radio_mode` meegaat. Zou de
+    kaart de vraag zelf beantwoorden, dan bestaat die lijst twee keer en kan de
+    editor "dit speelt door" beloven terwijl het afvuren `radio_mode` weglaat.
+    Eén bron, één antwoord -- zie `radiomodus.py`.
     """
-    resultaten: list[dict[str, Any]] = []
-    for emmer in _SEARCH_EMMERS:
-        for item in antwoord.get(emmer) or []:
-            if not isinstance(item, dict):
-                continue
-            resultaten.append(
-                {
-                    "name": item.get("name"),
-                    "uri": item.get("uri"),
-                    "media_type": item.get("media_type"),
-                    "image": item.get("image"),
-                    "artists": item.get("artists"),
-                    "album": item.get("album"),
-                    "endless": radiomodus.blijft_doorspelen(
-                        item.get("uri"), item.get("media_type")
-                    ),
-                }
-            )
-    return resultaten
+    return [
+        {**t, "endless": radiomodus.blijft_doorspelen(t.get("uri"), t.get("media_type"))}
+        for t in treffers
+    ]
 
 
 # --- 15.7 entities/list ------------------------------------------------

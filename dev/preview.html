@@ -188,6 +188,37 @@ const states = Object.fromEntries([
     app_name: "Netflix", volume_level: 0.5,
   }),
 
+  // Een Music Assistant-speler: `mass_player_type` is waar de kaart hem aan
+  // herkent, en het masker draagt shuffle, herhalen en groeperen.
+  S("media_player.ma_keuken", "playing", {
+    friendly_name: "Keuken (MA)", mass_player_type: "player",
+    supported_features: 1 | 4 | 8 | 16 | 32 | 16384 | 4096 | 32768 | 262144 | 524288 | 4194304,
+    media_title: "Rondo", media_artist: "Nils Frahm",
+    volume_level: 0.28, shuffle: false, repeat: "off", group_members: [],
+  }),
+  S("media_player.ma_woonkamer", "idle", {
+    friendly_name: "Woonkamer (MA)", mass_player_type: "player",
+    supported_features: 1 | 4 | 8 | 16 | 32 | 16384 | 32768 | 262144 | 524288,
+    volume_level: 0.4, shuffle: true, repeat: "all", group_members: [],
+  }),
+
+  // Rookmelder: alle vijf de soorten, plus een tweede die alleen rook meldt.
+  S("binary_sensor.rook_hal", "off", { friendly_name: "Rook hal", device_class: "smoke" }),
+  S("binary_sensor.co_hal", "off", { friendly_name: "CO hal", device_class: "carbon_monoxide" }),
+  S("binary_sensor.warmte_hal", "off", { friendly_name: "Warmte hal", device_class: "heat" }),
+  S("sensor.temp_hal", "21.4", { friendly_name: "Temperatuur hal",
+    device_class: "temperature", unit_of_measurement: "°C" }),
+  S("sensor.batterij_hal", "12", { friendly_name: "Batterij hal",
+    device_class: "battery", unit_of_measurement: "%" }),
+  S("binary_sensor.rook_zolder", "on", { friendly_name: "Rook zolder", device_class: "smoke" }),
+  S("sensor.batterij_zolder", "94", { friendly_name: "Batterij zolder",
+    device_class: "battery", unit_of_measurement: "%" }),
+
+  // Alarmpaneel.
+  S("alarm_control_panel.huis", "disarmed", { friendly_name: "Huis", supported_features: 3 }),
+  S("alarm_control_panel.schuur", "armed_away", { friendly_name: "Schuur", supported_features: 3 }),
+  S("alarm_control_panel.garage", "triggered", { friendly_name: "Garage", supported_features: 3 }),
+
   S("switch.tuinpomp", "off", { friendly_name: "Druppelslang achtertuin" }),
   S("input_boolean.automatische_beregening", "on", { friendly_name: "Automatische beregening" }),
   S("input_boolean.handmatige_beregening", "off", { friendly_name: "Handmatige beregening" }),
@@ -280,6 +311,32 @@ const hass = {
         return { alarms: wsWekkers[bericht.person] ?? [], ringing: null, message: null };
       case "domotiapp_lovelace/entities/list":
         return { speakers: [], lights: [] };
+      // De mediakant: zoeken en de gelabelde speakers.
+      case "domotiapp_lovelace/media/search": {
+        const q = String(bericht.query ?? "").trim();
+        const alles = [
+          { name: `${q} — de afspeellijst`, uri: "library://playlist/1", media_type: "playlist" },
+          { name: `${q} Radio`, uri: "radiobrowser://1", media_type: "radio" },
+          { name: q, uri: "library://artist/9", media_type: "artist" },
+          { name: `${q} (Deluxe)`, uri: "library://album/4", media_type: "album",
+            artists: [{ name: "Nils Frahm" }] },
+          { name: `${q} in de ochtend`, uri: "library://track/7", media_type: "track",
+            artists: [{ name: "Nils Frahm" }], album: { name: "Spaces" } },
+        ];
+        const soort = bericht.media_types?.[0];
+        return { results: soort ? alles.filter((r) => r.media_type === soort) : alles };
+      }
+      case "domotiapp_lovelace/media/speakers":
+        return {
+          label_exists: true,
+          label_name: "Music Assistant Media",
+          entities: [
+            { entity_id: "media_player.ma_keuken", name: "Keuken (MA)", can_group: true },
+            { entity_id: "media_player.ma_woonkamer", name: "Woonkamer (MA)", can_group: true },
+            { entity_id: "media_player.sonos_keuken", name: "Sonos keuken", can_group: false },
+          ],
+          filtered_out: 0,
+        };
       case "domotiapp_lovelace/sound/search":
         return { results: [] };
       case "domotiapp_lovelace/updates/subscribe":
@@ -288,8 +345,41 @@ const hass = {
         throw Object.assign(new Error(`onbekend commando ${bericht.type}`), { code: "unknown" });
     }
   },
-  callService(domain, service, data) {
-    log(`${domain}.${service}  ${JSON.stringify(data)}`);
+  /**
+   * De weersvoorspelling loopt via een abonnement, niet via een attribuut.
+   *
+   * Sinds HA 2023.9 hangt de voorspelling niet meer aan de weerentiteit. De
+   * werkbank doet dat na, inclusief het opzeggen -- anders is niet te zien dat
+   * de kaart zijn abonnement netjes teruggeeft.
+   */
+  connection: {
+    async subscribeMessage(cb, bericht) {
+      log(`ws ${bericht.type}  ${bericht.entity_id ?? ""}`);
+      if (bericht.type !== "weather/subscribe_forecast") return () => {};
+      if (bericht.entity_id === "weather.meteo" && bericht.forecast_type === "hourly") {
+        throw new Error("deze bron kent geen uurvoorspelling");
+      }
+      const dag = 86400000;
+      const nu = Date.now();
+      const soorten = ["partlycloudy", "rainy", "cloudy", "sunny", "snowy", "fog", "windy", "pouring"];
+      const forecast = Array.from({ length: 8 }, (_, i) => ({
+        datetime: new Date(nu + i * (bericht.forecast_type === "hourly" ? 3600000 : dag)).toISOString(),
+        condition: soorten[i % soorten.length],
+        temperature: 19 + ((i * 3) % 7),
+        templow: 11 + (i % 4),
+        precipitation_probability: (i * 17) % 100,
+      }));
+      // Een tel later, zoals de echte: de kaart moet ook zonder voorspelling
+      // een geldig beeld hebben.
+      setTimeout(() => cb({ type: "event", forecast }), 120);
+      return () => log("abonnement op de voorspelling opgezegd");
+    },
+  },
+  callService(domain, service, data, target) {
+    log(`${domain}.${service}  ${JSON.stringify({ ...data, ...(target ?? {}) })}`);
+    // Home Assistant neemt het doel uit `target` óf uit `data.entity_id`. De
+    // kaarten gebruiken allebei de vormen, dus de werkbank ook.
+    data = { ...data, ...(target ?? {}) };
     // Reflect the call back into the mock, so the card visibly responds.
     const ids = [].concat(data?.entity_id ?? []);
     for (const id of ids) {
@@ -315,6 +405,17 @@ const hass = {
       if (service === "volume_down") {
         next.attributes.volume_level = Math.max(0, (st.attributes.volume_level ?? 0) - 0.05);
       }
+      if (service === "shuffle_set") next.attributes.shuffle = data.shuffle;
+      if (service === "repeat_set") next.attributes.repeat = data.repeat;
+      if (service === "join") {
+        next.attributes.group_members = [
+          ...(st.attributes.group_members ?? []), ...(data.group_members ?? []),
+        ];
+      }
+      if (service === "unjoin") next.attributes.group_members = [];
+      if (service === "alarm_disarm") next.state = "disarmed";
+      if (service === "alarm_arm_away") next.state = "armed_away";
+      if (service === "alarm_arm_home") next.state = "armed_home";
       if (service === "media_next_track") next.attributes.media_title = "Het nummer hierna";
       if (service === "media_previous_track") next.attributes.media_title = "Het nummer hiervoor";
       if (service === "open_cover") next.state = "open";
@@ -464,6 +565,38 @@ const COLUMNS = [
     // En een scene met toggle aan: die hoort geen schakelaar te krijgen.
     { type: "custom:domotiapp-button-card", entity: "scene.radio", icon: "radio",
       tone: "pink", toggle: true },
+  ]],
+  ["Rookmelders en alarm", [
+    // Alles ingevuld, en de batterij staat op 12% -- dat hoort de kop over te nemen.
+    { type: "custom:domotiapp-smoke-card", name: "Hal", smoke: "binary_sensor.rook_hal",
+      co: "binary_sensor.co_hal", heat: "binary_sensor.warmte_hal",
+      temperature: "sensor.temp_hal", battery: "sensor.batterij_hal" },
+    // Rook staat aan: dit is de kaart die je één keer per jaar ziet.
+    { type: "custom:domotiapp-smoke-card", name: "Zolder", smoke: "binary_sensor.rook_zolder",
+      battery: "sensor.batterij_zolder" },
+    // Alleen rook: één regel, 56px.
+    { type: "custom:domotiapp-smoke-card", name: "Kelder", smoke: "binary_sensor.rook_hal" },
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis" },
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.schuur",
+      name: "Schuur achter" },
+    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.garage" },
+  ]],
+  ["Weersvoorspelling", [
+    { type: "custom:domotiapp-forecast-card", entity: "weather.buienradar" },
+    { type: "custom:domotiapp-forecast-card", entity: "weather.buienradar",
+      forecast_type: "hourly", days: 6, name: "Vanaf nu" },
+    // Een bron die geen uurvoorspelling kan: hoort dat te zeggen.
+    { type: "custom:domotiapp-forecast-card", entity: "weather.meteo",
+      forecast_type: "hourly", name: "Meteo per uur" },
+    { type: "custom:domotiapp-forecast-card", entity: "weather.buienradar",
+      show_current: false, days: 4, name: "Zonder nu-regel" },
+  ]],
+  ["Music Assistant", [
+    { type: "custom:domotiapp-media-card", entity: "media_player.ma_keuken" },
+    { type: "custom:domotiapp-media-card", entity: "media_player.ma_woonkamer", tone: "teal" },
+    // Zoeken uitgezet: dan blijven alleen shuffle en herhalen over.
+    { type: "custom:domotiapp-media-card", entity: "media_player.ma_keuken",
+      show_search: false, name: "Zonder zoeken" },
   ]],
   ["Wekkers", [
     { type: "custom:domotiapp-alarm-card", person: "person.sven" },
@@ -616,6 +749,16 @@ cols.append(
   }),
   editor("Editor — mediaspeler", "domotiapp-media-card-editor", {
     type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken",
+  }),
+  editor("Editor — rookmelder", "domotiapp-smoke-card-editor", {
+    type: "custom:domotiapp-smoke-card", smoke: "binary_sensor.rook_hal",
+    battery: "sensor.batterij_hal",
+  }),
+  editor("Editor — alarmpaneel", "domotiapp-alarm-panel-card-editor", {
+    type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis",
+  }),
+  editor("Editor — weersvoorspelling", "domotiapp-forecast-card-editor", {
+    type: "custom:domotiapp-forecast-card", entity: "weather.buienradar",
   }),
   editor("Editor — nieuwe kaart", "domotiapp-entities-card-editor", { rows: [] }),
   editor("Editor — entiteiten met schakelaar", "domotiapp-entities-card-editor", {

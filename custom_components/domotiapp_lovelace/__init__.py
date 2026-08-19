@@ -37,6 +37,7 @@ from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
 from .alarm import voorbeeld as alarm_voorbeeld
 from .alarm import websocket as alarm_websocket
+from .media import websocket as media_websocket
 from .alarm.const import DATA_PLANNER as ALARM_DATA_PLANNER
 from .alarm.const import DATA_STORE as ALARM_DATA_STORE
 from .alarm.const import LEGACY_STORAGE_KEY as ALARM_LEGACY_STORAGE_KEY
@@ -153,6 +154,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data[ALARM_DATA_STORE] = alarm_store
 
     alarm_websocket.async_register(hass)
+
+    # ---- de mediakant -------------------------------------------------
+    #
+    # Twee commando's, geen opslag: zoeken in Music Assistant en de gelabelde
+    # speakers opsommen. Al het andere -- afspelen, groeperen, shuffle -- doet
+    # de kaart met gewone service-aanroepen.
+    media_websocket.async_register(hass)
 
     # Reparatiemeldingen voor onleesbare opslag. Idempotent: meldingen die er
     # niet meer horen te zijn worden opgeruimd.

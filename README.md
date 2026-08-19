@@ -2,8 +2,9 @@
 
 De kaartenfamilie van DomotiApp, geleverd als integratie. Eén installatie, één
 bundel, één versienummer — de knop-, licht-, klimaat-, rolluik-, entiteiten-,
-media-, personen-, afval-, scheidings- en headerkaart, plus de **scenekaart** met
-zijn opslag per lichtgroep en de **wekkerkaart**.
+media-, rookmelder-, alarmpaneel-, weersvoorspelling-, personen-, afval-,
+scheidings- en headerkaart, plus de **scenekaart** met zijn opslag per lichtgroep
+en de **wekkerkaart**.
 
 ## Waarom een integratie en geen losse kaartresource
 
@@ -53,6 +54,30 @@ aanmaken → Groep → Lichtgroep**.
 De **mediaspelerkaart** (`custom:domotiapp-media-card`) toont wat er speelt, de
 knoppen die de speler aankan en het volume. Welke knoppen dat zijn leest hij uit
 de speler zelf: wat een speler niet kan, komt niet op de kaart.
+
+Op de mediakaart zit een **zoekknop** die Music Assistant over het hele scherm
+opent: zoeken in je hele bibliotheek en al je providers, tikken speelt meteen af,
+vasthouden geeft de keuze tussen nu, hierna en achteraan in de wachtrij. Onderin
+staan je speakers om samen te laten spelen.
+
+> **Eenmalig instellen:** maak in Home Assistant een label **`Music Assistant
+> Media`** aan (*Instellingen → Gebieden, labels en zones → Labels*) en plak het
+> op de Music Assistant-speakers die op de kaart mogen meespelen. Zonder dat
+> label werkt zoeken en afspelen gewoon, maar blijft de speakerlijst leeg. Het is
+> met opzet een ander label dan `Music Assistant Wekker`: op een wekker horen
+> andere speakers dan op een mediakaart.
+
+De **rookmelderkaart** (`custom:domotiapp-smoke-card`) neemt vijf optionele
+entiteiten: rook, koolmonoxide, warmte, temperatuur en batterij. Vul in wat je
+melder heeft. Eén regel zegt wat er aan de hand is — rook verslaat een lege
+batterij, een lege batterij verslaat "alles rustig".
+
+De **alarmpaneelkaart** (`custom:domotiapp-alarm-panel-card`) heeft drie knoppen:
+Uitgeschakeld, Afwezig en Thuis. Vraagt je paneel een pincode, dan werkt deze
+kaart niet: hij stuurt er geen mee.
+
+De **weersvoorspellingkaart** (`custom:domotiapp-forecast-card`) vraagt alleen de
+weerentiteit. Per dag of per uur; wat je bron niet levert, komt er niet op.
 
 De **knopkaart** en de **entiteitenkaart** kunnen een schuifschakelaar tonen
 (instelling *Schakelaar tonen*), voor wat twee standen heeft die blijven staan —
