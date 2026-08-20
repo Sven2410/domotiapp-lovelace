@@ -14,6 +14,7 @@ import { LitElement, css, html, nothing } from "lit";
 
 import { resolve } from "../icons.js";
 import { vormtaal } from "./vormtaal.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 import { bouwServiceOproepen, voerUit } from "./apply-scene.js";
 import { meldingNieuweLampen, nieuweLampen } from "./lamp-besturing.js";
@@ -77,7 +78,7 @@ class DomotiappSceneCard extends LitElement {
          rij in HA's sections-raster, zodat een scenekaart naast een knopkaart
          geen halve regel verschilt. */
       .card {
-        min-height: 56px;
+        min-height: var(--dac-raster, 56px);
         padding: 7px 12px;
         display: flex;
         flex-direction: column;
@@ -185,6 +186,33 @@ class DomotiappSceneCard extends LitElement {
         Array.isArray(hass.states[entityId].attributes?.entity_id),
     );
     return { entity: groep ?? "" };
+  }
+
+  /**
+   * Houd de kaart op een rasterrij van Home Assistant.
+   *
+   * Lit vervangt zijn DOM bij elke render, dus de waarnemer verhuist mee zodra
+   * er een ander vak staat -- de foutvorm tekent geen .card maar een .needs.
+   * Zie rasterhoogte.js voor waarom dit met een meting gaat en niet met een
+   * vast aantal rijen: dat laatste is hier al eens geprobeerd en toen stak de
+   * kaart 33px door zijn eigen vak heen.
+   */
+  updated() {
+    const vak = this.renderRoot?.querySelector(".card, .needs");
+    if (vak !== this._rasterVak) {
+      this._rasterUit?.();
+      this._rasterVak = vak;
+      this._rasterUit = vak ? volgRaster(vak) : null;
+    }
+    // Ook als het vak hetzelfde blijft: er kan een melding bij zijn gekomen.
+    meetRaster(vak);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._rasterUit?.();
+    this._rasterUit = null;
+    this._rasterVak = null;
   }
 
   setConfig(config) {

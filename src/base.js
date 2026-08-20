@@ -24,6 +24,7 @@
 
 import { baseCss, sheet, tokens } from "./theme.js";
 import { entitiesChanged } from "./ha.js";
+import { volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldInKiezer } from "./registratie.js";
 
 const hostCss = /* css */ `
@@ -223,7 +224,12 @@ export class DacCard extends HTMLElement {
     tpl.innerHTML = missing ? placeholder(missing) : this.template();
     this.shadowRoot.appendChild(tpl.content);
     this.built_ = true;
-    if (missing) return;
+    if (missing) {
+      // Ook de uitlegkaart hoort op een rasterrij uit te komen; anders begint
+      // de kaart eronder op een halve rij zolang er nog niets gekozen is.
+      this.teardown_.push(volgRaster(this.$(".needs")));
+      return;
+    }
     this.wire();
     this.wired_ = true;
     if (this.hass_) this.paint();

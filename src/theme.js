@@ -138,6 +138,7 @@ export const baseCss = /* css */ `
      configuratie", which tells the installer nothing about what is missing. */
   .needs {
     display: flex; align-items: center; gap: 14px;
+    min-height: var(--dac-raster, 56px);
     padding: 18px 18px;
     background: var(--dac-surface);
     border: 1px dashed var(--dac-border-hi);

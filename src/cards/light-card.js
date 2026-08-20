@@ -22,6 +22,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, isDead, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 const DIMMABLE = new Set(["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"]);
 const COLOURFUL = new Set(["hs", "rgb", "rgbw", "rgbww", "xy"]);
@@ -37,8 +38,12 @@ class LightCard extends DacCard {
   static css = /* css */ `
     :host { display: block; }
 
+    /* De hoogte komt op een rasterrij van Home Assistant uit; --dac-raster
+       wordt gemeten en gezet door volgRaster in rasterhoogte.js. Uit is deze
+       kaart 56px, met kleurstrips 120px -- en nooit de 93px ertussenin, want
+       dan begint de kaart eronder op een halve rij. */
     .card {
-      min-height: 56px; padding: 7px 12px;
+      min-height: var(--dac-raster, 56px); padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 7px;
     }
     :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
@@ -132,6 +137,8 @@ class LightCard extends DacCard {
       this.hass.callService("light", "toggle", { entity_id: entity });
     });
 
+    this.teardown_.push(volgRaster(this.$(".card")));
+
     // De schuiven worden pas gebouwd als we weten wat de lamp kan, dus ze
     // krijgen hun gedrag in paint() aangehangen.
     this.sliders_ = new Map();
@@ -223,6 +230,11 @@ class LightCard extends DacCard {
     }
 
     this.paintColour_(st, on);
+
+    // De kaart zegt zelf wanneer zijn inhoud van maat verandert. De waarnemer
+    // in volgRaster vangt alleen wat er daarna nog binnenkomt; een kind dat op
+    // display:none gaat meldt zich daar niet af.
+    meetRaster(this.$(".card"));
   }
 
   /** Kleur en wit: alleen wat de lamp kan, en alleen terwijl hij brandt. */
@@ -313,6 +325,9 @@ class LightCard extends DacCard {
   getGridOptions() {
     // "auto" laat de hoogte de inhoud volgen, zodat de kleurstrips de kaarten
     // eronder naar beneden duwen in plaats van een lege regel achter te laten.
+    // En de inhoud komt zelf op een rasterrij uit -- zie rasterhoogte.js. Een
+    // getal hier zou de kaart klemmen op zijn vak, en dan steekt hij eruit
+    // zodra de lamp aangaat en de strips erbij komen.
     return { columns: 12, rows: "auto", min_columns: 4, min_rows: 1 };
   }
 

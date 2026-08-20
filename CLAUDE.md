@@ -157,7 +157,28 @@ Python-tests.
    service-aanroep dubbel op, wat makkelijk voor een gedragsverandering
    aangezien wordt.
 
-8. **Zoek kaartelementen niet met een eigen deep-query door shadow roots.** Dat
+8. **Kaarten komen op de rasterrijen uit via hun INHOUD, niet via `rows`.**
+   Het sections-raster is 56px per rij met 8px ertussen. Geef je een getal aan
+   `getGridOptions`, dan klemt `computeCardGridSize` het vak op `rows * 64 - 8`
+   en steekt de kaart eruit zodra de inhoud groeit. Daarom staan de kaarten die
+   kunnen groeien op `rows: "auto"` en duwt `src/rasterhoogte.js` hun inhoud op
+   naar 56, 120, 184 of 248. Twee dingen die daarbij gemeten zijn op
+   20 augustus 2026:
+   - Home Assistant vraagt `getGridOptions()` **alleen opnieuw bij een nieuwe
+     `hass`**. Niet op `ll-rebuild`, `card-updated`, `iron-resize` of een
+     venster-resize -- alle vier geprobeerd, teller bleef staan.
+   - Een `ResizeObserver` meldt **niets** als een kind op `display: none` gaat.
+     De kleurstrips van een lamp die uitging verdwenen wel, maar de kaart bleef
+     op 120px staan. Daarom roept elke kaart `meetRaster()` zelf aan in
+     `paint()` (of `updated()`), en is de waarnemer alleen het vangnet voor wat
+     er ná het tekenen binnenkomt.
+
+9. **Een view heeft na een harde herlading seconden nodig om te bouwen.** Meet
+   je te vroeg, dan vind je nul kaarten en lijkt het of alles stuk is. Dat is
+   twee keer ten onrechte voor een regressie aangezien; wacht tot
+   `hui-card`-elementen kinderen hebben.
+
+10. **Zoek kaartelementen niet met een eigen deep-query door shadow roots.** Dat
    heeft twee keer ten onrechte "0 kaarten" opgeleverd. Gebruik een
    capture-listener op `window` en lees `event.composedPath()` — robuuster, en
    dichter bij wat een echte klik doet.

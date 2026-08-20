@@ -22,6 +22,7 @@
  */
 
 import { DacCard, registerCard, registerEditor, TONES, INCOMPLETE } from "../base.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve, weatherIcon } from "../icons.js";
 import { bindActions, fmtNumber, isDead, localizeState, moreInfo, nameOf, stateOf } from "../ha.js";
@@ -36,8 +37,12 @@ class ForecastCard extends DacCard {
   static css = /* css */ `
     :host { display: block; height: 100%; }
 
+    /* Op een rasterrij van Home Assistant; --dac-raster wordt gemeten en
+       gezet door volgRaster in rasterhoogte.js. De hoogte van een dagtegel
+       hangt af van wat je weerbron levert, dus uitrekenen kan hier niet --
+       meten wel. */
     .card {
-      height: 100%; min-height: 56px; padding: 7px 12px;
+      min-height: var(--dac-raster, 56px); padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
     :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
@@ -129,6 +134,7 @@ class ForecastCard extends DacCard {
   }
 
   wire() {
+    this.teardown_.push(volgRaster(this.$(".card")));
     this.teardown_.push(
       bindActions(this.$(".nu"), {
         onTap: () => moreInfo(this, this.config.entity),
@@ -220,6 +226,11 @@ class ForecastCard extends DacCard {
       t == null ? "" : `${fmtNumber(this.hass, t, Number.isInteger(t) ? 0 : 1)}<small>${eenheid}</small>`;
 
     this.paintRij_();
+
+    // De kaart zegt zelf wanneer zijn inhoud van maat verandert. De waarnemer
+    // in volgRaster vangt alleen wat er daarna nog binnenkomt; een kind dat op
+    // display:none gaat meldt zich daar niet af.
+    meetRaster(this.$(".card"));
   }
 
   paintRij_() {
@@ -296,7 +307,8 @@ class ForecastCard extends DacCard {
     // "auto", net als de lampkaart. De hoogte van de dagrij hangt af van wat je
     // weerbron levert: zonder minimumtemperatuur en zonder neerslagkans is een
     // tegel twee regels korter. Een vast aantal rasterrijen zou dan bij de ene
-    // bron precies passen en bij de andere een strook leeg laten.
+    // bron precies passen en bij de andere afknijpen. De inhoud komt wél op een
+    // rasterrij uit -- zie rasterhoogte.js.
     return { columns: 12, rows: "auto", min_columns: 6, min_rows: 2 };
   }
 
