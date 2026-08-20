@@ -157,6 +157,28 @@ export function extraVoor(st, { zoeken = true } = {}) {
 }
 
 /**
+ * De bronnen van deze speler, of niets.
+ *
+ * Een tv-ontvanger heeft geen albums maar zenders, en die staan in `source_list`.
+ * Drie voorwaarden, en alle drie doen ertoe:
+ *
+ * - de speler moet `SELECT_SOURCE` kunnen, anders is er niets om te kiezen;
+ * - de lijst moet gevuld zijn -- een Sonos meldt het kenmerk soms wel en levert
+ *   dan een lege lijst, en een knop die een leeg scherm opent is een kapotte knop;
+ * - hij moet aanstaan. Een uitgeschakelde ontvanger accepteert geen zender, en
+ *   de zender die er dan nog in staat is die van gisteren.
+ *
+ * De speler zelf bepaalt dit, niet de geluidsentiteit: het volume mag van de
+ * soundbar komen, de zender komt altijd van het kastje.
+ */
+export function bronVoor(st, { tonen = true } = {}) {
+  if (!tonen || !staatAan(st) || !kan(st, KENMERK.SELECT_SOURCE)) return null;
+  const lijst = st?.attributes?.source_list;
+  if (!Array.isArray(lijst) || !lijst.length) return null;
+  return { nu: st.attributes.source ?? null, aantal: lijst.length };
+}
+
+/**
  * Wat er onder de naam staat.
  *
  * Een titel met een artiest erachter als het muziek is, de zender als het

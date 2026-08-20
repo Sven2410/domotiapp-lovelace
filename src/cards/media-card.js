@@ -65,6 +65,7 @@ import {
   stateOf,
 } from "../ha.js";
 import {
+  bronVoor,
   extraVoor,
   geluidsSpeler,
   herhaalStand,
@@ -81,6 +82,7 @@ import {
   watSpeeltEr,
 } from "./media-logica.js";
 import { toonZoekscherm } from "../media/zoekscherm.js";
+import { toonBronkiezer } from "../media/bronkiezer.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Het icoon en het voorleeslabel per knop. */
@@ -168,6 +170,28 @@ class MediaCard extends DacCard {
       font-size: 11.5px; color: var(--dac-ink-2);
     }
 
+    /* De bronknop staat rechts op de volumeregel en draagt de naam van de
+       zender die nu aanstaat -- dat is de informatie waar je naar kijkt. De
+       geluidsbalk krimpt ervoor; hij heeft aan de helft genoeg, de naam van een
+       zender niet. Zonder max-width duwt "794 Voorst Veluwezoom" de schuif weg. */
+    .bronknop {
+      flex: 0 0 auto; max-width: 45%; height: 30px; padding: 0 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      border-radius: var(--dac-radius-pill); font: inherit; font-size: 12px;
+      color: var(--dac-ink-2); background: var(--dac-surface);
+      border: 1px solid var(--dac-border);
+      transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+    }
+    .bronknop:hover { background: var(--dac-surface-hi); color: var(--dac-ink); border-color: var(--dac-border-hi); }
+    .bronknop .icon { width: 15px; height: 15px; flex: 0 0 auto; }
+    .bronknop b {
+      min-width: 0; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* In telefoonformaat is er breedte zat en kijk je van verder weg. */
+    :host([layout="groot"]) .bronknop { height: 44px; padding: 0 18px; font-size: 14px; }
+    :host([layout="groot"]) .bronknop .icon { width: 18px; height: 18px; }
+
     /* ---- derde regel ---- */
     .extra { display: flex; align-items: center; gap: 6px; }
     .extra[hidden] { display: none; }
@@ -238,6 +262,7 @@ class MediaCard extends DacCard {
       layout: "row",
       show_artwork: true,
       show_volume: true,
+      show_source: true,
       show_controls: true,
       show_search: true,
       ...config,
@@ -342,6 +367,10 @@ class MediaCard extends DacCard {
     switch (soort) {
       case "power":
         return roep(isUit(st) ? "turn_on" : "turn_off");
+      case "bron":
+        // Het bronscherm hangt aan document.body, net als het zoekscherm --
+        // zie de kop van bronkiezer.js voor waarom dat moet.
+        return toonBronkiezer(this.hass, id, nameOf(this.hass, id, this.config.name));
       case "prev":
         return roep("media_previous_track");
       case "next":
@@ -471,14 +500,22 @@ class MediaCard extends DacCard {
     const geluid = geluidsSpeler(this.config);
     const gst = geluid === this.config.entity ? st : stateOf(this.hass, geluid);
     const delen = this.config.show_volume === false || dood ? [] : volumeVoor(gst);
-    box.hidden = !delen.length;
-    if (!delen.length) {
+
+    // De bron hoort bij de SPELER, niet bij de geluidsentiteit: het volume mag
+    // van de soundbar komen, de zender komt altijd van het kastje zelf.
+    const bron = dood ? null : bronVoor(st, { tonen: this.config.show_source !== false });
+
+    // De regel blijft staan zolang er iets op staat. Een tv-ontvanger zonder
+    // geluidsentiteit heeft geen volume maar wél zenders, en dan draagt deze
+    // regel alleen de bronknop.
+    box.hidden = !delen.length && !bron;
+    if (box.hidden) {
       box.dataset.sig = "";
       this.sliders_?.delete("volume");
       return;
     }
 
-    const sig = delen.join(",");
+    const sig = [...delen, bron ? "bron" : ""].join(",");
     if (box.dataset.sig !== sig) {
       box.dataset.sig = sig;
       box.innerHTML =
@@ -490,9 +527,20 @@ class MediaCard extends DacCard {
           ? `<button class="k" type="button" data-k="vol-" aria-label="Zachter">${resolve("minus")}</button>` +
             `<button class="k" type="button" data-k="vol+" aria-label="Harder">${resolve("plus")}</button>`
           : "") +
-        `<span class="pct tnum"></span>`;
+        `<span class="pct tnum"></span>` +
+        (bron
+          ? `<button class="bronknop" type="button" data-k="bron">${resolve("tv")}<b></b></button>`
+          : "");
       this.sliders_?.delete("volume");
       box.querySelector(".slider")?.setAttribute("aria-label", "Volume");
+    }
+
+    const bronknop = box.querySelector(".bronknop");
+    if (bronknop) {
+      const naam = bron.nu || "Bron";
+      this.text(bronknop.querySelector("b"), naam);
+      bronknop.setAttribute("aria-label", `Bron kiezen, nu ${naam}`);
+      bronknop.title = `Kies uit ${bron.aantal} bronnen`;
     }
 
     const gedempt = isGedempt(gst);
@@ -625,6 +673,7 @@ class MediaEditor extends DacEditor {
       layout: "row",
       show_artwork: true,
       show_volume: true,
+      show_source: true,
       show_controls: true,
       show_search: true,
       icon_tap_action: { action: "toggle" },
@@ -654,6 +703,7 @@ class MediaEditor extends DacEditor {
       { name: "show_artwork", selector: sel.bool() },
       { name: "show_controls", selector: sel.bool() },
       { name: "show_volume", selector: sel.bool() },
+      { name: "show_source", selector: sel.bool() },
       { name: "show_search", selector: sel.bool() },
       { name: "icon_tap_action", selector: sel.action("toggle") },
       { name: "icon_hold_action", selector: sel.action("more-info") },
@@ -672,6 +722,7 @@ class MediaEditor extends DacEditor {
         show_artwork: "Albumhoes tonen",
         show_controls: "Knoppen tonen",
         show_volume: "Volume tonen",
+        show_source: "Bronknop tonen",
         show_search: "Zoeken en groeperen tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
@@ -692,6 +743,8 @@ class MediaEditor extends DacEditor {
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+    if (s.name === "show_source")
+      return "Voor een tv-ontvanger of een versterker met ingangen: een knop met de zender die nu aanstaat, die een zoekbaar overzicht opent. Kan de speler geen bron kiezen, dan verschijnt hij niet.";
     if (s.name === "show_search")
       return "De zoekknop opent Music Assistant over het hele scherm. Alleen bij een speler van Music Assistant; groeperen komt erbij als de speler dat aankan.";
     return undefined;

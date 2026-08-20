@@ -214,6 +214,24 @@ const states = Object.fromEntries([
   S("sensor.batterij_zolder", "94", { friendly_name: "Batterij zolder",
     device_class: "battery", unit_of_measurement: "%" }),
 
+  // Een tv-ontvanger zoals het Ziggo-kastje van de eigenaar: 154547 betekent
+  // onder andere SELECT_SOURCE (2048) en géén volume. Het echte kastje levert
+  // 233 bronnen; hier staan er genoeg om het zoekveld nodig te maken.
+  S("media_player.ziggo", "playing", {
+    friendly_name: "OpaEnOma",
+    supported_features: 154547,
+    source: "RTL 4",
+    source_list: ["NPO 1", "NPO 2", "NPO 3", "RTL 4", "RTL 5", "SBS6", "RTL 7",
+      "Veronica / Disney Jr.", "Net5", "RTL 8", "STAR Channel", "RTL Z", "Viaplay TV",
+      "Ziggo Sport 1", "Comedy Central", "Discovery", "ESPN", "Netflix", "Videoland",
+      "Disney+", "HBO Max", "NPO Radio 2", "Qmusic", "Radio 538", "Sublime",
+      "794 Voorst Veluwezoom", "Omroep Gelderland"],
+    media_title: "RTL Nieuws - 19:30 uur",
+    media_channel: "RTL 4",
+    media_content_type: "channel",
+    device_class: "tv",
+  }),
+
   // Een tv zonder eigen volume, met een soundbar die het geluid doet.
   S("media_player.tv_kamer", "playing", {
     friendly_name: "Tv kamer", mass_player_type: "player",
@@ -255,6 +273,62 @@ const log = (msg, cls = "") => {
 
 /** Wat de Python-kant zou bewaren, hier in het geheugen. */
 const wsOpslag = {};
+
+/**
+ * De nagebootste bibliotheek van Music Assistant.
+ *
+ * Met echte staat: een hartje dat je aanzet verschijnt in het favorietenblad,
+ * een lijst die je maakt blijft staan, en een nummer dat je eruit haalt is weg.
+ * Een vaste lijst zou alleen toetsen of er íets getekend wordt.
+ */
+let wsBiebNr = 100;
+const wsBieb = {
+  playlists: [
+    { name: "Ochtend", uri: "library://playlist/1", media_type: "playlist",
+      library_item_id: "1", provider: "library", favorite: true, is_editable: true },
+    { name: "Spotify Top 50", uri: "spotify://playlist/2", media_type: "playlist",
+      library_item_id: "2", provider: "spotify", favorite: false, is_editable: false },
+  ],
+  radio: [
+    { name: "NPO Radio 2", uri: "radiobrowser://11", media_type: "radio",
+      library_item_id: "11", provider: "radiobrowser", favorite: true },
+    { name: "Sublime", uri: "radiobrowser://12", media_type: "radio",
+      library_item_id: "12", provider: "radiobrowser", favorite: false },
+  ],
+  tracks: [
+    { name: "Says", uri: "library://track/21", media_type: "track", library_item_id: "21",
+      provider: "library", favorite: true, artists: ["Nils Frahm"], album: "Spaces" },
+    { name: "Re", uri: "library://track/22", media_type: "track", library_item_id: "22",
+      provider: "library", favorite: false, artists: ["Nils Frahm"], album: "Spaces" },
+  ],
+  albums: [
+    { name: "Spaces", uri: "library://album/31", media_type: "album", library_item_id: "31",
+      provider: "library", favorite: false, artists: ["Nils Frahm"] },
+  ],
+  artists: [
+    { name: "Nils Frahm", uri: "library://artist/41", media_type: "artist",
+      library_item_id: "41", provider: "library", favorite: false },
+  ],
+};
+const wsLijstNummers = { 1: [{ ...wsBieb.tracks[0] }, { ...wsBieb.tracks[1] }], 2: [] };
+/** Waar hoort deze uri bij? Ook zoekresultaten moeten favoriet kunnen worden. */
+function wsBiebZoek(uri) {
+  for (const soort of Object.keys(wsBieb)) {
+    const gevonden = wsBieb[soort].find((i) => i.uri === uri);
+    if (gevonden) return gevonden;
+  }
+  // Een zoekresultaat dat nog niet in de bibliotheek staat: MA zet hem er dan
+  // bij. Dat doen we hier ook, anders kan een hartje op een zoekresultaat niet.
+  const soort = { playlist: "playlists", radio: "radio", track: "tracks",
+    album: "albums", artist: "artists" }[String(uri).split("://")[1]?.split("/")[0]
+    ?? String(uri).split("//")[1]?.split("/")[0]];
+  const emmer = wsBieb[soort] ?? wsBieb.tracks;
+  const nr = String(wsBiebNr++);
+  const nieuw = { name: `Toegevoegd ${nr}`, uri, media_type: soort === "radio" ? "radio" : (soort ?? "tracks").replace(/s$/, ""),
+    library_item_id: nr, provider: "library", favorite: false };
+  emmer.push(nieuw);
+  return nieuw;
+}
 /** Twee wekkers voor Sven, zodat de wekkerkaart iets te tonen heeft. */
 const wsWekkers = {
   "person.sven": [
@@ -345,6 +419,67 @@ const hass = {
         }
         if (bericht.code === "4711") window.__pogingen = 0;
         return { ok: bericht.code === "4711" };
+      }
+      // ---- de bibliotheek: een kleine Music Assistant in het geheugen ----
+      //
+      // Met echt gedrag en niet met vaste lijstjes: een hartje dat aangaat moet
+      // in het favorietenblad verschijnen, en een lijst die je maakt moet er de
+      // volgende keer nog staan. Anders toetst de werkbank alleen of er iets
+      // getekend wordt.
+      case "domotiapp_lovelace/media/library": {
+        const soort = bericht.kind;
+        let items = (wsBieb[soort] ?? []).slice();
+        if (bericht.favorite) items = items.filter((i) => i.favorite);
+        if (bericht.search) {
+          const q = String(bericht.search).toLowerCase();
+          items = items.filter((i) => String(i.name).toLowerCase().includes(q));
+        }
+        return { items: items.slice(0, bericht.limit ?? 50) };
+      }
+      case "domotiapp_lovelace/media/favorite": {
+        if (bericht.favorite) {
+          const gevonden = wsBiebZoek(bericht.uri);
+          if (gevonden) gevonden.favorite = true;
+          else throw new Error("Onbekende uri");
+        } else {
+          const lijst = wsBieb[bericht.kind] ?? [];
+          const item = lijst.find((i) => String(i.library_item_id) === String(bericht.library_item_id));
+          if (!item) throw new Error("Niet in de bibliotheek");
+          item.favorite = false;
+        }
+        return { favorite: bericht.favorite };
+      }
+      case "domotiapp_lovelace/media/playlist/create": {
+        const nr = String(wsBiebNr++);
+        const lijst = { name: bericht.name, uri: `library://playlist/${nr}`,
+          media_type: "playlist", library_item_id: nr, provider: "library",
+          favorite: false, is_editable: true };
+        wsBieb.playlists.push(lijst);
+        wsLijstNummers[nr] = [];
+        return { playlist: lijst };
+      }
+      case "domotiapp_lovelace/media/playlist/remove": {
+        wsBieb.playlists = wsBieb.playlists.filter(
+          (l) => String(l.library_item_id) !== String(bericht.library_item_id));
+        delete wsLijstNummers[bericht.library_item_id];
+        return { removed: bericht.library_item_id };
+      }
+      case "domotiapp_lovelace/media/playlist/tracks":
+        return { tracks: (wsLijstNummers[bericht.library_item_id] ?? [])
+          .map((t, i) => ({ ...t, position: i })) };
+      case "domotiapp_lovelace/media/playlist/add_tracks": {
+        const doel = wsLijstNummers[bericht.library_item_id] ?? (wsLijstNummers[bericht.library_item_id] = []);
+        for (const uri of bericht.uris) {
+          const item = wsBiebZoek(uri);
+          if (item) doel.push({ ...item });
+        }
+        return { added: bericht.uris.length };
+      }
+      case "domotiapp_lovelace/media/playlist/remove_tracks": {
+        const doel = wsLijstNummers[bericht.library_item_id] ?? [];
+        const eruit = new Set(bericht.positions);
+        wsLijstNummers[bericht.library_item_id] = doel.filter((_, i) => !eruit.has(i));
+        return { removed: bericht.positions.length };
       }
       case "domotiapp_lovelace/media/speakers":
         return {
@@ -595,6 +730,16 @@ const COLUMNS = [
       { columns: 1, items: [
         { entity: "scene.radio", icon: "radio", tone: "pink", toggle: true } ] },
     ] },
+  ]],
+  ["Bronkiezer", [
+    // De tv-ontvanger: geen eigen volume, wél zenders. De bronknop hoort naast
+    // de geluidsbalk van de soundbar te staan.
+    { type: "custom:domotiapp-media-card", entity: "media_player.ziggo",
+      volume_entity: "media_player.sonos_keuken" },
+    // Zonder geluidsentiteit: dan draagt de regel alleen de bronknop.
+    { type: "custom:domotiapp-media-card", entity: "media_player.ziggo", name: "Zonder geluid" },
+    // Een speler zonder bronnen: hier hoort geen bronknop te staan.
+    { type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken" },
   ]],
   ["Rookmelders", [
     // Alles ingevuld, en de batterij staat op 12% -- dat hoort de kop over te nemen.

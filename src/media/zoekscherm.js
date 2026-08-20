@@ -34,6 +34,18 @@ import { resolve } from "../icons.js";
 import { bindActions, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
+import {
+  BIB_SOORTEN,
+  BIB_WOORD,
+  haalBibliotheek,
+  haalLijstNummers,
+  haalUitLijst,
+  kanFavoriet,
+  maakLijst,
+  verwijderLijst,
+  voegToeAanLijst,
+  zetFavoriet,
+} from "./bibliotheek.js";
 
 /** Hoe lang we wachten met zoeken nadat er een toets is losgelaten. */
 const TIK_PAUZE_MS = 350;
@@ -133,6 +145,24 @@ const css = /* css */ `
   }
   .zoek input::placeholder { color: var(--dac-ink-3); }
 
+  /* ------------------------------------------------------------ tabbladen */
+  /* Drie plekken: zoeken, je favorieten, je afspeellijsten. Ze staan bovenaan
+     en niet in een menu, want dit is de indeling van het scherm -- niet een
+     instelling die je een keer kiest. */
+  .tabs {
+    flex: 0 0 auto; display: flex; gap: 6px; padding: 10px 16px 0;
+  }
+  .tabs button {
+    flex: 1 1 0; padding: 12px 10px; cursor: pointer; font: inherit; font-size: 14px;
+    font-weight: 600; color: var(--dac-ink-2); background: none;
+    border: 0; border-bottom: 2px solid transparent;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .tabs button:hover { color: var(--dac-ink); }
+  .tabs button[aria-selected="true"] {
+    color: var(--dac-ink); border-bottom-color: var(--dac-accent-hi);
+  }
+
   .soorten {
     flex: 0 0 auto; display: flex; gap: 8px; padding: 6px 16px 10px;
     overflow-x: auto; scrollbar-width: none;
@@ -156,6 +186,24 @@ const css = /* css */ `
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     align-content: start;
   }
+
+  /* De regel is een wikkel: de knop links, het hartje of het kruisje rechts.
+     Een knop in een knop bestaat niet in HTML, dus staan ze naast elkaar.
+     min-width 0 op de wikkel én op de knop: zonder de eerste rekt een lange
+     naam de rasterkolom op, zonder de tweede loopt hij door de rand heen. */
+  .rij { position: relative; display: flex; align-items: center; min-width: 0; }
+  .rij .tr { flex: 1 1 auto; min-width: 0; }
+  /* Het hartje ligt OP de tegel en niet ernaast: naast de tegel valt hij buiten
+     het vlak en lijkt hij bij niets te horen. De tekst maakt ruimte met een
+     rechtermarge, zodat een lange naam er niet onder verdwijnt. */
+  .rij:has(.hart) .tr .tekst, .rij:has(.weg) .tr .tekst { padding-right: 40px; }
+  .rij .hart, .rij .weg { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+
+  /* Een hidden-attribuut verliest het van een display in een regel
+     hierboven. Dat is geen detail: zonder deze regel bleef de zoekbalk op het
+     favorietenblad staan, en stond de terugknop van een afspeellijst er terwijl
+     er geen lijst open was. Gemeten, niet bedacht. */
+  .zoek[hidden], .soorten[hidden], .lijstkop[hidden], .tabs[hidden] { display: none; }
 
   .tr {
     display: flex; align-items: center; gap: 12px; padding: 8px;
@@ -248,6 +296,53 @@ const css = /* css */ `
   .spreker .stil { flex: 1 1 auto; font-size: 11px; color: var(--dac-ink-3); text-align: right; }
 
   /* ---------------------------------------------------------------- menu */
+  /* --------------------------------------------------------------- hartje */
+  /* Het hartje staat rechts op de regel en is een eigen knop, net als het icoon
+     op de entiteitenkaart: op de regel tikken speelt af, op het hartje tikken
+     zet hem in je favorieten. Twee dingen, twee knoppen. */
+  .hart, .weg {
+    flex: 0 0 auto; width: 42px; height: 42px; padding: 0; cursor: pointer;
+    display: grid; place-items: center; border-radius: var(--dac-radius-pill);
+    background: none; border: 0; color: var(--dac-ink-3);
+    transition: color 160ms ease, background 160ms ease;
+  }
+  .hart:hover, .weg:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  .hart[aria-pressed="true"] { color: var(--dac-device-1); }
+  .hart .icon, .weg .icon { width: 20px; height: 20px; }
+
+  /* ------------------------------------------------------- afspeellijsten */
+  .lijstkop {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+    padding: 4px 16px 10px;
+  }
+  .lijstkop b { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 600;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lijstkop .terug { flex: 0 0 auto; }
+
+  .nieuwe {
+    flex: 0 0 auto; margin: 0 16px 10px; padding: 14px; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 600; text-align: center;
+    border-radius: var(--dac-radius); color: var(--dac-accent-hi);
+    background: color-mix(in srgb, var(--dac-accent-hi) 12%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
+  }
+  .nieuwe:hover { background: color-mix(in srgb, var(--dac-accent-hi) 20%, transparent); }
+  .nieuwe[hidden] { display: none; }
+
+  /* De naamregel van een nieuwe lijst. Geen prompt(): die is op een tablet in
+     kioskmodus niet te zien, en hij blokkeert alles eromheen. */
+  .nieuwrij {
+    flex: 0 0 auto; display: flex; gap: 10px; padding: 0 16px 10px;
+  }
+  .nieuwrij[hidden] { display: none; }
+  .nieuwrij input {
+    flex: 1 1 auto; min-width: 0; height: 52px; padding: 0 18px;
+    border-radius: var(--dac-radius-pill); background: var(--dac-surface);
+    border: 1px solid var(--dac-border); outline: none;
+    font: inherit; font-size: 16px; color: var(--dac-ink);
+  }
+  .nieuwrij input:focus { border-color: var(--dac-accent-hi); }
+
   .menu {
     position: fixed; z-index: 2; min-width: 190px; padding: 6px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
@@ -309,10 +404,16 @@ class MediaBrowser extends HTMLElement {
     this.$(".wie b").textContent = naam;
     this.$(".wie span").textContent = "Music Assistant";
     this.sprekerSig_ = null;
+    // Altijd op het zoekblad beginnen. Wie het scherm opent wil meestal iets
+    // zoeken; en een scherm dat opent waar je het vorige keer liet, laat je
+    // eerst uitzoeken waar je bent.
+    this.lijst_ = null;
+    this.soort_ = "";
+    this.naarTab_("zoeken");
     this.haalSpeakers_();
     // Focus ná de animatie: een input die tijdens een transform focus krijgt,
     // laat sommige mobiele browsers de pagina meescrollen.
-    setTimeout(() => this.$("input")?.focus(), 60);
+    setTimeout(() => this.$(".zoek input")?.focus(), 60);
   }
 
   sluit() {
@@ -344,6 +445,21 @@ class MediaBrowser extends HTMLElement {
           <span class="wie"><b></b><span></span></span>
           <button class="rond sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
         </header>
+        <nav class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="zoeken" aria-selected="true">Zoeken</button>
+          <button type="button" role="tab" data-tab="favorieten" aria-selected="false">Favorieten</button>
+          <button type="button" role="tab" data-tab="lijsten" aria-selected="false">Afspeellijsten</button>
+        </nav>
+        <div class="lijstkop" hidden>
+          <button class="rond terug" type="button" aria-label="Terug">${resolve("chevronRight")}</button>
+          <b></b>
+          <button class="rond weglijst" type="button" aria-label="Deze afspeellijst verwijderen">${resolve("bin")}</button>
+        </div>
+        <button class="nieuwe" type="button" hidden>+  Nieuwe afspeellijst</button>
+        <div class="nieuwrij" hidden>
+          <input type="text" placeholder="Naam van de afspeellijst" aria-label="Naam van de nieuwe afspeellijst" />
+          <button class="zoekknop" type="button" data-maak>Maken</button>
+        </div>
         <div class="zoek">
           <label class="veld">
             ${resolve("search")}
@@ -375,7 +491,11 @@ class MediaBrowser extends HTMLElement {
       else if (!e.target.closest(".menu")) this.menuDicht_();
     });
 
-    const veld = this.$("input");
+    // `.zoek input` en niet `input`: sinds het afspeellijstenblad staat het
+    // naamveld van een nieuwe lijst eerder in de shadow root, en dan hingen alle
+    // zoekbindingen aan het verkeerde veld. Gemeten: typen in het naamveld
+    // vuurde zoekopdrachten af.
+    const veld = this.$(".zoek input");
     this.aan_(this.$(".zoekknop"), "click", () => {
       clearTimeout(this.timer_);
       this.zoek_();
@@ -389,6 +509,32 @@ class MediaBrowser extends HTMLElement {
       }
       if (e.key === "Escape") this.sluit();
     });
+    this.lijstLuisteraars_();
+
+    this.aan_(this.$(".tabs"), "click", (e) => {
+      const knop = e.target.closest("[data-tab]");
+      if (knop) this.naarTab_(knop.dataset.tab);
+    });
+    this.aan_(this.$(".terug"), "click", () => {
+      this.lijst_ = null;
+      this.naarTab_("lijsten");
+    });
+    this.aan_(this.$(".weglijst"), "click", () => this.lijstWeg_());
+    this.aan_(this.$(".nieuwe"), "click", () => {
+      this.$(".nieuwrij").hidden = false;
+      this.$(".nieuwe").hidden = true;
+      this.$(".nieuwrij input").value = "";
+      this.$(".nieuwrij input").focus();
+    });
+    this.aan_(this.$("[data-maak]"), "click", () => this.lijstMaken_());
+    this.aan_(this.$(".nieuwrij input"), "keydown", (e) => {
+      if (e.key === "Enter") this.lijstMaken_();
+      if (e.key === "Escape") {
+        this.$(".nieuwrij").hidden = true;
+        this.$(".nieuwe").hidden = false;
+      }
+    });
+
     this.aan_(this.$(".soorten"), "click", (e) => {
       const knop = e.target.closest("[data-soort]");
       if (!knop) return;
@@ -397,7 +543,8 @@ class MediaBrowser extends HTMLElement {
         b.setAttribute("aria-pressed", String(b === knop));
       }
       clearTimeout(this.timer_);
-      this.zoek_();
+      if (this.modus_ === "favorieten") this.haalFavorieten_();
+      else this.zoek_();
     });
 
     this.aan_(this.$(".sprekers"), "click", (e) => {
@@ -426,7 +573,7 @@ class MediaBrowser extends HTMLElement {
   }
 
   async zoek_() {
-    const vraag = this.$("input").value.trim();
+    const vraag = this.$(".zoek input").value.trim();
     if (!vraag) {
       this.treffers_ = [];
       this.leegMelding_(
@@ -462,6 +609,231 @@ class MediaBrowser extends HTMLElement {
     }
   }
 
+  /* ---------------------------------------------------------- tabbladen */
+
+  /**
+   * Naar een tabblad.
+   *
+   * Elk tabblad heeft zijn eigen kop: zoeken heeft een zoekveld en soortknoppen,
+   * favorieten heeft alleen soortknoppen (er valt niets te zoeken, je bladert),
+   * en afspeellijsten heeft geen van beide maar wel een knop om er een te maken.
+   * Wat er niet bij hoort verdwijnt, in plaats van uitgegrijsd te blijven staan.
+   */
+  naarTab_(tab) {
+    this.modus_ = tab;
+    for (const b of this.shadowRoot.querySelectorAll("[data-tab]")) {
+      b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    }
+
+    const inLijst = tab === "lijsten" && this.lijst_;
+    this.$(".zoek").hidden = tab !== "zoeken";
+    this.$(".soorten").hidden = tab === "lijsten";
+    this.$(".lijstkop").hidden = !inLijst;
+    this.$(".nieuwe").hidden = tab !== "lijsten" || Boolean(this.lijst_);
+    this.$(".nieuwrij").hidden = true;
+
+    if (tab === "zoeken") {
+      this.tekenSoorten_(SOORTEN, this.soort_);
+      this.teken_();
+      return;
+    }
+    if (tab === "favorieten") {
+      this.tekenSoorten_(BIB_SOORTEN, this.bibSoort_);
+      this.haalFavorieten_();
+      return;
+    }
+    if (inLijst) this.openLijst_(this.lijst_);
+    else this.haalLijsten_();
+  }
+
+  /** De filterknoppen; ze dienen zowel het zoeken als de favorieten. */
+  tekenSoorten_(soorten, gekozen) {
+    this.$(".soorten").innerHTML = soorten
+      .map(
+        ([waarde, label]) =>
+          `<button type="button" data-soort="${waarde}" aria-pressed="${waarde === gekozen}">${label}</button>`
+      )
+      .join("");
+  }
+
+  /* -------------------------------------------------------- favorieten */
+
+  async haalFavorieten_() {
+    // In het favorietenblad betekent de soortknop iets anders dan bij zoeken:
+    // daar filtert hij de zoekopdracht, hier kiest hij wélke bibliotheek je ziet.
+    // Eén lege waarde ("Alles") bestaat hier niet -- MA levert per soort.
+    this.bibSoort_ = BIB_SOORTEN.some(([w]) => w === this.soort_)
+      ? this.soort_
+      : this.bibSoort_ ?? "playlists";
+    this.soort_ = this.bibSoort_;
+    const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
+    this.leegMelding_("Ophalen…", "Je favorieten uit Music Assistant.");
+    try {
+      const items = await haalBibliotheek(this.hass, this.bibSoort_, { favoriet: true });
+      if (beurt !== this.beurt_) return;
+      this.treffers_ = items;
+      if (!items.length) {
+        this.leegMelding_(
+          "Nog geen favorieten",
+          `Zoek iets op en tik op het hartje om het hier te zetten.`
+        );
+        return;
+      }
+      this.teken_();
+    } catch (fout) {
+      if (beurt !== this.beurt_) return;
+      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  /** Het hartje om. Meteen tekenen, want wachten op MA voelt als een dode knop. */
+  async favorietOm_(item, knop) {
+    const nieuw = !item.favorite;
+    item.favorite = nieuw;
+    knop?.setAttribute("aria-pressed", String(nieuw));
+    try {
+      await zetFavoriet(this.hass, item, nieuw);
+      // In het favorietenblad hoort een afgevinkt item te verdwijnen: het is
+      // geen favoriet meer, dus het staat niet meer in de lijst van favorieten.
+      if (this.modus_ === "favorieten" && !nieuw) this.haalFavorieten_();
+    } catch (fout) {
+      item.favorite = !nieuw;
+      knop?.setAttribute("aria-pressed", String(!nieuw));
+      this.leegMelding_("Dat lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  /* ----------------------------------------------------- afspeellijsten */
+
+  async haalLijsten_() {
+    const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
+    this.leegMelding_("Ophalen…", "Je afspeellijsten uit Music Assistant.");
+    try {
+      const items = await haalBibliotheek(this.hass, "playlists", {});
+      if (beurt !== this.beurt_) return;
+      this.treffers_ = items;
+      if (!items.length) {
+        this.leegMelding_("Nog geen afspeellijsten", "Maak er een met de knop hierboven.");
+        return;
+      }
+      this.teken_();
+    } catch (fout) {
+      if (beurt !== this.beurt_) return;
+      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  async openLijst_(lijst) {
+    this.lijst_ = lijst;
+    this.modus_ = "lijsten";
+    this.$(".lijstkop").hidden = false;
+    this.$(".lijstkop b").textContent = lijst.name ?? "Afspeellijst";
+    this.$(".nieuwe").hidden = true;
+    // Een lijst van een provider die niet bewerkbaar is (Spotify bijvoorbeeld)
+    // mag je wel zien maar niet weggooien. De knop verdwijnt dan.
+    this.$(".weglijst").hidden = !lijst.is_editable;
+
+    const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
+    this.leegMelding_("Ophalen…", lijst.name ?? "");
+    try {
+      const nummers = await haalLijstNummers(this.hass, lijst);
+      if (beurt !== this.beurt_) return;
+      this.treffers_ = nummers;
+      if (!nummers.length) {
+        this.leegMelding_("Deze lijst is leeg", "Zoek iets op en kies 'Aan afspeellijst toevoegen'.");
+        return;
+      }
+      this.teken_();
+    } catch (fout) {
+      if (beurt !== this.beurt_) return;
+      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  async lijstMaken_() {
+    const naam = this.$(".nieuwrij input").value.trim();
+    if (!naam) return;
+    this.$(".nieuwrij").hidden = true;
+    try {
+      await maakLijst(this.hass, naam);
+      this.lijst_ = null;
+      this.naarTab_("lijsten");
+    } catch (fout) {
+      this.leegMelding_("Maken lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  async lijstWeg_() {
+    const lijst = this.lijst_;
+    if (!lijst) return;
+    // Twee keer tikken om te bevestigen. Geen dialoog: die staat op een tablet
+    // in kioskmodus achter het scherm, en dit is niet onomkeerbaar genoeg voor
+    // een heel scherm -- de nummers blijven gewoon in de bibliotheek staan.
+    const knop = this.$(".weglijst");
+    if (knop.dataset.zeker !== "ja") {
+      knop.dataset.zeker = "ja";
+      knop.title = "Nog een keer tikken om te verwijderen";
+      knop.style.color = "var(--dac-bad)";
+      setTimeout(() => {
+        knop.dataset.zeker = "";
+        knop.style.color = "";
+      }, 4000);
+      return;
+    }
+    knop.dataset.zeker = "";
+    knop.style.color = "";
+    try {
+      await verwijderLijst(this.hass, lijst);
+      this.lijst_ = null;
+      this.naarTab_("lijsten");
+    } catch (fout) {
+      this.leegMelding_("Verwijderen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  /** Een nummer uit de open afspeellijst. Op POSITIE, want zo wil MA het. */
+  async nummerWeg_(item) {
+    const lijst = this.lijst_;
+    if (!lijst || item.position == null) return;
+    try {
+      await haalUitLijst(this.hass, lijst, [item.position]);
+      this.openLijst_(lijst);
+    } catch (fout) {
+      this.leegMelding_("Verwijderen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+    }
+  }
+
+  /** Het menu "aan welke lijst?" achter een treffer. */
+  async kiesLijstVoor_(treffer) {
+    this.menuDicht_();
+    let lijsten = [];
+    try {
+      lijsten = await haalBibliotheek(this.hass, "playlists", {});
+    } catch {
+      lijsten = [];
+    }
+    const bewerkbaar = lijsten.filter((l) => l.is_editable);
+    const menu = this.$(".menu");
+    menu.innerHTML =
+      `<span class="titel">Aan welke lijst?</span>` +
+      (bewerkbaar.length
+        ? bewerkbaar
+            .map((l, i) => `<button type="button" data-lijst="${i}">${this.veilig_(l.name)}</button>`)
+            .join("")
+        : `<span class="titel">Geen bewerkbare lijst. Maak er eerst een.</span>`);
+    menu.hidden = false;
+    menu.onclick = async (e) => {
+      const knop = e.target.closest("[data-lijst]");
+      if (!knop) return;
+      this.menuDicht_();
+      try {
+        await voegToeAanLijst(this.hass, bewerkbaar[+knop.dataset.lijst], [treffer.uri]);
+      } catch (fout) {
+        this.leegMelding_("Toevoegen lukte niet", fout?.message ?? "", true);
+      }
+    };
+  }
+
   leegMelding_(kop, tekst, fout = false) {
     this.$(".lijst").innerHTML =
       `<div class="melding${fout ? " fout" : ""}"><b>${kop}</b>${tekst}</div>`;
@@ -473,19 +845,34 @@ class MediaBrowser extends HTMLElement {
       this.leegMelding_("Niets gevonden", "Probeer een andere naam of een ander soort.");
       return;
     }
+    const inLijst = this.modus_ === "lijsten" && this.lijst_;
     lijst.innerHTML = this.treffers_
       .map((t, i) => {
         const hoes = t.image
           ? `<img src="${t.image}" alt="" loading="lazy" />`
           : resolve(t.media_type === "radio" ? "radio" : "music");
+        // Het hartje staat naast de regel en niet erin: een knop in een knop
+        // bestaat niet in HTML, en een tik erop moet iets ánders doen dan een
+        // tik op de regel.
+        const hart =
+          kanFavoriet(t) && !inLijst
+            ? `<button class="hart" type="button" data-hart="${i}" aria-pressed="${Boolean(t.favorite)}"
+                 aria-label="Favoriet">${resolve("star")}</button>`
+            : "";
+        const weg = inLijst
+          ? `<button class="weg" type="button" data-weg="${i}"
+               aria-label="Uit deze afspeellijst halen">${resolve("close")}</button>`
+          : "";
         return `
-          <button class="tr" type="button" data-i="${i}">
-            <span class="hoes">${hoes}</span>
-            <span class="tekst">
-              <span class="nm">${this.veilig_(t.name)}</span>
-              <span class="ond">${this.veilig_(ondertitel(t))}</span>
-            </span>
-          </button>`;
+          <div class="rij" data-i="${i}">
+            <button class="tr" type="button">
+              <span class="hoes">${hoes}</span>
+              <span class="tekst">
+                <span class="nm">${this.veilig_(t.name)}</span>
+                <span class="ond">${this.veilig_(ondertitel(t))}</span>
+              </span>
+            </button>${hart}${weg}
+          </div>`;
       })
       .join("");
 
@@ -495,12 +882,50 @@ class MediaBrowser extends HTMLElement {
     this.trefferBinding_ = bindActions(lijst, {
       onTap: () => {
         const t = this.laatsteTreffer_;
-        if (t) this.speel_(t, "replace");
+        if (!t) return;
+        // In het afspeellijstenblad opent een tik de lijst in plaats van hem af
+        // te spelen: je wilt zien wat erin zit. Afspelen doe je met vasthouden,
+        // net als overal in dit scherm.
+        if (this.modus_ === "lijsten" && !this.lijst_) this.openLijst_(t);
+        else this.speel_(t, "replace");
       },
       onHold: () => {
         const t = this.laatsteTreffer_;
         if (t) this.menuOpen_(t);
       },
+    });
+
+  }
+
+  /**
+   * De luisteraars op de lijst. EEN KEER, bij het opbouwen.
+   *
+   * Ze stonden in `teken_()`, en dat is precies de val die in dit project al
+   * eerder tijd heeft gekost: `teken_()` draait bij elke hertekening, dus na
+   * twee keer tekenen hingen er twee klikluisteraars en verwijderde een tik op
+   * het kruisje TWEE nummers uit de afspeellijst. Gemeten in de werkbank.
+   *
+   * Ze hoeven ook niet opnieuw: het element `.lijst` blijft staan, en welke
+   * regel geraakt is lezen ze uit het `data-`attribuut van het doel.
+   */
+  lijstLuisteraars_() {
+    const lijst = this.$(".lijst");
+
+    // Het hartje en het kruisje zijn eigen knoppen. Zonder dit telt een tik
+    // erop ook als een tik op de regel, en dan speelt er muziek terwijl je
+    // alleen een hartje wilde zetten -- dezelfde afspraak als bij de chip op de
+    // entiteitenkaart.
+    this.aan_(lijst, "click", (e) => {
+      const hart = e.target.closest("[data-hart]");
+      const weg = e.target.closest("[data-weg]");
+      if (!hart && !weg) return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (hart) this.favorietOm_(this.treffers_[+hart.dataset.hart], hart);
+      else this.nummerWeg_(this.treffers_[+weg.dataset.weg]);
+    });
+    this.aan_(lijst, "pointerdown", (e) => {
+      if (e.target.closest("[data-hart], [data-weg]")) e.stopPropagation();
     });
     // `bindActions` zegt of het een tik of een vasthoud was, maar niet waarop.
     // Dat lezen we bij het neergaan van de vinger.
@@ -541,11 +966,20 @@ class MediaBrowser extends HTMLElement {
 
   menuOpen_(treffer) {
     const menu = this.$(".menu");
+    const inLijst = this.modus_ === "lijsten" && this.lijst_;
     menu.innerHTML =
       `<span class="titel">${this.veilig_(treffer.name)}</span>` +
       `<button type="button" data-w="replace">Nu afspelen</button>` +
       `<button type="button" data-w="next">Hierna afspelen</button>` +
-      `<button type="button" data-w="add">Achteraan in de wachtrij</button>`;
+      `<button type="button" data-w="add">Achteraan in de wachtrij</button>` +
+      (kanFavoriet(treffer)
+        ? `<button type="button" data-fav>${treffer.favorite ? "Uit favorieten" : "Favoriet maken"}</button>`
+        : "") +
+      // Een afspeellijst in een afspeellijst stoppen kan niet, en een artiest
+      // ook niet -- MA neemt losse nummers en albums aan.
+      (treffer.uri && !inLijst && treffer.media_type !== "playlist"
+        ? `<button type="button" data-toe>Aan afspeellijst toevoegen</button>`
+        : "");
     menu.hidden = false;
 
     const r = this.menuPlek_;
@@ -557,7 +991,15 @@ class MediaBrowser extends HTMLElement {
 
     menu.onclick = (e) => {
       const knop = e.target.closest("[data-w]");
-      if (knop) this.speel_(treffer, knop.dataset.w);
+      if (knop) return this.speel_(treffer, knop.dataset.w);
+      if (e.target.closest("[data-fav]")) {
+        this.menuDicht_();
+        return this.favorietOm_(treffer, this.shadowRoot.querySelector(
+          `[data-hart="${this.treffers_.indexOf(treffer)}"]`
+        ));
+      }
+      if (e.target.closest("[data-toe]")) return this.kiesLijstVoor_(treffer);
+      return undefined;
     };
   }
 
