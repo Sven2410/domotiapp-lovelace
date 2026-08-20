@@ -22,7 +22,6 @@ from custom_components.domotiapp_lovelace.config_flow import (
     maak_label,
 )
 from custom_components.domotiapp_lovelace.const import DATA_STORE, DOMAIN
-from custom_components.domotiapp_lovelace.paneelcode import DATA_CODE_STORE
 
 from .conftest import registreer_lichtgroep, zet_integratie_op
 
@@ -45,18 +44,8 @@ def _gezonde_groep(entity_id: str, aantallen: tuple[int, int, int]) -> dict[str,
 
 
 async def _start(hass: HomeAssistant) -> dict[str, Any]:
-    """Open de options flow en kies meteen het opruimoverzicht.
-
-    Sinds er ook een alarmcode in te stellen is, begint de flow met een menu.
-    Alles wat hieronder staat gaat over het opruimen, dus die keuze hoort in de
-    helper en niet in twintig tests.
-    """
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    menu = await hass.config_entries.options.async_init(entry.entry_id)
-    assert menu["type"] is data_entry_flow.FlowResultType.MENU
-    return await hass.config_entries.options.async_configure(
-        menu["flow_id"], {"next_step_id": "scenes"}
-    )
+    return await hass.config_entries.options.async_init(entry.entry_id)
 
 
 # --------------------------------------------------------------------------
@@ -102,7 +91,7 @@ async def test_lijst_bevat_groep_waarvan_de_entiteit_weg_is(
     resultaat = await _start(hass)
 
     assert resultaat["type"] is data_entry_flow.FlowResultType.FORM
-    assert resultaat["step_id"] == "scenes"
+    assert resultaat["step_id"] == "init"
 
     opties = _opties(resultaat)
     waarden = {optie["value"] for optie in opties}
@@ -410,82 +399,3 @@ def _opties(resultaat: dict[str, Any]) -> list[dict[str, Any]]:
         if str(sleutel) == CONF_GROEP:
             return waarde.config["options"]
     raise AssertionError("geen keuzelijst in het formulier")
-
-
-# --------------------------------------------------------------------------
-# Het menu en de alarmcode (NIEUW GEDRAG)
-# --------------------------------------------------------------------------
-
-
-async def test_menu_biedt_twee_dingen(hass: HomeAssistant, schrijf_opslag) -> None:
-    """De flow begint met een menu: alarmcode of opruimen.
-
-    Dat de opruimstap achter een menu is beland, is de reden dat elke test
-    hierboven via `_start` loopt.
-    """
-    await zet_integratie_op(hass)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-
-    menu = await hass.config_entries.options.async_init(entry.entry_id)
-    assert menu["type"] is data_entry_flow.FlowResultType.MENU
-    assert set(menu["menu_options"]) == {"alarmcode", "scenes"}
-
-
-async def test_alarmcode_instellen_en_wissen(hass: HomeAssistant) -> None:
-    """De code gaat via deze stap de opslag in, en er weer uit.
-
-    Dit is de enige plek waar hij te zetten is, en dat is met opzet: HA zet zijn
-    eigen options-flow-endpoints achter `require_admin`.
-    """
-    await zet_integratie_op(hass)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    store = hass.data[DOMAIN][DATA_CODE_STORE]
-
-    async def open_stap() -> dict[str, Any]:
-        menu = await hass.config_entries.options.async_init(entry.entry_id)
-        return await hass.config_entries.options.async_configure(
-            menu["flow_id"], {"next_step_id": "alarmcode"}
-        )
-
-    stap = await open_stap()
-    assert stap["type"] is data_entry_flow.FlowResultType.FORM
-    assert stap["step_id"] == "alarmcode"
-
-    klaar = await hass.config_entries.options.async_configure(
-        stap["flow_id"], {"code": "4711", "herhaal": "4711", "wissen": False}
-    )
-    assert klaar["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert store.heeft_code is True
-    assert await store.async_controleer("4711") is True
-
-    stap = await open_stap()
-    klaar = await hass.config_entries.options.async_configure(
-        stap["flow_id"], {"code": "", "herhaal": "", "wissen": True}
-    )
-    assert klaar["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert store.heeft_code is False
-
-
-async def test_alarmcode_weigert_wat_niet_deugt(hass: HomeAssistant) -> None:
-    """Te kort, niet gelijk, of leeg: dan blijft het formulier staan met uitleg."""
-    await zet_integratie_op(hass)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    store = hass.data[DOMAIN][DATA_CODE_STORE]
-
-    async def probeer(velden: dict[str, Any]) -> dict[str, Any]:
-        menu = await hass.config_entries.options.async_init(entry.entry_id)
-        stap = await hass.config_entries.options.async_configure(
-            menu["flow_id"], {"next_step_id": "alarmcode"}
-        )
-        return await hass.config_entries.options.async_configure(stap["flow_id"], velden)
-
-    for velden, fout in (
-        ({"code": "", "herhaal": "", "wissen": False}, "code_leeg"),
-        ({"code": "12", "herhaal": "12", "wissen": False}, "code_te_kort"),
-        ({"code": "4711", "herhaal": "4712", "wissen": False}, "code_ongelijk"),
-    ):
-        resultaat = await probeer(velden)
-        assert resultaat["type"] is data_entry_flow.FlowResultType.FORM
-        assert resultaat["errors"] == {"base": fout}, velden
-
-    assert store.heeft_code is False, "er mag niets zijn opgeslagen"

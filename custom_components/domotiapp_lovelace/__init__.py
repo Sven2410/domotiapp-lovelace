@@ -31,7 +31,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from . import loader, migratie, paneelcode, resource, websocket
+from . import loader, migratie, resource, websocket
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -161,17 +161,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # speakers opsommen. Al het andere -- afspelen, groeperen, shuffle -- doet
     # de kaart met gewone service-aanroepen.
     media_websocket.async_register(hass)
-
-    # ---- de alarmcode ---------------------------------------------------
-    #
-    # Gehasht, aan de serverkant, met een pogingsteller. Zie paneelcode.py voor
-    # wat dit wel en niet beschermt.
-    if paneelcode.DATA_CODE_STORE not in data:
-        code_store = paneelcode.PaneelCodeStore(hass)
-        await code_store.async_load()
-        data[paneelcode.DATA_CODE_STORE] = code_store
-
-    paneelcode.async_register(hass)
 
     # Reparatiemeldingen voor onleesbare opslag. Idempotent: meldingen die er
     # niet meer horen te zijn worden opgeruimd.

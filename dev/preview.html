@@ -214,18 +214,6 @@ const states = Object.fromEntries([
   S("sensor.batterij_zolder", "94", { friendly_name: "Batterij zolder",
     device_class: "battery", unit_of_measurement: "%" }),
 
-  // Alarmpaneel.
-  S("alarm_control_panel.huis", "disarmed", { friendly_name: "Huis", supported_features: 3 }),
-  S("alarm_control_panel.schuur", "armed_away", { friendly_name: "Schuur", supported_features: 3 }),
-  S("alarm_control_panel.garage", "triggered", { friendly_name: "Garage", supported_features: 3 }),
-  // Zoals Alarmo het meldt: eigen code, en (nog) geen thuismodus.
-  S("alarm_control_panel.alarmo", "disarmed", {
-    friendly_name: "Alarmo", supported_features: 26,
-    code_format: "number", code_arm_required: false,
-  }),
-  // Een paneel zonder eigen code: hier springt de code van DomotiApp bij.
-  S("alarm_control_panel.kopo", "disarmed", { friendly_name: "KOPO", supported_features: 7 }),
-
   // Een tv zonder eigen volume, met een soundbar die het geluid doet.
   S("media_player.tv_kamer", "playing", {
     friendly_name: "Tv kamer", mass_player_type: "player",
@@ -608,7 +596,7 @@ const COLUMNS = [
         { entity: "scene.radio", icon: "radio", tone: "pink", toggle: true } ] },
     ] },
   ]],
-  ["Rookmelders en alarm", [
+  ["Rookmelders", [
     // Alles ingevuld, en de batterij staat op 12% -- dat hoort de kop over te nemen.
     { type: "custom:domotiapp-smoke-card", name: "Hal", smoke: "binary_sensor.rook_hal",
       co: "binary_sensor.co_hal", heat: "binary_sensor.warmte_hal",
@@ -618,19 +606,6 @@ const COLUMNS = [
       battery: "sensor.batterij_zolder" },
     // Alleen rook: één regel, 56px.
     { type: "custom:domotiapp-smoke-card", name: "Kelder", smoke: "binary_sensor.rook_hal" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.schuur",
-      name: "Schuur achter" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.garage" },
-  ]],
-  ["Alarm met code", [
-    // Eigen code van het paneel (1234 in deze nabootsing), geen thuismodus.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.alarmo" },
-    // Geen eigen code: de code van DomotiApp (4711) springt bij, alleen bij uit.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.kopo" },
-    // Dezelfde, maar dan met een code bij élke stand.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.kopo",
-      name: "KOPO (altijd code)", code_arm: "altijd" },
   ]],
   ["Weersvoorspelling", [
     { type: "custom:domotiapp-forecast-card", entity: "weather.buienradar" },
@@ -822,9 +797,6 @@ cols.append(
   editor("Editor — rookmelder", "domotiapp-smoke-card-editor", {
     type: "custom:domotiapp-smoke-card", smoke: "binary_sensor.rook_hal",
     battery: "sensor.batterij_hal",
-  }),
-  editor("Editor — alarmpaneel", "domotiapp-alarm-panel-card-editor", {
-    type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis",
   }),
   editor("Editor — weersvoorspelling", "domotiapp-forecast-card-editor", {
     type: "custom:domotiapp-forecast-card", entity: "weather.buienradar",

@@ -37,7 +37,6 @@ import "./cards/climate-card.js";
 import "./cards/entities-card.js";
 import "./cards/media-card.js";
 import "./cards/smoke-card.js";
-import "./cards/alarm-panel-card.js";
 import "./cards/forecast-card.js";
 import "./cards/cover-card.js";
 import "./cards/person-card.js";
