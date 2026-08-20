@@ -1,10 +1,10 @@
 # DomotiApp Lovelace
 
 De kaartenfamilie van DomotiApp, geleverd als integratie. Eén installatie, één
-bundel, één versienummer — de knop-, licht-, klimaat-, rolluik-, entiteiten-,
-media-, rookmelder-, alarmpaneel-, weersvoorspelling-, personen-, afval-,
-scheidings- en headerkaart, plus de **scenekaart** met zijn opslag per lichtgroep
-en de **wekkerkaart**.
+bundel, één versienummer — de entiteiten-, licht-, klimaat-, rolluik-, media-,
+rookmelder-, alarmpaneel-, weersvoorspelling-, personen-, afval-, scheidings- en
+headerkaart, plus de **scenekaart** met zijn opslag per lichtgroep en de
+**wekkerkaart**.
 
 ## Waarom een integratie en geen losse kaartresource
 
@@ -111,11 +111,46 @@ doorheen.
 De **weersvoorspellingkaart** (`custom:domotiapp-forecast-card`) vraagt alleen de
 weerentiteit. Per dag of per uur; wat je bron niet levert, komt er niet op.
 
-De **knopkaart** en de **entiteitenkaart** kunnen een schuifschakelaar tonen
-(instelling *Schakelaar tonen*), voor wat twee standen heeft die blijven staan —
-een lamp, een stopcontact, een schakelaar. Op een scene of een script verschijnt
-hij niet: daar valt niets aan of uit te zetten. Op de entiteitenkaart kun je
-daarnaast kiezen of de status onder de naam staat of rechts op de regel.
+## De entiteitenkaart
+
+`custom:domotiapp-entities-card` is de werkkaart. Hij is opgebouwd uit **rijen**,
+en elke rij heeft twee eigen keuzes:
+
+- **Hoeveel kolommen** — één, twee of drie entiteiten naast elkaar. Het
+  kolomaantal ís het aantal plekken: wil je een vierde, dan maak je een tweede
+  rij.
+- **Welke vorm** — *Rij* (icoon, naam en status naast elkaar), *Tegel* (icoon
+  boven de naam, met een vleug identiteitskleur, voor een raster ruimtes) of
+  *Compact* (een pil met alleen icoon en naam).
+
+Daarnaast staat er één keuze voor de hele kaart: **waar het kaartvlak zit**. Om
+de hele kaart (een lijst op één vlak), om elke entiteit apart (losse blokken —
+zo zag de oude knopkaart eruit), of geen vlak.
+
+**Er was een aparte knopkaart** (`custom:domotiapp-button-card`). Die is er sinds
+0.6.0 uit: een knop is niets anders dan deze kaart met één rij van één kolom, en
+twee kaarten die hetzelfde doen lopen vroeg of laat uit de pas. Alles wat de
+knopkaart kon zit hier: de drie vormen, icoon of naam verbergen, dubbeltikken, en
+een plek zónder entiteit — dat is een navigatieknop. Gebruik je het oude type nog
+in een dashboard, zet het dan om naar:
+
+```yaml
+type: custom:domotiapp-entities-card
+surface: items          # zoals de knopkaart: een eigen vlak per knop
+rows:
+  - columns: 1
+    layout: row         # of tile / compact
+    items:
+      - entity: light.woonkamer
+        icon: bulb
+        tap_action: { action: navigate, navigation_path: "#woonkamer" }
+```
+
+Per entiteit kun je verder een **schuifschakelaar** tonen (*Schakelaar tonen*),
+voor wat twee standen heeft die blijven staan — een lamp, een stopcontact, een
+schakelaar. Op een scene of een script verschijnt hij niet: daar valt niets aan
+of uit te zetten. En voor de hele kaart kun je kiezen of de status onder de naam
+staat of rechts op de regel.
 
 De scenes horen bij die lichtgroep, niet bij het dashboard. Zet je de kaart
 ergens anders neer, dan gaan ze mee. Verwijder je een kamer, dan blijven ze

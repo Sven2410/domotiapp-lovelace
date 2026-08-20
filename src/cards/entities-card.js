@@ -1,11 +1,32 @@
 /**
- * Een lijst entiteiten, ingedeeld in rijen die je zelf samenstelt.
+ * De werkkaart van de familie: entiteiten in rijen die je zelf samenstelt.
  *
- * De eerste opzet had één lijst en één kolomaantal voor de hele kaart, en dat
- * viel uit elkaar zodra je twee korte namen naast elkaar wilde met daaronder één
- * lange. Nu is een rij de eenheid: elke rij heeft zijn eigen kolomaantal en zijn
- * eigen entiteiten, en per entiteit stel je naam, icoon, tikgedrag en het al dan
- * niet tonen van de toestand in.
+ * Hier zat tot 20 augustus 2026 een tweede kaart naast: de knopkaart, een
+ * control als rij, tegel of compacte pil. Die twee deden hetzelfde werk in twee
+ * vormtalen -- dezelfde chip, dezelfde tweeknoppenverdeling, dezelfde
+ * kleurregels, twee keer geschreven en twee keer onderhouden. Een knop is niets
+ * anders dan een entiteitenkaart met een rij van een kolom, dus is de knopkaart
+ * hierin opgegaan en bestaat `custom:domotiapp-button-card` niet meer.
+ *
+ * Wat daarvan hierheen kwam: de drie vormen (rij, tegel, compact), het tonen of
+ * verbergen van icoon en naam per entiteit, dubbeltikken, en een plek zonder
+ * entiteit -- dat laatste is geen fout maar een navigatieknop.
+ *
+ * De vorm zit **per rij**, niet per kaart en niet per entiteit. Per kaart zou
+ * betekenen dat een raster tegels boven een lijst twee kaarten kost; per
+ * entiteit zou blokjes van ongelijke hoogte naast elkaar zetten in dezelfde rij.
+ * Een rij is precies de eenheid waarop een vorm klopt.
+ *
+ * WAAR HET VLAK ZIT
+ *
+ * De kaart heeft een vlak en de entiteiten erin zijn plat -- zo stond hij er al.
+ * Maar een raster ruimtetegels hoort er anders uit te zien: losse blokken, elk
+ * met een eigen rand, zoals de knopkaart ze tekende. Dat is `surface: items`.
+ * En `surface: none` geeft helemaal geen vlak, voor als de kaart al in iets
+ * anders zit. Een instelling, drie eerlijke standen; geen kaart die zelf raadt
+ * wat je bedoelde.
+ *
+ * DE REST, ONVERANDERD
  *
  * Heeft een entiteit een eigen afbeelding -- een clublogo, een profielfoto, het
  * merk van een integratie -- dan wordt die getoond in plaats van een icoon,
@@ -16,17 +37,17 @@
  * Alleen het icoon draagt de toestand. Een raster van zes oplichtende vlakken is
  * geen lijst meer maar een lichtkrant.
  *
- * Het icoon en de regel zijn twee knoppen, net als op de knopkaart. Op het icoon
- * tikken schakelt, op de regel tikken doet wat jij instelt -- meestal openen of
- * navigeren. Dat is het verschil tussen een lijst die je kunt bedienen en een
- * lijst waar je alleen naar kunt kijken.
+ * Het icoon en de regel zijn twee knoppen. Op het icoon tikken schakelt, op de
+ * regel tikken doet wat jij instelt -- meestal openen of navigeren. Dat is het
+ * verschil tussen een lijst die je kunt bedienen en een lijst waar je alleen
+ * naar kunt kijken.
  *
  * TWEE MANIEREN OM DE TOESTAND TE TONEN
  *
  * Standaard staat de toestand als tweede regel onder de naam. Zet je `Status
  * rechts` aan, dan staat hij rechts op de regel in plaats van eronder -- de
  * vorm die Home Assistants eigen entiteitenkaart heeft, en die in een kolom van
- * één entiteit per regel rustiger leest omdat alle waarden onder elkaar
+ * een entiteit per regel rustiger leest omdat alle waarden onder elkaar
  * uitkomen.
  *
  * En een regel die een lamp of een stopcontact aanstuurt kan in plaats van een
@@ -36,10 +57,18 @@
  * zeggen.
  */
 
-import { DacCard, registerCard, registerEditor, rowsFor, toneValue, TONES, INCOMPLETE } from "../base.js";
+import { DacCard, registerCard, rowsFor, toneValue, TONES, INCOMPLETE } from "../base.js";
 import { resolve, defaultIcon } from "../icons.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import "../editor/entities-editor.js";
+import {
+  GAP,
+  HOOGTE,
+  gevuld,
+  kaartHoogte,
+  toRows,
+  vlakVan,
+} from "./entities-logica.js";
 import {
   attrsOf,
   bindActions,
@@ -57,55 +86,54 @@ import {
   stateOf,
 } from "../ha.js";
 
-const ITEM_H = 44;
-const GAP = 6;
-
-/** Eén item mag een string zijn, of een object met alles erop. */
-const asItem = (i) => (typeof i === "string" ? { entity: i } : { ...i });
-
-/**
- * Breng elke configvorm terug tot rijen.
- *
- * De oude vorm -- één `items`- of `entities`-lijst met één `columns` -- blijft
- * werken en wordt één rij. Dashboards die al draaien hoeven niet aangepast.
- */
-export function toRows(config) {
-  if (Array.isArray(config.rows) && config.rows.length) {
-    return config.rows.map((r) => ({
-      columns: Math.min(Math.max(1, Number(r.columns) || 2), 3),
-      items: (r.items ?? r.entities ?? []).map(asItem),
-    }));
-  }
-  const flat = (config.items ?? config.entities ?? []).map(asItem);
-  if (!flat.length) return [];
-  return [{ columns: Math.min(Math.max(1, Number(config.columns) || 2), 3), items: flat }];
-}
-
 class EntitiesCard extends DacCard {
   static css = /* css */ `
     :host { display: block; height: 100%; }
 
-    /* 5px boven en onder plus 44px per regel plus de rand van 2 komt precies op
-       56 uit: één rasterrij, dezelfde hoogte als een Mushroom-kaart ernaast. */
     .card {
       height: 100%; min-height: 56px; padding: 5px 10px;
       display: flex; flex-direction: column; justify-content: center; gap: ${GAP}px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    /* Zonder eigen kaartvlak vervalt ook de binnenmarge: die hoort bij het vlak,
+       en zonder vlak duwt hij de inhoud alleen maar uit het raster. */
+    :host([vlak="items"]) .card, :host([vlak="none"]) .card {
+      background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
+    }
 
     .row {
       display: grid; gap: ${GAP}px;
       grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
     }
+    /* Een enkele rij vult de kaart. Dat is het geval van de losse knop: een
+       kaart van 56px hoog hoort een knop van 56px te tonen, geen pil van 44 met
+       lucht eromheen. Bij meer rijen niet, want dan zouden ze de ruimte
+       verdelen en staat een tegelrij naast een gewone rij uit te rekken. */
+    .card > .row:only-child { flex: 1 1 auto; }
 
     .it {
+      position: relative; overflow: hidden; height: 100%;
       display: flex; align-items: center; gap: 10px;
-      min-height: ${ITEM_H}px; padding: 2px 6px 2px 2px;
+      min-height: var(--it-h, 44px); padding: 2px 6px 2px 2px;
       background: none; border: 0; border-radius: var(--dac-radius-sm);
       font: inherit; color: inherit; text-align: left; cursor: pointer;
-      transition: background 200ms ease;
+      transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+      touch-action: manipulation;
     }
     .it:hover { background: var(--dac-surface); }
+    /* Draagt de plek zelf het vlak, dan hoort hij ook zelf te reageren -- en
+       met dezelfde ronding als elke andere kaart in de familie.
+
+       De rand staat er expliciet bij. .surface in theme.js zet hem wel, maar
+       .it hierboven zet border op 0 en staat verderop in dezelfde stylesheet;
+       bij gelijke specificiteit wint de laatste. Het gevolg was een blokje met
+       een achtergrond en zonder rand -- precies het verschil tussen een knop en
+       een vlek. */
+    .it.surface {
+      border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius); padding: 2px 10px 2px 6px;
+    }
+    .it.surface:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+    .it.surface:active { transform: scale(.985); }
 
     .chip {
       width: 36px; height: 36px; flex: 0 0 auto; cursor: pointer;
@@ -117,7 +145,7 @@ class EntitiesCard extends DacCard {
       box-shadow: 0 0 12px -3px color-mix(in srgb, var(--tone) 55%, transparent);
     }
 
-    .txt { min-width: 0; display: flex; flex-direction: column; }
+    .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     .nm {
       font-size: 13px; font-weight: 500; line-height: 1.25;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -132,29 +160,64 @@ class EntitiesCard extends DacCard {
     /* Rechts uitgelijnd: de naam neemt de ruimte, de waarde staat tegen de rand
        aan. Zo komen de waarden van een lijst onder elkaar uit in plaats van
        ergens midden in de regel te eindigen. */
-    .txt { flex: 1 1 auto; }
     .st.rechts {
       flex: 0 0 auto; margin-left: auto; padding-left: 10px;
       max-width: 55%; text-align: right; font-size: 12px;
     }
 
+    /* ---- tegel: icoon boven het label, voor een raster ruimtes of scenes ---- */
+    .row[data-vorm="tile"] .it {
+      flex-direction: column; align-items: flex-start; justify-content: space-between;
+      gap: 0; padding: 14px;
+    }
+    .row[data-vorm="tile"] .chip { width: 40px; height: 40px; }
+    .row[data-vorm="tile"] .chip .icon,
+    .row[data-vorm="tile"] .chip ha-icon { width: 21px; height: 21px; --mdc-icon-size: 21px; }
+    .row[data-vorm="tile"] .txt { flex: 0 0 auto; margin-top: 12px; width: 100%; }
+    .row[data-vorm="tile"] .nm { font-size: 14px; }
+
+    /* ---- compact: icoon en naam, meer niet. Voor een dichte favorietenrij. ---- */
+    .row[data-vorm="compact"] .it { padding: 4px 14px 4px 4px; border-radius: var(--dac-radius-pill); }
+    .row[data-vorm="compact"] .chip { width: 32px; height: 32px; border-radius: var(--dac-radius-pill); }
+    .row[data-vorm="compact"] .chip .icon,
+    .row[data-vorm="compact"] .chip ha-icon { width: 17px; height: 17px; --mdc-icon-size: 17px; }
+
     ${toggleCss}
     .toggle { width: 42px; height: 24px; }
     .toggle .knob { width: 18px; height: 18px; }
     .toggle[aria-checked="true"] .knob { --knob: 20px; }
+    /* Op een tegel is er rechts van de tekst geen ruimte, dus staat de
+       schakelaar bovenin naast het icoon -- daar waar op een rij het icoon zelf
+       staat, en dus waar je hand al is. */
+    .row[data-vorm="tile"] .toggle { position: absolute; top: 14px; right: 14px; margin: 0; }
+    .row[data-vorm="compact"] .toggle { width: 40px; height: 23px; }
+    .row[data-vorm="compact"] .toggle .knob { width: 17px; height: 17px; }
+    .row[data-vorm="compact"] .toggle[aria-checked="true"] .knob { --knob: 19px; }
+
+    /* Een vleug identiteitskleur op een tegel, zodat je hem van een afstand
+       herkent voordat de tekst leesbaar is. Alleen op de tegelvorm: in een rij
+       zou het net het oplichten worden dat er juist uit moest. */
+    .wash {
+      position: absolute; top: -70px; right: -60px; width: 190px; height: 190px;
+      border-radius: 50%; pointer-events: none; opacity: .10;
+      background: radial-gradient(circle, var(--tone) 0%, transparent 70%);
+      transition: opacity 260ms ease;
+    }
+    .it[data-on="true"] .wash { opacity: .2; }
 
     .it.unavailable { opacity: .42; pointer-events: none; }
 
     /* Onder de 260px passen twee namen niet meer naast elkaar zonder te
-       verminken, dus dan gaat elke rij terug naar één kolom. */
+       verminken, dus dan gaat elke rij terug naar een kolom. Een tegelrij niet:
+       daar staat de naam onder het icoon en past hij nog prima. */
     @container (max-width: 260px) {
-      .row { grid-template-columns: 1fr; }
+      .row:not([data-vorm="tile"]) { grid-template-columns: 1fr; }
     }
   `;
 
   validate(config) {
     const rows = toRows(config);
-    if (!rows.some((r) => r.items.length)) {
+    if (!rows.some((r) => r.items.some(gevuld))) {
       return { ...config, [INCOMPLETE]: "Voeg een rij toe en kies daar entiteiten in." };
     }
     return { show_state: true, state_position: "below", ...config, rows };
@@ -168,7 +231,7 @@ class EntitiesCard extends DacCard {
     return this.config.rows[+r]?.items[+i];
   }
 
-  /** Eén lamp draagt zijn eigen kleur, een groep niet. Zie `lightTone` in ha.js. */
+  /** Een losse lamp draagt zijn eigen kleur, een groep niet. Zie `lightTone` in ha.js. */
   tone_(item) {
     if (item.tone) return toneValue(item.tone);
     if (this.config.tone) return toneValue(this.config.tone);
@@ -189,27 +252,33 @@ class EntitiesCard extends DacCard {
 
   template() {
     const c = this.config;
-    if (c.bare) this.setAttribute("bare", "");
+    this.setAttribute("vlak", vlakVan(c));
     this.style.containerType = "inline-size";
-    const rechts = c.state_position === "right";
+    const eigenVlak = vlakVan(c) === "items";
 
     const rows = c.rows
-      .map(
-        (row, r) => `
-      <div class="row" style="--cols:${row.columns}">
-        ${row.items
+      .map((row, r) => {
+        // Op een tegel staat de status altijd onder de naam; daar is geen
+        // rechterkant om tegenaan te zetten.
+        const rechts = c.state_position === "right" && row.layout !== "tile";
+        const st = `<span class="st${rechts ? " rechts" : ""}"></span>`;
+        const items = row.items
           .map(
             (item, i) => `
-          <div class="it" role="button" tabindex="0" data-r="${r}" data-i="${i}">
-            <span class="chip" role="button" tabindex="0"></span>
-            <span class="txt"><span class="nm"></span>${rechts ? "" : `<span class="st"></span>`}</span>
-            ${rechts ? `<span class="st rechts"></span>` : ""}
+          <div class="it${eigenVlak ? " surface" : ""}" role="button" tabindex="0"
+               data-r="${r}" data-i="${i}">
+            ${row.layout === "tile" ? `<span class="wash"></span>` : ""}
+            ${item.show_icon === false ? "" : `<span class="chip" role="button" tabindex="0"></span>`}
+            <span class="txt">${item.show_name === false ? "" : `<span class="nm"></span>`}${rechts ? "" : st}</span>
+            ${rechts ? st : ""}
             ${this.metSchakelaar_(item) ? toggleHtml({ label: "Aan of uit" }) : ""}
           </div>`
           )
-          .join("")}
-      </div>`
-      )
+          .join("");
+        return `
+      <div class="row" data-vorm="${row.layout}"
+           style="--cols:${row.columns};--it-h:${HOOGTE[row.layout]}px">${items}</div>`;
+      })
       .join("");
 
     return `<div class="card surface">${rows}</div>`;
@@ -221,26 +290,34 @@ class EntitiesCard extends DacCard {
       if (!item) return;
       const fire = (which, fallback) =>
         runAction(this, this.hass, item, item[which] ?? fallback);
+      // Zonder entiteit valt er niets te openen: dan is dit een navigatieknop en
+      // doet alleen wat jij instelt nog iets.
+      const heen = { action: item.entity ? "more-info" : "none" };
 
-      // De regel opent, het icoon schakelt -- dezelfde verdeling als op de
-      // knopkaart, zodat een dashboard één gewoonte heeft in plaats van twee.
+      // De regel opent, het icoon schakelt -- twee knoppen op een regel, zodat
+      // je het licht aan kunt doen zonder de kamer te openen.
       this.teardown_.push(
         bindActions(el, {
-          onTap: () => fire("tap_action", { action: "more-info" }),
-          onHold: () => fire("hold_action", { action: "more-info" }),
+          onTap: () => fire("tap_action", heen),
+          onHold: () => fire("hold_action", heen),
+          onDouble: item.double_tap_action
+            ? () => fire("double_tap_action", { action: "none" })
+            : undefined,
         })
       );
 
       const chip = el.querySelector(".chip");
-      this.teardown_.push(
-        bindActions(chip, {
-          onTap: () => fire("icon_tap_action", defaultTapAction(item.entity)),
-          onHold: () => fire("icon_hold_action", { action: "more-info" }),
-        })
-      );
-      // Anders telt een tik op het icoon ook als een tik op de regel.
-      this.on(chip, "click", (e) => e.stopPropagation());
-      this.on(chip, "pointerdown", (e) => e.stopPropagation());
+      if (chip) {
+        this.teardown_.push(
+          bindActions(chip, {
+            onTap: () => fire("icon_tap_action", defaultTapAction(item.entity)),
+            onHold: () => fire("icon_hold_action", heen),
+          })
+        );
+        // Anders telt een tik op het icoon ook als een tik op de regel.
+        this.on(chip, "click", (e) => e.stopPropagation());
+        this.on(chip, "pointerdown", (e) => e.stopPropagation());
+      }
 
       const schakelaar = el.querySelector(".toggle");
       if (!schakelaar) return;
@@ -264,7 +341,8 @@ class EntitiesCard extends DacCard {
 
       const st = stateOf(this.hass, item.entity);
       const on = isOn(st);
-      const dead = isDead(st);
+      // Een plek zonder entiteit is een navigatieknop, geen kapotte entiteit.
+      const dead = Boolean(item.entity) && isDead(st);
 
       el.dataset.on = String(on);
       el.classList.toggle("unavailable", dead);
@@ -272,24 +350,29 @@ class EntitiesCard extends DacCard {
       const tone = this.tone_(item);
       el.style.setProperty("--tone", tone);
 
+      const name = nameOf(this.hass, item.entity, item.name);
+
       // Zelf gekozen icoon wint. Anders de eigen afbeelding van de entiteit,
       // en pas als die er niet is het icoon van het domein.
       const chip = el.querySelector(".chip");
-      const pic = pictureOf(this.hass, item.entity, item.icon);
-      const wanted = item.icon || (pic ? `pic:${pic}` : defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
-      if (chip.dataset.icon !== wanted) {
-        chip.dataset.icon = wanted;
-        chip.classList.toggle("pic", Boolean(pic));
-        chip.innerHTML = pic
-          ? `<img src="${pic}" alt="" loading="lazy" />`
-          : resolve(item.icon || defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
+      if (chip) {
+        const pic = pictureOf(this.hass, item.entity, item.icon);
+        const wanted =
+          item.icon || (pic ? `pic:${pic}` : defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
+        if (chip.dataset.icon !== wanted) {
+          chip.dataset.icon = wanted;
+          chip.classList.toggle("pic", Boolean(pic));
+          chip.innerHTML = pic
+            ? `<img src="${pic}" alt="" loading="lazy" />`
+            : resolve(item.icon || defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
+        }
+        // Een afbeelding heeft de kleur van zichzelf; alleen een icoon kleurt mee.
+        chip.style.setProperty("--tone", pic ? "var(--dac-ink-3)" : on ? tone : "var(--dac-ink-3)");
+        chip.setAttribute("aria-label", item.entity ? `${name} schakelen` : "Icoon");
       }
-      // Een afbeelding heeft de kleur van zichzelf; alleen een icoon kleurt mee.
-      chip.style.setProperty("--tone", pic ? "var(--dac-ink-3)" : on ? tone : "var(--dac-ink-3)");
 
-      const name = nameOf(this.hass, item.entity, item.name);
-      this.text(el.querySelector(".nm"), name);
-      chip.setAttribute("aria-label", `${name} schakelen`);
+      const nmEl = el.querySelector(".nm");
+      if (nmEl) this.text(nmEl, name);
 
       const schakelaar = el.querySelector(".toggle");
       if (schakelaar) {
@@ -320,20 +403,12 @@ class EntitiesCard extends DacCard {
     });
   }
 
-  lines_() {
-    return (this.config?.rows ?? []).reduce(
-      (n, r) => n + Math.ceil((r.items.length || 1) / r.columns),
-      0
-    );
-  }
-
   getCardSize() {
-    return Math.max(1, this.lines_());
+    return rowsFor(kaartHoogte(this.config));
   }
 
   getGridOptions() {
-    const lines = Math.max(1, this.lines_());
-    const rows = rowsFor(12 + lines * ITEM_H + (lines - 1) * GAP);
+    const rows = rowsFor(kaartHoogte(this.config));
     return { columns: 12, rows, min_columns: 4, min_rows: rows, max_rows: rows };
   }
 
@@ -346,7 +421,7 @@ class EntitiesCard extends DacCard {
    *
    * Er stonden twee willekeurige entiteiten in, en dat las als een kaart die al
    * iets doet terwijl er niets gekozen was -- je moest eerst opruimen voordat je
-   * kon beginnen. Nu opent de editor met één knop: rij toevoegen.
+   * kon beginnen. Nu opent de editor met een knop: rij toevoegen.
    */
   static getStubConfig() {
     return { rows: [] };
@@ -355,5 +430,6 @@ class EntitiesCard extends DacCard {
 
 registerCard("domotiapp-entities-card", EntitiesCard, {
   name: "DomotiApp Entiteiten",
-  description: "Rijen entiteiten, elk met een eigen kolomindeling.",
+  description:
+    "Entiteiten in rijen, elk met een eigen kolomindeling en vorm: regel, tegel of compacte pil. Ook voor een losse knop.",
 });
