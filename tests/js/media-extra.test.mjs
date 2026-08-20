@@ -179,4 +179,33 @@ describe("bronVoor()", () => {
   it("zonder gekozen bron nog steeds een knop, maar zonder naam", () => {
     assert.deepEqual(bronVoor(speler({ source: undefined })), { nu: null, aantal: 2 });
   });
+
+  it("geen knop bij één bron -- dat is geen keuze", () => {
+    assert.equal(bronVoor(speler({ source_list: ["NPO 1"] })), null);
+  });
+
+  it("geen knop op een speler van Music Assistant", () => {
+    // Gemeten op de Sonos van de eigenaar: de MA-entiteit meldt precies één
+    // bron, "Music Assistant Queue". Dat is de eigen boekhouding van MA en geen
+    // keuze die iemand maakt.
+    assert.equal(
+      bronVoor(
+        speler({ mass_player_type: "player", source_list: ["Music Assistant Queue"],
+                 source: "Music Assistant Queue" })
+      ),
+      null
+    );
+    // Ook niet als MA er ooit meerdere zou melden: het blijft zijn wachtrij.
+    assert.equal(
+      bronVoor(speler({ mass_player_type: "player", source_list: ["Queue", "Iets"] })),
+      null
+    );
+  });
+
+  it("de Sonos-entiteit ernaast houdt zijn eigen bronnen wél", () => {
+    // Dezelfde speaker, maar de entiteit van Sonos zelf: veertien radiozenders.
+    const sonos = speler({ mass_player_type: undefined,
+      source_list: ["100% NL", "Qmusic", "Radio 538"], source: null });
+    assert.deepEqual(bronVoor(sonos), { nu: null, aantal: 3 });
+  });
 });
