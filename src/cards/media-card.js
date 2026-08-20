@@ -412,7 +412,9 @@ class MediaCard extends DacCard {
         );
       case "search":
         // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
-        return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name));
+        return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name), {
+          radioModus: this.config.radio_mode === true,
+        });
       default:
         return undefined;
     }
@@ -704,6 +706,7 @@ class MediaEditor extends DacEditor {
       { name: "show_controls", selector: sel.bool() },
       { name: "show_volume", selector: sel.bool() },
       { name: "show_source", selector: sel.bool() },
+      { name: "radio_mode", selector: sel.bool() },
       { name: "show_search", selector: sel.bool() },
       { name: "icon_tap_action", selector: sel.action("toggle") },
       { name: "icon_hold_action", selector: sel.action("more-info") },
@@ -723,6 +726,7 @@ class MediaEditor extends DacEditor {
         show_controls: "Knoppen tonen",
         show_volume: "Volume tonen",
         show_source: "Bronknop tonen",
+        radio_mode: "Doorspelen na een nummer",
         show_search: "Zoeken en groeperen tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
@@ -743,6 +747,8 @@ class MediaEditor extends DacEditor {
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+    if (s.name === "radio_mode")
+      return "Zoals Spotify: is het gekozen nummer klaar, dan zoekt Music Assistant er zelf muziek bij in plaats van te stoppen. Staat dit uit, dan kan het nog steeds per keer via het menu bij een treffer.";
     if (s.name === "show_source")
       return "Voor een tv-ontvanger of een versterker met ingangen: een knop met de zender die nu aanstaat, die een zoekbaar overzicht opent. Kan de speler geen bron kiezen, dan verschijnt hij niet.";
     if (s.name === "show_search")
