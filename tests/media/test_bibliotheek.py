@@ -357,3 +357,98 @@ async def test_lege_lijst_toevoegen_mag_niet(
         {"type": f"{DOMAIN}/media/playlist/add_tracks", "library_item_id": "99", "uris": []},
     )
     assert not antwoord["success"]
+
+
+# ------------------------------------------------- wat er op de echte MA misging
+
+
+async def test_nummers_ophalen_vraagt_een_verse_lijst(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """`force_refresh=True`, en dat is de kern van "toevoegen doet niets".
+
+    Music Assistant cachet de nummers van een afspeellijst en voegt nieuwe
+    nummers toe in een achtergrondtaak. Zonder deze vlag kreeg het scherm de
+    lijst zoals hij wás terug -- gemeten op de installatie van de eigenaar op
+    20 augustus 2026: drie nummers toegevoegd, direct daarna 0 in de lijst, even
+    later alle drie.
+    """
+    await zet_integratie_op(hass)
+    nep_mass.music.get_playlist_tracks = AsyncMock(return_value=[])
+    client = await hass_ws_client(hass)
+
+    await _stuur(
+        client,
+        {
+            "type": f"{DOMAIN}/media/playlist/tracks",
+            "library_item_id": "40",
+            "provider": "library",
+        },
+    )
+    assert nep_mass.music.get_playlist_tracks.await_args.kwargs["force_refresh"] is True
+
+
+async def test_posities_beginnen_bij_een(hass: HomeAssistant, hass_ws_client, nep_mass) -> None:
+    """MA telt de posities in een afspeellijst vanaf 1.
+
+    Uitgelezen op de echte installatie: een lijst van twaalf nummers had de
+    posities 1 tot en met 12. Zou de terugval vanaf 0 tellen, dan haalt een tik
+    op het kruisje het nummer erbóven weg.
+    """
+    await zet_integratie_op(hass)
+    # Nummers zonder eigen `position`: dan telt onze terugval.
+    een, twee = NepNummer("Een", "1"), NepNummer("Twee", "2")
+    nep_mass.music.get_playlist_tracks = AsyncMock(return_value=[een, twee])
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client,
+        {
+            "type": f"{DOMAIN}/media/playlist/tracks",
+            "library_item_id": "40",
+            "provider": "library",
+        },
+    )
+    assert [t["position"] for t in antwoord["result"]["tracks"]] == [1, 2]
+
+
+class GeenRechten(Exception):
+    """Zoals music_assistant_models hem noemt."""
+
+
+GeenRechten.__name__ = "InsufficientPermissions"
+
+
+async def test_verwijderen_zonder_beheerrechten_zegt_wat_er_aan_de_hand_is(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Music Assistant laat een afspeellijst verwijderen alleen aan een beheerder toe.
+
+    De verbinding die Home Assistant heeft is dat niet. Op de installatie van de
+    eigenaar kwam dat als "Unknown error" op het scherm; dat vertelt niemand
+    iets. Nu staat er wát er aan de hand is en waar het wél kan.
+    """
+    await zet_integratie_op(hass)
+    nep_mass.music.remove_playlist = AsyncMock(side_effect=GeenRechten("Admin access required"))
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "40"}
+    )
+    assert not antwoord["success"]
+    bericht = antwoord["error"]["message"]
+    assert "beheerder" in bericht
+    assert "Unknown error" not in bericht
+
+
+async def test_een_gewone_fout_blijft_gewoon_doorkomen(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Alleen de fouten die we kennen worden vertaald; de rest blijft zichzelf."""
+    await zet_integratie_op(hass)
+    nep_mass.music.create_playlist = AsyncMock(side_effect=RuntimeError("iets anders"))
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(client, {"type": f"{DOMAIN}/media/playlist/create", "name": "X"})
+    assert not antwoord["success"]
+    assert "iets anders" in antwoord["error"]["message"]
