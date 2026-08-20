@@ -372,11 +372,29 @@ async def afspeellijst_verwijderen(hass: HomeAssistant, item_id: str) -> None:
     mass = client(hass)
     try:
         async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-            await mass.music.remove_playlist(item_id)
+            await mass.music.remove_playlist(item_id, recursive=False)
     except TimeoutError:
         raise
     except Exception as err:  # noqa: BLE001
-        raise _vertaal(err) from err
+        if type(err).__name__ != "InsufficientPermissions":
+            raise _vertaal(err) from err
+        # Tweede route. `music/playlists/remove` vraagt beheerrechten, maar het
+        # algemene `music/library/remove_item` is een ander commando met een
+        # eigen rechtencontrole -- misschien wél toegestaan voor de verbinding
+        # die Home Assistant heeft.
+        #
+        # `recursive=False` en dat is geen smaak: de client noemt deze route
+        # "Destructive! Will remove the item and all dependants", en bij een
+        # afspeellijst zouden dat de nummers kunnen zijn. Alleen de lijst mag
+        # weg, nooit de muziek erin.
+        try:
+            async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+                await mass.music.remove_item_from_library("playlist", item_id, recursive=False)
+        except TimeoutError:
+            raise
+        except Exception as tweede:  # noqa: BLE001
+            _LOGGER.debug("Beide routes om een afspeellijst te verwijderen faalden: %s / %s", err, tweede)
+            raise _vertaal(err) from tweede
 
 
 async def afspeellijst_nummers(
