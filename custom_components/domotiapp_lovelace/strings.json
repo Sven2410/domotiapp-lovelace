@@ -12,42 +12,23 @@
   },
   "options": {
     "step": {
-      "confirm": {
-        "title": "Scenes verwijderen",
-        "description": "U staat op het punt de opgeslagen scenes te verwijderen van:\n\n**{groep}**\n\nDit is niet ongedaan te maken. De gegevens zijn daarna alleen nog uit een backup terug te halen.\n\nDe lichtgroep zelf en de kaart blijven bestaan; de scenes kunnen daarna opnieuw worden ingesteld.",
-        "data": {
-          "bevestigd": "Ja, verwijder de scenes van deze lichtgroep"
-        }
-      },
-      "scenes": {
+      "init": {
         "title": "Opgeslagen scenes opruimen",
         "description": "Kies de lichtgroep waarvan u de opgeslagen scenes wilt verwijderen. Achter elke groep staat het aantal ingestelde lampen per scene, zodat u ziet of er werk in zit.\n\nEr wordt nog niets verwijderd; u krijgt eerst een bevestiging.",
         "data": {
           "groep": "Lichtgroep"
         }
       },
-      "init": {
-        "title": "DomotiApp Lovelace",
-        "menu_options": {
-          "alarmcode": "Alarmcode instellen",
-          "scenes": "Opgeslagen scenes opruimen"
-        }
-      },
-      "alarmcode": {
-        "title": "Alarmcode",
-        "description": "De alarmpaneelkaart vraagt deze code voordat hij het alarm uitschakelt. Inschakelen gaat zonder code.\n\n{stand}\n\nDe code wordt gehasht opgeslagen en is daarna niet meer te lezen — ook niet door u. Bent u hem kwijt, dan stelt u hier gewoon een nieuwe in.\n\n**Let op:** dit is een slot op de kaart, niet op Home Assistant. Wie in Home Assistant kan inloggen, kan het alarm ook via de ontwikkelaarstools uitschakelen. Heeft uw alarmsysteem zelf een code, gebruik dan die — de kaart stuurt hem door.",
+      "confirm": {
+        "title": "Scenes verwijderen",
+        "description": "U staat op het punt de opgeslagen scenes te verwijderen van:\n\n**{groep}**\n\nDit is niet ongedaan te maken. De gegevens zijn daarna alleen nog uit een backup terug te halen.\n\nDe lichtgroep zelf en de kaart blijven bestaan; de scenes kunnen daarna opnieuw worden ingesteld.",
         "data": {
-          "code": "Nieuwe code (minimaal 4 tekens)",
-          "herhaal": "Nog een keer",
-          "wissen": "Code verwijderen (dan vraagt de kaart niets meer)"
+          "bevestigd": "Ja, verwijder de scenes van deze lichtgroep"
         }
       }
     },
     "error": {
-      "bevestiging_vereist": "Zet het vinkje aan om te bevestigen, of sluit dit scherm om niets te verwijderen.",
-      "code_leeg": "Vul een code in, of zet het vinkje om de bestaande code te verwijderen.",
-      "code_te_kort": "Een code van minder dan vier tekens is te makkelijk te raden.",
-      "code_ongelijk": "De twee codes zijn niet gelijk. Probeer het opnieuw."
+      "bevestiging_vereist": "Zet het vinkje aan om te bevestigen, of sluit dit scherm om niets te verwijderen."
     },
     "abort": {
       "niets_opgeslagen": "Er is nog niets opgeslagen om op te ruimen.",

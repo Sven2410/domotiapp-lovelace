@@ -12,20 +12,30 @@
  * En een rij zelf klapt ook dicht. Dat is niet alleen netjes: het is het enige
  * dat een kaart van vier rijen met elf entiteiten nog te overzien houdt. Je
  * klapt de rij dicht waar je klaar mee bent en begint aan de volgende. Vandaar
- * ook dat een verse kaart met niets meer opent dan één knop: rij toevoegen.
+ * ook dat een verse kaart met niets meer opent dan een knop: rij toevoegen.
  *
  * Het kolomaantal ís het aantal plekken. Twee kolommen is twee entiteiten, niet
  * twee entiteiten naast elkaar met een derde eronder -- dat laatste is wat een
  * tweede rij is. Daarom staat er geen "entiteit toevoegen" meer: de plekken
- * staan er al, en er is er nooit één meer dan er kolommen zijn. Wat er bij het
+ * staan er al, en er is er nooit een meer dan er kolommen zijn. Wat er bij het
  * verlagen niet meer past wordt binnen deze sessie bewaard, zodat je van drie
  * naar twee en terug kunt zonder je werk kwijt te zijn.
  *
- * Dit is de enige editor in de familie die niet één `ha-form` is, en dat is geen
- * luxe. De config is genest -- rijen met items met eigen instellingen -- en
- * `ha-form` kent geen herhalende rij. De andere kaarten omzeilen dat met platte
- * sleutels (`naam:light.x`), maar dat werkt alleen zolang er één lijst is. Bij
- * twee rijen die dezelfde entiteit mogen bevatten loopt die truc vast.
+ * Sinds de knopkaart hierin is opgegaan (20 augustus 2026) staat er per rij ook
+ * een VORM: rij, tegel of compact. Die keuze zit naast het kolomaantal en niet
+ * bij de kaart, zodat een raster tegels boven een lijst regels op een kaart past
+ * in plaats van op twee. En per entiteit kan het icoon of de naam uit -- dat is
+ * wat de knopkaart kon en wat hier ontbrak.
+ *
+ * Een plek zonder entiteit is geen lege plek meer maar mag een navigatieknop
+ * zijn: een naam, een icoon en een tikactie, en verder niets. Vandaar dat overal
+ * `gevuld()` staat waar eerst `item.entity` stond.
+ *
+ * Dit is de enige editor in de familie die niet een enkele `ha-form` is, en dat
+ * is geen luxe. De config is genest -- rijen met items met eigen instellingen --
+ * en `ha-form` kent geen herhalende rij. De andere kaarten omzeilen dat met
+ * platte sleutels (`naam:light.x`), maar dat werkt alleen zolang er een lijst
+ * is. Bij twee rijen die dezelfde entiteit mogen bevatten loopt die truc vast.
  *
  * DE VAL DIE HIER STOND, EN WAAROM ALLES ERAAN HING
  *
@@ -35,7 +45,7 @@
  * nieuwe lijst maar geen nieuwe items. Vanaf de tweede wijziging was elke
  * `item.name = ...` dus een `TypeError: Cannot add property name, object is not
  * extensible`. De eerste wijziging kwam aan, de rest liep dood in een stille
- * fout: één letter in het naamveld, één icoon dat bleef hangen, een schakelaar
+ * fout: een letter in het naamveld, een icoon dat bleef hangen, een schakelaar
  * die terugsprong. Daarom geeft `emit_()` nu kopieën weg en houden we onze eigen
  * objecten voor onszelf.
  *
@@ -55,9 +65,15 @@
 import "./icon-picker.js";
 import "./tone-picker.js";
 import { meldAan } from "../registratie.js";
+import { asItem, clampCols, clampVorm, gevuld } from "../cards/entities-logica.js";
 
-const clampCols = (n) => Math.min(Math.max(1, Number(n) || 2), 3);
-const asItem = (i) => (typeof i === "string" ? { entity: i } : { ...i });
+/** Wat een rij is en wat een plek is: één keer opgeschreven, in `entities-logica.js`. */
+const VORMEN = [
+  { waarde: "row", label: "Rij" },
+  { waarde: "tile", label: "Tegel" },
+  { waarde: "compact", label: "Compact" },
+];
+const vormLabel = (v) => VORMEN.find((x) => x.waarde === v)?.label ?? "Rij";
 
 /** Een rij heeft precies zoveel plekken als kolommen: niet meer, niet minder. */
 function vul(row) {
@@ -66,8 +82,8 @@ function vul(row) {
   while (row.items.length > row.columns) {
     const eruit = row.items.pop();
     // Alleen ingevulde plekken zijn het bewaren waard, en alleen zolang deze
-    // editor openstaat. Eén klik op "2" mag geen werk weggooien.
-    if (eruit.entity) row.bewaard.push(eruit);
+    // editor openstaat. Een klik op "2" mag geen werk weggooien.
+    if (gevuld(eruit)) row.bewaard.push(eruit);
   }
   return row;
 }
@@ -85,11 +101,14 @@ function toRows(config) {
   const ruw = Array.isArray(config.rows) && config.rows.length
     ? config.rows.map((r) => ({
         columns: clampCols(r.columns),
+        layout: clampVorm(r.layout),
         items: (r.items ?? r.entities ?? []).map(asItem),
       }))
     : (() => {
         const flat = (config.items ?? config.entities ?? []).map(asItem);
-        return flat.length ? [{ columns: clampCols(config.columns), items: flat }] : [];
+        return flat.length
+          ? [{ columns: clampCols(config.columns), layout: clampVorm(config.layout), items: flat }]
+          : [];
       })();
 
   const uit = [];
@@ -99,7 +118,7 @@ function toRows(config) {
       groepen.push(row.items.slice(i, i + row.columns));
     }
     if (!groepen.length) groepen.push([]);
-    for (const items of groepen) uit.push(vul({ columns: row.columns, items }));
+    for (const items of groepen) uit.push(vul({ columns: row.columns, layout: row.layout, items }));
   }
   return uit;
 }
@@ -109,14 +128,19 @@ function toRows(config) {
  * rijen, en nergens een object dat wij daarna nog aanraken.
  *
  * Die laatste is geen netheid maar de kern. Home Assistant bevriest wat het
- * krijgt; deelden we onze eigen items uit, dan zouden ze na één wijziging
+ * krijgt; deelden we onze eigen items uit, dan zouden ze na een wijziging
  * onaanraakbaar zijn. Zie de kop.
+ *
+ * `layout: row` blijft weg: dat is de standaard, en YAML waarin op elke rij het
+ * gewone geval staat opgeschreven is moeilijker te lezen dan YAML waarin alleen
+ * de uitzondering staat.
  */
 const uitgekleed = (rows) =>
   rows
     .map((r) => ({
       columns: r.columns,
-      items: r.items.filter((i) => i.entity).map((i) => structuredClone(i)),
+      ...(r.layout && r.layout !== "row" ? { layout: r.layout } : {}),
+      items: r.items.filter(gevuld).map((i) => structuredClone(i)),
     }))
     .filter((r) => r.items.length);
 
@@ -154,18 +178,29 @@ const CSS = `
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .dac-ed .kolommen {
+  .dac-ed .segment {
     flex: 0 0 auto; display: inline-flex; gap: 2px; padding: 3px;
     background: rgba(127,127,127,.12); border-radius: 999px;
   }
-  .dac-ed .kolommen button {
+  .dac-ed .segment button {
     min-width: 28px; height: 24px; padding: 0 7px; cursor: pointer;
     border: 0; background: transparent; border-radius: 999px;
     font: inherit; font-size: 12px; color: var(--secondary-text-color);
   }
-  .dac-ed .kolommen button[aria-pressed="true"] {
+  .dac-ed .segment button[aria-pressed="true"] {
     background: var(--primary-color); color: var(--text-primary-color, #fff); font-weight: 600;
   }
+
+  /* De vorm van de rij. Staat in de rij zelf en niet in de kop: de kop is met
+     het kolomaantal en de prullenbak al vol, en op een telefoon breekt hij dan. */
+  .dac-ed .vormrij {
+    display: flex; align-items: center; gap: 10px; padding: 2px 2px 4px 2px;
+  }
+  .dac-ed .vormrij > b {
+    flex: 1 1 auto; min-width: 0; font-size: 12.5px; font-weight: 500;
+    color: var(--secondary-text-color);
+  }
+  .dac-ed .vormrij .segment button { min-width: 0; padding: 0 10px; }
 
   .dac-ed .weg {
     flex: 0 0 auto; width: 28px; height: 28px; display: grid; place-items: center;
@@ -235,6 +270,10 @@ class EntitiesEditor extends HTMLElement {
     delete this.rest_.items;
     delete this.rest_.entities;
     delete this.rest_.columns;
+    // Kwam er een oude platte config binnen, dan is `layout` daarvan al in de
+    // rij beland. Hem hier laten staan zou hem als kaartbrede sleutel
+    // terugschrijven, waar hij niets meer betekent.
+    delete this.rest_.layout;
 
     // Onze eigen wijziging die via Home Assistant terugkomt, bij ELKE
     // toetsaanslag. Zou die een herbouw uitlokken, dan verdwijnt het veld waar
@@ -252,8 +291,8 @@ class EntitiesEditor extends HTMLElement {
     this.rows_ = binnen;
     if (!this.eersteKeer_) {
       this.eersteKeer_ = true;
-      // Eén rij staat open, want dan is er niets te overzien. Bij meer rijen
-      // begint alles dicht: dat is precies waar het dichtklappen voor is.
+      // Een enkele rij staat open, want dan is er niets te overzien. Bij meer
+      // rijen begint alles dicht: dat is precies waar het dichtklappen voor is.
       if (this.rows_.length === 1) this.open_.add("r0");
     }
     this.build_();
@@ -325,7 +364,7 @@ class EntitiesEditor extends HTMLElement {
   /** Zet de lege plekken van een rij open: daar moet je nog wat mee. */
   legePlekkenOpen_(row, r) {
     row.items.forEach((it, i) => {
-      if (!it.entity) this.open_.add(`r${r}i${i}`);
+      if (!gevuld(it)) this.open_.add(`r${r}i${i}`);
     });
   }
 
@@ -352,8 +391,9 @@ class EntitiesEditor extends HTMLElement {
       const uitleg = document.createElement("p");
       uitleg.className = "uitleg";
       uitleg.textContent =
-        "Een rij is één regel op de kaart, met één, twee of drie entiteiten naast elkaar. " +
-        "Elke rij heeft zijn eigen indeling.";
+        "Een rij is een regel op de kaart, met een, twee of drie entiteiten naast elkaar. " +
+        "Elke rij heeft zijn eigen indeling en zijn eigen vorm. Een rij van een kolom is " +
+        "een losse knop.";
       wrap.appendChild(uitleg);
     }
 
@@ -362,7 +402,7 @@ class EntitiesEditor extends HTMLElement {
     knop.className = "rijtoevoegen";
     knop.textContent = "＋  Rij toevoegen";
     knop.addEventListener("click", () => {
-      const row = vul({ columns: 2, items: [] });
+      const row = vul({ columns: 2, layout: "row", items: [] });
       this.rows_.push(row);
       const r = this.rows_.length - 1;
       this.open_.add(`r${r}`);
@@ -388,19 +428,63 @@ class EntitiesEditor extends HTMLElement {
     return el;
   }
 
+  /**
+   * Een rijtje knoppen waarvan er precies een aanstaat.
+   *
+   * Zowel het kolomaantal als de vorm zijn zo'n keuze, en ze horen er hetzelfde
+   * uit te zien -- twee verschillende bedieningen voor twee keuzes van dezelfde
+   * soort is precies hoe een editor rommelig wordt.
+   */
+  segment_(opties, huidig, kies, { inKop = false } = {}) {
+    const wrap = document.createElement("span");
+    wrap.className = "segment";
+    const knoppen = opties.map((o) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = o.label;
+      if (o.titel) b.title = o.titel;
+      const klik = () => {
+        if (huidig() === o.waarde) return;
+        kies(o.waarde);
+      };
+      if (inKop) this.binnenKop_(b, klik);
+      else b.addEventListener("click", klik);
+      wrap.appendChild(b);
+      return [b, o.waarde];
+    });
+    const vernieuw = () =>
+      knoppen.forEach(([b, w]) => b.setAttribute("aria-pressed", String(huidig() === w)));
+    vernieuw();
+    return { wrap, vernieuw };
+  }
+
   /* ------------------------------------------------- kaartbrede instelling */
 
   /**
    * Wat voor de hele kaart geldt, en dus niet per rij of per entiteit.
    *
-   * Alleen de plaats van de toestand staat hier. Alles wat over één entiteit
-   * gaat hoort bij die entiteit -- dat is de hele reden dat deze editor uit
-   * blokken bestaat in plaats van uit twee lange lijsten.
+   * Twee dingen maar: waar de status staat, en waar het kaartvlak zit. Alles wat
+   * over een entiteit gaat hoort bij die entiteit, en alles wat over een rij
+   * gaat bij die rij -- dat is de hele reden dat deze editor uit blokken bestaat
+   * in plaats van uit twee lange lijsten.
    */
   kaartBlok_() {
     const form = document.createElement("ha-form");
     form.hass = this.hass_;
     form.schema = [
+      {
+        name: "surface",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "card", label: "Om de hele kaart" },
+              { value: "items", label: "Om elke entiteit apart" },
+              { value: "none", label: "Geen vlak" },
+            ],
+          },
+        },
+      },
       {
         name: "state_position",
         selector: {
@@ -414,14 +498,30 @@ class EntitiesEditor extends HTMLElement {
         },
       },
     ];
-    form.computeLabel = () => "Waar de status staat";
-    form.computeHelper = () =>
-      "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar tonen geen tekst.";
-    form.data = { state_position: this.rest_.state_position ?? "below" };
+    form.computeLabel = (s) =>
+      ({ surface: "Waar het kaartvlak zit", state_position: "Waar de status staat" })[s.name] ??
+      s.name;
+    form.computeHelper = (s) => {
+      if (s.name === "surface")
+        return "Om elke entiteit apart geeft losse blokken in plaats van een lijst op een vlak -- dat is de vorm van een raster ruimtetegels of een rij losse knoppen.";
+      if (s.name === "state_position")
+        return "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar tonen geen tekst, en op een tegel staat de status altijd onder de naam.";
+      return undefined;
+    };
+    // `bare: true` was de oude spelling van "geen vlak" en wordt hier gewoon
+    // getoond als wat het is.
+    form.data = {
+      surface: this.rest_.surface ?? (this.rest_.bare ? "none" : "card"),
+      state_position: this.rest_.state_position ?? "below",
+    };
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();
-      const v = e.detail.value?.state_position;
-      if (v === "right") this.rest_.state_position = "right";
+      const v = e.detail.value ?? {};
+      // De standaard hoort niet in de YAML: wat er staat is wat afwijkt.
+      if (v.surface === "items" || v.surface === "none") this.rest_.surface = v.surface;
+      else delete this.rest_.surface;
+      delete this.rest_.bare;
+      if (v.state_position === "right") this.rest_.state_position = "right";
       else delete this.rest_.state_position;
       this.emit_();
     });
@@ -449,40 +549,23 @@ class EntitiesEditor extends HTMLElement {
     const sub = document.createElement("small");
     titel.append(naam, sub);
 
-    const kol = document.createElement("span");
-    kol.className = "kolommen";
-    const kolKnoppen = [1, 2, 3].map((n) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = String(n);
-      b.title = `${n} entiteit${n > 1 ? "en" : ""} in deze rij`;
-      kol.appendChild(
-        this.binnenKop_(b, () => {
-          if (row.columns === n) return;
-          row.columns = n;
-          vul(row);
-          this.open_.add(`r${r}`);
-          this.legePlekkenOpen_(row, r);
-          this.emit_();
-          this.build_();
-        })
-      );
-      return b;
-    });
-
-    // De samenvatting is wat een dichtgeklapte rij nog bruikbaar maakt: je moet
-    // hem kunnen herkennen zonder hem open te doen.
-    const vernieuwKop = () => {
-      const gevuld = row.items.filter((i) => i.entity);
-      const kolommen = `${row.columns} kolom${row.columns > 1 ? "men" : ""}`;
-      sub.textContent = gevuld.length
-        ? `${kolommen} · ${gevuld.map((i) => this.itemNaam_(i)).join(", ")}`
-        : `${kolommen} · nog leeg`;
-      kolKnoppen.forEach((b) =>
-        b.setAttribute("aria-pressed", String(row.columns === Number(b.textContent)))
-      );
-    };
-    this.koppen_.push(vernieuwKop);
+    const kolommen = this.segment_(
+      [1, 2, 3].map((n) => ({
+        waarde: n,
+        label: String(n),
+        titel: `${n} entiteit${n > 1 ? "en" : ""} in deze rij`,
+      })),
+      () => row.columns,
+      (n) => {
+        row.columns = n;
+        vul(row);
+        this.open_.add(`r${r}`);
+        this.legePlekkenOpen_(row, r);
+        this.emit_();
+        this.build_();
+      },
+      { inKop: true }
+    );
 
     const weg = document.createElement("button");
     weg.type = "button";
@@ -496,11 +579,42 @@ class EntitiesEditor extends HTMLElement {
       this.build_();
     });
 
-    sum.append(pijl, titel, kol, weg);
+    sum.append(pijl, titel, kolommen.wrap, weg);
 
-    // ---- body: de plekken in deze rij ----
+    // ---- body: de vorm van deze rij, en daaronder de plekken erin ----
     const body = document.createElement("div");
     body.className = "rijbody";
+
+    const vormen = this.segment_(
+      VORMEN.map((v) => ({ waarde: v.waarde, label: v.label })),
+      () => row.layout,
+      (v) => {
+        row.layout = v;
+        // Geen herbouw: er verandert niets aan wélke velden er staan, alleen aan
+        // wat de kaart ernaast tekent.
+        this.emit_();
+      }
+    );
+    const vormrij = document.createElement("div");
+    vormrij.className = "vormrij";
+    const vormNaam = document.createElement("b");
+    vormNaam.textContent = "Vorm van deze rij";
+    vormrij.append(vormNaam, vormen.wrap);
+    body.appendChild(vormrij);
+
+    // De samenvatting is wat een dichtgeklapte rij nog bruikbaar maakt: je moet
+    // hem kunnen herkennen zonder hem open te doen.
+    const vernieuwKop = () => {
+      const ingevuld = row.items.filter(gevuld);
+      const delen = [`${row.columns} kolom${row.columns > 1 ? "men" : ""}`];
+      if (row.layout !== "row") delen.push(vormLabel(row.layout));
+      delen.push(ingevuld.length ? ingevuld.map((i) => this.itemNaam_(i)).join(", ") : "nog leeg");
+      sub.textContent = delen.join(" · ");
+      kolommen.vernieuw();
+      vormen.vernieuw();
+    };
+    this.koppen_.push(vernieuwKop);
+
     row.items.forEach((item, i) => body.appendChild(this.itemBlok_(row, item, r, i)));
 
     det.append(sum, body);
@@ -514,7 +628,8 @@ class EntitiesEditor extends HTMLElement {
     return (
       item.name ||
       this.hass_?.states?.[item.entity]?.attributes?.friendly_name ||
-      item.entity
+      item.entity ||
+      "Knop"
     );
   }
 
@@ -565,6 +680,8 @@ class EntitiesEditor extends HTMLElement {
     kiezer.hass = this.hass_;
     kiezer.schema = [{ name: "entity", selector: { entity: {} } }];
     kiezer.computeLabel = () => "Entiteit";
+    kiezer.computeHelper = () =>
+      "Mag leeg blijven: zonder entiteit wordt dit een navigatieknop. Geef hem dan een naam, een icoon en een tikactie.";
     kiezer.addEventListener("value-changed", (e) => {
       e.stopPropagation();
       item.entity = e.detail.value.entity ?? "";
@@ -597,27 +714,35 @@ class EntitiesEditor extends HTMLElement {
     rest.schema = [
       { name: "name", selector: { text: {} } },
       { name: "toggle", selector: { boolean: {} } },
+      { name: "show_icon", selector: { boolean: {} } },
+      { name: "show_name", selector: { boolean: {} } },
       { name: "show_state", selector: { boolean: {} } },
       { name: "icon_tap_action", selector: { ui_action: { default_action: "toggle" } } },
       { name: "icon_hold_action", selector: { ui_action: { default_action: "more-info" } } },
       { name: "tap_action", selector: { ui_action: { default_action: "more-info" } } },
       { name: "hold_action", selector: { ui_action: { default_action: "more-info" } } },
+      { name: "double_tap_action", selector: { ui_action: { default_action: "none" } } },
     ];
     rest.computeLabel = (s) =>
       ({
         name: "Naam (overschrijft die van de entiteit)",
         toggle: "Schakelaar tonen",
+        show_icon: "Icoon tonen",
+        show_name: "Naam tonen",
         show_state: "Status tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
         tap_action: "Tikken op de regel",
         hold_action: "Vasthouden op de regel",
+        double_tap_action: "Dubbeltikken op de regel",
       })[s.name] ?? s.name;
     rest.computeHelper = (s) => {
       if (s.name === "icon_tap_action")
         return "Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert.";
       if (s.name === "toggle")
-        return "Een schuifschakelaar rechts op de regel, in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.";
+        return "Een schuifschakelaar in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.";
+      if (s.name === "double_tap_action")
+        return "Laat dit op geen actie staan als je het niet gebruikt: een regel die op dubbeltikken wacht, reageert trager op een gewone tik.";
       return undefined;
     };
     rest.addEventListener("value-changed", (e) => {
@@ -629,11 +754,20 @@ class EntitiesEditor extends HTMLElement {
       if (v.toggle === true) item.toggle = true;
       else delete item.toggle;
       // `false` moet blijven staan, alleen de standaard mag weg.
-      if (v.show_state === false) item.show_state = false;
-      else delete item.show_state;
+      for (const k of ["show_icon", "show_name", "show_state"]) {
+        if (v[k] === false) item[k] = false;
+        else delete item[k];
+      }
       for (const k of ["icon_tap_action", "icon_hold_action", "tap_action", "hold_action"]) {
         if (v[k]) item[k] = v[k];
         else delete item[k];
+      }
+      // "Geen actie" is hier de standaard, en wegschrijven zou de kaart op elke
+      // tik 260ms laten wachten om te zien of er een tweede komt.
+      if (v.double_tap_action && v.double_tap_action.action !== "none") {
+        item.double_tap_action = v.double_tap_action;
+      } else {
+        delete item.double_tap_action;
       }
       this.emit_();
     });
@@ -641,14 +775,14 @@ class EntitiesEditor extends HTMLElement {
     // De kop: die mag bij elke wijziging opnieuw, want er staat niemand in te
     // typen. Naam en entiteit erin veranderen terwijl je ze invult.
     const vernieuwKop = () => {
-      naam.textContent = item.entity ? this.itemNaam_(item) : "Kies een entiteit";
-      sub.textContent = item.entity || "";
-      det.dataset.leeg = String(!item.entity);
-      weg.hidden = !item.entity;
+      naam.textContent = gevuld(item) ? this.itemNaam_(item) : "Kies een entiteit";
+      sub.textContent = item.entity || (gevuld(item) ? "Zonder entiteit: een navigatieknop" : "");
+      det.dataset.leeg = String(!gevuld(item));
+      weg.hidden = !gevuld(item);
     };
     this.koppen_.push(vernieuwKop);
 
-    // De velden: één keer vullen, bij het opbouwen. Daarna houden ze zichzelf
+    // De velden: een keer vullen, bij het opbouwen. Daarna houden ze zichzelf
     // bij -- `ha-form` en allebei de kiezers doen dat -- en erin schrijven
     // terwijl iemand typt zou de cursor laten wegspringen.
     kiezer.data = { entity: item.entity || undefined };
@@ -657,11 +791,14 @@ class EntitiesEditor extends HTMLElement {
     rest.data = {
       name: item.name ?? "",
       toggle: item.toggle ?? false,
+      show_icon: item.show_icon ?? true,
+      show_name: item.show_name ?? true,
       show_state: item.show_state ?? true,
       icon_tap_action: item.icon_tap_action,
       icon_hold_action: item.icon_hold_action,
       tap_action: item.tap_action,
       hold_action: item.hold_action,
+      double_tap_action: item.double_tap_action,
     };
 
     body.append(kiezer, icoon, kleur, rest);

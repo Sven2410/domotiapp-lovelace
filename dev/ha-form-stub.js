@@ -127,7 +127,14 @@ class HaFormStub extends HTMLElement {
         veld = document.createElement("input");
         veld.type = sel.number ? "number" : "text";
         veld.value = this.data_?.[s.name] ?? "";
-        veld.addEventListener("change", () =>
+        // Een tekstveld vuurt bij ELKE TOETSAANSLAG, niet pas bij het verlaten.
+        // Dat is wat `ha-textfield` doet, en het is precies het gedrag waar het
+        // twee keer op stukliep: Home Assistant duwt de config bij elke aanslag
+        // terug via `setConfig`, en een editor die daarop opnieuw opbouwt laat
+        // het veld onder je vingers verdwijnen -- alleen de eerste letter komt
+        // aan. Vuurde dit dubbel alleen bij `change`, dan zou de werkbank dat
+        // nooit laten zien. Zie de kop van src/editor/entities-editor.js.
+        veld.addEventListener(sel.number ? "change" : "input", () =>
           this.emit_(s.name, sel.number ? Number(veld.value) : veld.value)
         );
       }

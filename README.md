@@ -1,10 +1,9 @@
 # DomotiApp Lovelace
 
 De kaartenfamilie van DomotiApp, geleverd als integratie. Eén installatie, één
-bundel, één versienummer — de knop-, licht-, klimaat-, rolluik-, entiteiten-,
-media-, rookmelder-, alarmpaneel-, weersvoorspelling-, personen-, afval-,
-scheidings- en headerkaart, plus de **scenekaart** met zijn opslag per lichtgroep
-en de **wekkerkaart**.
+bundel, één versienummer — de entiteiten-, licht-, klimaat-, rolluik-, media-,
+rookmelder-, weersvoorspelling-, personen-, afval-, scheidings- en headerkaart,
+plus de **scenekaart** met zijn opslag per lichtgroep en de **wekkerkaart**.
 
 ## Waarom een integratie en geen losse kaartresource
 
@@ -85,37 +84,54 @@ entiteiten: rook, koolmonoxide, warmte, temperatuur en batterij. Vul in wat je
 melder heeft. Eén regel zegt wat er aan de hand is — rook verslaat een lege
 batterij, een lege batterij verslaat "alles rustig".
 
-De **alarmpaneelkaart** (`custom:domotiapp-alarm-panel-card`) toont de standen die
-je paneel aankan: Uitgeschakeld, Afwezig en Thuis.
-
-**Met een code.** Uitschakelen kan om een code vragen, inschakelen niet — dat is
-de standaard. De code komt uit een van twee plekken, en de kaart kiest zelf:
-
-1. **Je alarmsysteem zelf.** Meldt de entiteit `code_format`, dan heeft je paneel
-   een eigen code (Alarmo, de `manual`-integratie, een systeem van een merk). De
-   kaart toont het codepaneel en stuurt de code mee.
-2. **DomotiApp.** Heeft je paneel geen eigen code, stel er dan een in bij de
-   integratie: *Instellingen → Apparaten & diensten → DomotiApp Lovelace →
-   Configureren → Alarmcode*. Die staat gehasht op de server en is daarna niet
-   meer uit te lezen — ook niet door jou.
-
-> **Wat dit wel en niet is.** Het is een slot op de kaart, niet op Home Assistant.
-> Wie kan inloggen, kan het alarm ook via de ontwikkelaarstools uitschakelen. Het
-> houdt tegen dat iemand die langsloopt het alarm van de muur af uitzet. Wil je
-> een slot dat ook tegen een ingelogde gebruiker beschermt, gebruik dan de code
-> van je alarmsysteem zelf.
-
-Na vijf verkeerde pogingen binnen een minuut gaat er een minuut lang niets meer
-doorheen.
+Er zat een **alarmpaneelkaart** in, met een eigen code. Die is er sinds 0.6.0 uit
+en komt niet terug: een alarm hoort niet via een dashboardkaart uitgeschakeld te
+worden. Bedien je alarm via het paneel zelf of via de eigen kaart van je
+alarmintegratie.
 
 De **weersvoorspellingkaart** (`custom:domotiapp-forecast-card`) vraagt alleen de
 weerentiteit. Per dag of per uur; wat je bron niet levert, komt er niet op.
 
-De **knopkaart** en de **entiteitenkaart** kunnen een schuifschakelaar tonen
-(instelling *Schakelaar tonen*), voor wat twee standen heeft die blijven staan —
-een lamp, een stopcontact, een schakelaar. Op een scene of een script verschijnt
-hij niet: daar valt niets aan of uit te zetten. Op de entiteitenkaart kun je
-daarnaast kiezen of de status onder de naam staat of rechts op de regel.
+## De entiteitenkaart
+
+`custom:domotiapp-entities-card` is de werkkaart. Hij is opgebouwd uit **rijen**,
+en elke rij heeft twee eigen keuzes:
+
+- **Hoeveel kolommen** — één, twee of drie entiteiten naast elkaar. Het
+  kolomaantal ís het aantal plekken: wil je een vierde, dan maak je een tweede
+  rij.
+- **Welke vorm** — *Rij* (icoon, naam en status naast elkaar), *Tegel* (icoon
+  boven de naam, met een vleug identiteitskleur, voor een raster ruimtes) of
+  *Compact* (een pil met alleen icoon en naam).
+
+Daarnaast staat er één keuze voor de hele kaart: **waar het kaartvlak zit**. Om
+de hele kaart (een lijst op één vlak), om elke entiteit apart (losse blokken —
+zo zag de oude knopkaart eruit), of geen vlak.
+
+**Er was een aparte knopkaart** (`custom:domotiapp-button-card`). Die is er sinds
+0.6.0 uit: een knop is niets anders dan deze kaart met één rij van één kolom, en
+twee kaarten die hetzelfde doen lopen vroeg of laat uit de pas. Alles wat de
+knopkaart kon zit hier: de drie vormen, icoon of naam verbergen, dubbeltikken, en
+een plek zónder entiteit — dat is een navigatieknop. Gebruik je het oude type nog
+in een dashboard, zet het dan om naar:
+
+```yaml
+type: custom:domotiapp-entities-card
+surface: items          # zoals de knopkaart: een eigen vlak per knop
+rows:
+  - columns: 1
+    layout: row         # of tile / compact
+    items:
+      - entity: light.woonkamer
+        icon: bulb
+        tap_action: { action: navigate, navigation_path: "#woonkamer" }
+```
+
+Per entiteit kun je verder een **schuifschakelaar** tonen (*Schakelaar tonen*),
+voor wat twee standen heeft die blijven staan — een lamp, een stopcontact, een
+schakelaar. Op een scene of een script verschijnt hij niet: daar valt niets aan
+of uit te zetten. En voor de hele kaart kun je kiezen of de status onder de naam
+staat of rechts op de regel.
 
 De scenes horen bij die lichtgroep, niet bij het dashboard. Zet je de kaart
 ergens anders neer, dan gaan ze mee. Verwijder je een kamer, dan blijven ze

@@ -214,18 +214,6 @@ const states = Object.fromEntries([
   S("sensor.batterij_zolder", "94", { friendly_name: "Batterij zolder",
     device_class: "battery", unit_of_measurement: "%" }),
 
-  // Alarmpaneel.
-  S("alarm_control_panel.huis", "disarmed", { friendly_name: "Huis", supported_features: 3 }),
-  S("alarm_control_panel.schuur", "armed_away", { friendly_name: "Schuur", supported_features: 3 }),
-  S("alarm_control_panel.garage", "triggered", { friendly_name: "Garage", supported_features: 3 }),
-  // Zoals Alarmo het meldt: eigen code, en (nog) geen thuismodus.
-  S("alarm_control_panel.alarmo", "disarmed", {
-    friendly_name: "Alarmo", supported_features: 26,
-    code_format: "number", code_arm_required: false,
-  }),
-  // Een paneel zonder eigen code: hier springt de code van DomotiApp bij.
-  S("alarm_control_panel.kopo", "disarmed", { friendly_name: "KOPO", supported_features: 7 }),
-
   // Een tv zonder eigen volume, met een soundbar die het geluid doet.
   S("media_player.tv_kamer", "playing", {
     friendly_name: "Tv kamer", mass_player_type: "player",
@@ -596,16 +584,19 @@ const COLUMNS = [
         // Een scene kan geen schakelaar dragen: die hoort er niet te komen.
         { entity: "scene.radio", name: "Radio (geen schakelaar)", icon: "radio", toggle: true } ] },
     ] },
-    // De knopkaart met een schakelaar.
-    { type: "custom:domotiapp-button-card", entity: "switch.tuinpomp", icon: "drop",
-      tone: "water", toggle: true },
-    { type: "custom:domotiapp-button-card", entity: "input_boolean.slapen", icon: "moon",
-      tone: "house", toggle: true },
-    // En een scene met toggle aan: die hoort geen schakelaar te krijgen.
-    { type: "custom:domotiapp-button-card", entity: "scene.radio", icon: "radio",
-      tone: "pink", toggle: true },
+    // Losse knoppen met een schakelaar: rijen van een kolom, elk met een eigen
+    // vlak. Dit is wat de knopkaart was.
+    { type: "custom:domotiapp-entities-card", surface: "items", rows: [
+      { columns: 1, items: [
+        { entity: "switch.tuinpomp", icon: "drop", tone: "water", toggle: true } ] },
+      { columns: 1, items: [
+        { entity: "input_boolean.slapen", icon: "moon", tone: "house", toggle: true } ] },
+      // En een scene met toggle aan: die hoort geen schakelaar te krijgen.
+      { columns: 1, items: [
+        { entity: "scene.radio", icon: "radio", tone: "pink", toggle: true } ] },
+    ] },
   ]],
-  ["Rookmelders en alarm", [
+  ["Rookmelders", [
     // Alles ingevuld, en de batterij staat op 12% -- dat hoort de kop over te nemen.
     { type: "custom:domotiapp-smoke-card", name: "Hal", smoke: "binary_sensor.rook_hal",
       co: "binary_sensor.co_hal", heat: "binary_sensor.warmte_hal",
@@ -615,19 +606,6 @@ const COLUMNS = [
       battery: "sensor.batterij_zolder" },
     // Alleen rook: één regel, 56px.
     { type: "custom:domotiapp-smoke-card", name: "Kelder", smoke: "binary_sensor.rook_hal" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.schuur",
-      name: "Schuur achter" },
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.garage" },
-  ]],
-  ["Alarm met code", [
-    // Eigen code van het paneel (1234 in deze nabootsing), geen thuismodus.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.alarmo" },
-    // Geen eigen code: de code van DomotiApp (4711) springt bij, alleen bij uit.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.kopo" },
-    // Dezelfde, maar dan met een code bij élke stand.
-    { type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.kopo",
-      name: "KOPO (altijd code)", code_arm: "altijd" },
   ]],
   ["Weersvoorspelling", [
     { type: "custom:domotiapp-forecast-card", entity: "weather.buienradar" },
@@ -672,13 +650,15 @@ const COLUMNS = [
   ["Knoppen en afval", [
     // Zonder icoon in de config, zodat de eigen afbeelding van de entiteit aan
     // bod komt -- precies wat er in Home Assistant ontbrak.
-    { type: "custom:domotiapp-button-card", entity: "sensor.eredivisie" },
-    // Regressie op de lampkleur: één ledstrip mag zijn eigen kleur dragen, de
-    // groep eromheen niet -- die hoort lampgeel te zijn, niet paars.
-    { type: "custom:domotiapp-button-card", entity: "light.ledstrip_sven" },
-    { type: "custom:domotiapp-button-card", entity: "light.groep_slaapkamer" },
-    { type: "custom:domotiapp-button-card", entity: "input_boolean.slapen", icon: "moon", tone: "house" },
-    { type: "custom:domotiapp-button-card", entity: "scene.radio", icon: "radio", tone: "pink" },
+    { type: "custom:domotiapp-entities-card", surface: "items", rows: [
+      { columns: 1, items: [{ entity: "sensor.eredivisie" }] },
+      // Regressie op de lampkleur: één ledstrip mag zijn eigen kleur dragen, de
+      // groep eromheen niet -- die hoort lampgeel te zijn, niet paars.
+      { columns: 1, items: [{ entity: "light.ledstrip_sven" }] },
+      { columns: 1, items: [{ entity: "light.groep_slaapkamer" }] },
+      { columns: 1, items: [{ entity: "input_boolean.slapen", icon: "moon", tone: "house" }] },
+      { columns: 1, items: [{ entity: "scene.radio", icon: "radio", tone: "pink" }] },
+    ] },
     { type: "custom:domotiapp-waste-card",
       sensors: ["sensor.mijnafvalwijzer_pmd","sensor.mijnafvalwijzer_gft","sensor.mijnafvalwijzer_papier","sensor.mijnafvalwijzer_restafval"] },
   ]],
@@ -707,38 +687,47 @@ for (const [title, configs] of COLUMNS) {
   cols.appendChild(col);
 }
 
-// Tegels apart, zodat de tegelvorm naast elkaar staat.
-const tiles = document.createElement("div");
-tiles.className = "grid3";
-for (const t of [
-  { name: "Woning", icon: "house", tone: "house" },
-  { name: "Rolluiken", icon: "shutter", tone: "solar" },
-  { name: "Afval", icon: "binWheeled", tone: "warn" },
-]) {
-  tiles.appendChild(make({ type: "custom:domotiapp-button-card", layout: "tile", ...t,
-    tap_action: { action: "navigate", navigation_path: "#x" } }));
-}
-cols.lastElementChild.appendChild(tiles);
+// Tegels: een rij van drie kolommen in de tegelvorm. Geen van de drie heeft een
+// entiteit -- dit zijn navigatieknoppen, en die horen gewoon te tekenen in
+// plaats van "Niet bereikbaar" te melden.
+cols.lastElementChild.appendChild(
+  make({ type: "custom:domotiapp-entities-card", surface: "items", rows: [
+    { columns: 3, layout: "tile", items: [
+      { name: "Woning", icon: "house", tone: "house",
+        tap_action: { action: "navigate", navigation_path: "#x" } },
+      { name: "Rolluiken", icon: "shutter", tone: "solar",
+        tap_action: { action: "navigate", navigation_path: "#x" } },
+      { name: "Afval", icon: "binWheeled", tone: "warn",
+        tap_action: { action: "navigate", navigation_path: "#x" } },
+    ] },
+  ] })
+);
 
 // Een tegel en een compacte pil met schakelaar: op een tegel staat hij ergens
 // anders dan op een rij, en hij hoort er even zwaar te staan.
-const tegelSchakel = document.createElement("div");
-tegelSchakel.className = "grid2";
-tegelSchakel.append(
-  make({ type: "custom:domotiapp-button-card", layout: "tile", entity: "switch.tuinpomp",
-         name: "Pomp", icon: "drop", tone: "water", toggle: true }),
-  make({ type: "custom:domotiapp-button-card", layout: "compact", entity: "input_boolean.slapen",
-         name: "Slapen", icon: "moon", tone: "house", toggle: true })
+cols.lastElementChild.appendChild(
+  make({ type: "custom:domotiapp-entities-card", surface: "items", rows: [
+    { columns: 1, layout: "tile", items: [
+      { entity: "switch.tuinpomp", name: "Pomp", icon: "drop", tone: "water", toggle: true } ] },
+    { columns: 1, layout: "compact", items: [
+      { entity: "input_boolean.slapen", name: "Slapen", icon: "moon", tone: "house", toggle: true } ] },
+  ] })
 );
-cols.lastElementChild.appendChild(tegelSchakel);
 
-const compact = document.createElement("div");
-compact.className = "grid2";
-for (const t of [
-  { entity: "input_boolean.slapen", name: "Slapen", icon: "moon", tone: "house", layout: "compact" },
-  { entity: "scene.radio", name: "Radio", icon: "radio", tone: "pink", layout: "compact" },
-]) compact.appendChild(make({ type: "custom:domotiapp-button-card", ...t }));
-cols.lastElementChild.appendChild(compact);
+// Twee compacte pillen naast elkaar, plus een rij waarin naam en icoon uit
+// staan -- dat laatste kon alleen de knopkaart en hoort hier nu ook te kunnen.
+cols.lastElementChild.appendChild(
+  make({ type: "custom:domotiapp-entities-card", surface: "items", rows: [
+    { columns: 2, layout: "compact", items: [
+      { entity: "input_boolean.slapen", name: "Slapen", icon: "moon", tone: "house" },
+      { entity: "scene.radio", name: "Radio", icon: "radio", tone: "pink" },
+    ] },
+    { columns: 2, items: [
+      { entity: "light.spots_sven", name: "Zonder icoon", show_icon: false },
+      { entity: "light.spots_sven", icon: "bulb", show_name: false },
+    ] },
+  ] })
+);
 
 /* ------------------------------------------------------------------ editors */
 
@@ -802,18 +791,12 @@ cols.append(
     sensors: ["sensor.mijnafvalwijzer_pmd", "sensor.mijnafvalwijzer_gft"],
     tones: { "sensor.mijnafvalwijzer_gft": "teal" },
   }),
-  editor("Editor — knopkaart", "domotiapp-button-card-editor", {
-    type: "custom:domotiapp-button-card", entity: "light.spots_sven",
-  }),
   editor("Editor — mediaspeler", "domotiapp-media-card-editor", {
     type: "custom:domotiapp-media-card", entity: "media_player.sonos_keuken",
   }),
   editor("Editor — rookmelder", "domotiapp-smoke-card-editor", {
     type: "custom:domotiapp-smoke-card", smoke: "binary_sensor.rook_hal",
     battery: "sensor.batterij_hal",
-  }),
-  editor("Editor — alarmpaneel", "domotiapp-alarm-panel-card-editor", {
-    type: "custom:domotiapp-alarm-panel-card", entity: "alarm_control_panel.huis",
   }),
   editor("Editor — weersvoorspelling", "domotiapp-forecast-card-editor", {
     type: "custom:domotiapp-forecast-card", entity: "weather.buienradar",
@@ -822,6 +805,17 @@ cols.append(
   editor("Editor — entiteiten met schakelaar", "domotiapp-entities-card-editor", {
     state_position: "right",
     rows: [{ columns: 1, items: [{ entity: "switch.tuinpomp", toggle: true }] }],
+  }),
+  // De vorm per rij en de plek zonder entiteit: wat er van de knopkaart bij
+  // kwam. Hier hoort de vormkeuze op "Tegel" te staan en de tweede plek als
+  // navigatieknop herkend te worden.
+  editor("Editor — tegels en een navigatieknop", "domotiapp-entities-card-editor", {
+    surface: "items",
+    rows: [{ columns: 2, layout: "tile", items: [
+      { entity: "light.spots_sven", name: "Spots", icon: "bulb" },
+      { name: "Woning", icon: "house", tone: "house",
+        tap_action: { action: "navigate", navigation_path: "#x" } },
+    ] }],
   }),
   editor("Editor — bestaande kaart", "domotiapp-entities-card-editor", {
     rows: [
@@ -851,7 +845,13 @@ requestAnimationFrame(() => {
     const rows = c.getGridOptions?.().rows;
     const ideal = typeof rows === "number" ? rows * 56 + (rows - 1) * 8 : null;
 
-    const doos = c.shadowRoot?.querySelector(".card, .btn");
+    // Meet de doos die het vlak DRAAGT. Bij de entiteitenkaart mag dat de kaart
+    // zelf zijn of elke plek apart (surface: items) -- en in dat laatste geval
+    // heeft de kaart zelf geen hoek, dus zou meten aan .card altijd 0px geven
+    // en dus altijd rood. Dan meet de werkbank het verkeerde ding en niet de
+    // kaart de verkeerde hoek.
+    const eigenVlak = c.shadowRoot?.querySelector(".it.surface");
+    const doos = eigenVlak ?? c.shadowRoot?.querySelector(".card, .btn");
     const r = doos ? getComputedStyle(doos).borderTopLeftRadius : null;
     // 999px is de compacte pil, die mag afwijken; de rest hoort 20px te zijn.
     const radiusOk = !r || r === "20px" || parseFloat(r) > 100;
