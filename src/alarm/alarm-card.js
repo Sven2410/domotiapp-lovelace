@@ -69,6 +69,7 @@ import {
   subtitel,
 } from "./weergave.js";
 import { vormtaal } from "../scene/vormtaal.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -184,6 +185,9 @@ class DomotiappAlarmCard extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this._stopAbonnement();
+    this._rasterUit?.();
+    this._rasterUit = null;
+    this._rasterVak = null;
   }
 
   updated(gewijzigd) {
@@ -191,7 +195,28 @@ class DomotiappAlarmCard extends LitElement {
     if (gewijzigd.has("hass") && this.hass) {
       this._startAbonnement();
     }
+    this._volgRaster();
   }
+
+  /**
+   * Houd de kaart op een rasterrij van Home Assistant.
+   *
+   * Lit vervangt zijn DOM bij elke render, dus de waarnemer moet meeverhuizen
+   * zodra er een ander vak in de shadow root staat -- de foutvorm tekent geen
+   * .card maar een .needs. Zie rasterhoogte.js voor waarom dit met een meting
+   * gaat en niet met een vast aantal rijen.
+   */
+  _volgRaster() {
+    const vak = this.renderRoot?.querySelector(".card, .needs");
+    if (vak !== this._rasterVak) {
+      this._rasterUit?.();
+      this._rasterVak = vak;
+      this._rasterUit = vak ? volgRaster(vak) : null;
+    }
+    // Ook als het vak hetzelfde blijft: er kan een wekker bij zijn gekomen.
+    meetRaster(vak);
+  }
+
 
   // --- de verbinding met de integratie ---------------------------------
 
@@ -434,6 +459,14 @@ class DomotiappAlarmCard extends LitElement {
       display: block;
       container: domotiapp-kaart / inline-size;
     }
+    /* De kaart komt uit op een rasterrij van Home Assistant. --dac-raster wordt
+       gemeten en gezet door volgRaster in rasterhoogte.js; een vast aantal
+       rijen in getGridOptions kan hier niet, want deze kaart groeit met de
+       wekkers mee en zou dan door zijn eigen vak heen steken. */
+    .card {
+      min-height: var(--dac-raster, 56px);
+    }
+
     /* Geen overflow:hidden op de kaart: de stopknop houdt daarom zelf de
        hoekafronding van de kaart. Er staat sinds fase 7 niets meer boven de kaart
        te zweven — de volle-viewportlaag die het overloopmenu afsloot, is precies

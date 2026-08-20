@@ -81,6 +81,7 @@ import {
   watSpeeltEr,
 } from "./media-logica.js";
 import { toonZoekscherm } from "../media/zoekscherm.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Het icoon en het voorleeslabel per knop. */
 const KNOPPEN = {
@@ -98,8 +99,12 @@ class MediaCard extends DacCard {
   static css = /* css */ `
     :host { display: block; }
 
+    /* Op een rasterrij van Home Assistant; --dac-raster wordt gemeten en
+       gezet door volgRaster in rasterhoogte.js. Zonder dat is deze kaart 93px
+       met een volumeregel en 130px met een derde regel erbij -- allebei ergens
+       tussen twee rasterrijen in. */
     .card {
-      min-height: 56px; padding: 7px 12px;
+      min-height: var(--dac-raster, 56px); padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 7px;
     }
     :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
@@ -273,6 +278,8 @@ class MediaCard extends DacCard {
     const c = this.config;
     const fire = (which, fallback) => runAction(this, this.hass, c, c[which] ?? fallback);
 
+    this.teardown_.push(volgRaster(this.$(".card")));
+
     this.teardown_.push(
       bindActions(this.$(".top"), {
         onTap: () => fire("tap_action", { action: "more-info" }),
@@ -424,6 +431,11 @@ class MediaCard extends DacCard {
     this.paintKnoppen_(st, dood);
     this.paintVolume_(st, dood);
     this.paintExtra_(st, dood);
+
+    // De kaart zegt zelf wanneer zijn inhoud van maat verandert. De waarnemer
+    // in volgRaster vangt alleen wat er daarna nog binnenkomt; een kind dat op
+    // display:none gaat meldt zich daar niet af.
+    meetRaster(this.$(".card"));
   }
 
   paintKnoppen_(st, dood) {
