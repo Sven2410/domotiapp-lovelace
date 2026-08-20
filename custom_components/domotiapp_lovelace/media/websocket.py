@@ -185,11 +185,12 @@ async def _handle_library(hass: HomeAssistant, connection, msg: dict[str, Any]) 
 @websocket_api.async_response
 async def _handle_favorite(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     """Een hartje aan- of uitzetten."""
+    plek: dict[str, Any] | None = None
     try:
         if msg["favorite"]:
             if not msg.get("uri"):
                 raise HomeAssistantError("Om iets favoriet te maken is een uri nodig.")
-            await ma.favoriet_aan(hass, msg["uri"])
+            plek = await ma.favoriet_aan(hass, msg["uri"])
         else:
             if not msg.get("kind") or not msg.get("library_item_id"):
                 raise HomeAssistantError(
@@ -199,7 +200,9 @@ async def _handle_favorite(hass: HomeAssistant, connection, msg: dict[str, Any])
     except (ma.MANietBeschikbaar, TimeoutError, HomeAssistantError) as err:
         _fout(connection, msg, err)
         return
-    connection.send_result(msg["id"], {"favorite": msg["favorite"]})
+    # `plek` vertelt de kaart waar het item nu in de bibliotheek staat, zodat het
+    # hartje meteen weer uit kan. Zie `favoriet_aan`.
+    connection.send_result(msg["id"], {"favorite": msg["favorite"], **(plek or {})})
 
 
 @websocket_api.websocket_command(

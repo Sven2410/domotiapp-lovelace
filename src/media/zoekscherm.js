@@ -36,6 +36,7 @@ import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
 import {
   BIB_SOORTEN,
+  SOORT_ENKELVOUD,
   BIB_WOORD,
   haalBibliotheek,
   haalLijstNummers,
@@ -120,7 +121,10 @@ const css = /* css */ `
   /* ------------------------------------------------------------ zoeken */
   /* De zoekbalk is breed en heeft het woord "zoeken" erin -- op een tablet zie
      je anders een leeg vak en weet je niet of er iets gebeurt. */
-  .zoek { flex: 0 0 auto; padding: 14px 16px 8px; display: flex; gap: 10px; align-items: center; }
+  .zoek {
+    flex: 0 0 auto; padding: 14px 16px 8px; display: flex; gap: 10px; align-items: center;
+    flex-wrap: wrap;
+  }
   .zoek .veld {
     flex: 1 1 auto; display: flex; align-items: center; gap: 12px;
     padding: 0 18px; height: 56px; border-radius: var(--dac-radius-pill);
@@ -165,7 +169,7 @@ const css = /* css */ `
 
   .soorten {
     flex: 0 0 auto; display: flex; gap: 8px; padding: 6px 16px 10px;
-    overflow-x: auto; scrollbar-width: none;
+    overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
   }
   .soorten::-webkit-scrollbar { display: none; }
   .soorten button {
@@ -181,7 +185,11 @@ const css = /* css */ `
 
   /* -------------------------------------------------------- resultaten */
   .lijst {
-    flex: 1 1 auto; overflow-y: auto; padding: 4px 16px 20px;
+    /* overscroll-behavior: contain houdt het scrollen HIER. Zonder dat
+       scrolde de pagina achter het scherm mee zodra je onderaan de lijst was --
+       je scrolt dan in twee dingen tegelijk. */
+    flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+    padding: 4px 16px 20px;
     display: grid; gap: 10px;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     align-content: start;
@@ -264,6 +272,31 @@ const css = /* css */ `
   .melding.fout b { color: var(--dac-bad); }
 
   /* -------------------------------------------------------------- speakers */
+  /* De kop van de speakerbalk is een knop: op een telefoon nam die balk het
+     halve scherm in beslag, en dan blader je door je muziek in een strook van
+     vier regels. Dicht toont hij wie er speelt; open de hele lijst. */
+  .voetkop {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 12px 4px; cursor: pointer; font: inherit; text-align: left;
+    background: none; border: 0; color: inherit;
+  }
+  .voetkop .waar {
+    flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--dac-ink-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .voetkop .pijl {
+    flex: 0 0 auto; display: grid; place-items: center;
+    transition: transform 200ms ease;
+  }
+  .voetkop .pijl .icon { width: 18px; height: 18px; color: var(--dac-ink-3); }
+  footer[open] .voetkop .pijl { transform: rotate(180deg); }
+  footer:not([open]) .sprekers { display: none; }
+  /* Ook open blijft de lijst binnen de perken: hooguit de helft van het scherm,
+     en scrollen doe je erin en niet erachter. */
+  footer[open] .sprekers {
+    max-height: min(46vh, 340px); overflow-y: auto; overscroll-behavior: contain;
+  }
+
   footer {
     flex: 0 0 auto; border-top: 1px solid var(--dac-border);
     padding: 10px 16px max(12px, env(safe-area-inset-bottom));
@@ -380,6 +413,36 @@ const css = /* css */ `
     border-color: color-mix(in srgb, var(--dac-bad) 50%, transparent);
   }
 
+  /* ------------------------------------------------------------ telefoon */
+  /* Gemeten op de telefoon van de eigenaar (390px breed): de knop "Zoeken" viel
+     buiten beeld, de tabbladen stonden krap, en de speakerbalk nam het halve
+     scherm. Dit blok is geen opsmuk maar de reden dat het scherm daar bruikbaar
+     is. */
+  @media (max-width: 560px) {
+    header { padding: max(10px, env(safe-area-inset-top)) 12px 10px; }
+    .tabs { padding: 6px 8px 0; gap: 2px; }
+    .tabs button { padding: 12px 4px; font-size: 13px; }
+
+    /* Het veld op de eerste regel, de knop eronder over de volle breedte. Naast
+       elkaar passen ze niet: dan wordt het veld zo smal dat er twee woorden in
+       staan, of valt de knop van het scherm. */
+    .zoek { padding: 10px 12px 6px; gap: 8px; }
+    .zoek .veld { flex: 1 1 100%; height: 50px; padding: 0 14px; }
+    .zoekknop { flex: 1 1 100%; height: 46px; padding: 0; }
+
+    .soorten { padding: 4px 12px 8px; }
+    .lijst { padding: 4px 12px 16px; grid-template-columns: 1fr; }
+    .nieuwe, .nieuwrij { margin-inline: 12px; padding-inline: 0; }
+    .lijstkop { padding: 4px 12px 8px; }
+
+    footer { padding: 0 12px max(8px, env(safe-area-inset-bottom)); }
+    .toast { bottom: max(110px, env(safe-area-inset-bottom)); }
+    /* Een menu dat halverwege het scherm begint en 60vh hoog is, past niet meer.
+       Op een telefoon is bijna de hele hoogte beter dan een lijst die eronder
+       doorloopt. */
+    .menu { max-height: 70vh; min-width: 180px; }
+  }
+
   .menu {
     position: fixed; z-index: 2; min-width: 190px; padding: 6px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
@@ -426,11 +489,12 @@ class MediaBrowser extends HTMLElement {
    * @param {string} entityId de speler waar dit scherm bij hoort
    * @param {string} naam
    */
-  open(hass, entityId, naam, { radioModus = false } = {}) {
+  open(hass, entityId, naam, { radioModus = false, speakers = null } = {}) {
     this.hass = hass;
     this.entity_ = entityId;
     this.naam_ = naam;
     this.radioModus_ = radioModus;
+    this.speakerKeuze_ = Array.isArray(speakers) && speakers.length ? speakers : null;
     if (!this.gebouwd_) this.bouw_();
     this.setAttribute("open", "");
     // Escape hangt aan het document en niet aan dit element.
@@ -447,6 +511,10 @@ class MediaBrowser extends HTMLElement {
     this.$(".wie b").textContent = naam;
     this.$(".wie span").textContent = "Music Assistant";
     this.sprekerSig_ = null;
+    // Altijd dichtgeklapt beginnen. Wie het scherm opent komt muziek zoeken;
+    // waar het heen gaat staat in de kop, en openklappen is een tik.
+    this.$("footer")?.removeAttribute("open");
+    this.$(".voetkop")?.setAttribute("aria-expanded", "false");
     // Altijd op het zoekblad beginnen. Wie het scherm opent wil meestal iets
     // zoeken; en een scherm dat opent waar je het vorige keer liet, laat je
     // eerst uitzoeken waar je bent.
@@ -520,7 +588,11 @@ class MediaBrowser extends HTMLElement {
         </nav>
         <div class="lijst"></div>
         <footer hidden>
-          <span class="kop">Speelt af op</span>
+          <button class="voetkop" type="button" aria-expanded="false">
+            <span class="kop">Speelt af op</span>
+            <span class="waar"></span>
+            <span class="pijl">${resolve("chevronDown")}</span>
+          </button>
           <div class="sprekers"></div>
         </footer>
         <div class="menu" hidden></div>
@@ -553,6 +625,16 @@ class MediaBrowser extends HTMLElement {
       if (e.key === "Escape") this.sluit();
     });
     this.lijstLuisteraars_();
+
+    // De speakerbalk klapt in en uit. Dicht op een telefoon: gemeten op het
+    // toestel van de eigenaar nam hij daar het halve scherm in beslag, en dan
+    // blader je door je muziek in een strook van vier regels.
+    this.aan_(this.$(".voetkop"), "click", () => {
+      const voet = this.$("footer");
+      const open = voet.toggleAttribute("open");
+      this.$(".voetkop").setAttribute("aria-expanded", String(open));
+      this.voetOpen_ = open;
+    });
 
     this.aan_(this.$(".tabs"), "click", (e) => {
       const knop = e.target.closest("[data-tab]");
@@ -735,7 +817,15 @@ class MediaBrowser extends HTMLElement {
     item.favorite = nieuw;
     knop?.setAttribute("aria-pressed", String(nieuw));
     try {
-      await zetFavoriet(this.hass, item, nieuw);
+      const antwoord = await zetFavoriet(this.hass, item, nieuw);
+      // Een zoekresultaat heeft nog geen bibliotheeknummer; dat krijgt het pas
+      // doordat MA het bij het favoriet maken in de bibliotheek zet. De
+      // serverkant geeft het terug, en zonder dit op te slaan kon je een
+      // zoekresultaat wel favoriet maken maar niet meteen weer afvinken.
+      if (nieuw && antwoord?.library_item_id) {
+        item.library_item_id = antwoord.library_item_id;
+        if (antwoord.kind) item.media_type = SOORT_ENKELVOUD[antwoord.kind] ?? item.media_type;
+      }
       // In het favorietenblad hoort een afgevinkt item te verdwijnen: het is
       // geen favoriet meer, dus het staat niet meer in de lijst van favorieten.
       if (this.modus_ === "favorieten" && !nieuw) this.haalFavorieten_();
@@ -1183,6 +1273,31 @@ class MediaBrowser extends HTMLElement {
   /* ----------------------------------------------------------- speakers */
 
   async haalSpeakers_() {
+    // Staat de keuze in de kaart, dan is dat de lijst. Geen label om te plakken,
+    // geen serverronde: de kaart weet welke speakers erbij horen omdat je ze
+    // daar hebt aangewezen.
+    if (this.speakerKeuze_) {
+      this.speakers_ = {
+        label_exists: true,
+        entities: this.speakerKeuze_
+          .map((id) => {
+            const st = stateOf(this.hass, id);
+            return st
+              ? {
+                  entity_id: id,
+                  name: st.attributes?.friendly_name ?? id,
+                  can_group: kan(st, KENMERK.GROUPING),
+                }
+              : null;
+          })
+          // Een speaker die niet meer bestaat hoort niet als lege regel te
+          // blijven staan; dan lijkt de kaart stuk terwijl er een entiteit weg is.
+          .filter(Boolean),
+        filtered_out: 0,
+      };
+      this.tekenSpeakers_();
+      return;
+    }
     try {
       this.speakers_ = await this.hass.callWS({
         type: "domotiapp_lovelace/media/speakers",
@@ -1222,6 +1337,15 @@ class MediaBrowser extends HTMLElement {
 
     voet.hidden = false;
     const groep = this.groepNu_();
+
+    // Dicht moet de balk nog steeds zeggen waar het geluid heen gaat -- anders
+    // is inklappen alleen maar iets kwijtraken.
+    const meespelend = lijst.entities.filter(
+      (sp) => sp.entity_id === this.entity_ || groep.has(sp.entity_id)
+    );
+    this.$(".waar").textContent = meespelend.length
+      ? meespelend.map((sp) => sp.name).join(", ")
+      : this.naam_ ?? "";
 
     // Alleen opnieuw opbouwen als de samenstelling verandert. Elke hertekening
     // gooit de knop weg waar iemand net op stond -- en daarmee de focus. De

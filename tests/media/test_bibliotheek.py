@@ -564,3 +564,53 @@ async def test_zonder_hoes_geen_object(hass: HomeAssistant, hass_ws_client, nep_
     antwoord = await _stuur(client, {"type": f"{DOMAIN}/media/library", "kind": "playlists"})
     assert antwoord["success"], antwoord
     assert antwoord["result"]["items"][0]["image"] is None
+
+
+async def test_favoriet_aan_geeft_terug_waar_het_item_belandde(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Een zoekresultaat heeft nog geen bibliotheeknummer.
+
+    Dat krijgt het pas doordat MA het bij het favoriet maken in de bibliotheek
+    zet -- en het hartje weer UIT zetten gaat op bibliotheeknummer plus soort.
+    Zonder deze opzoeking kon je een zoekresultaat wel favoriet maken maar niet
+    meteen weer afvinken: "Dit item kan niet favoriet gemaakt worden", terwijl
+    het er gewoon stond. Gemeld op 20 augustus 2026.
+    """
+    await zet_integratie_op(hass)
+    nep_mass.music.add_item_to_favorites = AsyncMock()
+    gevonden = NepNummer("Guus", item_id="77")
+    gevonden.media_type = "track"
+    nep_mass.music.get_item_by_uri = AsyncMock(return_value=gevonden)
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client,
+        {"type": f"{DOMAIN}/media/favorite", "favorite": True, "uri": "spotify://track/x"},
+    )
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["library_item_id"] == "77"
+    assert antwoord["result"]["kind"] == "tracks"
+
+
+async def test_favoriet_aan_werkt_ook_als_opzoeken_mislukt(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """De nazorg mag de handeling niet laten mislukken.
+
+    Het hartje staat dan gewoon aan; alleen kan de kaart hem pas na een
+    verversing weer uitzetten. Dat is beter dan het favoriet maken laten falen
+    omdat het opzoeken erna niet lukte.
+    """
+    await zet_integratie_op(hass)
+    nep_mass.music.add_item_to_favorites = AsyncMock()
+    nep_mass.music.get_item_by_uri = AsyncMock(side_effect=RuntimeError("weg"))
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client,
+        {"type": f"{DOMAIN}/media/favorite", "favorite": True, "uri": "spotify://track/x"},
+    )
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["favorite"] is True
+    assert "library_item_id" not in antwoord["result"]
