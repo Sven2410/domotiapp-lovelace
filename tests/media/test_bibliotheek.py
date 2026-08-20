@@ -282,7 +282,8 @@ async def test_afspeellijst_verwijderen(hass: HomeAssistant, hass_ws_client, nep
         client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "99"}
     )
     assert antwoord["success"], antwoord
-    nep_mass.music.remove_playlist.assert_awaited_once_with("99")
+    # `recursive=False`: alleen de lijst, nooit de nummers erin.
+    nep_mass.music.remove_playlist.assert_awaited_once_with("99", recursive=False)
 
 
 async def test_afspeellijst_nummers_dragen_hun_positie(
@@ -452,3 +453,58 @@ async def test_een_gewone_fout_blijft_gewoon_doorkomen(
     antwoord = await _stuur(client, {"type": f"{DOMAIN}/media/playlist/create", "name": "X"})
     assert not antwoord["success"]
     assert "iets anders" in antwoord["error"]["message"]
+
+
+async def test_verwijderen_probeert_een_tweede_route(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Weigert `music/playlists/remove`, dan volgt `music/library/remove_item`.
+
+    Twee verschillende commando's met een eigen rechtencontrole. Lukt de tweede
+    wél, dan is de afspeellijst gewoon weg en hoeft niemand iets in te stellen.
+    """
+    await zet_integratie_op(hass)
+    nep_mass.music.remove_playlist = AsyncMock(side_effect=GeenRechten("Admin access required"))
+    nep_mass.music.remove_item_from_library = AsyncMock()
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "40"}
+    )
+    assert antwoord["success"], antwoord
+    # recursive=False: deze route heet in de client zelf "Destructive! Will
+    # remove the item and all dependants". Alleen de lijst mag weg, nooit de
+    # nummers erin.
+    nep_mass.music.remove_item_from_library.assert_awaited_once_with(
+        "playlist", "40", recursive=False
+    )
+
+
+async def test_verwijderen_meldt_pas_als_beide_routes_weigeren(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Weigeren ze allebei, dan komt de uitleg over beheerrechten alsnog."""
+    await zet_integratie_op(hass)
+    nep_mass.music.remove_playlist = AsyncMock(side_effect=GeenRechten("Admin access required"))
+    nep_mass.music.remove_item_from_library = AsyncMock(
+        side_effect=GeenRechten("Admin access required")
+    )
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(
+        client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "40"}
+    )
+    assert not antwoord["success"]
+    assert "beheerder" in antwoord["error"]["message"]
+
+
+async def test_de_gewone_route_gaat_niet_recursief(
+    hass: HomeAssistant, hass_ws_client, nep_mass
+) -> None:
+    """Ook de eerste route mag alleen de lijst weghalen, niet wat erin zit."""
+    await zet_integratie_op(hass)
+    nep_mass.music.remove_playlist = AsyncMock()
+    client = await hass_ws_client(hass)
+
+    await _stuur(client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "40"})
+    nep_mass.music.remove_playlist.assert_awaited_once_with("40", recursive=False)
