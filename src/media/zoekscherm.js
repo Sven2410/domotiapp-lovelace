@@ -196,8 +196,26 @@ const css = /* css */ `
   /* Het hartje ligt OP de tegel en niet ernaast: naast de tegel valt hij buiten
      het vlak en lijkt hij bij niets te horen. De tekst maakt ruimte met een
      rechtermarge, zodat een lange naam er niet onder verdwijnt. */
-  .rij:has(.hart) .tr .tekst, .rij:has(.weg) .tr .tekst { padding-right: 40px; }
-  .rij .hart, .rij .weg { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+  .rij[data-knoppen="1"] .tr .tekst { padding-right: 42px; }
+  .rij[data-knoppen="2"] .tr .tekst { padding-right: 84px; }
+  /* De knoppen aan de rechterkant van een regel, op de tegel en niet ernaast. */
+  .rij .knoppen {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 2px;
+  }
+  .rij .hart, .rij .weg, .rij .meer { position: static; transform: none; }
+
+  /* De drie puntjes: dezelfde maat als het hartje, en ze openen hetzelfde menu
+     als vasthouden. Vasthouden blijft werken, maar het is een verborgen
+     handeling -- wie hem niet kent, kon niets aan een afspeellijst toevoegen. */
+  .meer {
+    flex: 0 0 auto; width: 42px; height: 42px; padding: 0; cursor: pointer;
+    display: grid; place-items: center; border-radius: var(--dac-radius-pill);
+    background: none; border: 0; color: var(--dac-ink-3);
+    transition: color 160ms ease, background 160ms ease;
+  }
+  .meer:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  .meer .icon { width: 20px; height: 20px; }
 
   /* Een hidden-attribuut verliest het van een display in een regel
      hierboven. Dat is geen detail: zonder deze regel bleef de zoekbalk op het
@@ -367,6 +385,11 @@ const css = /* css */ `
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
     border-radius: var(--dac-radius-sm); box-shadow: 0 24px 48px -20px rgba(0,0,0,.9);
     display: flex; flex-direction: column;
+    /* Scrollen, en dat is geen luxe: "Aan welke lijst?" toont alle bewerkbare
+       afspeellijsten, en dat zijn er bij de eigenaar twintig. Zonder dit liep
+       het menu onder de onderkant van het scherm door en was de lijst die je
+       net had gemaakt onbereikbaar -- alfabetisch stond hij achteraan. */
+    max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain;
   }
   .menu[hidden] { display: none; }
   .menu button {
@@ -403,10 +426,11 @@ class MediaBrowser extends HTMLElement {
    * @param {string} entityId de speler waar dit scherm bij hoort
    * @param {string} naam
    */
-  open(hass, entityId, naam) {
+  open(hass, entityId, naam, { radioModus = false } = {}) {
     this.hass = hass;
     this.entity_ = entityId;
     this.naam_ = naam;
+    this.radioModus_ = radioModus;
     if (!this.gebouwd_) this.bouw_();
     this.setAttribute("open", "");
     // Escape hangt aan het document en niet aan dit element.
@@ -864,6 +888,9 @@ class MediaBrowser extends HTMLElement {
             .join("")
         : `<span class="titel">Geen bewerkbare lijst. Maak er eerst een.</span>`);
     menu.hidden = false;
+    // Opnieuw plaatsen: deze lijst is veel hoger dan het menu dat er stond.
+    this.menuPlaats_(menu);
+    menu.scrollTop = 0;
     menu.onclick = async (e) => {
       const knop = e.target.closest("[data-lijst]");
       if (!knop) return;
@@ -933,15 +960,19 @@ class MediaBrowser extends HTMLElement {
           ? `<button class="weg" type="button" data-weg="${i}"
                aria-label="Uit deze afspeellijst halen">${resolve("close")}</button>`
           : "";
+        // De drie puntjes openen hetzelfde menu als vasthouden.
+        const meer = `<button class="meer" type="button" data-meer="${i}"
+               aria-label="Meer met ${this.veilig_(t.name)}">${resolve("dots")}</button>`;
+        const aantal = (hart || weg ? 1 : 0) + 1;
         return `
-          <div class="rij" data-i="${i}">
+          <div class="rij" data-i="${i}" data-knoppen="${aantal}">
             <button class="tr" type="button">
               <span class="hoes">${hoes}</span>
               <span class="tekst">
                 <span class="nm">${this.veilig_(t.name)}</span>
                 <span class="ond">${this.veilig_(ondertitel(t))}</span>
               </span>
-            </button>${hart}${weg}
+            </button><span class="knoppen">${hart}${weg}${meer}</span>
           </div>`;
       })
       .join("");
@@ -957,7 +988,7 @@ class MediaBrowser extends HTMLElement {
         // te spelen: je wilt zien wat erin zit. Afspelen doe je met vasthouden,
         // net als overal in dit scherm.
         if (this.modus_ === "lijsten" && !this.lijst_) this.openLijst_(t);
-        else this.speel_(t, "replace");
+        else this.speel_(t, "replace", { radio: this.radioStandaard_(t) });
       },
       onHold: () => {
         const t = this.laatsteTreffer_;
@@ -995,14 +1026,19 @@ class MediaBrowser extends HTMLElement {
     this.aan_(lijst, "click", (e) => {
       const hart = e.target.closest("[data-hart]");
       const weg = e.target.closest("[data-weg]");
-      if (!hart && !weg) return;
+      const meer = e.target.closest("[data-meer]");
+      if (!hart && !weg && !meer) return;
       e.stopImmediatePropagation();
       e.preventDefault();
       if (hart) this.favorietOm_(this.treffers_[+hart.dataset.hart], hart);
-      else this.nummerWeg_(this.treffers_[+weg.dataset.weg]);
+      else if (weg) this.nummerWeg_(this.treffers_[+weg.dataset.weg]);
+      else {
+        this.menuPlek_ = meer.getBoundingClientRect();
+        this.menuOpen_(this.treffers_[+meer.dataset.meer]);
+      }
     });
     this.aan_(lijst, "pointerdown", (e) => {
-      if (e.target.closest("[data-hart], [data-weg]")) e.stopImmediatePropagation();
+      if (e.target.closest("[data-hart], [data-weg], [data-meer]")) e.stopImmediatePropagation();
     });
     // `bindActions` zegt of het een tik of een vasthoud was, maar niet waarop.
     // Dat lezen we bij het neergaan van de vinger.
@@ -1022,8 +1058,17 @@ class MediaBrowser extends HTMLElement {
 
   /* ----------------------------------------------------------- afspelen */
 
-  /** @param {"replace"|"next"|"add"} wachtrij */
-  speel_(treffer, wachtrij) {
+  /**
+   * @param {"replace"|"next"|"add"} wachtrij
+   * @param {{radio?: boolean}} opties
+   *
+   * `radio_mode` is wat Spotify doet nadat het gekozen nummer klaar is: Music
+   * Assistant zoekt er zelf muziek bij en speelt door in plaats van te stoppen.
+   * Het is een gewone optie van `music_assistant.play_media`; wij bieden hem
+   * alleen aan waar hij ergens op slaat -- bij een radiozender valt er niets
+   * bij te zoeken, die speelt zelf al door.
+   */
+  speel_(treffer, wachtrij, { radio = false } = {}) {
     if (!treffer?.uri) return;
     this.menuDicht_();
     this.hass.callService(
@@ -1033,6 +1078,7 @@ class MediaBrowser extends HTMLElement {
         media_id: treffer.uri,
         ...(treffer.media_type ? { media_type: treffer.media_type } : {}),
         enqueue: wachtrij,
+        ...(radio ? { radio_mode: true } : {}),
       },
       { entity_id: this.entity_ }
     );
@@ -1041,12 +1087,31 @@ class MediaBrowser extends HTMLElement {
     if (wachtrij === "replace") this.sluit();
   }
 
+  /**
+   * Valt er iets bij te zoeken?
+   *
+   * Alleen bij muziek. Een radiozender speelt zelf al door, en een afspeellijst
+   * heeft zijn eigen einde -- daar hoort Music Assistant niet ongevraagd
+   * achteraan te plakken.
+   */
+  kanRadio_(treffer) {
+    return ["track", "album", "artist"].includes(treffer?.media_type);
+  }
+
+  /** Doorspelen als de kaart daarom vraagt. Zie de instelling `radio_mode`. */
+  radioStandaard_(treffer) {
+    return Boolean(this.radioModus_) && this.kanRadio_(treffer);
+  }
+
   menuOpen_(treffer) {
     const menu = this.$(".menu");
     const inLijst = this.modus_ === "lijsten" && this.lijst_;
     menu.innerHTML =
       `<span class="titel">${this.veilig_(treffer.name)}</span>` +
       `<button type="button" data-w="replace">Nu afspelen</button>` +
+      (this.kanRadio_(treffer)
+        ? `<button type="button" data-radio>Afspelen en doorgaan</button>`
+        : "") +
       `<button type="button" data-w="next">Hierna afspelen</button>` +
       `<button type="button" data-w="add">Achteraan in de wachtrij</button>` +
       (kanFavoriet(treffer)
@@ -1059,16 +1124,18 @@ class MediaBrowser extends HTMLElement {
         : "");
     menu.hidden = false;
 
-    const r = this.menuPlek_;
-    const breed = 210;
-    const links = Math.min(Math.max(8, (r?.left ?? 40) + 12), window.innerWidth - breed - 8);
-    const boven = Math.min((r?.bottom ?? 80) + 6, window.innerHeight - 160);
-    menu.style.left = `${links}px`;
-    menu.style.top = `${boven}px`;
+    this.menuPlaats_(menu);
 
     menu.onclick = (e) => {
       const knop = e.target.closest("[data-w]");
-      if (knop) return this.speel_(treffer, knop.dataset.w);
+      if (knop) {
+        return this.speel_(treffer, knop.dataset.w, {
+          radio: knop.dataset.w === "replace" && this.radioStandaard_(treffer),
+        });
+      }
+      if (e.target.closest("[data-radio]")) {
+        return this.speel_(treffer, "replace", { radio: true });
+      }
       if (e.target.closest("[data-fav]")) {
         this.menuDicht_();
         return this.favorietOm_(treffer, this.shadowRoot.querySelector(
@@ -1078,6 +1145,34 @@ class MediaBrowser extends HTMLElement {
       if (e.target.closest("[data-toe]")) return this.kiesLijstVoor_(treffer);
       return undefined;
     };
+  }
+
+  /**
+   * Zet het menu ergens waar het HELEMAAL past.
+   *
+   * De vorige versie klemde de bovenkant op `innerHeight - 160`, alsof een menu
+   * nooit hoger dan 160 pixels zou zijn. "Aan welke lijst?" is dat wel: bij de
+   * eigenaar staan er twintig bewerkbare afspeellijsten in, en dan liep het
+   * menu onder de onderkant van het scherm door -- met de lijst die hij net had
+   * gemaakt achteraan, want de volgorde is alfabetisch.
+   *
+   * Nu wordt de werkelijke hoogte gemeten, ná het tekenen, en past het menu
+   * boven de aanklikplek als het eronder niet past.
+   */
+  menuPlaats_(menu) {
+    const r = this.menuPlek_;
+    const breed = menu.offsetWidth || 210;
+    const hoog = menu.offsetHeight || 160;
+    const links = Math.min(Math.max(8, (r?.left ?? 40) + 12), window.innerWidth - breed - 8);
+
+    const onder = (r?.bottom ?? 80) + 6;
+    const boven =
+      onder + hoog <= window.innerHeight - 8
+        ? onder
+        : Math.max(8, (r?.top ?? 80) - hoog - 6);
+
+    menu.style.left = `${links}px`;
+    menu.style.top = `${Math.min(boven, Math.max(8, window.innerHeight - hoog - 8))}px`;
   }
 
   menuDicht_() {
@@ -1262,7 +1357,7 @@ meldAan("domotiapp-media-browser", MediaBrowser);
  * anders zes volledige schermen in de DOM hebben staan, met zes abonnementen op
  * `hass`. Welke speler het scherm bedient wordt bij het openen meegegeven.
  */
-export function toonZoekscherm(hass, entityId, naam) {
+export function toonZoekscherm(hass, entityId, naam, opties = {}) {
   let scherm = document.querySelector("domotiapp-media-browser");
   if (!scherm) {
     scherm = document.createElement("domotiapp-media-browser");
@@ -1270,7 +1365,7 @@ export function toonZoekscherm(hass, entityId, naam) {
   }
   // Zonder tabindex vangt het scherm geen Escape voordat er ergens geklikt is.
   scherm.tabIndex = -1;
-  scherm.open(hass, entityId, naam);
+  scherm.open(hass, entityId, naam, opties);
   scherm.focus?.();
   return scherm;
 }

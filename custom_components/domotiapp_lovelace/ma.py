@@ -259,7 +259,26 @@ def _naam(waarde: Any) -> str | None:
     return getattr(waarde, "name", None) or (waarde.get("name") if isinstance(waarde, dict) else None)
 
 
-def bibliotheekItem(item: Any, soort: str) -> dict[str, Any]:
+def afbeelding_url(mass: Any, item: Any, grootte: int = 256) -> str | None:
+    """De hoes van dit item als iets waar een <img> mee overweg kan.
+
+    Music Assistant levert geen URL maar een `MediaItemImage`: een pad, een
+    provider en soms een proxy-id. Alleen een pad dat "remotely accessible" is,
+    is rechtstreeks te gebruiken; de rest moet langs de imageproxy van de
+    MA-server, met de bundel-URL van die server ervoor.
+
+    Die vertaling zit in de client zelf (`get_media_item_image_url`), dus die
+    gebruiken we -- zelf een URL in elkaar zetten is een tweede plek die uit de
+    pas gaat lopen. Zonder dit stond er `[object Object]` in de `src` van elke
+    hoes op het favorieten- en afspeellijstenblad, en bleef het vakje leeg.
+    """
+    try:
+        return mass.get_media_item_image_url(item, size=grootte)
+    except Exception:  # noqa: BLE001 -- een ontbrekende hoes mag niets breken
+        return None
+
+
+def bibliotheekItem(item: Any, soort: str, mass: Any = None) -> dict[str, Any]:
     """Eén item, in dezelfde vorm als `treffers()` teruggeeft.
 
     Dezelfde vorm, want het zoekscherm en het favorietenscherm tonen dezelfde
@@ -270,9 +289,12 @@ def bibliotheekItem(item: Any, soort: str) -> dict[str, Any]:
     haal = (lambda naam, standaard=None: item.get(naam, standaard)) if isinstance(item, dict) else (
         lambda naam, standaard=None: getattr(item, naam, standaard)
     )
-    afbeelding = haal("image")
-    if afbeelding is not None and not isinstance(afbeelding, (str, dict)):
-        afbeelding = {"path": getattr(afbeelding, "path", None), "provider": getattr(afbeelding, "provider", None)}
+    # De hoes: een URL of niets. Nooit een object -- de kaart zet dit
+    # rechtstreeks in een `src`.
+    afbeelding = afbeelding_url(mass, item) if mass is not None else None
+    if afbeelding is None:
+        ruw = haal("image")
+        afbeelding = ruw if isinstance(ruw, str) else None
 
     artiesten = [n for n in (_naam(a) for a in _als_lijst(haal("artists"))) if n]
 
@@ -311,7 +333,7 @@ async def bibliotheek(
             limit=limiet,
             offset=offset,
         )
-    return [bibliotheekItem(i, soort) for i in _als_lijst(items)]
+    return [bibliotheekItem(i, soort, mass) for i in _als_lijst(items)]
 
 
 async def favoriet_aan(hass: HomeAssistant, uri: str) -> None:
@@ -357,7 +379,7 @@ async def afspeellijst_maken(hass: HomeAssistant, naam: str) -> dict[str, Any]:
         raise
     except Exception as err:  # noqa: BLE001
         raise _vertaal(err) from err
-    return bibliotheekItem(lijst, "playlists")
+    return bibliotheekItem(lijst, "playlists", mass)
 
 
 async def afspeellijst_verwijderen(hass: HomeAssistant, item_id: str) -> None:
@@ -418,7 +440,7 @@ async def afspeellijst_nummers(
         nummers = await mass.music.get_playlist_tracks(item_id, provider, force_refresh=ververs)
     uit: list[dict[str, Any]] = []
     for plek, nummer in enumerate(_als_lijst(nummers)):
-        regel = bibliotheekItem(nummer, "tracks")
+        regel = bibliotheekItem(nummer, "tracks", mass)
         # MA nummert de posities in een afspeellijst zelf en begint daarbij bij
         # EEN. Die nummering is leidend, want een lijst kan in stukken opgehaald
         # worden. De terugval telt daarom ook vanaf 1.

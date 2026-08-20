@@ -66,6 +66,11 @@ def nep_mass(hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Een nagebootste MA-client op de plek waar `ma.client()` hem zoekt."""
     mass = MagicMock()
     mass.music = MagicMock()
+    # Standaard geen hoes. Zonder dit geeft de MagicMock een mock terug waar een
+    # URL hoort te staan, en die is niet naar JSON te schrijven -- dan faalt elk
+    # commando met "Invalid JSON in response" in plaats van met de fout die je
+    # aan het toetsen was.
+    mass.get_media_item_image_url = MagicMock(return_value=None)
     monkeypatch.setattr(ma, "client", lambda _hass: mass)
     return mass
 
@@ -508,3 +513,54 @@ async def test_de_gewone_route_gaat_niet_recursief(
 
     await _stuur(client, {"type": f"{DOMAIN}/media/playlist/remove", "library_item_id": "40"})
     nep_mass.music.remove_playlist.assert_awaited_once_with("40", recursive=False)
+
+
+class NepImage:
+    """Een MediaItemImage zoals MA hem levert: geen URL maar een object."""
+
+    def __init__(self) -> None:
+        self.path = "covers/ochtend.jpg"
+        self.provider = "library"
+        self.remotely_accessible = False
+
+
+async def test_de_hoes_wordt_een_url(hass: HomeAssistant, hass_ws_client, nep_mass) -> None:
+    """Music Assistant levert geen URL maar een object.
+
+    De kaart zet dit rechtstreeks in een `src`, dus wat er niet als string uit
+    komt, wordt `[object Object]` en dan blijft het hoesvakje leeg -- precies
+    wat er gemeld werd over de afspeellijsten. De client kan de vertaling zelf
+    (`get_media_item_image_url`), dus die gebruiken we.
+    """
+    await zet_integratie_op(hass)
+    lijst = NepNummer("Ochtend", item_id="1", favorite=False)
+    lijst.image = NepImage()
+    nep_mass.music.get_library_playlists = AsyncMock(return_value=[lijst])
+    nep_mass.get_media_item_image_url = MagicMock(
+        return_value="http://192.168.1.88:8095/imageproxy/abc?size=256"
+    )
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(client, {"type": f"{DOMAIN}/media/library", "kind": "playlists"})
+    assert antwoord["success"], antwoord
+    plaatje = antwoord["result"]["items"][0]["image"]
+    assert plaatje == "http://192.168.1.88:8095/imageproxy/abc?size=256"
+    assert isinstance(plaatje, str)
+
+
+async def test_zonder_hoes_geen_object(hass: HomeAssistant, hass_ws_client, nep_mass) -> None:
+    """Kan de client er geen URL van maken, dan is het `null` en geen object.
+
+    Een ontbrekende hoes mag nooit een `[object Object]` in de `src` opleveren;
+    de kaart tekent dan zijn eigen muzieknoot.
+    """
+    await zet_integratie_op(hass)
+    lijst = NepNummer("Zonder hoes", item_id="2", favorite=False)
+    lijst.image = NepImage()
+    nep_mass.music.get_library_playlists = AsyncMock(return_value=[lijst])
+    nep_mass.get_media_item_image_url = MagicMock(side_effect=RuntimeError("geen hoes"))
+    client = await hass_ws_client(hass)
+
+    antwoord = await _stuur(client, {"type": f"{DOMAIN}/media/library", "kind": "playlists"})
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["items"][0]["image"] is None
