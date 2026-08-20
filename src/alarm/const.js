@@ -12,7 +12,7 @@ export const EDITOR_TYPE = "domotiapp-alarm-card-editor";
 export const WEKKER_EDITOR_TYPE = "domotiapp-alarm-editor";
 
 /** Naam en beschrijving in de kaartkiezer. */
-export const CARD_NAME = "DomotiApp Alarm";
+export const CARD_NAME = "DomotiApp Wekker";
 
 export const DOCS_URL = "https://github.com/Sven2410/domotiapp-lovelace";
 

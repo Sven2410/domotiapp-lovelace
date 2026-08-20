@@ -45,7 +45,9 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 - **Tags en releases zonder `v`-prefix.** Sinds 19 augustus 2026 mag Claude Code
   ze zelf zetten: versie in `manifest.json` omhoog, bundel opnieuw bouwen en
   meecommitten, tag, `gh release create` met de wijzigingen in gewone taal.
-  Mergen blijft de eigenaar zelf doen.
+  **Mergen mag ook** -- de eigenaar heeft dat op 20 augustus 2026 bevestigd toen
+  deze regel de vorige tegensprak. De enige voorwaarde staat hierboven: pas
+  mergen als alle CI-checks groen zijn.
 - **`SPEC.md` is bindend.** Wijkt een opdracht ervan af, dan wint `SPEC.md` en
   meld je dat. Blijkt `SPEC.md` ergens niet uitvoerbaar of feitelijk onjuist,
   dan **wijzig je hem niet zelf**: melden en stoppen. (Uitzondering: een ronde
@@ -57,9 +59,14 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 ## Omgeving
 
 - Windows 11, PowerShell, `C:\dev\domotiapp-lovelace`.
-- **Testinstance:** container `ha-scene`, compose-project
+- **Testinstance:** container `ha-lovelace`, compose-project
   `domotiapp-lovelace-dev`, **poort 8127**, image gepind op `2026.8`.
   Config in `.ha-dev-config/` (gitignored).
+  De container heette `ha-scene`, net als die van domotiapp-scene, en dan weigert
+  Docker de tweede met een naamconflict. Staat `.ha-dev-config/` er nog niet, kopieer
+  hem dan uit `domotiapp-scene` (zonder database, logboeken, `deps/` en
+  `custom_components/`): daar zitten dezelfde testlampen in, en de ingelogde
+  sessie komt mee zodat er geen wachtwoord aan te pas hoeft te komen.
 - **De poorten 8123, 8124, 8125 en 8126 zijn bezet door andere projecten en
   mogen nooit gebruikt worden.**
 - **De productie-HA wordt nooit aangeraakt, ook niet gelezen.**

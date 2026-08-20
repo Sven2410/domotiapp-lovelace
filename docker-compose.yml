@@ -2,7 +2,11 @@ name: domotiapp-lovelace-dev
 
 services:
   homeassistant:
-    container_name: ha-scene
+    # ha-lovelace, niet ha-scene: domotiapp-scene heeft een eigen compose met
+    # exact diezelfde containernaam, en dan weigert Docker de tweede. Dat kostte
+    # op 20 augustus 2026 een halve start voordat duidelijk was dat er een
+    # container van een ANDER project op onze poort stond.
+    container_name: ha-lovelace
     image: ghcr.io/home-assistant/home-assistant:2026.8
     restart: "no"
     ports:
