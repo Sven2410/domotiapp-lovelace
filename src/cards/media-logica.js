@@ -173,8 +173,19 @@ export function extraVoor(st, { zoeken = true } = {}) {
  */
 export function bronVoor(st, { tonen = true } = {}) {
   if (!tonen || !staatAan(st) || !kan(st, KENMERK.SELECT_SOURCE)) return null;
+
+  // Een speler van Music Assistant heeft geen bronnen maar een wachtrij. Zijn
+  // `source_list` is er eentje lang en heet "Music Assistant Queue" -- dat is
+  // de eigen boekhouding van MA en geen keuze die iemand maakt. Gemeten op de
+  // Sonos van de eigenaar: de MA-entiteit meldt precies dat, terwijl de
+  // Sonos-entiteit ernaast veertien echte bronnen heeft (zijn radiozenders).
+  if (isMaSpeler(st)) return null;
+
   const lijst = st?.attributes?.source_list;
-  if (!Array.isArray(lijst) || !lijst.length) return null;
+  // Eén bron is geen keuze. Een scherm openen waar maar één regel in staat,
+  // waarvan je er al naar luistert, is een knop die niets doet.
+  if (!Array.isArray(lijst) || lijst.length < 2) return null;
+
   return { nu: st.attributes.source ?? null, aantal: lijst.length };
 }
 
