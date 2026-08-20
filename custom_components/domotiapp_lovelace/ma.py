@@ -336,8 +336,18 @@ async def bibliotheek(
     return [bibliotheekItem(i, soort, mass) for i in _als_lijst(items)]
 
 
-async def favoriet_aan(hass: HomeAssistant, uri: str) -> None:
-    """Zet een hartje. MA zoekt zelf op wat er achter de uri zit."""
+async def favoriet_aan(hass: HomeAssistant, uri: str) -> dict[str, Any] | None:
+    """Zet een hartje, en zeg waar het item daarna in de bibliotheek staat.
+
+    Dat laatste is geen extraatje maar een noodzaak. Een zoekresultaat heeft nog
+    geen bibliotheeknummer; dat krijgt het pas doordat MA het bij het favoriet
+    maken in de bibliotheek zet. En het hartje weer UIT zetten gaat op
+    bibliotheeknummer plus soort -- niet op uri.
+
+    Zonder deze opzoeking kon je een zoekresultaat wel favoriet maken maar niet
+    meteen weer afvinken: "Dit item kan niet favoriet gemaakt worden", terwijl
+    het er gewoon stond. Gemeld op 20 augustus 2026.
+    """
     mass = client(hass)
     try:
         async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
@@ -346,6 +356,23 @@ async def favoriet_aan(hass: HomeAssistant, uri: str) -> None:
         raise
     except Exception as err:  # noqa: BLE001 -- MA kent zijn eigen fouten
         raise _vertaal(err) from err
+
+    # Opzoeken mag mislukken: het hartje staat dan gewoon aan, alleen kan de
+    # kaart hem pas na een verversing weer uitzetten. Dat is beter dan de hele
+    # handeling laten falen omdat de nazorg niet lukte.
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            item = await mass.music.get_item_by_uri(uri)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Kon %s na het favoriet maken niet opzoeken: %s", uri, err)
+        return None
+
+    media_type = str(getattr(item, "media_type", "") or "")
+    soort = next((k for k, v in SOORT_MEDIA_TYPE.items() if v == media_type), None)
+    nummer = getattr(item, "item_id", None)
+    if soort is None or nummer is None:
+        return None
+    return {"kind": soort, "library_item_id": str(nummer)}
 
 
 async def favoriet_uit(hass: HomeAssistant, soort: str, library_item_id: str) -> None:

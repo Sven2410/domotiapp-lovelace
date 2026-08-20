@@ -186,11 +186,23 @@ export function magOpslaan(concept) {
  * 3. **Het geluid wordt uitgekleed** (valkuil 39).
  */
 export function naarAlarm(concept) {
+  const dagen = [...new Set(concept.days || [])].sort((a, b) => a - b);
   const alarm = {
     name: (concept.name || "").trim(),
     time: concept.time,
-    days: [...new Set(concept.days || [])].sort((a, b) => a - b),
-    enabled: concept.enabled !== false,
+    days: dagen,
+    // Een EENMALIGE wekker gaat bij het opslaan aan.
+    //
+    // Zo'n wekker staat na afloop op `enabled: false` -- dat zet de server zo
+    // zodra hij is afgegaan (zie de kop van weergave.js). Wie hem daarna opent,
+    // een nieuwe tijd invult en opslaat, wil dat hij afgaat; het schuifje bleef
+    // dan uit staan en er gebeurde niets. Gemeld op 20 augustus 2026.
+    //
+    // Alleen voor een eenmalige: bij een wekker met dagen betekent uit dat je
+    // hem zelf hebt uitgezet, en dat mag opslaan niet ongedaan maken. En de
+    // schuif in de lijst loopt langs `alarms/set_enabled` en niet hierlangs, dus
+    // die blijft gewoon werken.
+    enabled: dagen.length === 0 ? true : concept.enabled !== false,
     sound: kleedGeluidUit(concept.sound),
     speaker: concept.speaker,
     volume_pct: concept.volume_pct,

@@ -441,3 +441,35 @@ describe("opslaanKan (SPEC 7.4)", () => {
     assert.equal(opslaanKan(volledigConcept({ name: "" }), SPEAKERS_OK), false);
   });
 });
+
+/**
+ * Een eenmalige wekker die is afgegaan, opnieuw instellen.
+ *
+ * NIEUW GEDRAG. De server zet een eenmalige wekker na afloop op
+ * `enabled: false` (zie de kop van `weergave.js`). Wie hem daarna opende, een
+ * nieuwe tijd invulde en opsloeg, hield een uitgeschakelde wekker over: het
+ * schuifje bleef uit en er gebeurde niets. Gemeld op 20 augustus 2026.
+ */
+describe("naarAlarm() — een eenmalige wekker gaat aan bij opslaan", () => {
+  it("een eenmalige die uit stond, staat na opslaan aan", () => {
+    const concept = { ...nieuwConcept(), days: [], enabled: false, time: "08:15" };
+    assert.equal(naarAlarm(concept).enabled, true);
+  });
+
+  it("een eenmalige die al aan stond blijft aan", () => {
+    const concept = { ...nieuwConcept(), days: [], enabled: true };
+    assert.equal(naarAlarm(concept).enabled, true);
+  });
+
+  it("REGRESSIEWACHT: een wekker MET dagen blijft uit als je hem uitzette", () => {
+    // Daar betekent uit dat je hem zelf hebt uitgezet, en dat mag opslaan niet
+    // ongedaan maken.
+    const concept = { ...nieuwConcept(), days: [1, 2, 3], enabled: false };
+    assert.equal(naarAlarm(concept).enabled, false);
+  });
+
+  it("REGRESSIEWACHT: een wekker met dagen die aan stond blijft aan", () => {
+    const concept = { ...nieuwConcept(), days: [6, 0], enabled: true };
+    assert.equal(naarAlarm(concept).enabled, true);
+  });
+});

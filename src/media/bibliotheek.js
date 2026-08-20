@@ -86,6 +86,23 @@ export function soortVan(item) {
   }[t] ?? null;
 }
 
+/**
+ * De omgekeerde tabel van `soortVan`: van onze soortnaam naar MA's media_type.
+ *
+ * Nodig zodra de serverkant vertelt waar een net-favoriet item in de bibliotheek
+ * belandde: dat antwoord komt in ONZE woorden terug, en het item op het scherm
+ * draagt MA's woord.
+ */
+export const SOORT_ENKELVOUD = {
+  tracks: "track",
+  albums: "album",
+  artists: "artist",
+  playlists: "playlist",
+  radio: "radio",
+  podcasts: "podcast",
+  audiobooks: "audiobook",
+};
+
 /** Kan dit item favoriet gemaakt worden? Een item zonder uri niet. */
 export const kanFavoriet = (item) => Boolean(item?.uri);
 

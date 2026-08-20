@@ -414,6 +414,7 @@ class MediaCard extends DacCard {
         // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
         return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name), {
           radioModus: this.config.radio_mode === true,
+          speakers: this.config.speakers,
         });
       default:
         return undefined;
@@ -707,6 +708,12 @@ class MediaEditor extends DacEditor {
       { name: "show_volume", selector: sel.bool() },
       { name: "show_source", selector: sel.bool() },
       { name: "radio_mode", selector: sel.bool() },
+      {
+        name: "speakers",
+        selector: {
+          entity: { domain: "media_player", integration: "music_assistant", multiple: true },
+        },
+      },
       { name: "show_search", selector: sel.bool() },
       { name: "icon_tap_action", selector: sel.action("toggle") },
       { name: "icon_hold_action", selector: sel.action("more-info") },
@@ -727,6 +734,7 @@ class MediaEditor extends DacEditor {
         show_volume: "Volume tonen",
         show_source: "Bronknop tonen",
         radio_mode: "Doorspelen na een nummer",
+        speakers: "Speakers om mee te groeperen",
         show_search: "Zoeken en groeperen tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
@@ -747,6 +755,8 @@ class MediaEditor extends DacEditor {
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+    if (s.name === "speakers")
+      return "De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg, dan valt de kaart terug op het label \"Music Assistant Media\" in Home Assistant.";
     if (s.name === "radio_mode")
       return "Zoals Spotify: is het gekozen nummer klaar, dan zoekt Music Assistant er zelf muziek bij in plaats van te stoppen. Staat dit uit, dan kan het nog steeds per keer via het menu bij een treffer.";
     if (s.name === "show_source")
