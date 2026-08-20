@@ -69,7 +69,12 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
   sessie komt mee zodat er geen wachtwoord aan te pas hoeft te komen.
 - **De poorten 8123, 8124, 8125 en 8126 zijn bezet door andere projecten en
   mogen nooit gebruikt worden.**
-- **De productie-HA wordt nooit aangeraakt, ook niet gelezen.**
+- **De productie-HA (`192.168.1.88:8123`) mag GELEZEN worden als de eigenaar
+  erom vraagt, en verder nooit aangeraakt.** Uitlezen gaat read-only over de
+  websocket met het token uit `C:\dev\ha-token.txt`; een service aanroepen of
+  config wegschrijven is en blijft verboden. Deze regel stond er eerst als
+  "ook niet gelezen"; op 20 augustus 2026 heeft de eigenaar hem versoepeld toen
+  hij vroeg naar zijn eigen dashboard te kijken.
 - `C:\dev\_ref\ultimate-scene-card` is uitsluitend leesmateriaal, zonder remote.
   **Nooit in schrijven.** De analyse ervan staat in `INVENTARIS.md`.
 

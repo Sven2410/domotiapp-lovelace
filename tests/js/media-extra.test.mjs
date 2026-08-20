@@ -17,6 +17,7 @@ import { describe, it } from "node:test";
 
 import {
   KENMERK,
+  bronVoor,
   extraVoor,
   geluidsSpeler,
   herhaalStand,
@@ -129,5 +130,53 @@ describe("geluidsSpeler()", () => {
       "media_player.tv"
     );
     assert.equal(geluidsSpeler(undefined), undefined);
+  });
+});
+
+/**
+ * De bronkiezer — NIEUW GEDRAG.
+ *
+ * `bronVoor` bestond niet vóór deze ronde. De getallen komen van het
+ * Ziggo-kastje van de eigenaar, uitgelezen op 20 augustus 2026:
+ * `supported_features: 154547` en 233 bronnen.
+ */
+describe("bronVoor()", () => {
+  const ZIGGO = 154547; // bevat SELECT_SOURCE (2048), geen VOLUME_SET
+  const speler = (attrs = {}, state = "playing") => ({
+    entity_id: "media_player.opaenoma",
+    state,
+    attributes: { supported_features: ZIGGO, source_list: ["NPO 1", "RTL 4"], source: "RTL 4", ...attrs },
+  });
+
+  it("geeft de bron en het aantal terug", () => {
+    assert.deepEqual(bronVoor(speler()), { nu: "RTL 4", aantal: 2 });
+  });
+
+  it("REGRESSIEWACHT: het echte kastje kan SELECT_SOURCE maar geen volume", () => {
+    assert.equal(Boolean(ZIGGO & 2048), true, "SELECT_SOURCE");
+    assert.equal(Boolean(ZIGGO & 4), false, "VOLUME_SET");
+    assert.equal(Boolean(ZIGGO & 8), false, "VOLUME_MUTE");
+  });
+
+  it("niets als de speler geen bron kan kiezen", () => {
+    assert.equal(bronVoor(speler({ supported_features: 4 })), null);
+  });
+
+  it("niets bij een lege lijst — een knop naar een leeg scherm is kapot", () => {
+    assert.equal(bronVoor(speler({ source_list: [] })), null);
+    assert.equal(bronVoor(speler({ source_list: undefined })), null);
+  });
+
+  it("niets als de ontvanger uit staat", () => {
+    assert.equal(bronVoor(speler({}, "off")), null);
+    assert.equal(bronVoor(speler({}, "unavailable")), null);
+  });
+
+  it("niets als je hem hebt uitgezet in de kaartinstellingen", () => {
+    assert.equal(bronVoor(speler(), { tonen: false }), null);
+  });
+
+  it("zonder gekozen bron nog steeds een knop, maar zonder naam", () => {
+    assert.deepEqual(bronVoor(speler({ source: undefined })), { nu: null, aantal: 2 });
   });
 });

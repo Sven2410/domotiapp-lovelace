@@ -23,3 +23,10 @@ LABEL_MEDIA_NAAM: Final = "Music Assistant Media"
 # alles wat MA vindt, in plaats van een lijstje van tien in een editor.
 SEARCH_LIMIT_DEFAULT: Final = 20
 SEARCH_LIMIT_MAX: Final = 50
+
+# De bibliotheek. Ruimer dan een zoekopdracht: favorieten blader je door, en
+# 50 nummers per keer ophalen is voor een tablet met een trage verbinding nog
+# net prettig. De bovengrens is er tegen een scherm dat per ongeluk een hele
+# bibliotheek van 20.000 nummers in één keer opvraagt.
+LIBRARY_LIMIT_DEFAULT: Final = 50
+LIBRARY_LIMIT_MAX: Final = 200
