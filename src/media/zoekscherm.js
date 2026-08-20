@@ -343,6 +343,25 @@ const css = /* css */ `
   }
   .nieuwrij input:focus { border-color: var(--dac-accent-hi); }
 
+  /* Een korte melding onderin. Niet over de lijst heen: wie iets aan een
+     afspeellijst toevoegt terwijl hij aan het zoeken is, hoort zijn
+     zoekresultaten te houden. */
+  .toast {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: max(90px, env(safe-area-inset-bottom));
+    max-width: min(560px, 92vw); padding: 14px 22px; z-index: 3;
+    border-radius: var(--dac-radius-pill); font-size: 14px; font-weight: 500;
+    color: var(--dac-ink); background: var(--dac-bg-raise);
+    border: 1px solid var(--dac-border-hi);
+    box-shadow: 0 18px 40px -18px rgba(0,0,0,.9);
+    animation: op 180ms ease;
+  }
+  .toast[hidden] { display: none; }
+  .toast[data-fout="true"] {
+    color: var(--dac-bad);
+    border-color: color-mix(in srgb, var(--dac-bad) 50%, transparent);
+  }
+
   .menu {
     position: fixed; z-index: 2; min-width: 190px; padding: 6px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
@@ -791,15 +810,38 @@ class MediaBrowser extends HTMLElement {
     }
   }
 
-  /** Een nummer uit de open afspeellijst. Op POSITIE, want zo wil MA het. */
+  /**
+   * Een nummer uit de open afspeellijst. Op POSITIE, want zo wil MA het -- en
+   * die posities beginnen bij 1, niet bij 0.
+   */
   async nummerWeg_(item) {
     const lijst = this.lijst_;
     if (!lijst || item.position == null) return;
     try {
       await haalUitLijst(this.hass, lijst, [item.position]);
-      this.openLijst_(lijst);
+      this.melding_(`"${item.name}" uit de lijst gehaald`);
+      // Music Assistant verwerkt dit niet meteen. Meteen terugkijken geeft de
+      // oude lijst; gemeten op de installatie van de eigenaar duurde het een
+      // paar seconden. Dus: even wachten, en dan pas opnieuw ophalen.
+      await this.naVerwerking_(lijst);
     } catch (fout) {
-      this.leegMelding_("Verwijderen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.melding_(fout?.message ?? "Verwijderen lukte niet", true);
+    }
+  }
+
+  /**
+   * Haal de lijst opnieuw op zodra Music Assistant klaar is.
+   *
+   * Twee pogingen, want de vertraging is niet vast: MA verwerkt toevoegen en
+   * verwijderen in een achtergrondtaak en cachet de nummers van een lijst. De
+   * serverkant vraagt inmiddels om een verse lijst (`force_refresh`), maar dat
+   * helpt niet als de taak nog loopt.
+   */
+  async naVerwerking_(lijst) {
+    for (const wacht of [900, 2500]) {
+      await new Promise((r) => setTimeout(r, wacht));
+      if (this.lijst_ !== lijst || !this.hasAttribute("open")) return;
+      await this.openLijst_(lijst);
     }
   }
 
@@ -825,13 +867,41 @@ class MediaBrowser extends HTMLElement {
     menu.onclick = async (e) => {
       const knop = e.target.closest("[data-lijst]");
       if (!knop) return;
+      const lijst = bewerkbaar[+knop.dataset.lijst];
       this.menuDicht_();
       try {
-        await voegToeAanLijst(this.hass, bewerkbaar[+knop.dataset.lijst], [treffer.uri]);
+        await voegToeAanLijst(this.hass, lijst, [treffer.uri]);
+        // Music Assistant zet er een achtergrondtaak voor klaar en bevestigt
+        // niets. Zonder dit bericht gebeurde er zichtbaar níéts, en dat leest
+        // als "toevoegen werkt niet" -- precies wat er gemeld werd.
+        this.melding_(`"${treffer.name}" toegevoegd aan "${lijst.name}"`);
       } catch (fout) {
-        this.leegMelding_("Toevoegen lukte niet", fout?.message ?? "", true);
+        this.melding_(fout?.message ?? "Toevoegen lukte niet", true);
       }
     };
+  }
+
+  /**
+   * Een korte melding die vanzelf weer weggaat.
+   *
+   * Niet `leegMelding_`: die vervangt de hele lijst, en dat is precies verkeerd
+   * als je net iets aan een afspeellijst hebt toegevoegd terwijl je aan het
+   * zoeken bent -- dan ben je je zoekresultaten kwijt.
+   */
+  melding_(tekst, fout = false) {
+    let balk = this.$(".toast");
+    if (!balk) {
+      balk = document.createElement("div");
+      balk.className = "toast";
+      this.$(".laag").appendChild(balk);
+    }
+    balk.textContent = tekst;
+    balk.dataset.fout = String(fout);
+    balk.hidden = false;
+    clearTimeout(this.toastTimer_);
+    this.toastTimer_ = setTimeout(() => {
+      balk.hidden = true;
+    }, fout ? 6000 : 3000);
   }
 
   leegMelding_(kop, tekst, fout = false) {
@@ -915,17 +985,24 @@ class MediaBrowser extends HTMLElement {
     // erop ook als een tik op de regel, en dan speelt er muziek terwijl je
     // alleen een hartje wilde zetten -- dezelfde afspraak als bij de chip op de
     // entiteitenkaart.
+    //
+    // stopIMMEDIATEPropagation, en dat is geen detail. `bindActions` hangt zijn
+    // click-luisteraar aan DIT ZELFDE element, en `stopPropagation` houdt alleen
+    // de OUDERS tegen -- niet een tweede luisteraar op hetzelfde element. Het
+    // gevolg stond in de melding van de eigenaar: een tik op het hartje zette de
+    // favoriet én startte de muziek. Dat deze luisteraar als eerste geregistreerd
+    // is (in bouw_, vóór teken_) is wat hem de kans geeft de andere te stoppen.
     this.aan_(lijst, "click", (e) => {
       const hart = e.target.closest("[data-hart]");
       const weg = e.target.closest("[data-weg]");
       if (!hart && !weg) return;
-      e.stopPropagation();
+      e.stopImmediatePropagation();
       e.preventDefault();
       if (hart) this.favorietOm_(this.treffers_[+hart.dataset.hart], hart);
       else this.nummerWeg_(this.treffers_[+weg.dataset.weg]);
     });
     this.aan_(lijst, "pointerdown", (e) => {
-      if (e.target.closest("[data-hart], [data-weg]")) e.stopPropagation();
+      if (e.target.closest("[data-hart], [data-weg]")) e.stopImmediatePropagation();
     });
     // `bindActions` zegt of het een tik of een vasthoud was, maar niet waarop.
     // Dat lezen we bij het neergaan van de vinger.

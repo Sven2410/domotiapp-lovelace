@@ -207,6 +207,39 @@ def client(hass: HomeAssistant):
     return mass
 
 
+class MAWeigert(HomeAssistantError):
+    """Music Assistant wil dit niet uitvoeren."""
+
+
+def _vertaal(err: Exception) -> Exception:
+    """Van een MA-fout naar iets dat een mens kan lezen.
+
+    De belangrijkste is `InsufficientPermissions`. Music Assistant laat een
+    afspeellijst VERWIJDEREN alleen aan een beheerder toe, en de verbinding die
+    Home Assistant heeft is dat niet. Zonder deze vertaling kwam dat als
+    "Unknown error" op het scherm -- gemeten op de installatie van de eigenaar
+    op 20 augustus 2026.
+
+    Op naam en niet op klasse: `music_assistant_models` is een afhankelijkheid
+    van de MA-integratie en niet van ons, dus importeren zou dit bestand laten
+    breken op een installatie zonder Music Assistant.
+    """
+    naam = type(err).__name__
+    if naam == "InsufficientPermissions":
+        return MAWeigert(
+            "Music Assistant staat dit alleen toe aan een beheerder. Verwijderen van "
+            "een afspeellijst kan daarom niet vanaf de kaart; dat gaat via Music "
+            "Assistant zelf."
+        )
+    if naam in ("MediaNotFoundError", "InvalidDataError"):
+        return MAWeigert(f"Music Assistant kent dit item niet ({err}).")
+    # Ook wat we niet kennen wordt een HomeAssistantError. Anders ontsnapt hij
+    # langs de foutafhandeling van het commando en maakt Home Assistant er
+    # "Unknown error" van -- en dat vertelt niemand iets. De oorspronkelijke
+    # tekst gaat mee, zodat er in het logboek nog iets te zoeken valt.
+    return MAWeigert(f"Music Assistant gaf een fout: {err}")
+
+
 def _als_lijst(items: Any) -> list[Any]:
     """MA geeft dataclasses terug; soms een lijst, soms iets met `.items`."""
     if items is None:
@@ -284,8 +317,13 @@ async def bibliotheek(
 async def favoriet_aan(hass: HomeAssistant, uri: str) -> None:
     """Zet een hartje. MA zoekt zelf op wat er achter de uri zit."""
     mass = client(hass)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        await mass.music.add_item_to_favorites(uri)
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            await mass.music.add_item_to_favorites(uri)
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001 -- MA kent zijn eigen fouten
+        raise _vertaal(err) from err
 
 
 async def favoriet_uit(hass: HomeAssistant, soort: str, library_item_id: str) -> None:
@@ -296,8 +334,13 @@ async def favoriet_uit(hass: HomeAssistant, soort: str, library_item_id: str) ->
     """
     mass = client(hass)
     media_type = SOORT_MEDIA_TYPE.get(soort, soort)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        await mass.music.remove_item_from_favorites(media_type, library_item_id)
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            await mass.music.remove_item_from_favorites(media_type, library_item_id)
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001
+        raise _vertaal(err) from err
 
 
 async def afspeellijst_maken(hass: HomeAssistant, naam: str) -> dict[str, Any]:
@@ -307,49 +350,91 @@ async def afspeellijst_maken(hass: HomeAssistant, naam: str) -> dict[str, Any]:
     eigen bibliotheek, en dat is precies waar een lijst hoort die je hier maakt.
     """
     mass = client(hass)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        lijst = await mass.music.create_playlist(naam)
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            lijst = await mass.music.create_playlist(naam)
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001
+        raise _vertaal(err) from err
     return bibliotheekItem(lijst, "playlists")
 
 
 async def afspeellijst_verwijderen(hass: HomeAssistant, item_id: str) -> None:
-    """Weg met de lijst. Alleen de lijst: de nummers blijven in de bibliotheek."""
+    """Weg met de lijst. Alleen de lijst: de nummers blijven in de bibliotheek.
+
+    LET OP: Music Assistant laat dit alleen aan een beheerder toe, en de
+    verbinding die Home Assistant heeft is dat niet. Op de installatie van de
+    eigenaar geeft dit `InsufficientPermissions`. `_vertaal` maakt daar een
+    leesbare melding van; de kaart toont die en gooit de knop niet stilletjes
+    weg, want dan zou niemand weten waarom het niet kan.
+    """
     mass = client(hass)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        await mass.music.remove_playlist(item_id)
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            await mass.music.remove_playlist(item_id)
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001
+        raise _vertaal(err) from err
 
 
 async def afspeellijst_nummers(
-    hass: HomeAssistant, item_id: str, provider: str
+    hass: HomeAssistant, item_id: str, provider: str, *, ververs: bool = True
 ) -> list[dict[str, Any]]:
     """Wat er in een afspeellijst zit, op volgorde.
 
     De volgorde doet ertoe: verwijderen gaat op POSITIE en niet op uri, dus het
-    scherm moet weten welk nummer op welke plek staat.
+    scherm moet weten welk nummer op welke plek staat. Let op: MA telt die
+    posities vanaf 1, niet vanaf 0.
+
+    `ververs` staat standaard AAN, en dat is de reden dat deze functie bestond
+    zonder te werken. Music Assistant CACHET de nummers van een afspeellijst, en
+    voegt nieuwe nummers bovendien toe in een achtergrondtaak. Wie meteen na het
+    toevoegen opnieuw vroeg, kreeg de oude lijst terug -- en concludeerde dat
+    toevoegen niet werkte. Gemeten op de installatie van de eigenaar: drie
+    nummers toegevoegd, direct daarna 0 in de lijst, even later alle drie.
     """
     mass = client(hass)
     async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        nummers = await mass.music.get_playlist_tracks(item_id, provider)
+        nummers = await mass.music.get_playlist_tracks(item_id, provider, force_refresh=ververs)
     uit: list[dict[str, Any]] = []
     for plek, nummer in enumerate(_als_lijst(nummers)):
         regel = bibliotheekItem(nummer, "tracks")
-        # MA nummert de posities in een afspeellijst zelf; die is leidend, want
-        # een lijst kan in stukken opgehaald worden.
+        # MA nummert de posities in een afspeellijst zelf en begint daarbij bij
+        # EEN. Die nummering is leidend, want een lijst kan in stukken opgehaald
+        # worden. De terugval telt daarom ook vanaf 1.
         positie = getattr(nummer, "position", None)
-        regel["position"] = positie if positie is not None else plek
+        regel["position"] = positie if positie is not None else plek + 1
         uit.append(regel)
     return uit
 
 
 async def nummers_toevoegen(hass: HomeAssistant, item_id: str, uris: list[str]) -> None:
-    """Nummers achteraan de lijst."""
+    """Nummers achteraan de lijst.
+
+    Music Assistant zet hier een ACHTERGRONDTAAK voor klaar en antwoordt meteen
+    ("Creates background tasks to process the action" -- zijn eigen client). Er
+    komt dus geen bevestiging dat het gelukt is, en direct daarna terugkijken
+    geeft de lijst zoals hij was. Zie `afspeellijst_nummers`.
+    """
     mass = client(hass)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        await mass.music.add_playlist_tracks(item_id, uris)
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            await mass.music.add_playlist_tracks(item_id, uris)
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001
+        raise _vertaal(err) from err
 
 
 async def nummers_verwijderen(hass: HomeAssistant, item_id: str, posities: list[int]) -> None:
     """Nummers eruit, op positie."""
     mass = client(hass)
-    async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
-        await mass.music.remove_playlist_tracks(item_id, tuple(posities))
+    try:
+        async with asyncio.timeout(BIBLIOTHEEK_TIMEOUT_SECONDEN):
+            await mass.music.remove_playlist_tracks(item_id, tuple(posities))
+    except TimeoutError:
+        raise
+    except Exception as err:  # noqa: BLE001
+        raise _vertaal(err) from err
