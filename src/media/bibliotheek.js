@@ -103,6 +103,40 @@ export const SOORT_ENKELVOUD = {
   audiobooks: "audiobook",
 };
 
+/**
+ * De filterknoppen boven de ZOEKresultaten, met het `media_type` dat MA verwacht.
+ *
+ * Deze staan hier naast `BIB_SOORTEN` met opzet, want tussen die twee zat een
+ * bug. Zoeken praat in ENKELVOUD (`track`), de bibliotheek in MEERVOUD
+ * (`tracks`), en het favorietenblad vergeleek de twee rechtstreeks. Alleen
+ * `radio` heet in allebei hetzelfde, dus alleen radio kwam ooit over -- al het
+ * andere viel terug op afspeellijsten. Naast elkaar is dat te toetsen; twee
+ * bestanden verderop was het onzichtbaar.
+ */
+export const ZOEK_SOORTEN = [
+  ["", "Alles"],
+  ["track", "Nummers"],
+  ["album", "Albums"],
+  ["artist", "Artiesten"],
+  ["playlist", "Afspeellijsten"],
+  ["radio", "Radio"],
+];
+
+/**
+ * Welke bibliotheek het favorietenblad moet tonen nadat er een hartje aanging.
+ *
+ * Het antwoord van de serverkant is de beste bron: die heeft het item ná het
+ * favoriet maken opgezocht en weet waar MA het neerzette. Kwam dat niet mee, dan
+ * de soort van het item zelf; en anders blijft staan wat er stond.
+ *
+ * Hierdoor opent Favorieten op NUMMERS als je net een nummer favoriet maakte.
+ * Zonder dit keek je naar favoriete afspeellijsten, zag je je nummer niet, en
+ * leek het hartje niet bewaard.
+ */
+export function bibSoortNa(antwoord, item, huidig = null) {
+  return antwoord?.kind ?? soortVan(item) ?? huidig ?? "playlists";
+}
+
 /** Kan dit item favoriet gemaakt worden? Een item zonder uri niet. */
 export const kanFavoriet = (item) => Boolean(item?.uri);
 

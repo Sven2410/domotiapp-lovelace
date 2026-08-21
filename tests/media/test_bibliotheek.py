@@ -143,6 +143,67 @@ def test_bibliotheekitem_verdraagt_een_kale_dict() -> None:
     assert regel["artists"] is None
 
 
+# ------------------------------------ het hartje op een zoekresultaat
+
+
+def test_treffers_dragen_het_hartje_mee() -> None:
+    """Een zoekresultaat uit de bibliotheek weet dat het een favoriet is.
+
+    Dit was de helft van de melding "hij slaat favorieten niet op". Music
+    Assistant zoekt ook in zijn eigen bibliotheek, en zo'n treffer draagt
+    `favorite` en zijn bibliotheeknummer. Wij lieten allebei vallen, dus kwam een
+    nummer dat je een minuut eerder favoriet maakte terug met een leeg hartje.
+    """
+    regels = ma.treffers(
+        {
+            "tracks": [
+                {
+                    "name": "Het Nummer",
+                    "uri": "library://track/12",
+                    "media_type": "track",
+                    "provider": "library",
+                    "item_id": 12,
+                    "favorite": True,
+                }
+            ]
+        }
+    )
+    assert regels[0]["favorite"] is True
+    assert regels[0]["library_item_id"] == "12"
+
+
+def test_treffer_van_een_provider_leent_geen_bibliotheeknummer() -> None:
+    """Een treffer van Spotify heeft een item_id, maar niet ONS item_id.
+
+    Het hartje uitzetten gaat op bibliotheeknummer plus soort. Zou het nummer van
+    de provider daarvoor doorgaan, dan haalt een tik op het hartje iets ánders uit
+    je bibliotheek weg dan wat je aanwees.
+    """
+    regels = ma.treffers(
+        {
+            "tracks": [
+                {
+                    "name": "Hetzelfde Nummer",
+                    "uri": "spotify://track/abc",
+                    "media_type": "track",
+                    "provider": "spotify",
+                    "item_id": "abc",
+                }
+            ]
+        }
+    )
+    assert regels[0]["library_item_id"] is None
+    assert regels[0]["favorite"] is False
+
+
+def test_treffers_zonder_die_velden_blijven_werken() -> None:
+    """Oudere MA-antwoorden dragen ze niet; dan is het hartje gewoon uit."""
+    regels = ma.treffers({"radio": [{"name": "Radio 1", "uri": "radio://1"}]})
+    assert regels[0]["favorite"] is False
+    assert regels[0]["library_item_id"] is None
+    assert regels[0]["media_type"] == "radio"
+
+
 # ------------------------------------------------------------------ lezen
 
 

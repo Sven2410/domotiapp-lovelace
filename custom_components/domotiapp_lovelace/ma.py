@@ -120,12 +120,28 @@ def treffers(antwoord: dict[str, Any]) -> list[dict[str, Any]]:
 
     Plat en niet per emmer, omdat allebei de kanten die dit gebruiken één lijst
     tonen. Wie wél wil groeperen heeft `media_type` per treffer.
+
+    ## Waarom het hartje hier langskomt
+
+    Music Assistant zoekt in zijn eigen bibliotheek én bij de providers. Een
+    treffer die uit de bibliotheek komt weet dat hij een favoriet is; wij lieten
+    dat veld vallen, en dus kwam elk zoekresultaat met een leeg hartje binnen --
+    ook een nummer dat je een minuut eerder favoriet had gemaakt. Dat is de helft
+    van de melding "hij slaat favorieten niet op".
+
+    Het bibliotheeknummer gaat alleen mee als de treffer ECHT uit de bibliotheek
+    komt (`provider == "library"`). Bij een provider-treffer is `item_id` het
+    nummer van Spotify of Sonos, en een hartje uitzetten gaat op
+    bibliotheeknummer -- daar het verkeerde nummer voor gebruiken haalt iets
+    anders weg dan wat je aanwees.
     """
     resultaten: list[dict[str, Any]] = []
     for emmer in EMMERS:
         for item in antwoord.get(emmer) or []:
             if not isinstance(item, dict):
                 continue
+            nummer = item.get("item_id")
+            uit_bibliotheek = item.get("provider") == "library" and nummer is not None
             resultaten.append(
                 {
                     "name": item.get("name"),
@@ -134,6 +150,8 @@ def treffers(antwoord: dict[str, Any]) -> list[dict[str, Any]]:
                     "image": item.get("image"),
                     "artists": item.get("artists"),
                     "album": item.get("album"),
+                    "favorite": bool(item.get("favorite", False)),
+                    "library_item_id": str(nummer) if uit_bibliotheek else None,
                 }
             )
     return resultaten

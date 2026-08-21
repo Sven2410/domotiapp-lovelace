@@ -33,10 +33,13 @@ import { sheet, tokens, baseCss } from "../theme.js";
 import { resolve } from "../icons.js";
 import { bindActions, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import { zetScrollSlot } from "../scrollslot.js";
 import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
 import {
   BIB_SOORTEN,
+  ZOEK_SOORTEN as SOORTEN,
   SOORT_ENKELVOUD,
+  bibSoortNa,
   BIB_WOORD,
   haalBibliotheek,
   haalLijstNummers,
@@ -50,16 +53,6 @@ import {
 
 /** Hoe lang we wachten met zoeken nadat er een toets is losgelaten. */
 const TIK_PAUZE_MS = 350;
-
-/** De filterknoppen boven de resultaten, met het `media_type` dat MA verwacht. */
-const SOORTEN = [
-  ["", "Alles"],
-  ["track", "Nummers"],
-  ["album", "Albums"],
-  ["artist", "Artiesten"],
-  ["playlist", "Afspeellijsten"],
-  ["radio", "Radio"],
-];
 
 /** Het Nederlandse woord bij een `media_type`, voor het label op een treffer. */
 const SOORT_WOORD = {
@@ -508,6 +501,12 @@ class MediaBrowser extends HTMLElement {
       if (e.key === "Escape" && this.hasAttribute("open")) this.sluit();
     };
     document.addEventListener("keydown", this.escape_, true);
+    // De pagina eronder staat stil zolang dit scherm openligt. Zonder dit
+    // scrolde Home Assistant mee zodra je op de laag zelf scrolde in plaats van
+    // in een lijst -- gemeld op 20 augustus 2026. `??=`, want `open()` wordt ook
+    // aangeroepen op een scherm dat al openstaat (een andere speler); een tweede
+    // slot zou het eerste kwijtmaken en de pagina vast laten staan.
+    this.scrollLos_ ??= zetScrollSlot();
     this.$(".wie b").textContent = naam;
     this.$(".wie span").textContent = "Music Assistant";
     this.sprekerSig_ = null;
@@ -531,6 +530,8 @@ class MediaBrowser extends HTMLElement {
     this.removeAttribute("open");
     this.menuDicht_();
     if (this.escape_) document.removeEventListener("keydown", this.escape_, true);
+    this.scrollLos_?.();
+    this.scrollLos_ = null;
   }
 
   set hass(hass) {
@@ -663,7 +664,13 @@ class MediaBrowser extends HTMLElement {
     this.aan_(this.$(".soorten"), "click", (e) => {
       const knop = e.target.closest("[data-soort]");
       if (!knop) return;
-      this.soort_ = knop.dataset.soort;
+      // Dezelfde knoppenbalk, twee verschillende dingen eronder: bij zoeken is
+      // dit een filter op de zoekopdracht (enkelvoud, "track"), bij favorieten
+      // kiest hij WELKE bibliotheek je ziet (meervoud, "tracks"). Ze in één
+      // veld bewaren betekende dat het favorietenblad de zoekopdracht van het
+      // andere blad ging vergiftigen -- en andersom.
+      if (this.modus_ === "favorieten") this.bibSoort_ = knop.dataset.soort;
+      else this.soort_ = knop.dataset.soort;
       for (const b of this.shadowRoot.querySelectorAll("[data-soort]")) {
         b.setAttribute("aria-pressed", String(b === knop));
       }
@@ -700,7 +707,7 @@ class MediaBrowser extends HTMLElement {
   async zoek_() {
     const vraag = this.$(".zoek input").value.trim();
     if (!vraag) {
-      this.treffers_ = [];
+      this.treffers_ = this.zoekTreffers_ = [];
       this.leegMelding_(
         "Zoek in Music Assistant",
         "Typ een naam en kies uit alles wat je bibliotheek en je providers kennen."
@@ -722,7 +729,7 @@ class MediaBrowser extends HTMLElement {
         limit: 20,
       });
       if (beurt !== this.beurt_) return;
-      this.treffers_ = antwoord?.results ?? [];
+      this.treffers_ = this.zoekTreffers_ = antwoord?.results ?? [];
       this.teken_();
     } catch (fout) {
       if (beurt !== this.beurt_) return;
@@ -759,11 +766,22 @@ class MediaBrowser extends HTMLElement {
 
     if (tab === "zoeken") {
       this.tekenSoorten_(SOORTEN, this.soort_);
+      // Het andere blad heeft `treffers_` overschreven met zijn eigen lijst --
+      // dat is wat er op het scherm staat. Wie terugkomt hoort zijn zoekresultaat
+      // terug te zien, met de hartjes zoals ze nu zijn, en niet de favorieten
+      // van het vorige blad.
+      this.treffers_ = this.zoekTreffers_ ?? [];
+      if (!this.treffers_.length) {
+        this.leegMelding_(
+          "Zoek in Music Assistant",
+          "Typ een naam en kies uit alles wat je bibliotheek en je providers kennen."
+        );
+        return;
+      }
       this.teken_();
       return;
     }
     if (tab === "favorieten") {
-      this.tekenSoorten_(BIB_SOORTEN, this.bibSoort_);
       this.haalFavorieten_();
       return;
     }
@@ -784,13 +802,11 @@ class MediaBrowser extends HTMLElement {
   /* -------------------------------------------------------- favorieten */
 
   async haalFavorieten_() {
-    // In het favorietenblad betekent de soortknop iets anders dan bij zoeken:
-    // daar filtert hij de zoekopdracht, hier kiest hij wélke bibliotheek je ziet.
-    // Eén lege waarde ("Alles") bestaat hier niet -- MA levert per soort.
-    this.bibSoort_ = BIB_SOORTEN.some(([w]) => w === this.soort_)
-      ? this.soort_
-      : this.bibSoort_ ?? "playlists";
-    this.soort_ = this.bibSoort_;
+    // Eén lege waarde ("Alles") bestaat hier niet -- MA levert per soort. Welke
+    // soort dat is staat in `bibSoort_`: gezet door de soortknoppen hierboven,
+    // of door het laatste hartje dat je aanzette. Zie `favorietOm_`.
+    this.bibSoort_ ??= "playlists";
+    this.tekenSoorten_(BIB_SOORTEN, this.bibSoort_);
     const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
     this.leegMelding_("Ophalen…", "Je favorieten uit Music Assistant.");
     try {
@@ -826,6 +842,13 @@ class MediaBrowser extends HTMLElement {
         item.library_item_id = antwoord.library_item_id;
         if (antwoord.kind) item.media_type = SOORT_ENKELVOUD[antwoord.kind] ?? item.media_type;
       }
+      // Het favorietenblad opent op de soort die je nét favoriet maakte.
+      //
+      // Dit was de melding "hij slaat favorieten niet op": een nummer favoriet
+      // maken en dan naar Favorieten gaan liet je naar favoriete AFSPEELLIJSTEN
+      // kijken, want daar viel het blad op terug. Het nummer stond er wel, maar
+      // niet in de lijst waar je naar keek.
+      if (nieuw) this.bibSoort_ = bibSoortNa(antwoord, item, this.bibSoort_);
       // In het favorietenblad hoort een afgevinkt item te verdwijnen: het is
       // geen favoriet meer, dus het staat niet meer in de lijst van favorieten.
       if (this.modus_ === "favorieten" && !nieuw) this.haalFavorieten_();
@@ -1462,6 +1485,11 @@ class MediaBrowser extends HTMLElement {
 
   disconnectedCallback() {
     clearTimeout(this.timer_);
+    // Ook hier losmaken: wordt het scherm uit de DOM gehaald terwijl het
+    // openstaat (een dashboard dat opnieuw opbouwt), dan is er niemand meer die
+    // `sluit()` aanroept en zou de pagina voorgoed vaststaan.
+    this.scrollLos_?.();
+    this.scrollLos_ = null;
     this.schuiven_?.forEach((off) => off());
     this.schuiven_ = null;
     if (this.escape_) document.removeEventListener("keydown", this.escape_, true);
