@@ -14,6 +14,8 @@ import { describe, it } from "node:test";
 
 import {
   BIB_SOORTEN,
+  ZOEK_SOORTEN,
+  bibSoortNa,
   favorietBericht,
   kanFavoriet,
   soortVan,
@@ -106,5 +108,51 @@ describe("kanFavoriet()", () => {
   it("zonder uri niet -- dan hoort het hartje er niet te staan", () => {
     assert.equal(kanFavoriet({ name: "Iets" }), false);
     assert.equal(kanFavoriet(null), false);
+  });
+});
+
+describe("de brug tussen zoeken en de bibliotheek", () => {
+  it("elke zoeksoort wijst een bibliotheek aan die bestaat", () => {
+    // Dit is de bug van 21 augustus 2026. Het favorietenblad vergeleek de
+    // zoeksoort ("track") RECHTSTREEKS met de bibliotheeksoorten ("tracks").
+    // Alleen radio heet in allebei hetzelfde, dus alleen radio kwam over; al het
+    // andere viel terug op afspeellijsten. Wie een nummer favoriet maakte, kreeg
+    // favoriete AFSPEELLIJSTEN te zien en dacht dat het hartje niet bewaard was.
+    const bibliotheken = new Set(BIB_SOORTEN.map(([w]) => w));
+    for (const [zoeksoort] of ZOEK_SOORTEN) {
+      if (!zoeksoort) continue; // "Alles" heeft geen tegenhanger, dat mag
+      const bib = soortVan({ media_type: zoeksoort });
+      assert.equal(bibliotheken.has(bib), true, `${zoeksoort} wijst naar ${bib}`);
+    }
+  });
+
+  it("de twee lijsten praten NIET dezelfde taal -- daar zat het misverstand", () => {
+    const bibliotheken = new Set(BIB_SOORTEN.map(([w]) => w));
+    assert.equal(bibliotheken.has("track"), false);
+    assert.equal(bibliotheken.has("tracks"), true);
+  });
+});
+
+describe("bibSoortNa()", () => {
+  it("het antwoord van de serverkant wint -- die heeft het item opgezocht", () => {
+    assert.equal(bibSoortNa({ kind: "albums" }, { media_type: "track" }, "playlists"), "albums");
+  });
+
+  it("zonder antwoord telt de soort van het item zelf", () => {
+    assert.equal(bibSoortNa(null, { media_type: "track" }, "playlists"), "tracks");
+    assert.equal(bibSoortNa({}, { media_type: "playlist" }, "tracks"), "playlists");
+  });
+
+  it("een nummer favoriet maken opent het favorietenblad op nummers", () => {
+    // De melding zelf, in één regel: hartje op een nummer, dan naar Favorieten.
+    assert.equal(bibSoortNa({ kind: "tracks", library_item_id: "12" }, nummer()), "tracks");
+  });
+
+  it("valt iets weg, dan blijft staan waar je was", () => {
+    assert.equal(bibSoortNa(null, { media_type: "iets" }, "artists"), "artists");
+  });
+
+  it("en zonder ook maar iets is het afspeellijsten, zoals het blad altijd opende", () => {
+    assert.equal(bibSoortNa(null, null), "playlists");
   });
 });

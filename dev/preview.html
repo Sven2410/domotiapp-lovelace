@@ -402,9 +402,30 @@ const hass = {
             artists: [{ name: "Nils Frahm" }] },
           { name: `${q} in de ochtend`, uri: "library://track/7", media_type: "track",
             artists: [{ name: "Nils Frahm" }], album: { name: "Spaces" } },
+          // Een treffer die AL in de bibliotheek staat, zoals MA die ook
+          // teruggeeft: hij hoort met een gevuld hartje binnen te komen.
+          { name: "Says", uri: "library://track/21", media_type: "track",
+            artists: [{ name: "Nils Frahm" }], album: { name: "Spaces" } },
         ];
         const soort = bericht.media_types?.[0];
-        return { results: soort ? alles.filter((r) => r.media_type === soort) : alles };
+        const gekozen = soort ? alles.filter((r) => r.media_type === soort) : alles;
+        // Zoals de serverkant het sinds 21 augustus 2026 doet: een treffer die
+        // uit de BIBLIOTHEEK komt draagt zijn hartje en zijn bibliotheeknummer
+        // mee. Zonder dat kwam een nummer dat je net favoriet maakte terug met
+        // een leeg hartje, en leek het niet bewaard. Een provider-treffer krijgt
+        // ze niet: zijn item_id is dat van Spotify, niet van de bibliotheek.
+        return {
+          results: gekozen.map((r) => {
+            const inBieb = Object.values(wsBieb)
+              .flat()
+              .find((i) => i.uri === r.uri && i.provider === "library");
+            return {
+              ...r,
+              favorite: Boolean(inBieb?.favorite),
+              library_item_id: inBieb ? inBieb.library_item_id : null,
+            };
+          }),
+        };
       }
       // De alarmcode van DomotiApp, nagebootst. De echte staat gehasht aan de
       // serverkant; hier is 4711 de goede.
