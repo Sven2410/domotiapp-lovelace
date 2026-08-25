@@ -406,7 +406,6 @@ class HeaderEditor extends DacEditor {
 
         show_rule: "Accentlijn tonen",
         hide_below: "Verbergen onder breedte (px)",
-        bare: "Zonder kaartrand",
         name: "Naam",
       }[s.name] ?? super.label(s)
     );

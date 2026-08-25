@@ -136,6 +136,11 @@ class SeparatorEditor extends DacEditor {
     return { line: true, tone: "accent" };
   }
 
+  /** Deze kaart heeft nooit een vlak gehad; een schakelaar ervoor zou liegen. */
+  gedeeldeVelden() {
+    return [];
+  }
+
   pickers() {
     return [
       { key: "icon", kind: "icon", label: "Icoon links", fallback: "star", auto: false },

@@ -134,6 +134,7 @@ class DomotiappAlarmCard extends LitElement {
     const nieuw = valideerConfig(config);
     const anders = nieuw.person !== this._config?.person;
     this._config = nieuw;
+    this.toggleAttribute("bare", Boolean(config?.bare));
     if (anders) {
       // Andere persoon: alles wat we van de vorige wisten is niet meer waar.
       this._toestand = null;
@@ -465,6 +466,15 @@ class DomotiappAlarmCard extends LitElement {
        wekkers mee en zou dan door zijn eigen vak heen steken. */
     .card {
       min-height: var(--dac-raster, 56px);
+    }
+
+    /* Geen achtergrond -- zie de andere kaarten in de familie. */
+    :host([bare]) .card {
+      background: none;
+      border: 0;
+      box-shadow: none;
+      padding-left: 0;
+      padding-right: 0;
     }
 
     /* Geen overflow:hidden op de kaart: de stopknop houdt daarom zelf de
@@ -968,10 +978,12 @@ class DomotiappAlarmCardEditor extends LitElement {
       required: true,
       selector: { entity: { filter: { domain: "person" } } },
     },
+    { name: "bare", selector: { boolean: {} } },
   ];
 
   _label = (schema) =>
-    schema.name === "person" ? "Persoon" : schema.name;
+    ({ person: "Persoon", bare: "Achtergrond weglaten" })[schema.name] ??
+    schema.name;
 
   render() {
     if (!this._config || !this.hass) {

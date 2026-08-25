@@ -51,6 +51,70 @@ export const icons = {
     <path d="M5.4 20.4v-9.1h13.2v9.1"/>
     <path d="M7.6 13.2h8.8M7.6 15.4h8.8M7.6 17.6h8.8M7.6 19.8h8.8"/>`),
 
+  /* ---- rooms. Een navbalk wijst naar plekken, en de set had er geen enkele.
+     Allemaal op dezelfde 1.6 lijndikte; zie de kop van dit bestand. ---- */
+
+  bed: draw(`<path d="M3.2 20.2V8.4"/>
+    <path d="M3.2 16.4h17.6v3.8"/>
+    <path d="M20.8 16.4v-3.1a2.3 2.3 0 0 0-2.3-2.3H9.9v5.4"/>
+    <circle cx="6.8" cy="12.7" r="2"/>`),
+
+  bedDouble: draw(`<path d="M2.4 20.4V8.2M21.6 20.4V8.2"/>
+    <path d="M2.4 16.6h19.2v3.8"/>
+    <path d="M21.6 16.6v-2.9a2.2 2.2 0 0 0-2.2-2.2H4.6a2.2 2.2 0 0 0-2.2 2.2v2.9"/>
+    <path d="M12 11.5v5.1"/>
+    <path d="M5.2 11.5V9.9a.9.9 0 0 1 .9-.9h3.6a.9.9 0 0 1 .9.9v1.6"/>
+    <path d="M13.4 11.5V9.9a.9.9 0 0 1 .9-.9h3.6a.9.9 0 0 1 .9.9v1.6"/>`),
+
+  hanger: draw(`<path d="M12 8.4V7.2a2.1 2.1 0 1 1 2.1-2.1"/>
+    <path d="M12 8.4 3.2 15.6a1.4 1.4 0 0 0 .9 2.5h15.8a1.4 1.4 0 0 0 .9-2.5L12 8.4Z"/>`),
+
+  wardrobe: draw(`<rect x="4.2" y="2.8" width="15.6" height="17" rx="1.8"/>
+    <path d="M12 2.8v17"/>
+    <path d="M10.2 10.6v2.4M13.8 10.6v2.4"/>
+    <path d="M6.6 19.8v1.6M17.4 19.8v1.6"/>`),
+
+  sofa: draw(`<path d="M5.2 11.6V8.4a1.9 1.9 0 0 1 1.9-1.9h9.8a1.9 1.9 0 0 1 1.9 1.9v3.2"/>
+    <path d="M3 17.4v-4.1a2 2 0 0 1 4 0v1.5h10v-1.5a2 2 0 0 1 4 0v4.1z"/>
+    <path d="M5.8 17.4v2.2M18.2 17.4v2.2"/>`),
+
+  kitchen: draw(`<path d="M4.4 10.2h15.2v5.2a4 4 0 0 1-4 4H8.4a4 4 0 0 1-4-4z"/>
+    <path d="M2.4 12.2h2M19.6 12.2h2"/>
+    <path d="M9.4 7.4c0-1.1 1.2-1.1 1.2-2.2M13.4 7.4c0-1.1 1.2-1.1 1.2-2.2"/>`),
+
+  shower: draw(`<path d="M4.6 20.6V7.2a2.6 2.6 0 0 1 2.6-2.6h5.2A2.6 2.6 0 0 1 15 7.2v1.6"/>
+    <path d="M11 12.4a4 4 0 0 1 8 0z"/>
+    <path d="M12.8 15.4v1.6M15 15.4v1.6M17.2 15.4v1.6M13.9 18.8v1.6M16.1 18.8v1.6"/>`),
+
+  toilet: draw(`<path d="M7 3.6h3.6v4.8H7z"/>
+    <path d="M5.2 8.4h11.6l-1 5.2a4.6 4.6 0 0 1-4.5 3.7h-1a4.6 4.6 0 0 1-4.5-3.7z"/>
+    <path d="M9.2 17.4v2.8h4.2v-2.8M7.6 20.2h7.4"/>`),
+
+  desk: draw(`<rect x="4.6" y="4.2" width="14.8" height="9.4" rx="1.8"/>
+    <path d="M10.4 13.6v2.6h3.2v-2.6"/>
+    <path d="M2.8 18.4h18.4"/>
+    <path d="M5.2 18.4v2.4M18.8 18.4v2.4"/>`),
+
+  stairs: draw(`<path d="M3.6 20.4V16h4.3v-4.3h4.3V7.4h4.3V3.2h4.1"/>
+    <path d="M3.6 20.4h16.8"/>`),
+
+  parasol: draw(`<path d="M12 20.8V9.4"/>
+    <path d="M2.8 9.4a9.2 9.2 0 0 1 18.4 0z"/>
+    <path d="M6.6 9.4C6.6 5.9 9 3 12 3s5.4 2.9 5.4 6.4"/>
+    <path d="M12 20.8a2.2 2.2 0 0 0 2.2-2.2"/>`),
+
+  fence: draw(`<path d="M4.4 20.4V8.6L6.8 6l2.4 2.6v11.8M14.8 20.4V8.6L17.2 6l2.4 2.6v11.8"/>
+    <path d="M2.6 11.4h18.8M2.6 15.4h18.8"/>
+    <path d="M9.2 11.4v4M14.8 11.4v4"/>`),
+
+  /* Een naaldboom en geen bol met een steel: die laatste stond hier eerst en
+     las op 19px -- de maat in het meer-menu -- als een ballon. Gezien in de
+     echte kiezer op 25 augustus 2026. */
+  tree: draw(`<path d="M12 3 7.6 9.4h8.8z"/>
+    <path d="M12 7.6 5.8 16.2h12.4z"/>
+    <path d="M12 16.2v4.4"/>
+    <path d="M9.4 20.6h5.2"/>`),
+
   /* ---- covers. A shutter reads by its slats; an awning by its slope. ---- */
   shutter: draw(`<path d="M3.6 4.2h16.8M5.2 4.2v13.4M18.8 4.2v13.4"/>
     <path d="M5.2 7.6h13.6M5.2 11h13.6M5.2 14.4h13.6M5.2 17.6h13.6"/>`),

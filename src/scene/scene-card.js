@@ -34,7 +34,7 @@ import { meldAan, meldInKiezer } from "../registratie.js";
 const VERSION = __CARD_VERSION__;
 
 /** Sleutels die de kaart zelf kent. */
-const EIGEN_SLEUTELS = ["type", "entity", "name_overrides"];
+const EIGEN_SLEUTELS = ["type", "entity", "name_overrides", "bare"];
 
 /** De toestanden waarin de kaart kan staan. */
 const LADEN = "laden";
@@ -84,6 +84,19 @@ class DomotiappSceneCard extends LitElement {
         flex-direction: column;
         justify-content: center;
         gap: 8px;
+      }
+
+
+      /* Geen achtergrond: hetzelfde bare als bij de andere kaarten in de
+         familie, zodat een dashboard zonder vlakken ook zonder vlakken is als
+         deze kaart ertussen staat. De binnenmarge gaat mee weg -- die hoort bij
+         het vlak, en zonder vlak duwt hij de inhoud alleen uit het raster. */
+      :host([bare]) .card {
+        background: none;
+        border: 0;
+        box-shadow: none;
+        padding-left: 0;
+        padding-right: 0;
       }
 
       .rij {
@@ -234,6 +247,9 @@ class DomotiappSceneCard extends LitElement {
     }
 
     this._config = config;
+    // Een kenmerk en geen klasse op de div: lit tekent die div opnieuw bij elke
+    // render, en de host blijft.
+    this.toggleAttribute("bare", Boolean(config.bare));
   }
 
   getCardSize() {
