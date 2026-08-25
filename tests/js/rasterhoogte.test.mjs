@@ -13,10 +13,54 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ROW_GAP, ROW_H, opRaster } from "../../src/rasterhoogte.js";
+import { ROW_GAP, ROW_H, gemetenRijen, opRaster } from "../../src/rasterhoogte.js";
 
 /** De hoogtes waar Home Assistant zijn rijen op zet. */
 const RIJ = (n) => n * ROW_H + (n - 1) * ROW_GAP;
+
+describe("gemetenRijen() — de ondergrens die een kaart opgeeft — NIEUW GEDRAG", () => {
+  /**
+   * Een nagemaakt vak met alleen wat gemetenRijen leest: de weggeschreven
+   * meting van meetRaster. Geen DOM nodig, en dat is precies waarom die meting
+   * op een style-eigenschap staat en niet in een gesloten variabele.
+   */
+  const vak = (raster) => ({
+    style: { getPropertyValue: (naam) => (naam === "--dac-raster" ? raster : "") },
+  });
+
+  it("rekent elke rasterhoogte terug naar zijn aantal rijen", () => {
+    assert.equal(gemetenRijen(vak("56px")), 1);
+    assert.equal(gemetenRijen(vak("120px")), 2);
+    assert.equal(gemetenRijen(vak("184px")), 3);
+    assert.equal(gemetenRijen(vak("248px")), 4);
+    assert.equal(gemetenRijen(vak("632px")), 10);
+  });
+
+  it("is de omkering van opRaster, voor elk aantal rijen", () => {
+    for (let n = 1; n <= 12; n++) {
+      const px = n * ROW_H + (n - 1) * ROW_GAP;
+      assert.equal(gemetenRijen(vak(`${px}px`)), n, `${px}px hoort ${n} rijen te zijn`);
+    }
+  });
+
+  it("geeft null als er nog niets gemeten is", () => {
+    // Dan valt de kaart terug op zijn eigen schatting; een 1 verzinnen zou de
+    // ondergrens juist weer te laag zetten -- en dat is de fout die dit
+    // voorkomt.
+    for (const leeg of [vak(""), vak("0px"), vak("geen getal"), vak(undefined), {}, null, undefined]) {
+      assert.equal(gemetenRijen(leeg), null);
+    }
+  });
+
+  it("laat een mediakaart van 184px niet als 2 rijen doorgaan", () => {
+    // Dit is het gemeten geval van 25 augustus 2026: grid_options {rows: 2} gaf
+    // een vak van 120px terwijl de kaart 184px tekende, en die 64px liepen over
+    // de kaart eronder. De ondergrens hoort 3 te zijn, zodat Home Assistant de
+    // 2 omhoog klemt.
+    assert.equal(gemetenRijen(vak("184px")), 3);
+    assert.ok(gemetenRijen(vak("184px")) > 2);
+  });
+});
 
 describe("opRaster()", () => {
   it("de rijmaten zijn 56, 120, 184 en 248", () => {

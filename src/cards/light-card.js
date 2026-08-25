@@ -328,7 +328,9 @@ class LightCard extends DacCard {
     // En de inhoud komt zelf op een rasterrij uit -- zie rasterhoogte.js. Een
     // getal hier zou de kaart klemmen op zijn vak, en dan steekt hij eruit
     // zodra de lamp aangaat en de strips erbij komen.
-    return { columns: 12, rows: "auto", min_columns: 4, min_rows: 1 };
+    // De ondergrens is gemeten, niet geraden -- zie gemetenRijen in
+    // rasterhoogte.js. Met de kleurstrips erbij is deze kaart twee rijen.
+    return { columns: 12, rows: "auto", min_columns: 4, min_rows: this.minRijen_(".card", 1) };
   }
 
   static getConfigElement() {

@@ -24,7 +24,7 @@
 
 import { baseCss, sheet, tokens } from "./theme.js";
 import { entitiesChanged } from "./ha.js";
-import { volgRaster } from "./rasterhoogte.js";
+import { gemetenRijen, volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldInKiezer } from "./registratie.js";
 
 const hostCss = /* css */ `
@@ -292,6 +292,19 @@ export class DacCard extends HTMLElement {
   /** How many rows this card takes in a masonry column. */
   getCardSize() {
     return 1;
+  }
+
+  /**
+   * De ondergrens in rasterrijen die deze kaart aan Home Assistant opgeeft.
+   *
+   * Zie `gemetenRijen` in rasterhoogte.js voor waarom dit moet: zonder eerlijke
+   * ondergrens mag iemand het vak kleiner slepen dan de inhoud, en dan schildert
+   * de kaart over zijn buurman heen. De schatting is er voor de allereerste
+   * aanroep, vóór de eerste meting; Home Assistant vraagt het bij de volgende
+   * `hass` opnieuw en dan klopt het getal.
+   */
+  minRijen_(selector = ".card", schatting = 1) {
+    return gemetenRijen(this.$(selector)) ?? schatting;
   }
 }
 

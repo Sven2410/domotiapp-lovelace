@@ -654,10 +654,17 @@ class MediaCard extends DacCard {
     // vormen -- de rijvorm groeit met de volumeregel mee, en de grote vorm met
     // de hoes. Een vast aantal rasterrijen zou bij de een een strook leeg laten
     // en bij de ander de hoes afkappen.
-    if (this.config?.layout === "groot") {
-      return { columns: 12, rows: "auto", min_columns: 6, min_rows: 6 };
+    //
+    // `min_rows` is de GEMETEN hoogte en geen vast getal. Stond hier 1 (en 6
+    // voor de grote vorm), en dan mag het formaatgreepje in de kaarteditor het
+    // vak kleiner maken dan de inhoud -- waarna de kaart over zijn buurman heen
+    // schildert. Zie gemetenRijen in rasterhoogte.js.
+    const groot = this.config?.layout === "groot";
+    const rijen = this.minRijen_(".card", groot ? 6 : this.getCardSize());
+    if (groot) {
+      return { columns: 12, rows: "auto", min_columns: 6, min_rows: rijen };
     }
-    return { columns: 12, rows: "auto", min_columns: 4, min_rows: 1 };
+    return { columns: 12, rows: "auto", min_columns: 4, min_rows: rijen };
   }
 
   static getConfigElement() {
