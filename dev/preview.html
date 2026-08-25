@@ -156,6 +156,22 @@ const states = Object.fromEntries([
   // Eentje die wel terugmeldt, om te zien dat de schuif dan vanzelf verschijnt.
   S("cover.garagedeur", "open", { friendly_name: "Garagedeur", supported_features: 15, current_position: 65 }),
 
+  // Alles wat een moment draagt, in de vier spellingen die er in omloop zijn.
+  // De kaart hoort er een veld bij te zetten dat je meteen kunt zetten.
+  S("input_datetime.wektijd", "07:30:00", {
+    friendly_name: "Wektijd", has_date: false, has_time: true }),
+  S("input_datetime.vakantie", "2026-09-12", {
+    friendly_name: "Vakantie", has_date: true, has_time: false }),
+  S("input_datetime.afspraak", "2026-08-25 09:15:00", {
+    friendly_name: "Afspraak", has_date: true, has_time: true }),
+  // Zonder has_date/has_time: een oude opname, of een integratie die ze niet
+  // meestuurt. De toestand zelf hoort dan nog leesbaar te zijn.
+  S("input_datetime.kaal", "18:45:00", { friendly_name: "Zonder attributen" }),
+  // De klok van een apparaat, en eentje die nog nooit gezet is.
+  S("time.wekker_slaapkamer", "06:45:00", { friendly_name: "Wekker slaapkamer" }),
+  S("time.nooit_gezet", "unknown", { friendly_name: "Nooit gezet" }),
+  S("date.vuilnis", "2026-08-27", { friendly_name: "Vuilnis buiten" }),
+
   S("sensor.mijnafvalwijzer_pmd", dPlus(1), { friendly_name: "Afvalbeheer Mijnafvalwijzer PMD" }),
   S("sensor.mijnafvalwijzer_gft", dPlus(3), { friendly_name: "Afvalbeheer Mijnafvalwijzer GFT" }),
   S("sensor.mijnafvalwijzer_papier", dPlus(16), { friendly_name: "Afvalbeheer Mijnafvalwijzer Papier" }),
@@ -601,6 +617,15 @@ const hass = {
       if (service === "alarm_arm_home") next.state = "armed_home";
       if (service === "media_next_track") next.attributes.media_title = "Het nummer hierna";
       if (service === "media_previous_track") next.attributes.media_title = "Het nummer hiervoor";
+      // Een gezette tijd of datum komt terug als toestand, net als in een echt
+      // huis: zo zie je of de kaart hem overneemt in plaats van terug te
+      // springen naar wat er stond.
+      if (service === "set_datetime" || service === "set_value") {
+        if (data.datetime) next.state = String(data.datetime).replace("T", " ").slice(0, 19);
+        else if (data.date && data.time) next.state = `${data.date} ${data.time}`;
+        else if (data.date) next.state = data.date;
+        else if (data.time) next.state = data.time;
+      }
       if (service === "open_cover") next.state = "open";
       if (service === "close_cover") next.state = "closed";
       if (service === "set_cover_position") next.attributes.current_position = data.position;
@@ -750,6 +775,39 @@ const COLUMNS = [
       // En een scene met toggle aan: die hoort geen schakelaar te krijgen.
       { columns: 1, items: [
         { entity: "scene.radio", icon: "radio", tone: "pink", toggle: true } ] },
+    ] },
+  ]],
+  ["Tijd op de regel", [
+    // De vier spellingen naast elkaar, met de status rechts: zo staan de velden
+    // onder elkaar uit, net als de waarden van HA's eigen entiteitenkaart.
+    { type: "custom:domotiapp-entities-card", state_position: "right", rows: [
+      { columns: 1, items: [ { entity: "input_datetime.wektijd", name: "Wektijd" } ] },
+      { columns: 1, items: [ { entity: "input_datetime.vakantie" } ] },
+      { columns: 1, items: [ { entity: "input_datetime.afspraak" } ] },
+      { columns: 1, items: [ { entity: "input_datetime.kaal" } ] },
+    ] },
+    // De klok van een apparaat, eentje die nog nooit gezet is -- die staat op
+    // unknown en hoort dus gedimd te blijven met "Niet bereikbaar", precies
+    // zoals elke andere entiteit zonder toestand -- en een datum.
+    { type: "custom:domotiapp-entities-card", rows: [
+      { columns: 1, items: [ { entity: "time.wekker_slaapkamer", icon: "clock" } ] },
+      { columns: 1, items: [ { entity: "time.nooit_gezet" } ] },
+      { columns: 1, items: [ { entity: "date.vuilnis", icon: "bin", tone: "teal" } ] },
+    ] },
+    // Twee naast elkaar, en eentje met de status uit: die hoort géén veld te
+    // krijgen, want het veld is wat de tekst was.
+    { type: "custom:domotiapp-entities-card", rows: [
+      { columns: 2, items: [
+        { entity: "input_datetime.wektijd", name: "Wekker" },
+        { entity: "time.wekker_slaapkamer", name: "Slaapkamer" } ] },
+      { columns: 1, items: [
+        { entity: "input_datetime.wektijd", name: "Zonder veld", show_state: false } ] },
+    ] },
+    // Op een tegel staat het veld rechtsboven, waar de schakelaar ook staat.
+    { type: "custom:domotiapp-entities-card", surface: "items", rows: [
+      { columns: 2, layout: "tile", items: [
+        { entity: "input_datetime.wektijd", name: "Wektijd" },
+        { entity: "date.vuilnis", name: "Vuilnis", tone: "teal" } ] },
     ] },
   ]],
   ["Bronkiezer", [
@@ -993,6 +1051,10 @@ cols.append(
   })
 );
 
+// Een pop-up van Home Assistant bestaat hier niet, maar de kaart vraagt er wel
+// om. Loggen dus: een control die per ongeluk de regel eronder meeneemt is
+// anders onzichtbaar op de werkbank.
+window.addEventListener("hass-more-info", (e) => log(`hass-more-info  ${e.detail?.entityId ?? ""}`));
 window.addEventListener("error", (e) => log(`FOUT: ${e.message}`, "err"));
 window.addEventListener("unhandledrejection", (e) => log(`FOUT: ${e.reason}`, "err"));
 log("werkbank geladen");
