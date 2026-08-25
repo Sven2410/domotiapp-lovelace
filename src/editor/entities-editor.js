@@ -505,7 +505,7 @@ class EntitiesEditor extends HTMLElement {
       if (s.name === "surface")
         return "Om elke entiteit apart geeft losse blokken in plaats van een lijst op een vlak -- dat is de vorm van een raster ruimtetegels of een rij losse knoppen.";
       if (s.name === "state_position")
-        return "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar tonen geen tekst, en op een tegel staat de status altijd onder de naam.";
+        return "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar of een tijdveld tonen geen tekst, en op een tegel staat de status altijd onder de naam.";
       return undefined;
     };
     // `bare: true` was de oude spelling van "geen vlak" en wordt hier gewoon
@@ -741,6 +741,8 @@ class EntitiesEditor extends HTMLElement {
         return "Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert.";
       if (s.name === "toggle")
         return "Een schuifschakelaar in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.";
+      if (s.name === "show_state")
+        return "Een tijd of datum -- een input_datetime, of een klok van een apparaat -- verschijnt hier als een veld dat je meteen kunt zetten. Uit haalt met de tekst ook dat veld weg.";
       if (s.name === "double_tap_action")
         return "Laat dit op geen actie staan als je het niet gebruikt: een regel die op dubbeltikken wacht, reageert trager op een gewone tik.";
       return undefined;

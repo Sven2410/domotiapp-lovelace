@@ -406,6 +406,15 @@ export function defaultIcon(entityId, attrs = {}) {
       return "star";
     case "weather":
       return "cloudSun";
+    // Alles wat een moment draagt. `date` krijgt de kalender, de rest de klok --
+    // en die twee zijn op een regel van 18 pixels nog uit elkaar te houden.
+    case "date":
+      return "calendar";
+    case "time":
+    case "datetime":
+      return "clock";
+    case "input_datetime":
+      return attrs.has_time === false ? "calendar" : "clock";
     case "media_player":
       // Een tv is geen speaker. Wat er hangt is uit de entiteit zelf te lezen,
       // dus dat hoeft niemand in te stellen.

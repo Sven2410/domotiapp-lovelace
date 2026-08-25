@@ -55,11 +55,22 @@
  * maar je kunt hem ook bedienen, en dat scheelt de omweg via het icoon. Waar
  * een schakelaar staat, staat geen statustekst: dat zou twee keer hetzelfde
  * zeggen.
+ *
+ * Een tijd of een datum gaat sinds die schakelaar op dezelfde manier. Een
+ * `input_datetime` -- en net zo goed een `time`, `date` of `datetime` van een
+ * apparaat -- krijgt op de plek van de statustekst een veld waarin je hem
+ * meteen zet. Dat is bewust geen instelling: de waarde stond er toch al, hem
+ * bewerkbaar tonen kost geen ruimte, en de omweg erlangs kostte vier
+ * handelingen -- regel opentikken, venster afwachten, veld zoeken, venster
+ * sluiten -- voor het verzetten van een wektijd. Wie er helemaal geen waarde
+ * wil zet `Status tonen` uit; dan verdwijnt met de tekst ook het veld. Het
+ * rekenwerk erachter staat in `tijdveld.js`.
  */
 
 import { DacCard, registerCard, rowsFor, toneValue, TONES, INCOMPLETE } from "../base.js";
 import { resolve, defaultIcon } from "../icons.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
+import { kanTijdZetten, tijdSoort, veldWaarde, zetOproep } from "./tijdveld.js";
 import "../editor/entities-editor.js";
 import {
   GAP,
@@ -194,6 +205,36 @@ class EntitiesCard extends DacCard {
     .row[data-vorm="compact"] .toggle .knob { width: 17px; height: 17px; }
     .row[data-vorm="compact"] .toggle[aria-checked="true"] .knob { --knob: 19px; }
 
+    /* ---- een tijd of datum, te zetten waar hij staat ----
+
+       Het is een echt invoerveld van de browser en geen nagebouwde kiezer: dan opent op een
+       telefoon de klok van het toestel zelf, met de duim waar de duim hoort, en
+       werkt op een toetsenbord gewoon typen. Wat we ervan afhalen is het
+       kalenderknopje van de browser -- dat staat er in een eigen maat en kleur
+       overheen -- en het veld opent zijn kiezer daarom zelf bij een tik.
+
+       color-scheme: dark is geen sier: zonder dat tekent de browser de vakjes
+       en het uitklappaneel licht, en die vallen buiten onze shadow root. Dat is
+       hetzelfde soort val als de select in de wekkereditor (fase 12). */
+    .tijd {
+      flex: 0 0 auto; margin-left: auto; min-width: 0;
+      font: inherit; font-size: 13px; line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      color: var(--dac-ink); color-scheme: dark;
+      background-color: var(--dac-surface);
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      padding: 5px 10px; cursor: pointer; text-align: center;
+      transition: background 200ms ease, border-color 200ms ease;
+    }
+    .tijd:hover { background-color: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+    .tijd:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+    .tijd::-webkit-calendar-picker-indicator { display: none; }
+    .tijd::-webkit-datetime-edit { padding: 0; }
+    /* Datum en tijd samen is een lang veld; op een regel van 44px moet dat er
+       nog naast een naam passen. */
+    .tijd[type="datetime-local"] { font-size: 12px; padding: 5px 8px; }
+    .row[data-vorm="tile"] .tijd { position: absolute; top: 14px; right: 14px; margin: 0; }
+
     /* Een vleug identiteitskleur op een tegel, zodat je hem van een afstand
        herkent voordat de tekst leesbaar is. Alleen op de tegelvorm: in een rij
        zou het net het oplichten worden dat er juist uit moest. */
@@ -250,6 +291,20 @@ class EntitiesCard extends DacCard {
     return Boolean(item.toggle) && kanSchakelen(item.entity);
   }
 
+  /**
+   * Hoort er een tijd- of datumveld op deze regel?
+   *
+   * Zonder dat je erom vraagt, want de waarde stond er toch al -- zie de kop.
+   * Wie hem niet wil zet `Status tonen` uit; dat is dezelfde knop die de tekst
+   * weghaalt, en het veld is hier wat de tekst was. Een schakelaar wint, maar
+   * die twee komen nooit samen voor: geen enkel tijddomein is schakelbaar.
+   */
+  metTijd_(item) {
+    if (!kanTijdZetten(item.entity)) return false;
+    if (this.metSchakelaar_(item)) return false;
+    return (item.show_state ?? this.config.show_state) !== false;
+  }
+
   template() {
     const c = this.config;
     this.setAttribute("vlak", vlakVan(c));
@@ -272,6 +327,7 @@ class EntitiesCard extends DacCard {
             <span class="txt">${item.show_name === false ? "" : `<span class="nm"></span>`}${rechts ? "" : st}</span>
             ${rechts ? st : ""}
             ${this.metSchakelaar_(item) ? toggleHtml({ label: "Aan of uit" }) : ""}
+            ${this.metTijd_(item) ? `<span class="tijdslot" style="display:contents"></span>` : ""}
           </div>`
           )
           .join("");
@@ -317,6 +373,66 @@ class EntitiesCard extends DacCard {
         // Anders telt een tik op het icoon ook als een tik op de regel.
         this.on(chip, "click", (e) => e.stopPropagation());
         this.on(chip, "pointerdown", (e) => e.stopPropagation());
+      }
+
+      // Het tijdveld bestaat hier nog niet: `paint()` bouwt het pas als bekend
+      // is of er een klok, een kalender of allebei in zit. Daarom hangt het
+      // gedrag aan de REGEL en niet aan het veld -- een luisteraar op het veld
+      // zelf zou bij elke verbouwing weg zijn, en dat is precies hoe een kaart
+      // eruitziet die het doet en na een verhuizing niet meer (valkuil 2).
+      if (el.querySelector(".tijdslot")) {
+        // In de vangfase, want de regel eronder luistert zelf in de bubbelfase:
+        // stoppen we pas daar, dan is de pop-up al open voordat het veld zijn
+        // eigen tik krijgt. Het veld zelf houdt zijn tik gewoon -- vangen
+        // stopt de doorgifte, niet wat de browser er standaard mee doet.
+        const houdTegen = (e) => {
+          const veld = e.target?.closest?.(".tijd");
+          if (!veld) return;
+          e.stopPropagation();
+          // En de kiezer meteen open, want daar was het om te doen. Lukt dat
+          // niet -- een browser die het niet kent, of een kiezer die al opent
+          // op een aanraakscherm -- dan blijft het een gewoon veld.
+          if (e.type === "click") {
+            try {
+              veld.showPicker?.();
+            } catch {
+              // Geen kiezer. Typen werkt nog steeds.
+            }
+          }
+        };
+        this.on(el, "pointerdown", houdTegen, true);
+        this.on(el, "click", houdTegen, true);
+
+        // Een invoerveld meldt zich per VAK: typ je 08:45, dan komt er een
+        // wijziging na de 8 (00:30), na de 4 (08:30) en zo verder. Ongefilterd
+        // zouden dat vier service-aanroepen zijn, met drie tijden ertussen die
+        // niemand bedoelde -- en op een wektijd hangt een automatisering die
+        // van zo'n tussenstand wakker wordt. Dus: wachten tot het stil is, en
+        // meteen sturen zodra je het veld verlaat.
+        let wachtend = null;
+        let timer = null;
+        const stuur = () => {
+          clearTimeout(timer);
+          timer = null;
+          const oproep = wachtend;
+          wachtend = null;
+          if (oproep) this.hass.callService(oproep[0], oproep[1], oproep[2]);
+        };
+        this.teardown_.push(() => clearTimeout(timer));
+
+        this.on(el, "change", (e) => {
+          const veld = e.target?.closest?.(".tijd");
+          if (!veld) return;
+          e.stopPropagation();
+          wachtend = zetOproep(item.entity, veld.type, veld.value);
+          clearTimeout(timer);
+          timer = setTimeout(stuur, 600);
+        });
+        // `blur` stijgt niet op, `focusout` wel -- en die is hier nodig omdat
+        // het veld pas in `paint()` gebouwd wordt.
+        this.on(el, "focusout", (e) => {
+          if (e.target?.closest?.(".tijd")) stuur();
+        });
       }
 
       const schakelaar = el.querySelector(".toggle");
@@ -381,10 +497,36 @@ class EntitiesCard extends DacCard {
         schakelaar.setAttribute("aria-label", `${name} aan of uit`);
       }
 
+      // Het veld wordt pas gebouwd als bekend is wat erin moet: een klok, een
+      // kalender of allebei. Dat staat in de attributen, en die zijn er pas met
+      // een `hass` -- vandaar hier en niet in `template()`.
+      const tijdslot = el.querySelector(".tijdslot");
+      let tijdveld = null;
+      if (tijdslot) {
+        const soort = dead ? null : tijdSoort(st);
+        if (tijdslot.dataset.soort !== (soort ?? "")) {
+          tijdslot.dataset.soort = soort ?? "";
+          tijdslot.innerHTML = soort
+            ? `<input class="tijd" type="${soort}" step="60" />`
+            : "";
+        }
+        tijdveld = tijdslot.querySelector(".tijd");
+      }
+      if (tijdveld) {
+        tijdveld.setAttribute("aria-label", `${name} instellen`);
+        // Niet schrijven terwijl iemand in het veld staat: dan springt de
+        // cursor weg bij elke toestandswijziging in huis.
+        if (this.shadowRoot.activeElement !== tijdveld) {
+          const waarde = veldWaarde(st, tijdslot.dataset.soort);
+          if (tijdveld.value !== waarde) tijdveld.value = waarde;
+        }
+      }
+
       const stEl = el.querySelector(".st");
       const toon = item.show_state ?? this.config.show_state;
-      // Waar een schakelaar staat zegt de stand al wat de tekst zou zeggen.
-      if (schakelaar) {
+      // Waar een schakelaar of een tijdveld staat zegt de control al wat de
+      // tekst zou zeggen.
+      if (schakelaar || tijdveld) {
         stEl.textContent = "";
       } else if (toon === false) {
         stEl.textContent = "";
