@@ -271,6 +271,8 @@ Twee testfouten onderweg waren echte fouten in de bron, geen fouten in de test:
 
 ## `git status --porcelain`
 
+```
+(schoon -- alles zit in de commit van deze ronde)
+```
 
-
-Alles hierboven staat op branch `fase-27/navbalk-en-icoonzoek`.
+Alles van deze ronde staat op branch `fase-27/navbalk-en-icoonzoek`.
