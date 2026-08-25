@@ -14,12 +14,22 @@
 
 /** De vijf soorten, in de volgorde waarin ze op de kaart staan. */
 export const SOORTEN = [
-  { sleutel: "smoke", label: "Rook", icoon: "smoke", alarm: "Rook gedetecteerd" },
-  { sleutel: "co", label: "Koolmonoxide", icoon: "warning", alarm: "Koolmonoxide gedetecteerd" },
-  { sleutel: "heat", label: "Warmte", icoon: "thermo", alarm: "Te warm" },
+  { sleutel: "smoke", label: "Rook", icoon: "smoke", alarm: "Rook gedetecteerd", rust: "Geen" },
+  { sleutel: "co", label: "Koolmonoxide", icoon: "co", alarm: "Koolmonoxide gedetecteerd", rust: "Geen" },
+  { sleutel: "heat", label: "Warmte", icoon: "thermo", alarm: "Te warm", rust: "Normaal" },
   { sleutel: "temperature", label: "Temperatuur", icoon: "thermo", meting: true },
   { sleutel: "battery", label: "Batterij", icoon: "battery", meting: true },
 ];
+
+/**
+ * Wat er op de pil staat als er niets aan de hand is.
+ *
+ * Er stond overal "Rustig", en dat is geen antwoord op de vraag die de pil
+ * stelt. Naast "Rook" hoort "Geen" -- er is geen rook -- en naast "Warmte"
+ * hoort "Normaal", want warmte is er altijd, alleen niet te veel. "Rustig" is
+ * wat de KAART als geheel is, en dat staat al in de kop.
+ */
+export const rustWoord = (soort) => soort?.rust ?? "Rustig";
 
 /** Onder deze stand heet een batterij bijna leeg. */
 export const BATTERIJ_LAAG = 20;
@@ -64,7 +74,7 @@ export function toestand(gekozen, lees) {
   // 2. Alles weg. Eén weggevallen sensor is geen kapotte melder -- alle
   //    sensoren weg wel, en dan mag er geen "alles rustig" staan.
   if (gekozen.length && gekozen.every((s) => isWeg(lees(s.sleutel)))) {
-    return { soort: "weg", tekst: "Niet bereikbaar", tone: "neutral", icoon: "smoke" };
+    return { soort: "weg", tekst: "Niet bereikbaar", tone: "neutral", icoon: "smokeDetector" };
   }
 
   // 3. Een lege batterij. Een melder die niet kan melden is geen melder.
@@ -82,8 +92,8 @@ export function toestand(gekozen, lees) {
   //    "Alles rustig" op een kaart die alleen de temperatuur kent, is een
   //    belofte die niemand gedaan heeft.
   if (!melders.length) {
-    return { soort: "meting", tekst: "", tone: "accent", icoon: "smoke" };
+    return { soort: "meting", tekst: "", tone: "accent", icoon: "smokeDetector" };
   }
 
-  return { soort: "goed", tekst: "Alles rustig", tone: "good", icoon: "smoke" };
+  return { soort: "goed", tekst: "Alles rustig", tone: "good", icoon: "smokeDetector" };
 }

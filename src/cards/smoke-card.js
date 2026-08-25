@@ -36,7 +36,13 @@ import {
   runAction,
   stateOf,
 } from "../ha.js";
-import { BATTERIJ_LAAG, SOORTEN, batterijPct, toestand } from "./smoke-logica.js";
+import {
+  BATTERIJ_LAAG,
+  SOORTEN,
+  batterijPct,
+  rustWoord,
+  toestand,
+} from "./smoke-logica.js";
 
 /** Van een kleurnaam uit de logica naar de token van het thema. */
 const TOON = {
@@ -89,6 +95,14 @@ class SmokeCard extends DacCard {
       overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
     }
     .meta::-webkit-scrollbar { display: none; }
+    /* Loopt de rij door, dan hoort de laatste pil te VERVAGEN en niet halverwege
+       tegen de kaartrand te knallen. Zonder dit leest een afgesneden pil als een
+       kapotte kaart in plaats van als "er staat hier meer". Past alles, dan valt
+       er in die laatste 20px niets te vervagen en zie je er niets van. */
+    .meta {
+      mask-image: linear-gradient(90deg, #000 0 calc(100% - 20px), transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, #000 0 calc(100% - 20px), transparent 100%);
+    }
     .pil { flex: 0 0 auto; }
     .meta[hidden] { display: none; }
     .pil {
@@ -108,6 +122,23 @@ class SmokeCard extends DacCard {
     .pil[data-let="bad"] .icon, .pil[data-let="bad"] b { color: var(--dac-bad); }
 
     .top.unavailable { opacity: .42; }
+
+    /* ---- smal ----
+       Twee kaarten naast elkaar in een sectie geeft een kaart van rond de 200px.
+       Daar passen drie pillen mét label niet in, en dan schuift de derde half
+       buiten beeld. Onder deze breedte vervalt daarom het OMHULSEL van de pil --
+       de rand, het vlak en de binnenmarge -- en het label; wat overblijft is het
+       icoon met zijn waarde, en dat past wel. De gegevens blijven dus staan;
+       alleen de decoratie eromheen gaat weg. */
+    @container (max-width: 340px) {
+      .meta { gap: 13px; }
+      .pil {
+        padding: 0; gap: 5px;
+        background: none; border-color: transparent;
+      }
+      .pil .lb { display: none; }
+      .pil[data-let="warn"], .pil[data-let="bad"] { border-color: transparent; }
+    }
   `;
 
   validate(config) {
@@ -150,6 +181,9 @@ class SmokeCard extends DacCard {
 
   template() {
     if (this.config.bare) this.setAttribute("bare", "");
+    // Zonder dit kijkt de @container-query hierboven naar de dichtstbijzijnde
+    // container-voorouder, en dat kan er een van Home Assistant zijn.
+    this.style.containerType = "inline-size";
     const pillen = this.gekozen_()
       .map(
         (s) => `<span class="pil" data-soort="${s.sleutel}">${resolve(s.icoon)}
@@ -244,7 +278,7 @@ class SmokeCard extends DacCard {
     }
 
     const aan = isOn(st);
-    waarde.textContent = aan ? "Alarm" : "Rustig";
+    waarde.textContent = aan ? "Alarm" : rustWoord(soort);
     pil.dataset.let = aan ? "bad" : "";
   }
 

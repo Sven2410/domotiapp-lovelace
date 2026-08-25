@@ -37,9 +37,9 @@ export const GROEPEN = [
   ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
-  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "warning", "check", "close", "clock", "gaugeArrow"]],
+  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "close", "clock", "gaugeArrow"]],
   ["Cijfers", ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
-  ["Overig", ["star", "moon", "leaf", "cog", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil"]],
+  ["Overig", ["star", "moon", "leaf", "cog", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil"]],
 ];
 
 /**
@@ -152,6 +152,8 @@ export const TERMEN = {
   key: ["sleutel", "key", "toegang", "code", "wachtwoord", "slot"],
   wifi: ["wifi", "netwerk", "internet", "verbinding", "router", "signaal", "wlan"],
   smoke: ["rookmelder", "rook", "brand", "smoke", "melder", "vuur", "alarm"],
+  smokeDetector: ["rookmelder", "melder", "rook", "brand", "smoke detector", "detector", "plafond", "alarm"],
+  co: ["koolmonoxide", "co", "gas", "melder", "cv", "kachel", "carbon monoxide", "vergiftiging"],
   warning: ["waarschuwing", "let op", "attentie", "warning", "uitroepteken", "storing", "probleem"],
   check: ["goed", "vinkje", "in orde", "klaar", "check", "gelukt"],
   close: ["sluiten", "kruis", "dicht", "annuleren", "close", "weg"],
@@ -174,6 +176,7 @@ export const TERMEN = {
   star: ["ster", "favoriet", "star", "belangrijk", "voorkeur", "top"],
   moon: ["maan", "nacht", "slapen", "donker", "moon", "nachtstand", "avond"],
   leaf: ["blad", "groen", "eco", "duurzaam", "plant", "natuur", "besparen", "tuin"],
+  keuzelijst: ["keuzelijst", "keuze", "lijst", "modus", "stand", "programma", "dropdown", "select", "kiezen", "opties"],
   cog: ["instellingen", "tandwiel", "beheer", "settings", "configuratie", "opties", "systeem"],
   dots: ["meer", "drie puntjes", "menu", "opties", "extra", "overig", "more"],
   plus: ["plus", "meer", "erbij", "toevoegen", "hoger", "omhoog", "add"],

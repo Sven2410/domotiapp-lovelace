@@ -21,6 +21,14 @@
  * betekent daar "val terug op wit", en met de lichte tekst van een donker thema
  * werd de lijst onleesbaar. Dat is een release lang onopgemerkt gebleven omdat
  * niemand de dropdown had uitgeklapt.
+ *
+ * ## Waarom er sinds 25 augustus 2026 twee bestanden bewaakt worden
+ *
+ * De entiteitenkaart kreeg een keuzelijst op de regel zelf, voor een
+ * `input_select`. Die staat niet in een `.vak` — dat is een vorm van de
+ * wekkereditor — maar de fout van fase 12 is er precies dezelfde. Een bewaker
+ * die alleen naar één bestand kijkt, mist hem op de volgende plek waar iemand
+ * een select neerzet. Dat is deze plek geworden.
  */
 
 import { readFileSync } from "node:fs";
@@ -61,6 +69,26 @@ if (/\.vak select[^{]*\{[^}]*background(-color)?:\s*transparent/.test(bron)) {
   fouten.push("een .vak select staat op background transparent — dat is de fout van fase 12");
 }
 
+// 4. Dezelfde eis voor de keuzelijst op de entiteitenkaart. Zie de kop.
+const KAART = join(WORTEL, "src", "cards", "entities-card.js");
+const kaartBron = readFileSync(KAART, "utf8");
+let keuzelijst = 0;
+
+if (/<select\b/.test(kaartBron) || /\.keuze\s*\{/.test(kaartBron)) {
+  keuzelijst = 1;
+  const kaartEisen = [
+    [/\.keuze\s*\{[^}]*background-color:\s*var\(/, ".keuze mist een eigen background-color"],
+    [/\.keuze option\s*\{[^}]*background-color:\s*var\(/, ".keuze option mist een eigen background-color"],
+    [/\.keuze option:checked\s*\{[^}]*background-color:/, ".keuze option:checked mist een markering"],
+  ];
+  for (const [patroon, boodschap] of kaartEisen) {
+    if (!patroon.test(kaartBron)) fouten.push(`entities-card.js: ${boodschap}`);
+  }
+  if (/\.keuze[^{]*\{[^}]*background(-color)?:\s*transparent/.test(kaartBron)) {
+    fouten.push("entities-card.js: .keuze staat op background transparent — de fout van fase 12");
+  }
+}
+
 if (fouten.length > 0) {
   console.error("FOUT in de opmaak van de formuliercontrols:");
   for (const f of fouten) console.error(`  - ${f}`);
@@ -68,5 +96,7 @@ if (fouten.length > 0) {
 }
 
 console.log(
-  `OK: ${selects} select(s), elk in een .vak, met een eigen achtergrondkleur en een markering.`,
+  `OK: ${selects} select(s) in de wekkereditor, elk in een .vak` +
+    (keuzelijst ? ", plus de keuzelijst op de entiteitenkaart" : "") +
+    ", allemaal met een eigen achtergrondkleur en een markering.",
 );

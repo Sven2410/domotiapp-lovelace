@@ -37,7 +37,7 @@
  * een navbalk die tien instellingen heeft geen navbalk meer is.
  */
 
-import { DacCard, INCOMPLETE, registerCard, toneValue } from "../base.js";
+import { DacCard, INCOMPLETE, escapeHtml, registerCard, toneValue } from "../base.js";
 import "../editor/navbar-editor.js";
 import { icons, resolve } from "../icons.js";
 import { runAction } from "../ha.js";
@@ -273,15 +273,15 @@ class NavbarCard extends DacCard {
     const { balk, meer, heeftMeer } = verdeel(c.items, c.max);
 
     const knop = (item, index) => `
-      <button type="button" class="knop" data-i="${index}" title="${escape_(item.name)}">
+      <button type="button" class="knop" data-i="${index}" title="${escapeHtml(item.name)}">
         <span class="ico">${resolve(item.icon, "grid")}</span>
-        <span class="naam">${escape_(item.name)}</span>
+        <span class="naam">${escapeHtml(item.name)}</span>
       </button>`;
 
     const regel = (item, index) => `
       <button type="button" class="regel" data-i="${index}">
         <span class="mi">${resolve(item.icon, "grid")}</span>
-        <span class="mt">${escape_(item.name || item.path)}</span>
+        <span class="mt">${escapeHtml(item.name || item.path)}</span>
       </button>`;
 
     // De index is die van de VOLLEDIGE lijst, niet van de deellijst: dan hoeft
@@ -490,14 +490,6 @@ class NavbarCard extends DacCard {
     };
   }
 }
-
-/** Tekst uit een config gaat via innerHTML naar het scherm. */
-const escape_ = (tekst) =>
-  String(tekst ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 registerCard("domotiapp-navbar-card", NavbarCard, {
   name: "DomotiApp Navbalk",
