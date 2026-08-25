@@ -102,6 +102,25 @@ Light groups (config-entry-helpers, dus in `.storage`, niet in YAML):
 | `light.offline_groep` | alleen `light.test_lamp_wegvallend` | SPEC 13.6, "alle lampen offline" |
 | `light.fase_10_groep` | `kleur_en_wit`, `kleurtemp`, `dim` | een lamp die allebei kan naast een die er één kan — de keuzeknoppen uit SPEC 6.5 |
 
+Sinds 25 augustus 2026 staan er ook helpers voor de keuzelijst, de tabbladen en
+de vaatwasser. Allemaal met de hand aangemaakt via de websocket
+(`input_select/create` en zo); ze staan in `.storage` en dus niet in git.
+
+| Helper | Waarvoor |
+|---|---|
+| `input_select.testmodus` | Thuis / Weg / Nacht / Vakantie — de keuzelijst op de entiteitenkaart |
+| `select.speed` | bestond al (demo-integratie), een tweede keuzedomein naast `input_select` |
+| `input_select.vaatwasser_status` | Ready / Run / Pause / Finished / Inactive — de hele rangorde van de vaatwasserkaart |
+| `input_select.vaatwasser_programma` | Eco 50°C / Speed 60°C / Intensief 70°C / Voorspoelen |
+| `input_number.vaatwasser_rest` | resterende tijd in minuten |
+| `input_number.vaatwasser_voortgang` | 0-100, voor de voortgangsbalk |
+| `input_boolean.vaatwasser_klep` | de klepsensor, om de rangorde te toetsen |
+| `input_boolean.vaatwasser_slim` | de slimme-sturingsknop |
+| `input_button.vaatwasser_start` / `_stop` | de twee knoppen |
+
+Het testdashboard heet **`kaart-test`**. De view `navbalk` is de werkbank: die
+wordt per ronde opnieuw ingericht via `lovelace/config/save`.
+
 ---
 
 ## Commando's
@@ -183,7 +202,35 @@ Python-tests.
    twee keer ten onrechte voor een regressie aangezien; wacht tot
    `hui-card`-elementen kinderen hebben.
 
-10. **Zoek kaartelementen niet met een eigen deep-query door shadow roots.** Dat
+10. **`.chip` is een GEDEELDE klasse in `theme.js`** die een gevulde cirkel met
+   een rand in de accentkleur tekent. Gebruik je die naam voor het omhulsel van
+   een gewoon icoon, dan krijg je er ongevraagd een ring omheen — vier ringen
+   naast elkaar in een navbalk leest als vier knoppen die aanstaan. Dat is op
+   25 augustus 2026 op een schermafdruk gemeld. Kies een eigen naam
+   (`.ico`, `.mi`) als je alleen het icoon wilt.
+
+11. **`pointer-events: none` erft door naar afstammelingen, ook naar een kind dat
+   ergens anders op het scherm staat.** De navbalk zet zijn eigen `hui-card` uit
+   de rasterstroom; stond daar `pointer-events: none` bij, dan was de hele balk
+   onklikbaar terwijl hij er perfect uitzag. Gevonden met een hit-test op het
+   klikpunt (valkuil 6), die op `hui-sections-view` uitkwam in plaats van op de
+   knop.
+
+12. **`rows: "auto"` beschermt niet tegen het formaatgreepje.** Dat schrijft
+   `grid_options: {rows: N}` in de config, en dat wint. Home Assistant klemt dat
+   getal tussen `min_rows` en `max_rows` uit `getGridOptions()`; staat `min_rows`
+   op een vast getal dat te laag is, dan schildert de kaart over zijn buurman.
+   Elke groeikaart geeft daarom `gemetenRijen()` op als ondergrens. Zie
+   `docs/kaart-over-de-buurman/RAPPORT.md`.
+
+13. **Schrijf broncode met backslashes of dollartekens niet via een
+   shell-heredoc.** Op deze machine at die route `\\d` op tot `d` en maakte van
+   `this.$$(...)` een `this.$(...)` — met een lege view tot gevolg. En let op:
+   `$$` in de vervanging van `String.replace` betekent één `$`, dus de reparatie
+   lijkt te lukken en verandert niets. Gebruik een vervangfunctie, of schrijf
+   het bestand rechtstreeks weg.
+
+14. **Zoek kaartelementen niet met een eigen deep-query door shadow roots.** Dat
    heeft twee keer ten onrechte "0 kaarten" opgeleverd. Gebruik een
    capture-listener op `window` en lees `event.composedPath()` — robuuster, en
    dichter bij wat een echte klik doet.
@@ -192,29 +239,33 @@ Python-tests.
 
 ## Projectstand
 
-| Fase | Wat | Status |
-|---|---|---|
-| 0 | Inventarisatie referentiekaart + architectuurverificatie | gemerged (`INVENTARIS.md`, `ONDERZOEK-FRONTEND.md`) |
-| 1 | Rooktest, buildketen (esbuild + lit), CI | gemerged |
-| 2 / 2b | `SPEC.md` als bron van waarheid | gemerged |
-| 3 / 3b | Opslaglaag, validatie, foutgedrag, WebSocket-API, gedrag na unload | gemerged |
-| 4a / 4a-fix / 4a-bis | Kaart in rusttoestand, toepassen van een scene, config-editor, registry-race, light group zonder `entity_id` | gemerged |
-| 4b-1 / fix / fix2 / fix3 / fix4 | De editor achter het potlood (SPEC 4): tabbladen, icoonkiezer, lampbesturing, "niet ingesteld", Opslaan; spatie in tekstvelden, kelvinverloop, iconen verdeeld, resetknop weg, melding voor nog niet ingestelde lampen | gemerged |
-| 4b-2 | Voorbeeld en Annuleren met de snapshotroute (SPEC 9), met de integratie als beheerder van de snapshot | gemerged |
-| 4c | `CLAUDE.md` met werkafspraken, omgeving en projectstand | gemerged |
-| 5 | Options flow: het opruimoverzicht (SPEC 15) | gemerged |
-| **6** | **HACS-klaar maken: manifest, `hacs.json`, README voor de klant, installatietest op een verse instance** | **loopt** |
+De fase-tabel van fase 0 tot en met 6 stond hier tot 25 augustus 2026 en is
+vervangen: het pakket is al sinds 0.1.0 uitgebracht en de rondes gaan sindsdien
+per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/RAPPORT.md`;
+`git log --oneline` leest als de inhoudsopgave.
 
-**Wat er staat:** het product is functioneel compleet. De integratie serveert en
-registreert haar eigen kaart zonder Lovelace-resource, heeft een eigen `Store`
-met validatie en foutgedrag, zes WebSocket-commando's, een kaart die drie
-scene-iconen en een potlood toont en scenes toepast, een editor met drie
-tabbladen, icoonkiezer, lampbesturing per `supported_color_modes`, Voorbeeld met
-snapshot en herstel bij Annuleren, en een options flow om opgeslagen scenes per
-lichtgroep op te ruimen.
+**Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
+met **zestien kaarttypes**:
 
-**Wat er nog niet is:** de eerste release. Fase 6 maakt de repo
-installeerbaar via HACS; de tag en de release maakt de eigenaar zelf.
+| | |
+|---|---|
+| Kop en indeling | header, separator, **navbalk**, **tabbladen** |
+| Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, rolluiken |
+| Media | media (rij en groot), scene, wekker |
+| Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 
-**Tellingen op het moment van schrijven:** 136 Python-tests, 115 JS-tests, alle
-groen; bundel 42.468 bytes.
+Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
+voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
+options flow.
+
+**Laatste release: 0.10.0** (25 augustus 2026) — navbalk, tabbladen,
+vaatwasserkaart, zoeken in de icoonkiezer, zeventien iconen erbij, "achtergrond
+weglaten" op elke kaart, en de overlapbug uit `grid_options`.
+
+**Tellingen op het moment van schrijven:** 485 JS-tests en 136 Python-tests,
+alle groen; bundel 393.656 bytes; 112 getekende iconen.
+
+**Wat er open staat:** een donkere vlek in twee van zijn bubble-pop-ups. Die
+komt **niet** van onze kaarten — in beide pop-ups staan alleen mushroom-,
+bubble- en ultimate-climate-kaarten (uitgelezen op 25 augustus 2026). Hij
+vermoedt zijn thema en wil het eerst met 0.10.0 opnieuw bekijken.
