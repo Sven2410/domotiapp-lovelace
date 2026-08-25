@@ -472,6 +472,7 @@ class EntitiesEditor extends HTMLElement {
     const form = document.createElement("ha-form");
     form.hass = this.hass_;
     form.schema = [
+      { name: "name", selector: { text: {} } },
       {
         name: "surface",
         selector: {
@@ -499,9 +500,14 @@ class EntitiesEditor extends HTMLElement {
       },
     ];
     form.computeLabel = (s) =>
-      ({ surface: "Waar het kaartvlak zit", state_position: "Waar de status staat" })[s.name] ??
-      s.name;
+      ({
+        name: "Naam van de kaart (optioneel)",
+        surface: "Waar het kaartvlak zit",
+        state_position: "Waar de status staat",
+      })[s.name] ?? s.name;
     form.computeHelper = (s) => {
+      if (s.name === "name")
+        return "Een kop boven de entiteiten. Laat leeg voor geen kop -- de kaart is dan een rasterrij lager.";
       if (s.name === "surface")
         return "Om elke entiteit apart geeft losse blokken in plaats van een lijst op een vlak -- dat is de vorm van een raster ruimtetegels of een rij losse knoppen.";
       if (s.name === "state_position")
@@ -511,6 +517,7 @@ class EntitiesEditor extends HTMLElement {
     // `bare: true` was de oude spelling van "geen vlak" en wordt hier gewoon
     // getoond als wat het is.
     form.data = {
+      name: this.rest_.name ?? "",
       surface: this.rest_.surface ?? (this.rest_.bare ? "none" : "card"),
       state_position: this.rest_.state_position ?? "below",
     };
@@ -518,6 +525,8 @@ class EntitiesEditor extends HTMLElement {
       e.stopPropagation();
       const v = e.detail.value ?? {};
       // De standaard hoort niet in de YAML: wat er staat is wat afwijkt.
+      if (typeof v.name === "string" && v.name.trim()) this.rest_.name = v.name;
+      else delete this.rest_.name;
       if (v.surface === "items" || v.surface === "none") this.rest_.surface = v.surface;
       else delete this.rest_.surface;
       delete this.rest_.bare;

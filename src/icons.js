@@ -218,8 +218,30 @@ export const icons = {
     <path d="M10.4 15.9a2.6 2.6 0 0 1 3.2 0"/>
     <circle cx="12" cy="19" r="1.1"/>`),
 
-  smoke: draw(`<path d="M6.4 15.4a3.3 3.3 0 0 1 .5-6.5 4.8 4.8 0 0 1 9.3-.6 3.5 3.5 0 0 1 1.6 7.1z"/>
-    <path d="M5.8 19h3.2M11.2 19h3.2M16.6 19h1.8"/>`),
+  /* De melder zelf, aan het plafond, met twee sliertjes rook eronder. Het
+     bestaande `smoke` is de rook; dit is het apparaat. */
+  smokeDetector: draw(`<path d="M3 4.6h18"/>
+    <path d="M6 4.6h12v5.4a2.6 2.6 0 0 1-2.6 2.6H8.6A2.6 2.6 0 0 1 6 10V4.6Z"/>
+    <path d="M8.8 8h6.4"/>
+    <circle cx="12" cy="10.2" r=".95" fill="currentColor" stroke="none"/>
+    <path d="M8.8 16c1.5-1.3 2.8.5 4.3-.8M9.4 19.4c1.5-1.3 2.8.5 4.3-.8"/>`),
+
+  /* Koolmonoxide: de twee letters. Een driehoek met een uitroepteken zegt
+     "let op" en niet "CO", en dat verschil is op een melderkaart het hele
+     punt -- daar staat naast rook, warmte en batterij ook nog een tweede
+     alarmsoort. */
+  co: draw(`<path d="M10.6 9.2A3.4 3.4 0 1 0 10.6 14.8"/>
+    <circle cx="16.2" cy="12" r="3.2"/>`),
+  /* Rook, en geen wolk.
+
+     Hier stond een bol met drie streepjes eronder, en dat leest als een
+     regenwolk -- op een rookmelderkaart is dat precies het verkeerde woord.
+     Gemeld door de eigenaar op 25 augustus 2026, met de kaart ernaast. Rook
+     is wat er OMHOOG kringelt, dus dat is wat er nu staat: drie slierten van
+     verschillende hoogte. */
+  smoke: draw(`<path d="M6.6 20.4c0-2.2 2.5-2.2 2.5-4.4S6.6 13.8 6.6 11.6 9.1 9.4 9.1 7.2"/>
+    <path d="M12.7 20.4c0-2 2.2-2 2.2-4s-2.2-2-2.2-4 2.2-2 2.2-4"/>
+    <path d="M18.3 20.4c0-1.8 1.9-1.8 1.9-3.6s-1.9-1.8-1.9-3.6"/>`),
 
   star: draw(`<path d="m12 3.6 2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.4l-5 2.6.9-5.6-4-3.9 5.6-.8z"/>`),
 
@@ -284,6 +306,11 @@ export const icons = {
   leaf: draw(`<path d="M4.6 19.6c-1.4-7.6 3.4-14 14.9-15.2 1.1 8.4-3.3 15.3-14.9 15.2Z"/>
     <path d="M4.2 20.4c2.6-4.6 6-7.6 10.4-9.6"/>`),
 
+  /* Een keuzelijst. Drie regels met een markering voor de middelste: dat is
+     "hier kies je er een uit", en niet "hier staat een lijst". */
+  keuzelijst: draw(`<path d="M9.4 6.2h11.2M9.4 12h11.2M9.4 17.8h11.2"/>
+    <path d="M3.4 12.2 4.9 13.7 7.6 10.6"/>
+    <path d="M4 6.2h1.6M4 17.8h1.6"/>`),
   cog: draw(`<circle cx="12" cy="12" r="3.1"/>
     <path d="M12 3.4v2.2M12 18.4v2.2M20.6 12h-2.2M5.6 12H3.4M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6M18.1 18.1l-1.6-1.6M7.5 7.5 5.9 5.9"/>`),
 
@@ -479,6 +506,12 @@ export function defaultIcon(entityId, attrs = {}) {
       return "clock";
     case "input_datetime":
       return attrs.has_time === false ? "calendar" : "clock";
+    // Alles met een lijst standen. Zonder deze regel staat er een vraagteken
+    // naast een keuzelijst, en dat leest als een kaart die de entiteit niet
+    // kent -- gezien in de echte instance op 25 augustus 2026.
+    case "input_select":
+    case "select":
+      return "keuzelijst";
     case "media_player":
       // Een tv is geen speaker. Wat er hangt is uit de entiteit zelf te lezen,
       // dus dat hoeft niemand in te stellen.

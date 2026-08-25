@@ -67,16 +67,27 @@
  * rekenwerk erachter staat in `tijdveld.js`.
  */
 
-import { DacCard, registerCard, rowsFor, toneValue, TONES, INCOMPLETE } from "../base.js";
+import {
+  DacCard,
+  INCOMPLETE,
+  TONES,
+  escapeHtml,
+  registerCard,
+  rowsFor,
+  toneValue,
+} from "../base.js";
 import { resolve, defaultIcon } from "../icons.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { kanTijdZetten, tijdSoort, veldWaarde, zetOproep } from "./tijdveld.js";
+import { huidigeKeuze, kanKiezen, keuzes, kiesOproep } from "./keuzeveld.js";
 import "../editor/entities-editor.js";
 import {
   GAP,
   HOOGTE,
+  TITEL_H,
   gevuld,
   kaartHoogte,
+  kaartNaam,
   toRows,
   vlakVan,
 } from "./entities-logica.js";
@@ -109,6 +120,16 @@ class EntitiesCard extends DacCard {
        en zonder vlak duwt hij de inhoud alleen maar uit het raster. */
     :host([vlak="items"]) .card, :host([vlak="none"]) .card {
       background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
+    }
+
+    /* De kop van de kaart. Optioneel; zie kaartNaam() in entities-logica.js.
+       Hij staat in de flexkolom boven de rijen, dus de kaart centreert kop en
+       rijen samen in zijn vak in plaats van de kop los bovenaan te plakken. */
+    .kaartnaam {
+      flex: 0 0 auto; margin: 0; padding: 0 2px;
+      font-size: 13px; font-weight: 600; letter-spacing: -.01em; line-height: ${TITEL_H}px;
+      color: var(--dac-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
     .row {
@@ -235,6 +256,34 @@ class EntitiesCard extends DacCard {
     .tijd[type="datetime-local"] { font-size: 12px; padding: 5px 8px; }
     .row[data-vorm="tile"] .tijd { position: absolute; top: 14px; right: 14px; margin: 0; }
 
+    /* De keuzelijst. Zelfde pil als het tijdveld, met EEN belangrijk verschil:
+       de achtergrondkleur mag niet doorzichtig zijn.
+
+       De browser tekent het uitklappaneel van een select met de achtergrond van
+       de select zelf, en dat paneel valt buiten onze shadow root. Transparant
+       betekent daar "val terug op wit", en met lichte tekst wordt de lijst dan
+       onleesbaar. Dat is precies de fout uit fase 12, die een release lang
+       onopgemerkt bleef omdat niemand de dropdown had uitgeklapt. Vandaar een
+       ondoorzichtige kleur hier en op de opties, bewaakt door
+       scripts/check-controls.mjs. */
+    .keuze {
+      flex: 0 0 auto; margin-left: auto; max-width: 55%;
+      font: inherit; font-size: 13px; line-height: 1.2;
+      color: var(--dac-ink); color-scheme: dark;
+      background-color: var(--dac-bg-raise);
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      padding: 5px 8px 5px 10px; cursor: pointer;
+      text-overflow: ellipsis;
+      transition: background 200ms ease, border-color 200ms ease;
+    }
+    .keuze:hover { border-color: var(--dac-border-hi); }
+    .keuze:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+    .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
+    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
+    .row[data-vorm="tile"] .keuze {
+      position: absolute; top: 12px; right: 12px; margin: 0; max-width: calc(100% - 24px);
+    }
+
     /* Een vleug identiteitskleur op een tegel, zodat je hem van een afstand
        herkent voordat de tekst leesbaar is. Alleen op de tegelvorm: in een rij
        zou het net het oplichten worden dat er juist uit moest. */
@@ -305,6 +354,20 @@ class EntitiesCard extends DacCard {
     return (item.show_state ?? this.config.show_state) !== false;
   }
 
+  /**
+   * Hoort er een keuzelijst op deze regel?
+   *
+   * Dezelfde regel als bij het tijdveld: zonder dat je erom vraagt, want de
+   * waarde stond er toch al. `Status tonen` uit haalt met de tekst ook de lijst
+   * weg. Een schakelaar zou winnen, maar die twee komen nooit samen voor: geen
+   * enkel keuzedomein is schakelbaar.
+   */
+  metKeuze_(item) {
+    if (!kanKiezen(item.entity)) return false;
+    if (this.metSchakelaar_(item)) return false;
+    return (item.show_state ?? this.config.show_state) !== false;
+  }
+
   template() {
     const c = this.config;
     this.setAttribute("vlak", vlakVan(c));
@@ -328,6 +391,7 @@ class EntitiesCard extends DacCard {
             ${rechts ? st : ""}
             ${this.metSchakelaar_(item) ? toggleHtml({ label: "Aan of uit" }) : ""}
             ${this.metTijd_(item) ? `<span class="tijdslot" style="display:contents"></span>` : ""}
+            ${this.metKeuze_(item) ? `<span class="keuzeslot" style="display:contents"></span>` : ""}
           </div>`
           )
           .join("");
@@ -337,7 +401,9 @@ class EntitiesCard extends DacCard {
       })
       .join("");
 
-    return `<div class="card surface">${rows}</div>`;
+    const naam = kaartNaam(c);
+    const kop = naam ? `<h3 class="kaartnaam"></h3>` : "";
+    return `<div class="card surface">${kop}${rows}</div>`;
   }
 
   wire() {
@@ -435,6 +501,35 @@ class EntitiesCard extends DacCard {
         });
       }
 
+      // De keuzelijst bestaat hier nog niet: `paint()` bouwt hem pas als de
+      // opties bekend zijn, en die staan in de attributen. Daarom hangt het
+      // gedrag aan de REGEL en niet aan de lijst -- een luisteraar op de lijst
+      // zelf zou bij elke verbouwing weg zijn (zie het tijdveld hierboven).
+      if (el.querySelector(".keuzeslot")) {
+        // Een tik op de lijst mag niet ook de regel activeren: dan opent het
+        // venster van Home Assistant terwijl je alleen de lijst wilde uitklappen.
+        // In de vangfase, om dezelfde reden als bij het tijdveld.
+        const houdTegen = (e) => {
+          if (e.target?.closest?.(".keuze")) e.stopPropagation();
+        };
+        this.on(el, "pointerdown", houdTegen, true);
+        this.on(el, "click", houdTegen, true);
+        // De toetsenbordbediening van een select is pijl-omhoog en pijl-omlaag,
+        // en die mogen niet doorlekken naar de regel eronder.
+        this.on(el, "keydown", houdTegen, true);
+
+        // Geen wachttijd, anders dan bij het tijdveld: een keuze is er in een
+        // keer. Zie de kop van keuzeveld.js.
+        this.on(el, "change", (e) => {
+          const lijst = e.target?.closest?.(".keuze");
+          if (!lijst) return;
+          e.stopPropagation();
+          const st = stateOf(this.hass, item.entity);
+          const oproep = kiesOproep(item.entity, lijst.value, keuzes(st));
+          if (oproep) this.hass.callService(oproep[0], oproep[1], oproep[2]);
+        });
+      }
+
       const schakelaar = el.querySelector(".toggle");
       if (!schakelaar) return;
       this.teardown_.push(
@@ -451,6 +546,10 @@ class EntitiesCard extends DacCard {
   }
 
   paint() {
+    // De kop staat er alleen als er een naam is; `template()` bepaalt dat.
+    const kop = this.$(".kaartnaam");
+    if (kop) this.text(kop, kaartNaam(this.config));
+
     this.$$(".it").forEach((el) => {
       const item = this.item_(el.dataset.r, el.dataset.i);
       if (!item) return;
@@ -522,11 +621,42 @@ class EntitiesCard extends DacCard {
         }
       }
 
+      // Dezelfde volgorde als bij het tijdveld: de lijst wordt pas gebouwd als
+      // bekend is welke standen erin horen, en dat staat in de attributen.
+      const keuzeslot = el.querySelector(".keuzeslot");
+      let keuzelijst = null;
+      if (keuzeslot) {
+        const opties = dead ? [] : keuzes(st);
+        // Alleen opnieuw bouwen als de LIJST verandert, niet als de keuze
+        // verandert: opnieuw bouwen tijdens een uitgeklapte lijst klapt hem
+        // dicht, en een dashboard krijgt bij elke toestandswijziging in huis
+        // een nieuwe hass.
+        const vinger = JSON.stringify(opties);
+        if (keuzeslot.dataset.opties !== vinger) {
+          keuzeslot.dataset.opties = vinger;
+          keuzeslot.innerHTML = opties.length
+            ? `<select class="keuze">${opties
+                .map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`)
+                .join("")}</select>`
+            : "";
+        }
+        keuzelijst = keuzeslot.querySelector(".keuze");
+      }
+      if (keuzelijst) {
+        keuzelijst.setAttribute("aria-label", `${name} kiezen`);
+        // Niet schrijven terwijl iemand in de lijst staat: dan springt een
+        // uitgeklapte lijst terug bij elke toestandswijziging in huis.
+        if (this.shadowRoot.activeElement !== keuzelijst) {
+          const gekozen = huidigeKeuze(st);
+          if (keuzelijst.value !== gekozen) keuzelijst.value = gekozen;
+        }
+      }
+
       const stEl = el.querySelector(".st");
       const toon = item.show_state ?? this.config.show_state;
-      // Waar een schakelaar of een tijdveld staat zegt de control al wat de
-      // tekst zou zeggen.
-      if (schakelaar || tijdveld) {
+      // Waar een schakelaar, een tijdveld of een keuzelijst staat zegt de
+      // control al wat de tekst zou zeggen.
+      if (schakelaar || tijdveld || keuzelijst) {
         stEl.textContent = "";
       } else if (toon === false) {
         stEl.textContent = "";

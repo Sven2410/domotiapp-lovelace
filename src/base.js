@@ -76,6 +76,20 @@ export const TONE_LABELS = {
   neutral: "Neutraal",
 };
 
+/**
+ * Tekst uit een config die via innerHTML op het scherm komt.
+ *
+ * Elke kaart bouwt zijn DOM met een template-string, en een naam of een optie
+ * die iemand zelf heeft ingetypt gaat daar doorheen. Zonder dit is een naam met
+ * een < erin genoeg om de kaart te verbouwen.
+ */
+export const escapeHtml = (tekst) =>
+  String(tekst ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 /** A tone name, a CSS variable, or a plain colour -- all end up usable. */
 export const toneValue = (tone, fallback = "accent") =>
   TONES[tone] ?? (tone && /[#(]|^var/.test(tone) ? tone : TONES[fallback]);

@@ -36,8 +36,32 @@ export const GAP = 6;
 /** Padding boven en onder plus de rand -- alleen als de kaart zelf een vlak heeft. */
 export const KADER = 12;
 
+/**
+ * De regelhoogte van een kaartnaam, plus de ruimte eronder.
+ *
+ * Een kaart met een naam wordt daarmee een rasterrij hoger: een enkele regel
+ * gaat van 12 + 44 = 56 naar 12 + 22 + 6 + 44 = 84, en dat is 2 rijen. Dat is
+ * geen verrassing maar de bedoeling -- een kop hoort ruimte te kosten, en een
+ * kaart die zijn kop in dezelfde 56px propt duwt de regel eronder plat.
+ */
+export const TITEL_H = 22;
+
 export const VORMEN = ["row", "tile", "compact"];
 export const VLAKKEN = ["card", "items", "none"];
+
+/**
+ * De naam van de kaart als geheel, of "".
+ *
+ * Optioneel, en met opzet los van de naam van een entiteit: die staat op de
+ * regel. Dit is de kop erboven, voor als een kaart een groep is die een naam
+ * verdient zonder dat er een losse sectiekop boven hoeft.
+ *
+ * Alleen spaties telt als leeg. Anders levert een per ongeluk aangetikte
+ * spatiebalk een onzichtbare kop op die de kaart wel een rasterrij hoger maakt,
+ * en dan zoek je waar die lege ruimte vandaan komt.
+ */
+export const kaartNaam = (config) =>
+  typeof config?.name === "string" ? config.name.trim() : "";
 
 /** Een item mag een string zijn, of een object met alles erop. */
 export const asItem = (i) => (typeof i === "string" ? { entity: i } : { ...i });
@@ -105,8 +129,9 @@ export const regelsIn = (row) => Math.max(1, Math.ceil((row.items?.length || 1) 
  */
 export function kaartHoogte(config) {
   const rijen = config?.rows ?? [];
-  if (!rijen.length) return KADER + HOOGTE.row;
-  let px = vlakVan(config) === "card" ? KADER : 0;
+  const kop = kaartNaam(config) ? TITEL_H + GAP : 0;
+  if (!rijen.length) return KADER + kop + HOOGTE.row;
+  let px = (vlakVan(config) === "card" ? KADER : 0) + kop;
   for (const r of rijen) {
     const n = regelsIn(r);
     px += n * HOOGTE[clampVorm(r.layout)] + (n - 1) * GAP;

@@ -29,7 +29,9 @@ import {
   clampCols,
   clampVorm,
   gevuld,
+  TITEL_H,
   kaartHoogte,
+  kaartNaam,
   regelsIn,
   toRows,
   vlakVan,
@@ -162,6 +164,52 @@ describe("regelsIn()", () => {
 
   it("een lege rij is nog altijd één regel hoog", () => {
     assert.equal(regelsIn({ columns: 2, items: [] }), 1);
+  });
+});
+
+describe("kaartNaam() — de optionele kop boven de kaart — NIEUW GEDRAG", () => {
+  it("geeft de naam terug zoals hij is ingetypt", () => {
+    assert.equal(kaartNaam({ name: "Slaapkamer" }), "Slaapkamer");
+  });
+
+  it("knipt de randen af maar laat de spatie ertussen staan", () => {
+    assert.equal(kaartNaam({ name: "  Boven de trap  " }), "Boven de trap");
+  });
+
+  it("is leeg bij niets, en bij alleen spaties", () => {
+    // Alleen spaties zou anders een onzichtbare kop opleveren die de kaart wel
+    // een rasterrij hoger maakt -- en dan zoek je waar die ruimte vandaan komt.
+    for (const config of [{}, { name: "" }, { name: "   " }, { name: 42 }, null]) {
+      assert.equal(kaartNaam(config), "");
+    }
+  });
+});
+
+describe("een kop kost een rasterrij — NIEUW GEDRAG", () => {
+  const kaart = (rows, extra = {}) => ({ rows: toRows({ rows }), ...extra });
+  const EEN_RIJ = [{ columns: 1, items: ["light.a"] }];
+
+  it("telt de kop en de ruimte eronder mee", () => {
+    const zonder = kaartHoogte(kaart(EEN_RIJ));
+    const met = kaartHoogte(kaart(EEN_RIJ, { name: "Slaapkamer" }));
+    assert.equal(zonder, 56);
+    assert.equal(met, zonder + TITEL_H + GAP, "22 voor de regel, 6 eronder");
+    assert.equal(met, 84);
+  });
+
+  it("maakt van één rasterrij er twee, en niet meer", () => {
+    assert.equal(rowsFor(kaartHoogte(kaart(EEN_RIJ))), 1);
+    assert.equal(rowsFor(kaartHoogte(kaart(EEN_RIJ, { name: "Slaapkamer" }))), 2);
+  });
+
+  it("rekent de kop ook mee als de kaart geen vlak heeft", () => {
+    const zonder = kaartHoogte(kaart(EEN_RIJ, { surface: "none" }));
+    const met = kaartHoogte(kaart(EEN_RIJ, { surface: "none", name: "Slaapkamer" }));
+    assert.equal(met - zonder, TITEL_H + GAP);
+  });
+
+  it("laat een lege naam de hoogte niet veranderen", () => {
+    assert.equal(kaartHoogte(kaart(EEN_RIJ, { name: "   " })), kaartHoogte(kaart(EEN_RIJ)));
   });
 });
 
