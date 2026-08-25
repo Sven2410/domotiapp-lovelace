@@ -103,6 +103,33 @@ export function meetRaster(vak, pogingen = 4) {
 }
 
 /**
+ * Hoeveel rasterrijen de gemeten inhoud van dit vak nodig heeft, of null.
+ *
+ * DIT IS DE ONDERGRENS DIE EEN KAART AAN HOME ASSISTANT MOET OPGEVEN, en het is
+ * geen luxe. `rows: "auto"` beschermt alleen zolang niemand er een getal
+ * overheen zet -- en dat gebeurt vanzelf, want het formaatgreepje in de
+ * kaarteditor schrijft `grid_options: {rows: N}` in de config. Home Assistant
+ * klemt dat getal tussen `min_rows` en `max_rows` uit `getGridOptions()`; staat
+ * `min_rows` op 1, dan mag het vak kleiner worden dan de inhoud en schildert de
+ * kaart dwars over zijn buurman heen.
+ *
+ * Gemeten op 25 augustus 2026 in de echte instance: een mediakaart met
+ * `grid_options: {columns: 12, rows: 2}` kreeg een vak van 120px, tekende zijn
+ * 184px en liep 56px over de kaart eronder. Precies die config stond op zijn
+ * eigen dashboard. Met de gemeten ondergrens klemt Home Assistant de 2 naar 3 en
+ * is er niets meer om overheen te lopen.
+ *
+ * Leest de meting die `meetRaster` heeft weggeschreven en niet de eigen hoogte
+ * van het vak: die laatste is al door Home Assistant afgeknepen, en dan zou de
+ * ondergrens de afknijping bevestigen.
+ */
+export function gemetenRijen(vak) {
+  const px = parseFloat(vak?.style?.getPropertyValue?.("--dac-raster") ?? "");
+  if (!Number.isFinite(px) || px <= 0) return null;
+  return Math.max(1, Math.round((px + ROW_GAP) / (ROW_H + ROW_GAP)));
+}
+
+/**
  * Blijf de rasterhoogte volgen voor wat er ná het tekenen nog verandert.
  *
  * `meetRaster` in `paint()` dekt alles wat de kaart zelf doet. Het dekt níét

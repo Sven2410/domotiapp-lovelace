@@ -309,7 +309,9 @@ class ForecastCard extends DacCard {
     // tegel twee regels korter. Een vast aantal rasterrijen zou dan bij de ene
     // bron precies passen en bij de andere afknijpen. De inhoud komt wél op een
     // rasterrij uit -- zie rasterhoogte.js.
-    return { columns: 12, rows: "auto", min_columns: 6, min_rows: 2 };
+    // De ondergrens is gemeten, niet geraden -- zie gemetenRijen in
+    // rasterhoogte.js.
+    return { columns: 12, rows: "auto", min_columns: 6, min_rows: this.minRijen_(".card", 2) };
   }
 
   static getConfigElement() {
