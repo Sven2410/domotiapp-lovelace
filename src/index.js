@@ -43,6 +43,7 @@ import "./cards/person-card.js";
 import "./cards/waste-card.js";
 import "./cards/navbar-card.js";
 import "./cards/tabs-card.js";
+import "./cards/dishwasher-card.js";
 import "./scene/scene-card.js";
 import "./alarm/alarm-card.js";
 

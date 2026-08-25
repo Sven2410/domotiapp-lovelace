@@ -69,23 +69,29 @@ if (/\.vak select[^{]*\{[^}]*background(-color)?:\s*transparent/.test(bron)) {
   fouten.push("een .vak select staat op background transparent — dat is de fout van fase 12");
 }
 
-// 4. Dezelfde eis voor de keuzelijst op de entiteitenkaart. Zie de kop.
-const KAART = join(WORTEL, "src", "cards", "entities-card.js");
-const kaartBron = readFileSync(KAART, "utf8");
-let keuzelijst = 0;
+// 4. Dezelfde eis voor elke keuzelijst op een kaart. Zie de kop.
+//
+//    De lijst hieronder is geen opsomming van wat er nu is maar van wat er
+//    bewaakt moet worden: elk bestand dat een `.keuze` tekent hoort erin. Zet
+//    iemand er een select bij zonder dit bestand aan te vullen, dan is dat de
+//    volgende plek waar de fout van fase 12 terugkomt.
+const KAARTEN = ["entities-card.js", "dishwasher-card.js"];
+let keuzelijsten = 0;
 
-if (/<select\b/.test(kaartBron) || /\.keuze\s*\{/.test(kaartBron)) {
-  keuzelijst = 1;
+for (const naam of KAARTEN) {
+  const bron2 = readFileSync(join(WORTEL, "src", "cards", naam), "utf8");
+  if (!/<select\b/.test(bron2) && !/\.keuze\s*\{/.test(bron2)) continue;
+  keuzelijsten++;
   const kaartEisen = [
     [/\.keuze\s*\{[^}]*background-color:\s*var\(/, ".keuze mist een eigen background-color"],
     [/\.keuze option\s*\{[^}]*background-color:\s*var\(/, ".keuze option mist een eigen background-color"],
     [/\.keuze option:checked\s*\{[^}]*background-color:/, ".keuze option:checked mist een markering"],
   ];
   for (const [patroon, boodschap] of kaartEisen) {
-    if (!patroon.test(kaartBron)) fouten.push(`entities-card.js: ${boodschap}`);
+    if (!patroon.test(bron2)) fouten.push(`${naam}: ${boodschap}`);
   }
-  if (/\.keuze[^{]*\{[^}]*background(-color)?:\s*transparent/.test(kaartBron)) {
-    fouten.push("entities-card.js: .keuze staat op background transparent — de fout van fase 12");
+  if (/\.keuze[^{]*\{[^}]*background(-color)?:\s*transparent/.test(bron2)) {
+    fouten.push(`${naam}: .keuze staat op background transparent — de fout van fase 12`);
   }
 }
 
@@ -97,6 +103,6 @@ if (fouten.length > 0) {
 
 console.log(
   `OK: ${selects} select(s) in de wekkereditor, elk in een .vak` +
-    (keuzelijst ? ", plus de keuzelijst op de entiteitenkaart" : "") +
+    (keuzelijsten ? `, plus ${keuzelijsten} keuzelijst(en) op kaarten` : "") +
     ", allemaal met een eigen achtergrondkleur en een markering.",
 );
