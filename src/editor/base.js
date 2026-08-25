@@ -63,6 +63,25 @@ export const section = (name, icon, schema, expanded = false) => ({
   schema,
 });
 
+/**
+ * Velden die ELKE kaart in de familie heeft, en die dus niet in elk schema
+ * apart horen te staan.
+ *
+ * Nu staat er er een: het kaartvlak. `bare: true` zat al in negen kaarten en
+ * werkte ook, maar stond in geen enkele editor -- je moest het met de hand in
+ * de YAML zetten, en dat weet niemand. Wie zijn dashboard zonder vlakken wil
+ * (achtergrond weg, alleen de inhoud) moest daarvoor tot nu toe per kaart de
+ * code-editor in.
+ *
+ * Onderaan het formulier, want het gaat over hoe de kaart eruitziet en niet
+ * over wat erin staat.
+ */
+const GEDEELD = [{ name: "bare", selector: sel.bool() }];
+
+const GEDEELDE_HELPERS = {
+  bare: "Haalt de achtergrond, de rand en de schaduw onder de kaart weg. De inhoud blijft staan -- handig als de kaart al in iets anders zit, of voor een dashboard zonder vlakken.",
+};
+
 export class DacEditor extends HTMLElement {
   constructor() {
     super();
@@ -113,6 +132,22 @@ export class DacEditor extends HTMLElement {
    */
   schema() {
     return [];
+  }
+
+  /**
+   * De gedeelde velden die achter het schema van deze kaart komen.
+   *
+   * Een editor van een kaart zonder vlak -- de sectiekop -- geeft hier een
+   * lege lijst terug. Een schakelaar die niets doet is erger dan geen
+   * schakelaar.
+   */
+  gedeeldeVelden() {
+    return GEDEELD;
+  }
+
+  /** Wat het formulier werkelijk krijgt. */
+  volledigSchema_() {
+    return [...this.schema(), ...this.gedeeldeVelden()];
   }
 
   /**
@@ -191,9 +226,9 @@ export class DacEditor extends HTMLElement {
     const form = document.createElement("ha-form");
     form.hass = this.hass_;
     form.data = this.config_;
-    form.schema = this.schema();
+    form.schema = this.volledigSchema_();
     form.computeLabel = (s) => this.label(s);
-    form.computeHelper = (s) => this.helper(s);
+    form.computeHelper = (s) => this.helper(s) ?? GEDEELDE_HELPERS[s.name];
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();
       this.patch_(e.detail.value, true);
@@ -220,7 +255,7 @@ export class DacEditor extends HTMLElement {
       // Het schema kan van de config afhangen -- een naamveld per gekozen
       // persoon, een kleurkeuze per gekozen sensor. Alleen `data` bijwerken
       // laat die velden nooit verschijnen.
-      this.form_.schema = this.schema();
+      this.form_.schema = this.volledigSchema_();
       this.form_.data = this.config_;
     }
     for (const el of this.pickers_ ?? []) {
@@ -311,4 +346,5 @@ export const LABELS = {
   label: "Label",
   color: "Kleur",
   date_format: "Datumnotatie",
+  bare: "Achtergrond weglaten",
 };

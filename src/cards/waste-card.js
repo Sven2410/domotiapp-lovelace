@@ -331,7 +331,6 @@ class WasteEditor extends DacEditor {
         sensors: "Afvalsensoren",
         show_hero: "Eerstvolgende uitlichten",
         show_list: "Overige data tonen",
-        bare: "Zonder kaartrand",
       }[s.name] ?? super.label(s)
     );
   }
