@@ -166,7 +166,7 @@ zoekwoorden.
 ## Tests
 
 ```
-npm test                   430 tests, 430 pass, 0 fail
+npm test                   425 tests, 425 pass, 0 fail
 npm run check:registratie  OK
 npm run check:controls     OK  (nu ook de keuzelijst op de entiteitenkaart)
 npm run verify             OK
