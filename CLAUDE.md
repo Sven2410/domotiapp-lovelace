@@ -366,12 +366,26 @@ als een alarmsysteem. Sinds 0.6.0 heet hij **DomotiApp Wekker**; het `type` blee
 De werkafspraak hierboven zegt dát er met echte kliks gemeten wordt. Deze sectie
 zegt **hoe**, want elk van deze valkuilen heeft hier een keer een uur gekost.
 
-**De browsertool klikt in SCHERMAFDRUK-coördinaten, niet in CSS-pixels.** Op zijn
-scherm is dat 1568 tegen 1920: **factor 0,817**. Een `getBoundingClientRect()`
-uit de pagina moet je dus omrekenen voordat je hem aan `computer` geeft, anders
-klik je honderden pixels mis en lijkt de knop kapot. Dat is op 21 augustus 2026
-gevonden en op 26 augustus 2026 nog twee keer opnieuw ingelopen — reken het om,
-of lees het klikpunt uit met een hit-test (valkuil 6).
+**De browsertool klikt in SCHERMAFDRUK-coördinaten, niet in CSS-pixels.** Een
+`getBoundingClientRect()` uit de pagina moet je dus omrekenen voordat je hem aan
+`computer` geeft, anders klik je honderden pixels mis en lijkt de knop kapot.
+Gevonden op 21 augustus 2026, en op 26 augustus 2026 nog twee keer opnieuw
+ingelopen.
+
+**Reken de factor per keer uit; het is geen vast getal.** Hij is de breedte van
+de schermafdruk gedeeld door `window.innerWidth` op dat moment. Op 26 augustus
+2026 was dat 1568 op 1920 (0,817), maar de schermafdruk kwam die sessie in drie
+verschillende hoogtes terug (744, 699, 698) omdat het venster meebewoog. Zet dat
+getal dus niet vast: lees het af van een VERSE schermafdruk, of gebruik een
+hit-test op het klikpunt (valkuil 6) en laat het rekenen erbuiten.
+
+**En als er niets gebeurt, controleer eerst dát er geklikt is.** Hang een
+capture-luisteraar op `window` en lees `event.composedPath()` (valkuil 14); dan
+zie je het verschil tussen "hij landde ergens anders" en "er is helemaal niets
+aangekomen". Dat laatste betekent meestal
+`document.visibilityState === "hidden"` — zie hieronder. Zonder die toets
+concludeer je dat een knop kapot is terwijl je zelf naast zat; dat is op
+26 augustus 2026 twee keer gebeurd.
 
 **Zijn Chrome staat op `prefers-reduced-motion: reduce`.** Elke animatie die je
 bouwt is daar uitgeschakeld, dus met een schermafdruk bewijs je niets over
