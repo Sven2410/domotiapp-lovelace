@@ -300,6 +300,23 @@ Python-tests.
    **sluit de kiezer zelf** — hij sluit normaal pas bij het doorgeven dat je net
    hebt tegengehouden.
 
+21. **Na het wissen van de service worker (valkuil 15) stopt Home Assistant in
+   dat tabblad met het opbouwen van views.** `hui-root` krijgt geen `_curView`
+   meer, het scherm blijft leeg, en er staat geen fout in de console. Elke
+   conclusie die je daarna uit een leeg scherm trekt is onzin -- op 26 augustus
+   2026 zijn er zo twee onterechte "deze kaart sloopt de view" uit gerold.
+   Herstellen: `docker restart ha-lovelace` EN een vers tabblad. En let op: in
+   deze build geeft rechtstreeks naar `?edit=1` navigeren ook een lege view;
+   de bewerkmodus zet je aan met het potlood rechtsboven.
+
+22. **De slagschaduw op een kaart van één rasterrij is een vlek.** Een schaduw
+   van 18px omlaag met 40px onscherpte valt weg onder een kaart van drie rijen,
+   maar staat onder een kaart van 56px net zo hoog als de kaart zelf -- en drie
+   van die kaarten onder elkaar geven donkere banden. `--dac-shadow` draagt
+   daarom sinds 0.14.0 alleen nog de haarlijn bovenlangs. Zwevende dingen (de
+   navbalk, zijn menu, het mediazoekscherm) houden hun schaduw wél: daar is hij
+   de enige aanwijzing dat er iets boven iets anders hangt.
+
 ---
 
 ## Projectstand
@@ -323,19 +340,26 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.13.0** (26 augustus 2026) — de derde ronde van die dag: de
-kaarten in een tabblad worden bewerkt met het gereedschap van Home Assistant
-zelf. Slepen, het driepuntsmenu met Bewerken/Dupliceren/Kopiëren/Knippen/
-Verwijderen, en "Toevoegen aan dashboard" als kaartkiezer. Zie
-`docs/kaarten-bewerken-als-in-ha/RAPPORT.md` en valkuil 19 en 20.
+**Laatste release: 0.14.0** (26 augustus 2026) — de vierde ronde van die dag: de
+kaartenlijst van een tabblad staat nu in het VOORBEELD (zoals Bubble Card), de
+editor bouwt zichzelf niet meer opnieuw op terwijl je typt, de slagschaduw onder
+de kaarten is weg, en de scenekaart kreeg zijn vinkje "achtergrond weglaten".
+Zie `docs/voorbeeld-bewerken-en-de-schaduw/RAPPORT.md` en valkuil 21 en 22.
 
-Die dag kende drie rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
-(`docs/rookmelder-personen-en-meer-kaarten/`) en deze.
+Die dag kende vier rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
+(`docs/rookmelder-personen-en-meer-kaarten/`), **0.13.0**
+(`docs/kaarten-bewerken-als-in-ha/`) en deze.
 
 **Tellingen op het moment van schrijven:** 546 JS-tests en 136 Python-tests,
-alle groen; bundel 426.031 bytes; 112 getekende iconen.
+alle groen; bundel 428.942 bytes; 112 getekende iconen.
 
-**Wat er open staat:** een donkere vlek in twee van zijn bubble-pop-ups. Die
-komt **niet** van onze kaarten — in beide pop-ups staan alleen mushroom-,
-bubble- en ultimate-climate-kaarten (uitgelezen op 25 augustus 2026). Hij
-vermoedt zijn thema en wil het eerst met 0.10.0 opnieuw bekijken.
+**Wat er open staat**, gevraagd op 26 augustus 2026 en nog niet gebouwd:
+
+- **Kopjes boven de kolommen van de entiteitenkaart.** Twee kolommen, twee
+  namen erboven.
+- **Een entiteit met een afbeelding groter tonen**, zodat er een wifi-kaart met
+  een QR-code van te maken is, en de inhoud kunnen **centreren** in plaats van
+  links uitlijnen.
+
+De donkere vlek waar hij sinds 0.10.0 zijn thema van verdacht, is opgelost: het
+was onze eigen slagschaduw (valkuil 22).

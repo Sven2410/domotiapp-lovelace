@@ -160,7 +160,9 @@ export function kaartenLijst({ kaarten, hass, maakKaart, opActie }) {
 
   const overlays = [];
   kaarten.forEach((config, i) => {
-    const el = maakKaart(config);
+    // De index gaat mee: wie de kaarten al gebouwd heeft, wil ze op volgorde
+    // kunnen teruggeven in plaats van ze nog een keer te maken.
+    const el = maakKaart(config, i);
     if (!el) return;
     const vak = document.createElement("div");
     vak.className = "dac-kaart";
