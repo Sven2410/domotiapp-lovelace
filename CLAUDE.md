@@ -3,6 +3,16 @@
 Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 `SPEC.md` gaat over **wat** we bouwen en is bindend.
 
+En lees daarna `C:\dev\notities\domotiapp-lovelace\waar-gebleven.md`: dat is de
+lopende stand — wat er af is, wat er bij de eigenaar ligt, wat er nog beproefd
+moet worden. Die map is privé (adressen, entiteiten, klantgegevens mogen daar
+wél in) en hoort bijgewerkt te worden zodra er iets af is.
+
+**Waarom die twee bestanden en niet het geheugen van Claude Code:** dat staat in
+`~/.claude/projects/...` en is per machine. De eigenaar werkt ook op een MacBook,
+en daar is het leeg. Sinds 26 augustus 2026 staat alles wat onthouden moet worden
+daarom in git — technische kennis hier, de stand daar.
+
 ---
 
 ## Werkafspraken
@@ -56,6 +66,148 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
 
 ---
 
+## Hoe de eigenaar werkt
+
+Overgezet uit het geheugen van Claude Code op 26 augustus 2026: dat staat per
+machine en reist niet mee.
+
+**Hij stuurt zijn verzoeken terwijl je al aan het bouwen bent**, in losse
+berichten, en hij denkt gaandeweg door. Op 25 augustus 2026 kwamen er elf in één
+sessie; op 26 augustus twintig, verdeeld over zes uitgaven.
+
+- **Hij verwacht niet dat je stopt en overlegt.** Noteer wat erbij komt, bouw af
+  waar je mee bezig bent, en breng het per ronde uit.
+- **Vraag je hem om te prioriteren, dan krijg je "kies zelf, uiteindelijk moet
+  alles gemaakt worden".** Dus kies zelf, en zet een fout in bestaand werk vóór
+  nieuw werk.
+- **Zijn feedback komt in halve zinnen met een schermafdruk.** Kijk naar de
+  afbeelding, meet het na in de testinstance, en repareer het in dezelfde ronde.
+  Maar **neem de diagnose niet over**: de "shadows" waar hij zijn thema van
+  verdacht bleken van ons eigen `--dac-shadow` te komen, en dat kwam pas boven
+  water door te meten. Zie valkuil 22.
+- **Wat wél werkt:** elke paar rondes een korte tussenstand — wat gemerged is,
+  wat klaar is maar nog niet uitgebracht, en wat er nog open staat. Daar
+  reageert hij op met de volgende vraag, en dan weet je dat de vorige goed was.
+- **Het rapport in `docs/<naam>/RAPPORT.md` is hoe hij het leest.** De
+  terminaluitvoer is bij hem niet betrouwbaar over te nemen.
+
+**Waarom dit zo hoort:** hij test alles meteen zelf op zijn eigen installatie.
+Een ronde die blijft liggen tot er om overleg gevraagd is, is een ronde die hij
+niet kan proberen.
+
+De lopende stand — wat er bij hem ligt, wat er open staat — hoort **niet** in
+dit bestand maar in `C:\dev\notities\domotiapp-lovelace\waar-gebleven.md`. Werk
+dat bij zodra er iets af is, en push het: die repo is privé en reist mee naar
+zijn tweede machine.
+
+---
+
+## Vormregels voor elke kaart
+
+Uitgevochten in de rondes van 17 augustus 2026 en sindsdien niet meer ter
+discussie. Ze gelden voor élke kaart, ook een nieuwe. **Stel ze niet opnieuw
+voor.**
+
+**Hoogte valt op HA's rasterrijen.** Een rij is 56px met 8px ertussen, dus een
+kaart is 56, 120, 184 of 248 hoog — nooit ertussenin. Past iets niet op één rij,
+maak er dan twee. Reden: een DomotiApp-kaart naast een Mushroom-kaart in
+dezelfde kolom moet één kolom blijven. Zie valkuil 8 en 12 voor hoe dat in de
+praktijk misgaat.
+
+**Alleen het icoon draagt de toestand**, niet het hele kaartvlak. Een kolom van
+acht aanstaande knoppen wordt anders een muur in plaats van een rij.
+
+**Icoon en kaart zijn twee knoppen.** Tikken op het icoon schakelt de entiteit,
+tikken op de kaart doet wat er is ingesteld — meestal navigeren naar een pop-up.
+Zo doet hij het ook met zijn Mushroom-tegels: lampje aan zonder de kamer te
+openen, of andersom.
+
+**Geen statuskleuren in de kleurkiezer.** Kleur is op deze kaarten identiteit,
+geen oordeel. Goed, let op en kritiek blijven van de kaart zelf.
+
+**Geen "kleur volgt toestand"-instelling.** Dat is geen keuze: een knop die er
+hetzelfde uitziet of het apparaat aan of uit staat, is kapot. De kleur volgt wat
+eraan hangt — een lamp draagt de kleur die hij maakt, al het andere krijgt het
+accent.
+
+**Sinds 26 augustus 2026 biedt de kleurkiezer nog maar twee kleuren aan:**
+Automatisch en Accent, met de eigen kleur ingeklapt eronder. Een kleur die al in
+een config staat houdt zijn vakje zolang hij gekozen is; hem stil verbergen zou
+betekenen dat een dashboard een kleur draagt die nergens meer te vinden is.
+
+**Tekst verschijnt zoals het is ingetypt.** Geen `text-transform: uppercase`;
+het toetsenbord gaf "Woonkamer" en het scherm maakte er "WOONKAMER" van.
+
+**Eigen afbeelding van een entiteit gaat voor het domeinicoon**, en een
+zelfgekozen icoon gaat voor allebei.
+
+**Weergave-blokken in editors houdt hij niet.** Instellingen staan op één
+niveau; hij haalde ze bij de kopkaart, het afval en de knop expliciet weg.
+
+**Statusregels weglaten als er niets te melden is.** Zijn rolluiken melden niets
+terug, en een zin die zegt dat er niets bekend is maakt de rij alleen hoger.
+
+### De vormtaal komt van DomotiApp Coach
+
+De tokens staan in
+`C:\dev\domotiapp-coach\custom_components\domotiapp_coach\frontend\src\theme.js`.
+Dat bestand is de bron; hier staat de samenvatting, niet iets om opnieuw te
+bedenken.
+
+Ground `#0c0c0a`, raised `#12120f`, oppervlak wit op 3,8%/7%, inkt `#e8e4de` met
+62%/38% ladders, accent `#026fa1` / hi `#198fd9` (ook zijn website-accent).
+Radius 20/12/pill.
+
+Twee regels die in dat bestand zelf gemotiveerd staan:
+
+1. **Rood en groen zijn gereserveerd voor status** en staan bewust niet in de
+   identiteitskleuren. De categorische set is zon `#dc7300`, huis `#235efa`,
+   grid-in `#129be4`, grid-out `#bc10c8`, device-1 `#fd0774`, device-2 `#039580`
+   — gezocht op OKLCH-scheiding en kleurenblindheidsafstand tegen `#12120f`.
+   Niet vervangen zonder die zoektocht opnieuw te draaien.
+2. **Het getal draagt nooit de kleur.** Waarden in neutrale inkt; identiteit zit
+   in de icoonchip.
+
+**Geen webfonts.** HA's eigen UI-font, zodat er niets geladen wordt. Previews
+gebruiken datzelfde font, anders liegen ze over uitlijning en regellengte.
+
+**Waarom dit alles:** hij bouwt een merk (DomotiTech / DomotiApp) en wil dat een
+dashboard als één product leest, niet als zes HACS-kaarten naast elkaar.
+
+---
+
+## Distributie via HACS
+
+**Dit pakket is een INTEGRATIE, geen plugin, en dat scheelt de klant werk.** Het
+zet zijn bundel op een eigen URL, meldt hem aan bij de frontend én registreert
+hem als Lovelace-resource. De klant hoeft niets toe te voegen.
+
+**`hacs.json` heeft `hide_default_branch: true`, en dan MOET er een
+GitHub-release zijn** — zonder release biedt HACS niets aan om te installeren.
+Vastgesteld op 18 augustus 2026 bij het opzetten van dit pakket. Tags zijn kaal,
+zonder `v`-prefix; HACS pakt de repo-inhoud van de tag, een asset is niet nodig.
+
+**Er is precies één resource-URL, dus één gebundeld bestand.** Daarom `src/`
+gesplitst plus een esbuild-stap, en de gebouwde bundel meegecommit — `npm run
+verify` bewaakt dat die niet achterloopt op de bron. Uit de tijd dat dit nog een
+plugin was: `zip_release: true` werkt daar niet, want HACS registreert dan het
+zipbestand zelf als JavaScript-module en er laadt geen enkele kaart.
+
+**Een kaart mag NOOIT gooien in `setConfig`.** Dat draait bij elke toetsaanslag
+in de editor, en eenmaal met een lege stub zodra je de kaart uit de lijst kiest.
+Gooien geeft dan "Ongeldige configuratie" in plaats van een voorbeeld. Een lege
+config toont daarom een uitlegkaart via de `INCOMPLETE`-symbol in `src/base.js`.
+
+**HACS ververst de releaselijst van een eigen repository ongeveer eens per
+etmaal.** Een verse tag is bij hem dus niet meteen zichtbaar; hij moet
+"Informatie bijwerken" doen in HACS. Vastgesteld op 17 augustus 2026. Dat is
+géén reden om minder te releasen — hij vraagt om een uitgave per ronde — maar
+wel de reden dat hij soms zegt dat een update er nog niet is terwijl hij er wel
+staat. Een release kost hem bovendien een herstart van Home Assistant, want de
+bundelhash wordt berekend bij het opzetten van de integratie (valkuil 2).
+
+---
+
 ## Omgeving
 
 - Windows 11, PowerShell, `C:\dev\domotiapp-lovelace`.
@@ -71,10 +223,14 @@ Lees dit eerst, daarna `SPEC.md`. Dit bestand gaat over **hoe** we werken;
   mogen nooit gebruikt worden.**
 - **De productie-HA (`192.168.1.88:8123`) mag GELEZEN worden als de eigenaar
   erom vraagt, en verder nooit aangeraakt.** Uitlezen gaat read-only over de
-  websocket met het token uit `C:\dev\ha-token.txt`; een service aanroepen of
+  websocket met het token uit `C:\dev\tokens\thuis.txt`; een service aanroepen of
   config wegschrijven is en blijft verboden. Deze regel stond er eerst als
   "ook niet gelezen"; op 20 augustus 2026 heeft de eigenaar hem versoepeld toen
-  hij vroeg naar zijn eigen dashboard te kijken.
+  hij vroeg naar zijn eigen dashboard te kijken. Het tokenbestand heette tot
+  26 augustus 2026 `ha-token.txt` en staat sindsdien per installatie in
+  `C:\dev\tokens\` (niet in git). Wat er verder over zijn installatie bekend
+  is -- dashboards, apparatuur, Music Assistant -- staat in de privérepo:
+  `C:\dev\notities\domotiapp-lovelace\`. Hier niet, want deze repo is publiek.
 - `C:\dev\_ref\ultimate-scene-card` is uitsluitend leesmateriaal, zonder remote.
   **Nooit in schrijven.** De analyse ervan staat in `INVENTARIS.md`.
 
