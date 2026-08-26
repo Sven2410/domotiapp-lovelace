@@ -308,6 +308,141 @@ Python-tests.
 
 ---
 
+## Hoe de integratie in elkaar zit
+
+Dit pakket is sinds 18 augustus 2026 **de plek waar alles in zit**: alle
+kaarten, de scenekaart (uit domotiapp-scene) en de wekkerkaart (uit
+domotiapp-alarm), in één bundel, geleverd door één integratie. Bevestigd door de
+eigenaar op 20 augustus 2026: **er komt geen kaart meer bij in een losse repo.**
+Start een sessie gerust in een oude map — het werk gebeurt alsnog hier.
+
+**De laadroute is die van de wekker.** Een lader onder `/api/` met een VASTE URL
+die de bundelhash in zijn *antwoord* geeft. Een gehashte URL rechtstreeks in
+`index.html` overleeft HA's service worker niet. Zie ook valkuil 2 en 15.
+
+**De wekkerkant is een subpakket** `alarm/`, met `alarm_`-voorvoegsels op zijn
+`hass.data`-sleutels — beide kanten hadden een `store` en een `ws_registered`.
+
+**Overnemen uit een voorganger staat in `migratie.py`**, met een bestandstoets
+vóóraf. In de opslaglaag zelf zetten brak de wekkertests. Scenes én wekkers zijn
+bij de eerste start automatisch overgenomen; dat is op de echte installatie
+bevestigd, niet alleen in tests. De oude opslagbestanden blijven als vangnet
+staan.
+
+**Music Assistant loopt via twee bestanden.** `ma.py` (config entry opzoeken,
+`music_assistant.search`, antwoord platslaan) en `labels.py` (labelnaam →
+entiteiten, uitgerold over entiteit, apparaat en gebied) worden door de wekker-
+én de mediakant gebruikt. De mediakant heeft twee WS-commando's, `media/search`
+en `media/speakers`; al het andere — afspelen, `join`/`unjoin`, shuffle,
+herhalen — doet de kaart met gewone service-aanroepen.
+
+**Twee labels, met opzet gescheiden:** `Music Assistant Wekker` en
+`Music Assistant Media`. De opzoeking gaat op **naam**, dus hernoemen in Home
+Assistant breekt de koppeling. Sinds 0.8.0 is het label niet meer verplicht: de
+mediakaart heeft een veld *Speakers om mee te groeperen*, en leeg laten valt
+terug op het label. Sinds 0.16.1 valt een ALGEMENE mediaspeler daar niet op
+terug maar op zijn eigen speakerlijst.
+
+### Twee dingen die met opzet zijn weggehaald
+
+- **De knopkaart bestaat niet meer.** `custom:domotiapp-button-card` is opgegaan
+  in de entiteitenkaart, zonder schil voor het oude type — dat was zijn keuze.
+  Een losse knop is een rij van één kolom. Een plek zónder entiteit is een
+  navigatieknop, en daarom staat overal `gevuld()` waar eerst `item.entity`
+  stond.
+- **Het alarmpaneel is er helemaal uit** (0.6.0), inclusief `paneelcode.py`, de
+  options-flow-stap Alarmcode en `codepad.js`. Zijn reden: **een alarm hoort
+  niet via een dashboardkaart uitgeschakeld te worden.** Het staat in een eigen
+  commit, dus terug te draaien — maar draai het niet terug zonder het te vragen.
+
+**De wekkerkaart heette eerst "DomotiApp Alarm"** en dat las in de kaartkiezer
+als een alarmsysteem. Sinds 0.6.0 heet hij **DomotiApp Wekker**; het `type` bleef
+`domotiapp-alarm-card`.
+
+---
+
+## Meten in een echte browser
+
+De werkafspraak hierboven zegt dát er met echte kliks gemeten wordt. Deze sectie
+zegt **hoe**, want elk van deze valkuilen heeft hier een keer een uur gekost.
+
+**De browsertool klikt in SCHERMAFDRUK-coördinaten, niet in CSS-pixels.** Op zijn
+scherm is dat 1568 tegen 1920: **factor 0,817**. Een `getBoundingClientRect()`
+uit de pagina moet je dus omrekenen voordat je hem aan `computer` geeft, anders
+klik je honderden pixels mis en lijkt de knop kapot. Dat is op 21 augustus 2026
+gevonden en op 26 augustus 2026 nog twee keer opnieuw ingelopen — reken het om,
+of lees het klikpunt uit met een hit-test (valkuil 6).
+
+**Zijn Chrome staat op `prefers-reduced-motion: reduce`.** Elke animatie die je
+bouwt is daar uitgeschakeld, dus met een schermafdruk bewijs je niets over
+beweging. Meet `getComputedStyle(el, "::after").animationName` met de twee
+reduced-motion-regels tijdelijk uit `adoptedStyleSheets[0]` gehaald — en zet ze
+meteen terug. Er zijn er **twee**: een globale in `baseCss` van `theme.js` en die
+van de kaart zelf.
+
+**Het venster vooraan halen is niet genoeg: het TABBLAD moet het actieve zijn.**
+Komt er geen enkele klik aan, controleer dan eerst
+`document.visibilityState === "hidden"`. Het Chrome-venster naar voren halen kan
+zelf — `Get-Process chrome | where MainWindowHandle -ne 0` plus
+`SetForegroundWindow` via `Add-Type` — maar dat zet alleen het venster vooraan.
+Zat de MCP-tab achter een ander tabblad in datzelfde venster, dan blijft het
+`hidden`. Wat wél werkte: met `WScript.Shell.SendKeys` `^{TAB}` doorstappen tot
+de venstertitel de paginatitel is. Daarna `visible` en `hasFocus() === true`.
+Je mag het hem ook gewoon vragen; dat deed hij zonder morren.
+
+**Een native kiezer van de browser is niet met de browsertool te bedienen** —
+een klok, een kalender, een `<select>`-dropdown. Dat is een venster buiten de
+pagina; een klik op die coördinaten gaat er dwars doorheen en landt op de kaart
+eronder. Het OPENEN bewijs je met een schermafdruk, het INVULLEN met echte
+toetsaanslagen.
+
+**Zonder Docker geen Python-tests op Windows.** Draait Docker Desktop niet, start
+hem dan met `Start-Process` op
+`AppData\Local\Programs\DockerDesktop\Docker Desktop.exe` en wacht tot
+`docker info` slaagt.
+
+### De werkbank in `dev/`
+
+`dev/preview.html` is de grote werkbank; `dev/alarmcode.html` en `dev/cijfers.html`
+zijn gerichte proefopstellingen met een vaste hoogte.
+
+- **De werkbank schuift onder je klikken vandaan**: kaarten erboven veranderen
+  van hoogte als abonnementen binnenkomen. Voor een gerichte meting hoort er een
+  pagina met vaste hoogte te zijn.
+- **Het logpaneel onderin ligt over de kaarten heen** (`position: fixed`, de
+  onderste ~220px). Scroll je klikdoel daarboven.
+- **De browser houdt ES-modules vast over een gewone reload heen.** Serveer op
+  een NIEUWE poort na een bronwijziging.
+- **`dev/ha-form-stub.js` moet bij ELKE toetsaanslag vuren**, net als HA's
+  `ha-textfield`. Hij vuurde eerst alleen bij `change`, en daardoor kon de
+  werkbank de bevroren-config-bug (valkuil 23) structureel niet laten zien —
+  precies de bug die twee releases kostte. Test een editor door letter voor
+  letter te typen en te tellen of er evenveel `config-changed` uitkomen als
+  aanslagen.
+
+### De testinstance opzetten
+
+Zie **Omgeving** hierboven voor container, poort en testmateriaal. Twee dingen
+die daar niet staan:
+
+- **Controleer wélke map er gemount is** voordat je conclusies trekt:
+  `docker inspect ha-lovelace --format '{{range .Mounts}}{{.Source}} {{end}}'`.
+  De containernaam stond ooit in twee compose-bestanden, en dan draait er een
+  container van een ánder project op onze poort, met een andere integratie erin.
+- **Een config entry toevoegen gaat via de API**, niet door drie dialogen: haal
+  het token uit `localStorage.hassTokens` in de paginacontext en POST naar
+  `/api/config/config_entries/flow`. **Herladen** van die entry na elke
+  `npm run build` is verplicht (valkuil 2), en dat is een REST-aanroep —
+  `config_entries/reload` bestaat niet als WebSocket-commando:
+
+  ```js
+  const c = await window.hassConnection;
+  await fetch(`/api/config/config_entries/entry/${entryId}/reload`,
+    { method: "POST", headers: { Authorization: "Bearer " + c.auth.accessToken } });
+  ```
+
+---
+
 ## Valkuilen die ons al tijd hebben gekost
 
 1. **Registreren van custom elements gaat altijd via `src/registreer.js`.**
