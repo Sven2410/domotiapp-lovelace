@@ -31,13 +31,7 @@ import {
   heeftKaartEditor,
   kaartsoorten,
 } from "./kaartkiezer.js";
-import {
-  heeftHaGereedschap,
-  kaartenLijst,
-  kiesKaartViaHa,
-  naarKlembord,
-  pasToe,
-} from "./kaartenlijst.js";
+import { heeftHaGereedschap, kiesKaartViaHa, naarKlembord, pasToe } from "./kaartenlijst.js";
 
 const CSS = `
   .dac-tabs { display: flex; flex-direction: column; gap: 12px; }
@@ -530,23 +524,34 @@ class TabsEditor extends HTMLElement {
       return blok;
     }
 
-    const metHa = heeftHaGereedschap();
+    // MET het gereedschap van Home Assistant staat de lijst in het VOORBEELD,
+    // rechts in de dialoog -- daar waar de tab ook echt is. De kaart tekent hem
+    // daar zelf (zie tabs-card.js); hier staat alleen een regel die zegt waar
+    // je moet kijken, plus de editor van de kaart die je aan het bewerken bent.
+    if (heeftHaGereedschap()) {
+      const wijs = document.createElement("div");
+      wijs.className = "inhoud";
+      wijs.innerHTML = `${resolve("grid")}<span>${
+        tab.cards.length
+          ? `<b>${inhoudRegel(tab)}</b> — te bewerken in het voorbeeld hiernaast: slepen om te verplaatsen, het potlood om te bewerken.`
+          : "Nog geen kaart — voeg er een toe in het voorbeeld hiernaast."
+      }</span>`;
+      blok.appendChild(wijs);
+
+      // De kaart die op dit moment bewerkt wordt. Eén tegelijk: het potlood
+      // wijst er maar één aan.
+      if (this.bewerkt_?.tab === i && tab.cards[this.bewerkt_.index]) {
+        blok.appendChild(this.bewerkVak_(tab, i, this.bewerkt_.index));
+      }
+      return blok;
+    }
 
     if (tab.cards.length) {
       const kop = document.createElement("div");
       kop.className = "subkop";
       kop.textContent = tab.cards.length === 1 ? "Kaart" : `${tab.cards.length} kaarten`;
       blok.appendChild(kop);
-
-      if (metHa) blok.appendChild(this.haLijst_(tab, i));
-      else tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
-    }
-
-    // De kaart die op dit moment bewerkt wordt, met de editor van Home
-    // Assistant eronder. Eén tegelijk: twee open editors onder elkaar is geen
-    // scherm meer, en het potlood wijst er maar één aan.
-    if (metHa && this.bewerkt_?.tab === i && tab.cards[this.bewerkt_.index]) {
-      blok.appendChild(this.bewerkVak_(tab, i, this.bewerkt_.index));
+      tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
     }
 
     if (this.kiest_ === `t${i}`) {
@@ -559,51 +564,52 @@ class TabsEditor extends HTMLElement {
     knop.className = "toevoegen";
     knop.textContent = "＋  Kaart toevoegen";
     knop.addEventListener("click", () => {
-      if (metHa) this.voegToeViaHa_(tab, i);
-      else {
-        this.kiest_ = `t${i}`;
-        this.zoek_ = "";
-        this.build_();
-      }
+      this.kiest_ = `t${i}`;
+      this.zoek_ = "";
+      this.build_();
     });
     blok.appendChild(knop);
     return blok;
   }
 
-  /* -------------------------------- de lijst met het gereedschap van HA */
-
   /**
-   * De kaarten zoals ze eruitzien, met de overlay van Home Assistant eromheen:
-   * potlood, driepuntsmenu en slepen. Zie `kaartenlijst.js`.
+   * Wat het voorbeeld terugmeldt.
+   *
+   * De kaart in het voorbeeld tekent de lijst en vangt de gebeurtenissen van
+   * Home Assistant op; wat eruit komt landt hier. De kaart weet niets van de
+   * config -- die staat hier -- en deze editor weet niets van de overlay.
    */
-  haLijst_(tab, i) {
-    return kaartenLijst({
-      hass: this.hass_,
-      kaarten: tab.cards,
-      maakKaart: (config) => this.maakKaart_(config),
-      opActie: (soort, gegevens) => this.kaartActie_(tab, i, soort, gegevens),
-    });
+  uitVoorbeeld(i, soort, gegevens) {
+    const tab = this.tabs_[i];
+    if (!tab) return;
+    if (soort === "toevoegen") {
+      this.voegToeViaHa_(tab, i);
+      return;
+    }
+    this.kaartActie_(tab, i, soort, gegevens);
   }
 
   /**
-   * Een echte kaart uit een config, met dezelfde weg als de kaart zelf
-   * gebruikt: `loadCardHelpers`. Synchroon, want de lijst moet in één keer
-   * staan -- vandaar dat de helpers bij het opbouwen van de editor al
-   * opgehaald zijn (`build_`).
+   * Alleen het blok waarin een kaart bewerkt wordt opnieuw zetten.
+   *
+   * Niet `build_()`: die gooit de hele editor weg, en dan verlies je je plek en
+   * je focus. Zie de opmerking bij `config-changed` verderop -- dat was de
+   * klacht "dan word ik er weer uit gegooid".
    */
-  maakKaart_(config) {
-    try {
-      const el = this.helpers_?.createCardElement(config);
-      if (el) el.hass = this.hass_;
-      return el ?? null;
-    } catch (fout) {
-      // Een kaart die op zijn eigen config gooit hoort de editor niet te
-      // slopen: dan staat er een blokje met de fout, en kun je hem weghalen.
-      const stuk = document.createElement("div");
-      stuk.className = "inhoud";
-      stuk.textContent = `Deze kaart kon niet geladen worden: ${fout?.message ?? fout}`;
-      return stuk;
+  toonBewerkVak_() {
+    const oud = this.querySelector(".bewerkvak");
+    const i = this.bewerkt_?.tab;
+    const j = this.bewerkt_?.index;
+    const tab = Number.isInteger(i) ? this.tabs_[i] : null;
+
+    if (!tab || !tab.cards[j]) {
+      oud?.remove();
+      return;
     }
+    const nieuw = this.bewerkVak_(tab, i, j);
+    if (oud) oud.replaceWith(nieuw);
+    else this.querySelectorAll(".kaartvak")[i]?.appendChild(nieuw);
+    nieuw.scrollIntoView({ block: "nearest" });
   }
 
   /**
@@ -615,7 +621,13 @@ class TabsEditor extends HTMLElement {
   kaartActie_(tab, i, soort, gegevens) {
     if (soort === "bewerk") {
       this.bewerkt_ = { tab: i, index: gegevens.index };
-      this.build_();
+      // Alleen het bewerkblok verversen, en de tab openklappen als hij dicht
+      // stond -- een herbouw van de hele editor zou de schuifbalk terugzetten
+      // en het blok buiten beeld laten openen. Dat las als "hij doet niets".
+      this.open_.add(`t${i}`);
+      const det = this.querySelectorAll("details.tab")[i];
+      if (det) det.open = true;
+      this.toonBewerkVak_();
       return;
     }
     if (soort === "kopieer") {
@@ -671,10 +683,15 @@ class TabsEditor extends HTMLElement {
       tab.cards[j] = verse;
       this.emit_();
       naam.textContent = kaartNaam(verse);
-      // De kaart in de lijst erboven moet mee veranderen, maar niet bij elke
-      // toetsaanslag opnieuw opgebouwd worden -- dan verlies je je cursor.
-      clearTimeout(this.hertekenen_);
-      this.hertekenen_ = setTimeout(() => this.build_(), 700);
+      // EN VERDER NIETS. Hier stond een herbouw van de hele editor, met een
+      // wachttijd van 700ms erop. Dat is precies wat de eigenaar meldde als
+      // "dan word ik er weer uit gegooid": elke toetsaanslag in dit veld gooide
+      // 700ms later de hele editor weg en bouwde hem opnieuw op -- met een
+      // verse hui-card-element-editor, zonder focus, en met de schuifbalk
+      // terug bovenaan.
+      //
+      // Het hoeft ook niet: het VOORBEELD wordt door Home Assistant zelf
+      // opnieuw getekend zodra de config verandert, en daar staat de lijst.
     });
     editor.addEventListener("GUImode-changed", (e) => e.stopPropagation());
 

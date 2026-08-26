@@ -36,7 +36,66 @@ import { DacCard, INCOMPLETE, escapeHtml, registerCard, toneValue } from "../bas
 import "../editor/tabs-editor.js";
 import { resolve } from "../icons.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { heeftHaGereedschap, kaartenLijst } from "../editor/kaartenlijst.js";
 import { openTab, schrijfKeuze, sleutelVoor, tabsVan } from "./tabs-logica.js";
+
+/** Eén stap omhoog, dwars door shadow roots heen. */
+const omhoog = (knoop) =>
+  knoop.parentElement ?? (knoop.parentNode && knoop.parentNode.host) ?? null;
+
+/** Elke voorouder, van hier tot aan het document. */
+function* voorouders(start) {
+  let knoop = omhoog(start);
+  let stappen = 0;
+  while (knoop && stappen++ < 40) {
+    yield knoop;
+    knoop = omhoog(knoop);
+  }
+}
+
+/**
+ * De editor die bij dit voorbeeld hoort, of null.
+ *
+ * DE KANT WAAROP DEZE VERWIJZING LOOPT IS EEN KEUZE
+ *
+ * Het ligt voor de hand dat de EDITOR zich meldt bij het voorbeeld. Dat gaat
+ * mis op de volgorde: Home Assistant bouwt het voorbeeld en de editor los van
+ * elkaar, en wie er eerst is verschilt per keer. Andersom is er geen race: de
+ * kaart zoekt pas als hij aan het tekenen is, en dan staat de editor er.
+ *
+ * Er wordt alleen BINNEN de eigen bewerkdialoog gezocht, niet in het hele
+ * document. Twee dialogen tegelijk bestaan niet, maar een dashboard vol
+ * tabbladenkaarten wel -- en dan zou een zoektocht door alles de verkeerde
+ * editor kunnen vinden.
+ */
+function bewerkerVan(kaart) {
+  let dialoog = null;
+  for (const v of voorouders(kaart)) {
+    const tag = v.tagName?.toLowerCase?.() ?? "";
+    if (tag === "hui-dialog-edit-card") {
+      dialoog = v;
+      break;
+    }
+  }
+  if (!dialoog) return null;
+
+  const zoek = (knoop, diepte = 0) => {
+    if (!knoop || diepte > 25) return null;
+    if (knoop.tagName?.toLowerCase?.() === "domotiapp-tabs-card-editor") return knoop;
+    for (const k of knoop.children ?? []) {
+      const t = zoek(k, diepte + 1);
+      if (t) return t;
+    }
+    if (knoop.shadowRoot) {
+      for (const k of knoop.shadowRoot.children) {
+        const t = zoek(k, diepte + 1);
+        if (t) return t;
+      }
+    }
+    return null;
+  };
+  return zoek(dialoog);
+}
 
 class TabsCard extends DacCard {
   static css = /* css */ `
@@ -99,6 +158,21 @@ class TabsCard extends DacCard {
     /* De kaarten in een tab staan onder elkaar met dezelfde tussenruimte als
        Home Assistant zelf aanhoudt. */
     .vak > * + * { margin-top: 8px; }
+
+    /* ---- het gereedschap in het voorbeeld van de kaarteditor ---- */
+
+    .vak .dac-kaarten { display: flex; flex-direction: column; gap: 8px; }
+    .vak .dac-kaart { position: relative; user-select: none; -webkit-user-select: none; }
+
+    .voegtoe {
+      width: 100%; margin-top: 8px; padding: 13px;
+      cursor: pointer; font: inherit; font-size: 14px; font-weight: 500;
+      border: 1px dashed var(--dac-border-hi); border-radius: var(--dac-radius-sm);
+      background: transparent; color: var(--dac-accent-hi); text-align: center;
+    }
+    @media (hover: hover) {
+      .voegtoe:hover { background: var(--dac-surface); }
+    }
 
     .leeg {
       padding: 14px 4px; text-align: center;
@@ -263,6 +337,27 @@ class TabsCard extends DacCard {
         return el;
       });
       this.kinderen_.set(i, elementen);
+
+      // In het VOORBEELD van de kaarteditor komt het gereedschap van Home
+      // Assistant eromheen te staan: de overlay met het potlood en het
+      // driepuntsmenu, slepen, en een knop om er een bij te zetten. Zo bewerk
+      // je de tab waar je hem ziet, en niet in een lijst ernaast. Zie de kop
+      // van kaartenlijst.js.
+      const bewerker = bewerkerVan(this);
+      if (bewerker && heeftHaGereedschap()) {
+        vak.replaceChildren(
+          kaartenLijst({
+            hass: this.hass,
+            kaarten: tab.cards,
+            maakKaart: (_, index) => elementen[index] ?? null,
+            opActie: (soort, gegevens) => bewerker.uitVoorbeeld?.(i, soort, gegevens),
+          }),
+          this.voegToeKnop_(bewerker, i),
+        );
+        meetRaster(this.$(".card"));
+        return;
+      }
+
       vak.replaceChildren(...elementen);
       // De kaarten zijn er, hun opmaak nog niet -- meetRaster heeft daar zijn
       // eigen herkansing voor.
@@ -274,6 +369,19 @@ class TabsCard extends DacCard {
       )}</div>`;
       meetRaster(this.$(".card"));
     }
+  }
+
+  /** De knop onder de kaarten in het voorbeeld, in de vorm die HA aanhoudt. */
+  voegToeKnop_(bewerker, i) {
+    const knop = document.createElement("button");
+    knop.type = "button";
+    knop.className = "voegtoe";
+    knop.textContent = "＋  Kaart toevoegen";
+    knop.addEventListener("click", (e) => {
+      e.stopPropagation();
+      bewerker.uitVoorbeeld?.(i, "toevoegen", {});
+    });
+    return knop;
   }
 
   /* ------------------------------------------------- Lovelace-afspraken */

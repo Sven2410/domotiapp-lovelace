@@ -92,6 +92,13 @@ export class DomotiappSceneCardEditor extends LitElement {
           ? { entity: { include_entities: groepen } }
           : { entity: { domain: "light" } },
       },
+      // De kaart KENT `bare` al sinds hij bestaat, maar hij stond in geen enkel
+      // scherm -- je moest de code-editor in om hem aan te zetten. Elke andere
+      // kaart in de familie heeft dit vinkje onderaan zijn formulier staan;
+      // deze editor is met de hand geschreven en werd daarbij overgeslagen.
+      // Gemeld op 26 augustus 2026: "de scene kaart mist ook de achtergrond
+      // weg halen".
+      { name: "bare", selector: { boolean: {} } },
     ];
   }
 
@@ -132,6 +139,9 @@ export class DomotiappSceneCardEditor extends LitElement {
     if (schema.name === "entity") {
       return "Lichtgroep";
     }
+    if (schema.name === "bare") {
+      return "Achtergrond weglaten";
+    }
     return this._friendlyName(schema.name);
   };
 
@@ -139,12 +149,20 @@ export class DomotiappSceneCardEditor extends LitElement {
     if (schema.name === "entity") {
       return "De lichtgroep waarvan deze kaart de scenes beheert.";
     }
+    if (schema.name === "bare") {
+      return "Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan.";
+    }
     return schema.name;
   };
 
   _entiteitGewijzigd(event) {
     event.stopPropagation();
-    const nieuw = { ...this._config, entity: event.detail.value.entity };
+    const waarde = event.detail.value ?? {};
+    const nieuw = { ...this._config, entity: waarde.entity };
+
+    // De standaard hoort niet in de YAML: wat er staat is wat afwijkt.
+    if (waarde.bare) nieuw.bare = true;
+    else delete nieuw.bare;
 
     // Van groep gewisseld: overschrijvingen die bij de oude groep hoorden
     // zouden anders stil blijven staan.
@@ -201,7 +219,7 @@ export class DomotiappSceneCardEditor extends LitElement {
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${{ entity: this._config.entity ?? "" }}
+        .data=${{ entity: this._config.entity ?? "", bare: Boolean(this._config.bare) }}
         .schema=${this._entiteitSchema()}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}

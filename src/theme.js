@@ -63,8 +63,20 @@ export const tokens = /* css */ `
                          var(--paper-font-body1_-_font-family,
                            Roboto, "Noto Sans", "Segoe UI", system-ui, sans-serif));
 
-  --dac-shadow:        0 1px 0 rgba(255, 255, 255, 0.04) inset,
-                       0 18px 40px -24px rgba(0, 0, 0, 0.9);
+  /* Alleen de haarlijn bovenlangs, en GEEN slagschaduw meer.
+   *
+   * Er stond 0 18px 40px -24px rgba(0,0,0,0.9) bij. Op een kaart van drie
+   * rijen valt dat weg, maar op een kaart van EEN rij -- een entiteitenkaart
+   * met een regel erin, de meest gebruikte vorm in dit huis -- zit die
+   * schaduw net zo hoog als de kaart zelf, en dan is het geen schaduw meer
+   * maar een donkere vlek eronder. Staan er drie van die kaarten onder elkaar,
+   * dan tellen de vlekken op tot banden.
+   *
+   * De eigenaar heeft daar sinds 0.10.0 zijn thema van verdacht. Het was dit,
+   * en dat bleek toen hij zijn thema uitzette en de vlek bleef staan
+   * (26 augustus 2026). Dit is dus een BEWUSTE afwijking van de tokens van de
+   * Coach; verandert daar de schaduw, dan blijft deze regel staan. */
+  --dac-shadow:        0 1px 0 rgba(255, 255, 255, 0.04) inset;
 
   /* One row height for every interactive card in the family, so a column of
      mixed cards lines up instead of stepping. */
