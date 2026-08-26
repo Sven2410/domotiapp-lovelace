@@ -268,6 +268,18 @@ Python-tests.
    zich anders dan de rest. In de navbalk verloor daardoor uitsluitend de eerste
    knop zijn submenu. Schrijf `.map((x) => f(x))`.
 
+18. **Een blijvende highlight heeft TWEE oorzaken, en ze zien er hetzelfde uit.**
+   De eerste is de hover van valkuil 14. De tweede is `:focus-visible`: Home
+   Assistant zet de focus op het element dat een dialoog opende en GEEFT DIE
+   TERUG als de dialoog dichtgaat. Die teruggave is programmatisch, en dan matcht
+   `:focus-visible` wél — ook na een tik met je vinger. Gemeten op de
+   rookmelderkaart op 26 augustus 2026: `outline: 2px solid rgb(25,143,217)` die
+   bleef staan tot je ergens anders tikte. Opgelost in `DacCard`
+   (`bewaakFocusRing_`) voor alle kaarten tegelijk: focus die na een TIK alsnog
+   `:focus-visible` matcht gaat eraf, focus na een TOETS blijft staan. Repareer
+   je alleen de hover, dan blijft de helft van de klacht staan — dat is precies
+   wat er gebeurde.
+
 ---
 
 ## Projectstand
@@ -291,15 +303,15 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.11.0** (26 augustus 2026) — acht meldingen van de eigenaar
-op de dag na 0.10.0: "achtergrond weglaten" houdt zijn rand, Nederlandse namen in
-een keuzelijst, subknoppen op de navbalk, geen hover die op een aanraakscherm
-blijft plakken, de navbalk duwt geen separator meer weg, kaarten toevoegen in de
-tabbladeneditor, en een rookmelderkaart die groeit in plaats van schuift. Zie
-`docs/feedback-26-augustus/RAPPORT.md`.
+**Laatste release: 0.12.0** (26 augustus 2026) — de tweede ronde van die dag:
+geen omlijning meer om een meting op de rookmelderkaart, een naam die afbreekt in
+plaats van afgekapt te worden, de personenkaart 1,5px lager (gemeten), meerdere
+kaarten in één tabblad, en de focusring die na een pop-up bleef staan. Zie
+`docs/rookmelder-personen-en-meer-kaarten/RAPPORT.md`. De ronde ervoor,
+**0.11.0**, staat in `docs/feedback-26-augustus/RAPPORT.md`.
 
-**Tellingen op het moment van schrijven:** 526 JS-tests en 136 Python-tests,
-alle groen; bundel 414.109 bytes; 112 getekende iconen.
+**Tellingen op het moment van schrijven:** 528 JS-tests en 136 Python-tests,
+alle groen; bundel 418.834 bytes; 112 getekende iconen.
 
 **Wat er open staat:** een donkere vlek in twee van zijn bubble-pop-ups. Die
 komt **niet** van onze kaarten — in beide pop-ups staan alleen mushroom-,

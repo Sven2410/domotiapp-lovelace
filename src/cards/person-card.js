@@ -52,10 +52,32 @@ function place(st) {
 
 class PersonCard extends DacCard {
   static css = /* css */ `
-    :host { display: block; height: 100%; }
+    :host {
+      display: block; height: 100%;
+      /* Hoever de ring buiten de avatar steekt. Op twee plekken nodig: hij
+         tekent de ring en hij corrigeert de uitlijning. */
+      --dac-ring: 3px;
+    }
 
+    /* De ring om een avatar wordt met box-shadow BUITEN de avatar getekend, en
+       een box-shadow telt niet mee in de afmetingen. Het blok dat gecentreerd
+       wordt is dus korter dan wat je ziet: bovenaan steekt de ring eruit,
+       onderaan houdt de naam op waar zijn regel ophoudt. Gevolg: de inhoud
+       staat een halve ring te hoog. Dat is precies wat de eigenaar op
+       26 augustus 2026 meldde ("ik heb nu het idee dat hij iets te ver naar
+       boven staat"), en het is nagemeten:
+
+         midden van de kaart          443,2
+         midden van wat je ziet       441,7   (ringbovenkant tot naamonderkant)
+         afwijking                     -1,5   = de helft van de ring
+
+       De correctie zit in de binnenmarge en niet in een marge op de inhoud, en
+       dat is geen smaak: de SOM van boven en onder blijft 8px, dus de kaart
+       wordt er geen pixel hoger van. Dat luistert nauw -- zie de rekensom bij
+       getGridOptions hieronder, waar deze kaart op 55 van de 56 uitkomt. */
     .card {
-      height: 100%; padding: 4px 10px;
+      height: 100%;
+      padding: calc(4px + var(--dac-ring) / 2) 10px calc(4px - var(--dac-ring) / 2);
       display: flex; flex-direction: column; justify-content: center;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
@@ -84,7 +106,7 @@ class PersonCard extends DacCard {
       /* Ring buiten de avatar getekend, zodat een foto er nooit door bijgesneden
          wordt. Dunner dan hij was: de ring steekt buiten de avatar uit en zou
          bij deze maten tegen de naam eronder aan komen te staan. */
-      box-shadow: 0 0 0 1.5px var(--dac-bg), 0 0 0 3px var(--tone);
+      box-shadow: 0 0 0 1.5px var(--dac-bg), 0 0 0 var(--dac-ring) var(--tone);
     }
     .av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .av .icon { width: 55%; height: 55%; color: var(--dac-ink-2); }

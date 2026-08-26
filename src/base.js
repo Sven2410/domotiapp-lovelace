@@ -143,6 +143,61 @@ export class DacCard extends HTMLElement {
     this.built_ = false;
     this.wired_ = false;
     this.teardown_ = [];
+    this.bewaakFocusRing_();
+  }
+
+  /**
+   * Haalt de focusring weg die blijft staan nadat een pop-up gesloten is.
+   *
+   * WAT ER GEBEURT
+   *
+   * Tik op een kaart die `more-info` opent. Home Assistant zet de focus op het
+   * element dat de dialoog opende, en geeft die focus terug zodra de dialoog
+   * dichtgaat. Die teruggave is PROGRAMMATISCH, en dan matcht `:focus-visible`
+   * wél -- ook als je met je vinger of je muis was begonnen. Resultaat: een
+   * accentkleurige ring om de kaart, die blijft staan tot je ergens anders
+   * tikt. Op 26 augustus 2026 gemeten op de rookmelderkaart:
+   * `matches(":focus-visible") === true`, `outline: 2px solid rgb(25,143,217)`.
+   *
+   * Dit is dus NIET dezelfde fout als de blijvende hover (valkuil 14). Die zat
+   * in de opmaak en is met een mediaquery opgelost; deze zit in de focus en
+   * blijft daarna over. Ze zagen er alleen hetzelfde uit.
+   *
+   * WAAROM DE RING NIET GEWOON WEG MAG
+   *
+   * Omdat hij voor een toetsenbordgebruiker het enige is dat laat zien waar hij
+   * staat. Daarom wordt er niet op de ring gestuurd maar op de MANIER waarop de
+   * focus kwam: was de laatste handeling in deze kaart een tik of een klik, en
+   * matcht het element daarna toch `:focus-visible`, dan is dat een teruggave
+   * en gaat de focus eraf. Kwam de laatste handeling van het toetsenbord, dan
+   * blijft alles staan.
+   *
+   * Een gewone muisklik raakt dit niet: die geeft `:focus` maar geen
+   * `:focus-visible`, en dan gebeurt hier niets.
+   */
+  bewaakFocusRing_() {
+    let tik = 0;
+    let toets = 0;
+
+    this.shadowRoot.addEventListener("pointerdown", () => { tik = Date.now(); }, true);
+    this.shadowRoot.addEventListener("keydown", () => { toets = Date.now(); }, true);
+
+    this.shadowRoot.addEventListener(
+      "focusin",
+      (e) => {
+        if (toets >= tik) return;
+        const doel = e.target;
+        // Velden waarin je typt of kiest houden hun focus: die hebben hem nodig.
+        if (!doel?.matches || doel.matches("input, textarea, select, [contenteditable]")) return;
+        // Pas ná deze tik meten: op het moment van focusin heeft de browser zijn
+        // oordeel over :focus-visible nog niet altijd klaar.
+        requestAnimationFrame(() => {
+          if (toets >= tik) return;
+          if (doel.isConnected && doel.matches(":focus-visible")) doel.blur?.();
+        });
+      },
+      true,
+    );
   }
 
   /* ------------------------------------------------ Lovelace contract */

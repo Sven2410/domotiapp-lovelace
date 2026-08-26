@@ -51,17 +51,18 @@ const stukkeOpslag = () => ({
 });
 
 const TABS = [
-  { name: "Woning", icon: "house", card: { type: "vertical-stack", cards: [] } },
-  { name: "Weer", icon: "cloudSun", card: { type: "weather-forecast" } },
+  { name: "Woning", icon: "house", cards: [{ type: "vertical-stack", cards: [] }] },
+  { name: "Weer", icon: "cloudSun", cards: [{ type: "weather-forecast" }] },
 ];
 
 describe("een tab uit de config", () => {
   it("neemt de vorm van simple-tabs over", () => {
-    // Dit is letterlijk wat er in zijn dashboard staat.
+    // Dit is letterlijk wat er in zijn dashboard staat. `card` (enkelvoud) komt
+    // er als lijst van één uit; die spelling moet blijven werken.
     const t = asTab({ title: "Woning", icon: "mdi:home-thermometer-outline", card: { type: "vertical-stack", cards: [1] } });
     assert.equal(t.name, "Woning");
     assert.equal(t.icon, "mdi:home-thermometer-outline");
-    assert.deepEqual(t.card, { type: "vertical-stack", cards: [1] });
+    assert.deepEqual(t.cards, [{ type: "vertical-stack", cards: [1] }]);
   });
 
   it("neemt ook onze eigen vorm", () => {
@@ -72,27 +73,39 @@ describe("een tab uit de config", () => {
     assert.equal(asTab({ name: "Ons", title: "Hun" }).name, "Ons");
   });
 
-  it("maakt van een lijst kaarten een vertical-stack", () => {
+  it("houdt een lijst kaarten een lijst", () => {
+    // NIEUW GEDRAG (26 augustus 2026). Hiervoor werd een lijst tot één
+    // `vertical-stack` samengevouwen, en dan kon je er in de editor geen kaart
+    // meer bij zetten zonder eerst zelf een stack te maken.
     const t = asTab({ name: "Meer", cards: [{ type: "a" }, { type: "b" }] });
-    assert.equal(t.card.type, "vertical-stack");
-    assert.equal(t.card.cards.length, 2);
+    assert.deepEqual(t.cards, [{ type: "a" }, { type: "b" }]);
   });
 
-  it("laat één kaart in een lijst gewoon die kaart zijn", () => {
-    // Een stack van één is een stack die niets doet.
-    assert.deepEqual(asTab({ cards: [{ type: "a" }] }).card, { type: "a" });
+  it("laat een lijst van één een lijst van één", () => {
+    assert.deepEqual(asTab({ cards: [{ type: "a" }] }).cards, [{ type: "a" }]);
+  });
+
+  it("laat `cards` winnen van `card` als er allebei staat", () => {
+    // Anders zou een config die in deze editor is bijgewerkt terugvallen op de
+    // kaart die er vóór het bijwerken in zat.
+    const t = asTab({ card: { type: "oud" }, cards: [{ type: "nieuw" }] });
+    assert.deepEqual(t.cards, [{ type: "nieuw" }]);
+  });
+
+  it("gooit rommel uit de lijst", () => {
+    assert.deepEqual(asTab({ cards: [null, "tekst", 3, { type: "a" }] }).cards, [{ type: "a" }]);
   });
 
   it("maakt van rommel lege velden in plaats van undefined", () => {
-    assert.deepEqual(asTab(null), { name: "", icon: "", card: null });
-    assert.deepEqual(asTab({ name: 3, icon: [] }), { name: "", icon: "", card: null });
+    assert.deepEqual(asTab(null), { name: "", icon: "", cards: [] });
+    assert.deepEqual(asTab({ name: 3, icon: [] }), { name: "", icon: "", cards: [] });
   });
 
   it("noemt een tab gevuld zodra er iets in staat", () => {
     assert.equal(gevuld({ name: "Woning" }), true);
     assert.equal(gevuld({ icon: "house" }), true);
-    assert.equal(gevuld({ card: { type: "a" } }), true);
-    assert.equal(gevuld({ name: "  ", icon: "", card: null }), false);
+    assert.equal(gevuld({ cards: [{ type: "a" }] }), true);
+    assert.equal(gevuld({ name: "  ", icon: "", cards: [] }), false);
     assert.equal(gevuld(null), false);
   });
 

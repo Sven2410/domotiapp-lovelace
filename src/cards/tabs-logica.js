@@ -38,21 +38,31 @@ export const SLEUTEL_VOORVOEGSEL = "dac-tabs:";
  *
  * `title` is hoe `simple-tabs` het noemt en `name` hoe de rest van deze familie
  * het noemt; allebei werken, want een config die je overzet hoort te blijven
- * werken. Hetzelfde voor `card` (één kaart) tegenover `cards` (een lijst): een
- * lijst wordt een `vertical-stack`, want dat is wat iemand bedoelt.
+ * werken. Hetzelfde voor `card` (één kaart) tegenover `cards` (een lijst).
+ *
+ * SINDS 26 AUGUSTUS 2026 IS EEN TAB EEN LIJST, OOK ALS ER EEN KAART IN ZIT
+ *
+ * Er stond hier één kaart per tab, en een lijst werd een `vertical-stack`
+ * eromheen. Dat werkte, maar het betekende dat je in de editor eerst een stack
+ * moest toevoegen voordat je een tweede kaart kwijt kon -- en dat was precies de
+ * melding van de eigenaar: "bij de tabs kaart kan ik nu maar 1 kaart toevoegen".
+ * Nu draagt een tab gewoon een LIJST, tekent de kaart die onder elkaar, en hoeft
+ * er niets omheen.
+ *
+ * `card` (enkelvoud) blijft gelezen worden: dat is de spelling van simple-tabs
+ * en van onze eigen configs van vóór vandaag.
  */
 export function asTab(ruw) {
   const t = ruw ?? {};
   const naam = typeof t.name === "string" ? t.name : typeof t.title === "string" ? t.title : "";
-  let kaart = null;
-  if (t.card && typeof t.card === "object") kaart = t.card;
-  else if (Array.isArray(t.cards) && t.cards.length)
-    kaart = t.cards.length === 1 ? t.cards[0] : { type: "vertical-stack", cards: t.cards };
-  return { name: naam, icon: typeof t.icon === "string" ? t.icon : "", card: kaart };
+  const lijst = Array.isArray(t.cards) ? t.cards.filter((k) => k && typeof k === "object") : [];
+  const kaarten = lijst.length ? lijst : t.card && typeof t.card === "object" ? [t.card] : [];
+  return { name: naam, icon: typeof t.icon === "string" ? t.icon : "", cards: kaarten };
 }
 
 /** Heeft deze tab iets om te tonen? */
-export const gevuld = (tab) => Boolean(tab && (tab.name?.trim() || tab.icon?.trim() || tab.card));
+export const gevuld = (tab) =>
+  Boolean(tab && (tab.name?.trim() || tab.icon?.trim() || tab.cards?.length));
 
 /** De tabs uit een config, genormaliseerd, afgekapt en zonder lege plekken. */
 export function tabsVan(config) {
