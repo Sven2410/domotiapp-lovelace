@@ -46,6 +46,9 @@ import "./cards/tabs-card.js";
 import "./cards/dishwasher-card.js";
 import "./scene/scene-card.js";
 import "./alarm/alarm-card.js";
+// Het bevestigingsscherm. Geen kaart, maar wel altijd nodig: `runAction` vraagt
+// het aan zodra een actie `confirmation` draagt. Zie de kop van vraag.js.
+import "./vraag.js";
 
 import { startRegistratie } from "./registratie.js";
 

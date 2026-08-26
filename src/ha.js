@@ -7,6 +7,21 @@
  * layout; this file stays about Home Assistant.
  */
 
+/**
+ * De bevestigingsvraag, aangemeld door `vraag.js`.
+ *
+ * Waarom via een haakje en niet met een gewone import: `vraag.js` is een
+ * custom element en dus een `class ... extends HTMLElement`. Dat draait niet in
+ * Node, en `ha.js` wordt wél in gewone Node-tests geladen. Eén import zou de
+ * halve testsuite omgooien op een browserding dat er niets mee te maken heeft.
+ *
+ * `index.js` importeert `vraag.js`, dus in de bundel staat hij er altijd.
+ */
+let vragen = null;
+export const meldVraagAan = (fn) => {
+  vragen = fn;
+};
+
 /* ------------------------------------------------------------------ state */
 
 export const domainOf = (entityId) => String(entityId ?? "").split(".")[0];
@@ -223,6 +238,29 @@ function toggleCall(entityId) {
 export function runAction(node, hass, config, action) {
   if (!action || action.action === "none") return;
 
+  // `confirmation` is de eigen sleutel van Home Assistant op een actieconfig, en
+  // hij hoort hier thuis en niet bij de knop: dan werkt hij overal waar een
+  // actie draait. De vraag zelf staat in `vraag.js` -- en waarom dat NIET de
+  // dialoog van Home Assistant is, staat in de kop van dat bestand.
+  if (action.confirmation) {
+    const vraag = action.confirmation === true ? {} : action.confirmation;
+    if (!vragen) {
+      // Kan alleen buiten de bundel gebeuren. Niet uitvoeren: een herstart die
+      // ongevraagd doorgaat is erger dan een knop die een keer niets doet.
+      console.warn("DomotiApp: geen bevestigingsscherm geladen; de actie is niet uitgevoerd.");
+      return;
+    }
+    vragen(vraag).then((ja) => {
+      if (ja) voerUit(node, hass, config, action);
+    });
+    return;
+  }
+
+  voerUit(node, hass, config, action);
+}
+
+/** Wat `runAction` doet zodra er niets meer te vragen valt. */
+function voerUit(node, hass, config, action) {
   switch (action.action) {
     case "more-info":
       moreInfo(node, action.entity || config.entity);

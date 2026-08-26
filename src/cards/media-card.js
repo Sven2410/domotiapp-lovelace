@@ -81,8 +81,10 @@ import {
   volumeVoor,
   watSpeeltEr,
 } from "./media-logica.js";
+import { actieveSpeler, schrijfSpeler, spelersVan } from "./media-logica.js";
 import { toonZoekscherm } from "../media/zoekscherm.js";
 import { toonBronkiezer } from "../media/bronkiezer.js";
+import { toonSpelerKiezer } from "../media/spelerkiezer.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Het icoon en het voorleeslabel per knop. */
@@ -110,6 +112,27 @@ class MediaCard extends DacCard {
       display: flex; flex-direction: column; justify-content: center; gap: 7px;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
+
+    /* ---- de speakerbalk ----
+       Alleen als "algemene mediaspeler" aanstaat. Hij staat BOVEN de speler en
+       niet ernaast: waar de muziek heen gaat is de eerste vraag, en pas daarna
+       wat er speelt. Dat is ook de volgorde waarin een Sonos-kaart het zet. */
+    .spelers {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 7px 10px; cursor: pointer; font: inherit;
+      border-radius: var(--dac-radius-pill);
+      border: 1px solid var(--dac-border); background: var(--dac-surface);
+      color: var(--dac-ink-2); text-align: left;
+    }
+    @media (hover: hover) { .spelers:hover { background: var(--dac-surface-hi); } }
+    .spelers .icon { width: 16px; height: 16px; flex: 0 0 auto; }
+    .spelers .waar {
+      flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--dac-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .spelers .pijl { flex: 0 0 auto; display: flex; color: var(--dac-ink-3); }
+    .spelers .pijl .icon { width: 15px; height: 15px; }
+    .spelers[hidden] { display: none; }
 
     .top { display: flex; align-items: center; gap: 11px; min-height: 40px; }
 
@@ -254,9 +277,79 @@ class MediaCard extends DacCard {
     .vol.unavailable .slider, .vol.unavailable .k { pointer-events: none; }
   `;
 
+  /**
+   * De gekozen speaker wordt de `entity` van deze kaart.
+   *
+   * DAT IS DE HELE TRUC, en hij is met opzet zo klein. De kaart bedient overal
+   * `this.config.entity` -- knoppen, volume, bron, Music Assistant, groeperen.
+   * Zetten we de keuze dáár neer, dan werkt alles ongewijzigd mee en hoeft er
+   * nergens anders iets van te weten. "De inhoud moet hetzelfde blijven", en
+   * dat is precies wat dit waarmaakt.
+   *
+   * `ruw_` is wat er in de YAML staat; die blijft ongemoeid, zodat een volgende
+   * keuze weer vanaf het origineel rekent.
+   */
+  setConfig(config) {
+    this.ruw_ = config;
+    super.setConfig(this.metSpeler_(config));
+  }
+
+  /** Dezelfde config, maar met de gekozen speaker erin. */
+  metSpeler_(config) {
+    if (!config?.speaker_select) return config;
+    const lijst = spelersVan(config, this.hass);
+    const id = actieveSpeler(config, lijst, this.opslag_());
+    return id && id !== config.entity ? { ...config, entity: id } : config;
+  }
+
+  /**
+   * Komt `hass` pas ná `setConfig`, dan was er nog geen lijst om uit te kiezen.
+   *
+   * Home Assistant zet die twee in willekeurige volgorde; zonder deze inhaalslag
+   * blijft een kaart zonder vaste speler op "Kies een mediaspeler" staan terwijl
+   * er tien speakers in huis zijn.
+   */
+  set hass(hass) {
+    const eerste = !this.hass_;
+    super.hass = hass;
+    if (!eerste || !this.ruw_?.speaker_select) return;
+    const nu = this.metSpeler_(this.ruw_);
+    if (nu.entity && nu.entity !== this.config?.entity) super.setConfig(nu);
+  }
+
+  get hass() {
+    return super.hass;
+  }
+
+  /** `localStorage`, of niets als de browser hem dichthoudt. */
+  opslag_() {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  /** De speakers waaruit je op deze kaart mag kiezen. */
+  spelers_() {
+    return spelersVan(this.ruw_ ?? this.config, this.hass);
+  }
+
+  /** Een andere speaker: onthouden, en de kaart erop omzetten. */
+  kiesSpeler_(id) {
+    if (!id || id === this.config.entity) return;
+    schrijfSpeler(this.opslag_(), this.spelers_(), id);
+    super.setConfig({ ...this.ruw_, entity: id });
+  }
+
   validate(config) {
     if (!config.entity) {
-      return { ...config, [INCOMPLETE]: "Kies een mediaspeler." };
+      return {
+        ...config,
+        [INCOMPLETE]: config.speaker_select
+          ? "Zet er een mediaspeler in, of wacht tot Home Assistant er een meldt."
+          : "Kies een mediaspeler.",
+      };
     }
     return {
       layout: "row",
@@ -288,6 +381,15 @@ class MediaCard extends DacCard {
     this.setAttribute("layout", this.groot_() ? "groot" : "row");
     return `
       <div class="card surface" style="--tone:${this.tone_()}">
+        ${
+          this.config.speaker_select
+            ? `<button type="button" class="spelers" data-k="speler">
+                 ${resolve("speakers")}
+                 <span class="waar"></span>
+                 <span class="pijl">${resolve("chevronDown")}</span>
+               </button>`
+            : ""
+        }
         ${this.groot_() ? `<div class="hoesgroot" role="button" tabindex="0"></div>` : ""}
         <div class="top" data-on="false">
           <span class="chip" role="button" tabindex="0"></span>
@@ -346,6 +448,11 @@ class MediaCard extends DacCard {
       e.stopPropagation();
       this.doe_(knop.dataset.k);
     };
+    const spelerknop = this.$(".spelers");
+    if (spelerknop) {
+      this.on(spelerknop, "click", klik);
+      this.on(spelerknop, "pointerdown", (e) => e.stopPropagation());
+    }
     this.on(this.$(".ctl"), "click", klik);
     this.on(this.$(".vol"), "click", klik);
     this.on(this.$(".extra"), "click", klik);
@@ -410,6 +517,10 @@ class MediaCard extends DacCard {
           { repeat: volgendeHerhaling(herhaalStand(st)) },
           { entity_id: id }
         );
+      case "speler": {
+        const lijst = this.spelers_();
+        return toonSpelerKiezer(this.hass, lijst, id, (keuze) => this.kiesSpeler_(keuze));
+      }
       case "search":
         // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
         return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name), {
@@ -454,6 +565,15 @@ class MediaCard extends DacCard {
 
     const naam = nameOf(this.hass, c.entity, c.name);
     const speelt = watSpeeltEr(st, (s) => localizeState(this.hass, s));
+
+    // De speakerbalk toont de naam van de SPELER zelf, ook als de kaart een
+    // eigen naam draagt: waar het heen gaat is een apparaat, geen bijschrift.
+    const balk = this.$(".spelers");
+    if (balk) {
+      const waar = nameOf(this.hass, c.entity);
+      this.text(".spelers .waar", waar);
+      balk.setAttribute("aria-label", `Speaker kiezen. Nu: ${waar}`);
+    }
     this.text(".nm", naam);
     this.text(".st", speelt);
     chip.setAttribute("aria-label", `${naam} afspelen of pauzeren`);
@@ -702,6 +822,11 @@ class MediaEditor extends DacEditor {
     return [
       { name: "entity", selector: sel.entity("media_player") },
       { name: "name", selector: sel.text() },
+      { name: "speaker_select", selector: sel.bool() },
+      {
+        name: "players",
+        selector: { entity: { domain: "media_player", multiple: true } },
+      },
       {
         name: "layout",
         selector: sel.select([
@@ -734,6 +859,8 @@ class MediaEditor extends DacEditor {
       {
         entity: "Mediaspeler",
         name: "Naam (overschrijft die van de speler)",
+        speaker_select: "Algemene mediaspeler",
+        players: "Welke speakers je mag kiezen",
         layout: "Vorm",
         volume_entity: "Geluid van (optioneel)",
         show_artwork: "Albumhoes tonen",
@@ -754,6 +881,10 @@ class MediaEditor extends DacEditor {
   helper(s) {
     if (s.name === "entity")
       return "Welke knoppen er verschijnen leest de kaart uit de speler zelf: wat hij niet kan, komt er niet op.";
+    if (s.name === "speaker_select")
+      return "De kaart krijgt er een balk bij waarmee je kiest waar de muziek heen gaat. De speler hierboven is de standaard; de keuze wordt per apparaat onthouden, dus je telefoon en de tablet in de gang kunnen op iets anders staan.";
+    if (s.name === "players")
+      return "Laat je dit leeg, dan staan alle mediaspelers in huis in de lijst. Vul je er een paar in, dan alleen die -- plus de speler hierboven.";
     if (s.name === "layout")
       return "Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.";
     if (s.name === "volume_entity")

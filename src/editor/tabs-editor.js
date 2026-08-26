@@ -54,7 +54,7 @@ const CSS = `
     flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center;
     border-radius: 9px; background: rgba(127,127,127,.14); color: var(--primary-color);
   }
-  .dac-tabs .voor svg, .dac-tabs .voor ha-icon {
+  .dac-tabs .voor svg, .dac-tabs .voor ha-icon, .dac-tabs .voor img {
     width: 17px; height: 17px; --mdc-icon-size: 17px;
   }
 
@@ -174,7 +174,7 @@ const CSS = `
   .dac-tabs .sub[open] > summary { border-bottom: 1px solid var(--divider-color); }
   .dac-tabs .sub > summary:hover { background: rgba(127,127,127,.06); }
   .dac-tabs .sub .voor { width: 24px; height: 24px; border-radius: 7px; }
-  .dac-tabs .sub .voor svg, .dac-tabs .sub .voor ha-icon {
+  .dac-tabs .sub .voor svg, .dac-tabs .sub .voor ha-icon, .dac-tabs .sub .voor img {
     width: 14px; height: 14px; --mdc-icon-size: 14px;
   }
   .dac-tabs .sub .titel b { font-size: 12.5px; }

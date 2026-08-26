@@ -28,6 +28,7 @@ import {
   BALK_STANDAARD,
   ITEMS_MAX,
   SUB_MAX,
+  VOORAF,
   actieVoor,
   asItem,
   gevuld,
@@ -36,6 +37,8 @@ import {
   klemBalk,
   subVan,
   verdeel,
+  voegSubToe,
+  voorafOp,
 } from "../../src/cards/navbar-logica.js";
 
 /** n knoppen, genummerd, zodat de volgorde in een assert te lezen is. */
@@ -112,6 +115,9 @@ describe("een knop uit de config", () => {
       name: "",
       icon: "",
       path: "/lovelace/keuken",
+      // Sinds 27 augustus 2026 mag een knop een hele actieconfig dragen, voor
+      // knoppen die iets DOEN in plaats van ergens heen te gaan.
+      action: null,
       // Sinds 26 augustus 2026 draagt elke knop een (meestal lege) lijst
       // subknoppen mee.
       items: [],
@@ -130,9 +136,10 @@ describe("een knop uit de config", () => {
       name: "",
       icon: "",
       path: "",
+      action: null,
       items: [],
     });
-    assert.deepEqual(asItem(null), { name: "", icon: "", path: "", items: [] });
+    assert.deepEqual(asItem(null), { name: "", icon: "", path: "", action: null, items: [] });
   });
 
   it("noemt een knop gevuld zodra er iets in staat", () => {
@@ -249,5 +256,85 @@ describe("subknoppen", () => {
   it("draagt ze mee door itemsVan heen", () => {
     const uit = itemsVan({ items: [{ name: "Licht", items: [{ name: "Keuken", path: "/k" }] }] });
     assert.equal(subVan(uit[0]).length, 1);
+  });
+});
+
+/**
+ * De kant-en-klare subknoppen.
+ *
+ * Ze staan hier en niet in de editor omdat het data is: een naam, een icoon en
+ * wat de knop doet. Een typefout in `homeassistant.restart` merk je anders pas
+ * als je erop drukt -- en dan is het te laat om er nog achter te komen dat er
+ * niets gebeurt.
+ */
+describe("kant-en-klare subknoppen", () => {
+  it("levert DomotiTech met het logo en het adres erop", () => {
+    const knop = voorafOp("domotitech").maak();
+    assert.equal(knop.icon, "domotitech");
+    assert.equal(knop.path, "https://domotitech.nl");
+    // En hij komt er als url uit, niet als navigatie binnen het dashboard.
+    assert.deepEqual(actieVoor(knop), { action: "url", url_path: "https://domotitech.nl" });
+  });
+
+  it("laat Herstart de dienst aanroepen, met een vraag ervoor", () => {
+    const knop = voorafOp("herstart").maak();
+    const actie = actieVoor(knop);
+    assert.equal(actie.action, "perform-action");
+    assert.equal(actie.perform_action, "homeassistant.restart");
+    // Zonder bevestiging is dit een knop waar je per ongeluk op drukt.
+    assert.ok(actie.confirmation?.text?.length > 0);
+  });
+
+  it("geeft elke keer een VERS object", () => {
+    // Home Assistant bevriest wat het krijgt. Twee knoppen die hetzelfde object
+    // delen zijn twee knoppen die je nooit meer los kunt aanpassen.
+    const a = voorafOp("herstart").maak();
+    const b = voorafOp("herstart").maak();
+    assert.notEqual(a, b);
+    assert.notEqual(a.action, b.action);
+  });
+
+  it("kent geen id die niet bestaat", () => {
+    assert.equal(voorafOp("bestaat-niet"), null);
+    assert.ok(VOORAF.length >= 2);
+  });
+
+  it("zet een kant-en-klare knop bovenaan en een lege onderaan", () => {
+    const lijst = [{ name: "Auto" }, { name: "Sport" }];
+    const boven = voegSubToe(lijst, { name: "DomotiTech" }, true);
+    assert.equal(boven.plek, 0);
+    assert.equal(boven.lijst[0].name, "DomotiTech");
+    const onder = voegSubToe(lijst, { name: "Nieuw" }, false);
+    assert.equal(onder.plek, 2);
+    assert.equal(onder.lijst[2].name, "Nieuw");
+    // En de oorspronkelijke lijst blijft met rust gelaten.
+    assert.equal(lijst.length, 2);
+  });
+
+  it("duwt er niets af als de lijst vol zit", () => {
+    const vol = Array.from({ length: SUB_MAX }, (_, i) => ({ name: `k${i}` }));
+    const uit = voegSubToe(vol, { name: "erbij" }, true);
+    assert.equal(uit.plek, -1);
+    assert.equal(uit.lijst.length, SUB_MAX);
+    assert.equal(uit.lijst[0].name, "k0");
+  });
+
+  it("noemt een knop met alleen een actie gevuld", () => {
+    // Anders verdwijnt Herstart uit de balk: hij heeft geen pad, en dat was de
+    // enige toets die er stond.
+    assert.equal(gevuld({ name: "", icon: "", path: "", action: { action: "toggle" } }), true);
+  });
+
+  it("laat een actie winnen van een pad", () => {
+    const knop = { path: "/lovelace/a", action: { action: "toggle", entity: "light.x" } };
+    assert.deepEqual(actieVoor(knop), { action: "toggle", entity: "light.x" });
+  });
+
+  it("blijft een kaal pad accepteren", () => {
+    // REGRESSIEWACHT: `actieVoor` werd het eerst met een string aangeroepen.
+    assert.deepEqual(actieVoor("/lovelace/keuken"), {
+      action: "navigate",
+      navigation_path: "/lovelace/keuken",
+    });
   });
 });

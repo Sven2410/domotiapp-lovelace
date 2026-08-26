@@ -27,8 +27,8 @@
  * lezen; een icoon mag in twee groepen staan als het in allebei hoort.
  */
 export const GROEPEN = [
-  ["Woning", ["house", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
-  ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "kitchen", "shower", "toilet", "desk", "garage"]],
+  ["Woning", ["house", "homeStatus", "homeThermo", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
+  ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "kitchen", "shower", "toilet", "desk", "garage", "storage"]],
   ["Buiten", ["tree", "parasol", "fence", "sun", "awning", "car", "beach"]],
   ["Rolluiken", ["shutter", "shutterOpen", "awning", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
@@ -36,11 +36,13 @@ export const GROEPEN = [
   ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "washer", "dishwasher", "printer", "fan", "airco", "radio", "boiler"]],
   ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
+  ["Verwarming en klimaat", ["floorHeating", "heatPump", "boiler", "thermo", "homeThermo", "celsius", "gas", "pressure", "refill"]],
+  ["Auto en tanken", ["car", "petrol", "diesel", "gas", "fuelStation", "raceCar", "plug"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
-  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "close", "clock", "gaugeArrow", "bell", "pressure", "refill", "sleep"]],
+  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "close", "clock", "gaugeArrow", "bell", "pressure", "refill", "sleep", "siren", "sirenOff", "homeStatus"]],
   ["Cijfers", ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
-  ["Sport en vrije tijd", ["football", "sports", "raceCar", "beach"]],
-  ["Overig", ["star", "moon", "leaf", "cog", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil"]],
+  ["Sport en vrije tijd", ["football", "sports", "dumbbell", "raceCar", "beach"]],
+  ["Overig", ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil", "domotitech"]],
 ];
 
 /**
@@ -62,6 +64,22 @@ export const TERMEN = {
   grid: ["raster", "kamers", "overzicht", "tegels", "menu", "grid", "apps"],
 
   /* Kamers */
+  floorHeating: ["vloerverwarming", "vloer", "verwarming", "vloerverwarmingg", "leidingen", "cv", "warm", "underfloor", "floor heating"],
+  heatPump: ["warmtepomp", "pomp", "buitenunit", "heat pump", "verwarming", "koelen", "airco", "hybride"],
+  qr: ["qr", "qr-code", "qrcode", "code", "scan", "wifi code", "streepjescode", "gast"],
+  siren: ["sirene", "alarm", "alarmsirene", "geluid", "brandalarm", "siren", "aan"],
+  sirenOff: ["sirene uit", "alarm uit", "sirene uitzetten", "stil", "dempen", "siren off", "uitschakelen"],
+  petrol: ["benzine", "tanken", "brandstof", "pomp", "benzinepomp", "petrol", "euro 95", "brandstofpomp"],
+  diesel: ["diesel", "tanken", "brandstof", "pomp", "dieselpomp", "druppel"],
+  gas: ["gas", "aardgas", "vlam", "gasverbruik", "gasmeter", "brander", "gaskachel"],
+  fuelStation: ["tankstation", "tanken", "pompstation", "benzinestation", "luifel", "fuel station", "brandstof"],
+  homeThermo: ["klimaat", "klimaat in de woning", "woning thermometer", "binnentemperatuur", "temperatuur", "huis thermometer", "verwarming", "thermostaat"],
+  homeStatus: ["woning status", "status", "huis status", "alles in orde", "huisstatus", "woning", "controle", "check"],
+  lounge: ["lounge", "fauteuil", "stoel", "zithoek", "loungestoel", "zitkamer", "relax"],
+  dumbbell: ["sportschool", "halter", "gewicht", "fitness", "gym", "dumbbell", "krachttraining", "sporten"],
+  storage: ["opslag", "dozen", "berging", "zolder", "kelder", "opbergen", "voorraad", "storage", "kast"],
+  celsius: ["celsius", "graden", "temperatuur", "graad", "c", "thermometer", "warmte"],
+  domotitech: ["domotitech", "logo", "merk", "website", "domoti", "domotica"],
   beach: ["strand", "zee", "golven", "kust", "vakantie", "zon en zee", "beach", "zomer", "water"],
   sleep: ["slapen", "zzz", "slaapstand", "nachtmodus", "slaap", "sleep", "rust", "nacht", "welterusten", "dutje"],
   boiler: ["ketel", "cv", "cv-ketel", "boiler", "verwarming", "ketelstatus", "boiler status", "vlam", "warmte"],

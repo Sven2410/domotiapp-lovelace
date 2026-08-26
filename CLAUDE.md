@@ -204,10 +204,12 @@ Python-tests.
      `paint()` (of `updated()`), en is de waarnemer alleen het vangnet voor wat
      er ná het tekenen binnenkomt.
 
-9. **Een view heeft na een harde herlading seconden nodig om te bouwen.** Meet
-   je te vroeg, dan vind je nul kaarten en lijkt het of alles stuk is. Dat is
-   twee keer ten onrechte voor een regressie aangezien; wacht tot
-   `hui-card`-elementen kinderen hebben.
+9. **Een view heeft na een harde herlading TOT RUIM TIEN SECONDEN nodig om te
+   bouwen**, en in bewerkmodus eerder meer dan minder. Meet je te vroeg, dan
+   vind je nul kaarten en lijkt het of alles stuk is. Dat is inmiddels vier keer
+   ten onrechte voor een regressie aangezien -- op 27 augustus 2026 nog twee
+   keer, met acht seconden wachten. Wacht tot `hui-card`-elementen kinderen
+   hebben, en trek pas een conclusie als de console een fout toont.
 
 10. **`.chip` is een GEDEELDE klasse in `theme.js`** die een gevulde cirkel met
    een rand in de accentkleur tekent. Gebruik je die naam voor het omhulsel van
@@ -309,6 +311,11 @@ Python-tests.
    deze build geeft rechtstreeks naar `?edit=1` navigeren ook een lege view;
    de bewerkmodus zet je aan met het potlood rechtsboven.
 
+   **Bijstelling van 27 augustus 2026:** het is NIET onherstelbaar. Hetzelfde
+   profiel dat op 26 augustus geen enkele view meer bouwde -- ook niet zonder
+   onze kaarten -- deed het de volgende dag weer, zonder ingrijpen. Trek dus
+   geen conclusie over onbruikbaarheid; probeer het later opnieuw.
+
 22. **De slagschaduw op een kaart van één rasterrij is een vlek.** Een schaduw
    van 18px omlaag met 40px onscherpte valt weg onder een kaart van drie rijen,
    maar staat onder een kaart van 56px net zo hoog als de kaart zelf -- en drie
@@ -316,6 +323,42 @@ Python-tests.
    daarom sinds 0.14.0 alleen nog de haarlijn bovenlangs. Zwevende dingen (de
    navbalk, zijn menu, het mediazoekscherm) houden hun schaduw wél: daar is hij
    de enige aanwijzing dat er iets boven iets anders hangt.
+
+23. **`ha-form` schrijft zijn config bij ELKE toetsaanslag terug door
+   `setConfig`, en een editor die zijn eigen echo niet herkent gooit je eruit.**
+   De entiteiten-editor vergelijkt daarvoor `uitgekleed(naarRijen(config))` met
+   wat hij zelf wegschreef. Voeg je een eigenschap toe aan de UITVOER
+   (`uitgekleed`) maar niet aan het INLEZEN (`naarRijen`), dan verschilt die
+   vergelijking altijd, herbouwt de editor per aanslag, en verdwijnt het veld
+   onder je vingers. Dat kostte de kolomkoppen én het typen tegelijk. Het
+   rekenwerk staat daarom sinds 27 augustus 2026 los in
+   `src/editor/entities-rijen.js`, met een test die eist dat alles wat eruit
+   gaat er ook weer in komt.
+
+24. **Een kaart die kinderen cachet moet die cache legen in `setConfig`.**
+   `DacCard.setConfig` gooit de hele shadow-DOM weg. Wat er in een `Map` staat
+   hangt daarna nergens meer, maar de Map weet dat niet -- en een `if
+   (cache.has(i)) return` slaat dan het opnieuw opbouwen over. De tabbladenkaart
+   bleef zo LEEG na de eerste wijziging in de editor.
+
+25. **`element.isConnected` is `false` tijdens de eerste opbouw in een
+   kaarteditor.** Home Assistant maakt het voorbeeld en zet de config VOORDAT
+   het element in het document hangt. Een herkansing die daarop afhaakt (`if
+   (!el.isConnected) return`) stopt dus meteen en komt nooit terug. Zoek het
+   element elke ronde opnieuw op in plaats van een verwijzing vast te houden.
+   Idem voor de editor zelf: die komt later dan het voorbeeld -- wacht op de
+   `hui-dialog-edit-card`-voorouder en zoek de editor pas op bij de KLIK.
+
+26. **`dialog-box` van Home Assistant is er niet.** Op een vers geladen
+   dashboard is `customElements.get("dialog-box")` gewoon `undefined`; hij wordt
+   lui geladen. Een `show-dialog` met die tag doet dan niets, zonder fout. Voor
+   "Weet je het zeker?" gebruiken we daarom `src/vraag.js` -- een eigen scherm
+   dat er altijd is. Gemeten op 27 augustus 2026.
+
+27. **Importeer geen custom element vanuit `ha.js`.** Dat bestand wordt in
+   gewone Node-tests geladen, en een `class ... extends HTMLElement` op
+   modulescope gooit daar de halve testsuite om. Laat het element zich AANMELDEN
+   bij `ha.js` (`meldVraagAan`) en importeer het vanuit `index.js`.
 
 ---
 
@@ -340,23 +383,26 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.15.0** (26 augustus 2026) — de vijfde ronde van die dag:
-kolomkoppen en een beeldvorm op de entiteitenkaart, een naam per rolluik, tien
-iconen erbij, en de schaduwaudit over alle kaarten. Zie
-`docs/kolomkoppen-beeld-en-tien-iconen/RAPPORT.md`.
+**Laatste release: 0.16.0** (27 augustus 2026) — voorgedefinieerde subknoppen
+(DomotiTech en "Herstart Home Assistant", met een eigen bevestigingsscherm), een
+**algemene mediaspeler** met een speakerkiezer, de kleurkiezer teruggebracht tot
+Automatisch en Accent, zeventien iconen erbij, en de fout die maakte dat je uit
+het naamveld van de entiteiten-editor werd gegooid. Zie
+`docs/voorgedefinieerde-knoppen-en-de-algemene-speler/RAPPORT.md`.
 
-**Die ronde is NIET in een browser geverifieerd** — de testinstance was
-onbruikbaar geworden (valkuil 21) en niet meer te herstellen zonder de ingelogde
-sessie weg te gooien. Alles wat zonder browser te controleren is, is
-gecontroleerd; hoe het eruitziet niet. Dat staat groot in het rapport.
+Deze ronde is **wél** in een echte browser geverifieerd: de testinstance is
+vanzelf hersteld (zie de bijstelling bij valkuil 21).
 
-Die dag kende vijf rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
-(`docs/rookmelder-personen-en-meer-kaarten/`), **0.13.0**
+26 augustus kende vijf rondes: **0.11.0** (`docs/feedback-26-augustus/`),
+**0.12.0** (`docs/rookmelder-personen-en-meer-kaarten/`), **0.13.0**
 (`docs/kaarten-bewerken-als-in-ha/`), **0.14.0**
-(`docs/voorbeeld-bewerken-en-de-schaduw/`) en deze.
+(`docs/voorbeeld-bewerken-en-de-schaduw/`) en **0.15.0**
+(`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
+browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op het moment van schrijven:** 562 JS-tests en 136 Python-tests,
-alle groen; bundel 439.005 bytes; 122 getekende iconen.
+**Tellingen op het moment van schrijven:** 586 JS-tests en 526 Python-tests,
+alle groen; bundel 474.321 bytes; 137 getekende iconen (het DomotiTech-logo
+meegerekend, dat als data-URI is ingebakken).
 
 **Wat er open staat:**
 
