@@ -31,6 +31,13 @@ import {
   heeftKaartEditor,
   kaartsoorten,
 } from "./kaartkiezer.js";
+import {
+  heeftHaGereedschap,
+  kaartenLijst,
+  kiesKaartViaHa,
+  naarKlembord,
+  pasToe,
+} from "./kaartenlijst.js";
 
 const CSS = `
   .dac-tabs { display: flex; flex-direction: column; gap: 12px; }
@@ -122,6 +129,35 @@ const CSS = `
   .dac-tabs .kaartkop button.weg { color: var(--error-color, #d03b3b); }
 
   .dac-tabs .kaartvak { display: flex; flex-direction: column; gap: 10px; }
+
+  /* De kaarten zoals ze er echt uitzien, met de overlay van Home Assistant
+     eromheen. De ruimte tussen twee kaarten is dezelfde die een sectie
+     aanhoudt, zodat de voorbeeldweergave klopt met wat je straks ziet. */
+  .dac-tabs .dac-kaarten { display: flex; flex-direction: column; gap: 8px; }
+  .dac-tabs .dac-kaart { position: relative; }
+  /* Slepen mag niet als tekstselectie beginnen. */
+  .dac-tabs .dac-kaart { user-select: none; -webkit-user-select: none; }
+
+  .dac-tabs .bewerkvak {
+    border: 1px solid var(--primary-color); border-radius: 10px;
+    background: rgba(127,127,127,.05); overflow: hidden;
+  }
+  .dac-tabs .bewerkvak > .kop {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px 8px 12px;
+    border-bottom: 1px solid var(--divider-color);
+    font-size: 12.5px; color: var(--secondary-text-color);
+  }
+  .dac-tabs .bewerkvak > .kop b {
+    flex: 1 1 auto; min-width: 0; color: var(--primary-text-color); font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dac-tabs .bewerkvak > .kop button {
+    flex: 0 0 auto; padding: 5px 10px; cursor: pointer; font: inherit; font-size: 12px;
+    border: 1px solid var(--divider-color); border-radius: 999px;
+    background: transparent; color: var(--primary-color);
+  }
+  .dac-tabs .bewerkvak > .body { padding: 8px; }
 
   .dac-tabs .subkop {
     display: flex; align-items: center; gap: 8px;
@@ -270,6 +306,16 @@ class TabsEditor extends HTMLElement {
   async build_() {
     if (!this.hass_) return;
     await customElements.whenDefined("ha-form");
+    // De kaarthelpers van Home Assistant; hiermee worden de kaarten in de
+    // lijst getekend. Eén keer ophalen en bewaren, want `build_` draait bij
+    // elke wijziging.
+    if (!this.helpers_) {
+      try {
+        this.helpers_ = await window.loadCardHelpers?.();
+      } catch {
+        this.helpers_ = null;
+      }
+    }
     this.gebouwd_ = true;
     this.replaceChildren();
     this.koppen_ = [];
@@ -484,12 +530,23 @@ class TabsEditor extends HTMLElement {
       return blok;
     }
 
+    const metHa = heeftHaGereedschap();
+
     if (tab.cards.length) {
       const kop = document.createElement("div");
       kop.className = "subkop";
       kop.textContent = tab.cards.length === 1 ? "Kaart" : `${tab.cards.length} kaarten`;
       blok.appendChild(kop);
-      tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
+
+      if (metHa) blok.appendChild(this.haLijst_(tab, i));
+      else tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
+    }
+
+    // De kaart die op dit moment bewerkt wordt, met de editor van Home
+    // Assistant eronder. Eén tegelijk: twee open editors onder elkaar is geen
+    // scherm meer, en het potlood wijst er maar één aan.
+    if (metHa && this.bewerkt_?.tab === i && tab.cards[this.bewerkt_.index]) {
+      blok.appendChild(this.bewerkVak_(tab, i, this.bewerkt_.index));
     }
 
     if (this.kiest_ === `t${i}`) {
@@ -502,12 +559,147 @@ class TabsEditor extends HTMLElement {
     knop.className = "toevoegen";
     knop.textContent = "＋  Kaart toevoegen";
     knop.addEventListener("click", () => {
-      this.kiest_ = `t${i}`;
-      this.zoek_ = "";
-      this.build_();
+      if (metHa) this.voegToeViaHa_(tab, i);
+      else {
+        this.kiest_ = `t${i}`;
+        this.zoek_ = "";
+        this.build_();
+      }
     });
     blok.appendChild(knop);
     return blok;
+  }
+
+  /* -------------------------------- de lijst met het gereedschap van HA */
+
+  /**
+   * De kaarten zoals ze eruitzien, met de overlay van Home Assistant eromheen:
+   * potlood, driepuntsmenu en slepen. Zie `kaartenlijst.js`.
+   */
+  haLijst_(tab, i) {
+    return kaartenLijst({
+      hass: this.hass_,
+      kaarten: tab.cards,
+      maakKaart: (config) => this.maakKaart_(config),
+      opActie: (soort, gegevens) => this.kaartActie_(tab, i, soort, gegevens),
+    });
+  }
+
+  /**
+   * Een echte kaart uit een config, met dezelfde weg als de kaart zelf
+   * gebruikt: `loadCardHelpers`. Synchroon, want de lijst moet in één keer
+   * staan -- vandaar dat de helpers bij het opbouwen van de editor al
+   * opgehaald zijn (`build_`).
+   */
+  maakKaart_(config) {
+    try {
+      const el = this.helpers_?.createCardElement(config);
+      if (el) el.hass = this.hass_;
+      return el ?? null;
+    } catch (fout) {
+      // Een kaart die op zijn eigen config gooit hoort de editor niet te
+      // slopen: dan staat er een blokje met de fout, en kun je hem weghalen.
+      const stuk = document.createElement("div");
+      stuk.className = "inhoud";
+      stuk.textContent = `Deze kaart kon niet geladen worden: ${fout?.message ?? fout}`;
+      return stuk;
+    }
+  }
+
+  /**
+   * Wat het menu, het potlood of een sleepbeweging betekent.
+   *
+   * Twee dingen die geen lijstwijziging zijn staan hier; de rest is
+   * indexrekenwerk en dat staat in `pasToe` -- zonder DOM, met tests eronder.
+   */
+  kaartActie_(tab, i, soort, gegevens) {
+    if (soort === "bewerk") {
+      this.bewerkt_ = { tab: i, index: gegevens.index };
+      this.build_();
+      return;
+    }
+    if (soort === "kopieer") {
+      // Knippen is bij Home Assistant kopiëren én verwijderen; die twee
+      // gebeurtenissen komen allebei langs, dus hier alleen het kopiëren.
+      naarKlembord(tab.cards[gegevens.index]);
+      return;
+    }
+
+    const nieuw = pasToe(tab.cards, soort, gegevens);
+    if (!nieuw) return;
+    tab.cards = nieuw;
+    // De kaart die openstond kan van plek zijn veranderd of weg zijn; het
+    // bewerkvak sluit daarom, in plaats van de verkeerde kaart te tonen.
+    this.bewerkt_ = null;
+    this.emit_();
+    this.build_();
+  }
+
+  /** Het blok waarin één kaart bewerkt wordt. */
+  bewerkVak_(tab, i, j) {
+    const vak = document.createElement("div");
+    vak.className = "bewerkvak";
+
+    const kop = document.createElement("div");
+    kop.className = "kop";
+    const naam = document.createElement("b");
+    naam.textContent = kaartNaam(tab.cards[j]);
+    const dicht = document.createElement("button");
+    dicht.type = "button";
+    dicht.textContent = "Klaar";
+    dicht.addEventListener("click", () => {
+      this.bewerkt_ = null;
+      this.build_();
+    });
+    kop.append(naam, dicht);
+
+    const body = document.createElement("div");
+    body.className = "body";
+
+    const editor = document.createElement("hui-card-element-editor");
+    editor.hass = this.hass_;
+    if (this.lovelace_) editor.lovelace = this.lovelace_;
+    editor.value = tab.cards[j];
+    // DE VAL: `hui-card-element-editor` vuurt `config-changed`, en dat is
+    // precies de gebeurtenis waarmee wij onze eigen config aan de dialoog
+    // doorgeven. Laat je hem doorborrelen, dan denkt Home Assistant dat de
+    // tabbladenkaart zelf van type veranderd is en overschrijft hij alles.
+    editor.addEventListener("config-changed", (e) => {
+      e.stopPropagation();
+      const verse = e.detail?.config;
+      if (!verse) return;
+      tab.cards[j] = verse;
+      this.emit_();
+      naam.textContent = kaartNaam(verse);
+      // De kaart in de lijst erboven moet mee veranderen, maar niet bij elke
+      // toetsaanslag opnieuw opgebouwd worden -- dan verlies je je cursor.
+      clearTimeout(this.hertekenen_);
+      this.hertekenen_ = setTimeout(() => this.build_(), 700);
+    });
+    editor.addEventListener("GUImode-changed", (e) => e.stopPropagation());
+
+    body.appendChild(editor);
+    vak.append(kop, body);
+    return vak;
+  }
+
+  /** De echte kaartkiezer van Home Assistant, met wat eruit komt. */
+  async voegToeViaHa_(tab, i) {
+    const uit = await kiesKaartViaHa({ hass: this.hass_, kaarten: tab.cards });
+    if (!uit) return;
+
+    if (uit.kaarten) {
+      // De weg via een entiteit: Home Assistant heeft de lijst zelf bijgewerkt.
+      tab.cards = uit.kaarten;
+      this.bewerkt_ = null;
+    } else {
+      tab.cards.push(uit.kaart);
+      // Meteen open: je hebt hem net gekozen, dus je wilt hem invullen.
+      this.bewerkt_ = { tab: i, index: tab.cards.length - 1 };
+    }
+    this.open_.add(`t${i}`);
+    this.emit_();
+    this.build_();
   }
 
   /**
