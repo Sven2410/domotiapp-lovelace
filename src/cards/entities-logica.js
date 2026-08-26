@@ -28,7 +28,7 @@
  * precies op 56 uit: één rasterrij van Home Assistant, dezelfde hoogte als een
  * Mushroom-kaart ernaast. Aan dat getal mag niet gerekend worden.
  */
-export const HOOGTE = { row: 44, tile: 96, compact: 44 };
+export const HOOGTE = { row: 44, tile: 96, compact: 44, beeld: 120 };
 
 /** De ruimte tussen twee plekken en tussen twee rijen. */
 export const GAP = 6;
@@ -46,7 +46,50 @@ export const KADER = 12;
  */
 export const TITEL_H = 22;
 
-export const VORMEN = ["row", "tile", "compact"];
+export const VORMEN = ["row", "tile", "compact", "beeld"];
+
+/** Waar de inhoud van een plek tegenaan staat. */
+export const UITLIJNINGEN = ["links", "midden"];
+
+/**
+ * Hoe groot een afbeelding op een plek mag worden.
+ *
+ * De ondergrens is de maat van een gewone chip; de bovengrens is wat er op een
+ * halve kolom van een telefoon nog past. Daartussen is het aan de gebruiker --
+ * een QR-code moet je kunnen scannen, en dat lukt niet op 36 pixels.
+ */
+export const BEELD_MIN = 48;
+export const BEELD_MAX = 320;
+export const BEELD_STANDAARD = 120;
+
+export const clampBeeld = (n) => {
+  // Niets ingevuld is niet hetzelfde als nul ingevuld: `Number(null)` en
+  // `Number("")` zijn allebei 0, en die zouden hier op de ondergrens klemmen.
+  // Een rij zonder `image_size` kreeg dan 48 pixels in plaats van de standaard.
+  // Dezelfde val als bij `klemBalk` in navbar-logica.js.
+  if (n === null || n === undefined || n === "") return BEELD_STANDAARD;
+  const px = Math.round(Number(n));
+  if (!Number.isFinite(px)) return BEELD_STANDAARD;
+  return Math.min(BEELD_MAX, Math.max(BEELD_MIN, px));
+};
+
+export const clampUitlijning = (v) => (UITLIJNINGEN.includes(v) ? v : "links");
+
+/**
+ * De namen boven de kolommen van een rij, of een lege lijst.
+ *
+ * Zoveel namen als er kolommen zijn: staat er één naam bij twee kolommen, dan
+ * blijft de tweede leeg in plaats van dat de rij verschuift. Alleen spaties
+ * telt als leeg -- anders levert een aangetikte spatiebalk een onzichtbare kop
+ * op die de kaart wel hoger maakt.
+ */
+export function kolomNamen(ruw, kolommen) {
+  const lijst = Array.isArray(ruw) ? ruw : [];
+  const namen = Array.from({ length: kolommen }, (_, i) =>
+    typeof lijst[i] === "string" ? lijst[i].trim() : "",
+  );
+  return namen.some(Boolean) ? namen : [];
+}
 export const VLAKKEN = ["card", "items", "none", "open"];
 
 /**
@@ -89,15 +132,33 @@ export const gevuld = (item) =>
  */
 export function toRows(config) {
   if (Array.isArray(config?.rows) && config.rows.length) {
-    return config.rows.map((r) => ({
-      columns: clampCols(r.columns),
-      layout: clampVorm(r.layout),
-      items: (r.items ?? r.entities ?? []).map(asItem),
-    }));
+    return config.rows.map((r) => {
+      const columns = clampCols(r.columns);
+      return {
+        columns,
+        layout: clampVorm(r.layout),
+        align: clampUitlijning(r.align),
+        image_size: clampBeeld(r.image_size),
+        column_names: kolomNamen(r.column_names, columns),
+        items: (r.items ?? r.entities ?? []).map(asItem),
+      };
+    });
   }
   const flat = (config?.items ?? config?.entities ?? []).map(asItem);
   if (!flat.length) return [];
-  return [{ columns: clampCols(config.columns), layout: clampVorm(config.layout), items: flat }];
+  const columns = clampCols(config.columns);
+  return [
+    {
+      columns,
+      layout: clampVorm(config.layout),
+      align: clampUitlijning(config.align),
+      image_size: clampBeeld(config.image_size),
+      // Bij de platte vorm staan de kolomnamen op de kaart zelf: er is maar één
+      // rij, dus er valt niets te verwarren.
+      column_names: kolomNamen(config.column_names, columns),
+      items: flat,
+    },
+  ];
 }
 
 /**
@@ -122,6 +183,22 @@ export function vlakVan(config) {
  */
 export const regelsIn = (row) => Math.max(1, Math.ceil((row.items?.length || 1) / row.columns));
 
+/** De hoogte van de kolomkoppen boven een rij. */
+export const KOP_H = 15;
+
+/**
+ * Hoe hoog één regel van deze rij is.
+ *
+ * Voor de beeldvorm hangt dat af van de ingestelde afmeting: de afbeelding,
+ * plus de binnenmarge en de naam eronder. De andere vormen hebben een vaste
+ * maat, en die staat in HOOGTE.
+ */
+export function rijHoogte(row) {
+  const vorm = clampVorm(row?.layout);
+  if (vorm !== "beeld") return HOOGTE[vorm];
+  return clampBeeld(row?.image_size) + 34;
+}
+
 /**
  * Hoe hoog deze kaart wil zijn, in pixels.
  *
@@ -134,7 +211,9 @@ export function kaartHoogte(config) {
   let px = (vlakVan(config) === "card" ? KADER : 0) + kop;
   for (const r of rijen) {
     const n = regelsIn(r);
-    px += n * HOOGTE[clampVorm(r.layout)] + (n - 1) * GAP;
+    px += n * rijHoogte(r) + (n - 1) * GAP;
+    // Kolomkoppen staan boven de rij en kosten dus hun eigen regel.
+    if (r.column_names?.length) px += KOP_H + GAP;
   }
   return px + (rijen.length - 1) * GAP;
 }

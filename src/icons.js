@@ -444,6 +444,75 @@ export const icons = {
   tien: draw(`<circle cx="12" cy="12" r="8.6"/>
     <path d="M8.6 10.3 10 9.2v5.7"/>
     <ellipse cx="13.9" cy="12.1" rx="1.7" ry="2.8"/>`),
+
+  /* ---- tien iconen die er op 26 augustus 2026 bij gevraagd zijn ----
+     Allemaal op dezelfde 1.6 lijndikte; zie de kop van dit bestand. Wie er een
+     bij tekent, tekent hem op die dikte -- een 2px icoon naast een 1.6px icoon
+     is de snelste manier om een set te laten ophouden een set te zijn. ---- */
+
+  /* Het strand: de zon boven twee golven. Geen palmboom -- die maakt er een
+     vakantiebestemming van, en dit is een plek in huis of een modus. */
+  beach: draw(`<circle cx="17" cy="6.6" r="2.6"/>
+    <path d="M17 1.8v1.2M17 10.2v1.2M21.8 6.6h-1.2M13.4 6.6h-1.2M20.4 3.2l-.9.9M14.5 9.1l-.9.9"/>
+    <path d="M2.4 15.4c1.6-1.5 3.2-1.5 4.8 0s3.2 1.5 4.8 0 3.2-1.5 4.8 0 3.2 1.5 4.8 0"/>
+    <path d="M2.4 19.4c1.6-1.5 3.2-1.5 4.8 0s3.2 1.5 4.8 0 3.2-1.5 4.8 0 3.2 1.5 4.8 0"/>`),
+
+  /* Slapen: drie Z's die kleiner worden, zoals in een stripverhaal. Het bed
+     staat er al in de set; dit is de TOESTAND, niet de kamer. */
+  sleep: draw(`<path d="M3.4 12.4h6.2l-6.2 7.2h6.2"/>
+    <path d="M11.8 7.6h4.6l-4.6 5.4h4.6"/>
+    <path d="M18.2 3.6h3.4l-3.4 4h3.4"/>`),
+
+  /* De ketel: een kastje aan de muur met een vlam erin en twee leidingen
+     eronder. Dat laatste is wat hem van een boiler onderscheidt. */
+  boiler: draw(`<rect x="5" y="3.4" width="14" height="12.8" rx="1.8"/>
+    <path d="M12 6.8c1.9 1.8 2.8 3.2 2.8 4.4a2.8 2.8 0 0 1-5.6 0c0-1.2.9-2.6 2.8-4.4z"/>
+    <path d="M8.4 16.2v4M15.6 16.2v4"/>
+    <path d="M6.8 20.2h3.2M14 20.2h3.2"/>`),
+
+  /* Druk in bar: een manometer met wijzer en aansluiting. */
+  pressure: draw(`<circle cx="12" cy="10.4" r="6.4"/>
+    <path d="m12 10.4 3.2-3.2"/>
+    <circle cx="12" cy="10.4" r=".8"/>
+    <path d="M6.9 6.5 8 7.7M17.1 6.5 16 7.7M12 4v1.6"/>
+    <path d="M9.6 16.2 8.8 20.4h6.4l-.8-4.2"/>`),
+
+  /* Een melding: de klassieke bel. */
+  bell: draw(`<path d="M17.8 16.6H6.2l1.5-2.3V10a4.3 4.3 0 0 1 8.6 0v4.3z"/>
+    <path d="M10.2 19.2a2 2 0 0 0 3.6 0"/>
+    <path d="M12 5.7V4.2"/>`),
+
+  /* Bijvullen: een druppel die in een vat valt, met de vulstand erin. */
+  refill: draw(`<path d="M12 2.8c1.7 2 2.6 3.5 2.6 4.6a2.6 2.6 0 0 1-5.2 0c0-1.1.9-2.6 2.6-4.6z"/>
+    <path d="M5.8 11.8h12.4v6.6a2.2 2.2 0 0 1-2.2 2.2H8a2.2 2.2 0 0 1-2.2-2.2z"/>
+    <path d="M5.8 15.6c1.4-1.2 2.7-1.2 4.1 0s2.7 1.2 4.1 0 2.7-1.2 4.2 0"/>`),
+
+  /* Voetbal: de bal, met het middelste vlak en de naden eromheen. */
+  football: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <path d="m12 7.3 3.7 2.7-1.4 4.4H9.7L8.3 10z"/>
+    <path d="M12 7.3V3.4M15.7 10l3.7-1.2M14.3 14.4l2.3 3.1M9.7 14.4l-2.3 3.1M8.3 10 4.6 8.8"/>`),
+
+  /* Sport in het algemeen: een bal en een racket, zodat het niet één tak van
+     sport wordt. */
+  sports: draw(`<circle cx="7.6" cy="15.6" r="4"/>
+    <path d="M4.6 12.9a5.6 5.6 0 0 0 6 6"/>
+    <ellipse cx="16.2" cy="7.6" rx="3.4" ry="4.2"/>
+    <path d="M14.1 10.9 11 14.4"/>
+    <path d="M13.6 6.2h5.2M13.4 8.8h5.6M15.3 3.7v7.8M17.4 3.9v7.6"/>`),
+
+  /* Formule 1: twee wielen, een lage neus en een achtervleugel. */
+  raceCar: draw(`<circle cx="7" cy="16.4" r="2.6"/>
+    <circle cx="17.4" cy="16.4" r="2.6"/>
+    <path d="M2.4 16.4h2M9.6 16.4h5.2M20 16.4h1.6"/>
+    <path d="M4.4 14.2h1.4l1.6-2.4h4.2l1.6-2.6h2.4l.8 2.6h2.4l1.6 1.4-.4 1"/>
+    <path d="M2.2 18.4h3.2M19.6 8.4h2.2M20.7 8.4v2.6"/>`),
+
+  /* Een bewakingscamera: het huis heeft er al een fototoestel-icoon
+     (`camera`); dit is de camera aan de muur, en die lijkt er niet op. */
+  cctv: draw(`<path d="M3.8 9.5 16.2 6l1.3 4.6L5.1 14.1z"/>
+    <path d="m17.9 10.9 2.9-.8-.6-2.2-2.9.8"/>
+    <path d="M9.4 13.3v1.9a2.4 2.4 0 0 1-2.4 2.4H5"/>
+    <path d="M5 15.4v5M3 20.4h4"/>`),
 };
 
 /**

@@ -29,16 +29,17 @@
 export const GROEPEN = [
   ["Woning", ["house", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
   ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "kitchen", "shower", "toilet", "desk", "garage"]],
-  ["Buiten", ["tree", "parasol", "fence", "sun", "awning", "car"]],
+  ["Buiten", ["tree", "parasol", "fence", "sun", "awning", "car", "beach"]],
   ["Rolluiken", ["shutter", "shutterOpen", "awning", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
   ["Personen", ["person", "people", "away"]],
-  ["Apparaten", ["tv", "speaker", "camera", "car", "washer", "dishwasher", "printer", "fan", "airco", "radio"]],
+  ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "washer", "dishwasher", "printer", "fan", "airco", "radio", "boiler"]],
   ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
-  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "close", "clock", "gaugeArrow"]],
+  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "close", "clock", "gaugeArrow", "bell", "pressure", "refill", "sleep"]],
   ["Cijfers", ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
+  ["Sport en vrije tijd", ["football", "sports", "raceCar", "beach"]],
   ["Overig", ["star", "moon", "leaf", "cog", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil"]],
 ];
 
@@ -61,6 +62,16 @@ export const TERMEN = {
   grid: ["raster", "kamers", "overzicht", "tegels", "menu", "grid", "apps"],
 
   /* Kamers */
+  beach: ["strand", "zee", "golven", "kust", "vakantie", "zon en zee", "beach", "zomer", "water"],
+  sleep: ["slapen", "zzz", "slaapstand", "nachtmodus", "slaap", "sleep", "rust", "nacht", "welterusten", "dutje"],
+  boiler: ["ketel", "cv", "cv-ketel", "boiler", "verwarming", "ketelstatus", "boiler status", "vlam", "warmte"],
+  pressure: ["druk", "bar", "waterdruk", "manometer", "meter", "pressure", "keteldruk", "spanning"],
+  bell: ["notificatie", "melding", "bel", "meldingen", "alert", "waarschuwing", "notification", "bericht"],
+  refill: ["bijvullen", "water bijvullen", "vullen", "water", "peil", "niveau", "reservoir", "refill", "aanvullen"],
+  football: ["voetbal", "bal", "voetballen", "sport", "wedstrijd", "football", "soccer", "eredivisie"],
+  sports: ["sport", "sporten", "sportief", "bewegen", "tennis", "racket", "wedstrijd", "sports", "verschillende sporten"],
+  raceCar: ["formule 1", "f1", "racewagen", "raceauto", "autosport", "race", "grand prix", "verstappen", "circuit"],
+  cctv: ["camera", "bewakingscamera", "cctv", "beveiliging", "toezicht", "surveillance", "buitencamera", "beveiligingscamera"],
   bed: ["slaapkamer", "bed", "slapen", "slaap", "sleep", "bedroom", "nacht", "welterusten", "logeerkamer"],
   bedDouble: ["tweepersoonsbed", "2 persoonsbed", "bed", "slaapkamer", "slapen", "sleep", "double bed", "twee personen", "ouderslaapkamer", "nacht"],
   wardrobe: ["kledingkast", "kast", "garderobe", "kleding", "wardrobe", "closet", "inloopkast", "slaapkamer"],

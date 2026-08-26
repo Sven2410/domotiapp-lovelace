@@ -23,16 +23,24 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  BEELD_MAX,
+  BEELD_MIN,
+  BEELD_STANDAARD,
   GAP,
   HOOGTE,
   KADER,
+  KOP_H,
+  clampBeeld,
   clampCols,
+  clampUitlijning,
   clampVorm,
   gevuld,
+  kolomNamen,
   TITEL_H,
   kaartHoogte,
   kaartNaam,
   regelsIn,
+  rijHoogte,
   toRows,
   vlakVan,
 } from "../../src/cards/entities-logica.js";
@@ -268,5 +276,142 @@ describe("kaartHoogte() — de afspraak met het raster van Home Assistant", () =
       ])
     );
     assert.equal(px, KADER + HOOGTE.tile + GAP + HOOGTE.row);
+  });
+});
+
+/**
+ * Kolomkoppen, de beeldvorm en het centreren.
+ *
+ * NIEUW GEDRAG (26 augustus 2026), alle drie gevraagd door de eigenaar:
+ * "Ook wil ik een naam kunnen toevoegen aan een kolom", "een entiteit met een
+ * afbeelding iets groter maken dan kan ik er een wifi kaart van maken" en "dat
+ * ik ze kan centreren nu zijn ze links uitgelijnd".
+ *
+ * Wat hier bewaakt wordt is het rekenwerk eromheen, want dat is waar het
+ * stilletjes fout gaat: koppen die niet bij hun kolommen passen, een
+ * afbeelding die de kaart uit het raster duwt, en een oude config die per
+ * ongeluk van vorm verandert.
+ */
+describe("kolomNamen()", () => {
+  it("geeft precies zoveel namen als er kolommen zijn", () => {
+    assert.deepEqual(kolomNamen(["Ketel", "Warmtepomp"], 2), ["Ketel", "Warmtepomp"]);
+  });
+
+  it("vult aan met leegte als er namen missen", () => {
+    // Eén naam bij twee kolommen mag de rij niet laten verschuiven.
+    assert.deepEqual(kolomNamen(["Ketel"], 2), ["Ketel", ""]);
+  });
+
+  it("kapt af als er te veel namen staan", () => {
+    assert.deepEqual(kolomNamen(["a", "b", "c"], 2), ["a", "b"]);
+  });
+
+  it("geeft niets terug als er niets ingevuld is", () => {
+    // Anders staat er een lege koppenrij die de kaart wél hoger maakt.
+    assert.deepEqual(kolomNamen(["", "   "], 2), []);
+    assert.deepEqual(kolomNamen([], 2), []);
+    assert.deepEqual(kolomNamen(null, 2), []);
+  });
+
+  it("trimt, en negeert wat geen tekst is", () => {
+    assert.deepEqual(kolomNamen(["  Ketel  ", 42], 2), ["Ketel", ""]);
+  });
+});
+
+describe("clampBeeld()", () => {
+  it("houdt de maat tussen de grenzen", () => {
+    assert.equal(clampBeeld(160), 160);
+    assert.equal(clampBeeld(10), BEELD_MIN);
+    assert.equal(clampBeeld(9999), BEELD_MAX);
+  });
+
+  it("valt terug op de standaard bij onzin", () => {
+    assert.equal(clampBeeld(undefined), BEELD_STANDAARD);
+    assert.equal(clampBeeld("groot"), BEELD_STANDAARD);
+    assert.equal(clampBeeld(null), BEELD_STANDAARD);
+  });
+});
+
+describe("clampUitlijning()", () => {
+  it("kent links en midden, en verder niets", () => {
+    assert.equal(clampUitlijning("midden"), "midden");
+    assert.equal(clampUitlijning("links"), "links");
+    assert.equal(clampUitlijning("centraal"), "links");
+    assert.equal(clampUitlijning(undefined), "links");
+  });
+});
+
+describe("de beeldvorm", () => {
+  it("staat in de lijst met vormen", () => {
+    assert.equal(clampVorm("beeld"), "beeld");
+  });
+
+  it("rekent zijn hoogte uit de ingestelde maat", () => {
+    // De afbeelding plus de binnenmarge en de naam eronder.
+    assert.equal(rijHoogte({ layout: "beeld", image_size: 160 }), 194);
+    assert.equal(rijHoogte({ layout: "beeld" }), BEELD_STANDAARD + 34);
+  });
+
+  it("laat de vaste maten met rust", () => {
+    assert.equal(rijHoogte({ layout: "row" }), HOOGTE.row);
+    assert.equal(rijHoogte({ layout: "tile" }), HOOGTE.tile);
+    assert.equal(rijHoogte({}), HOOGTE.row);
+  });
+});
+
+describe("toRows() draagt de nieuwe velden mee", () => {
+  it("leest ze van een rij", () => {
+    const [rij] = toRows({
+      rows: [
+        {
+          columns: 2,
+          layout: "beeld",
+          align: "midden",
+          image_size: 200,
+          column_names: ["Ketel", "Warmtepomp"],
+          items: ["light.a", "light.b"],
+        },
+      ],
+    });
+    assert.equal(rij.layout, "beeld");
+    assert.equal(rij.align, "midden");
+    assert.equal(rij.image_size, 200);
+    assert.deepEqual(rij.column_names, ["Ketel", "Warmtepomp"]);
+  });
+
+  it("leest ze ook van de platte vorm", () => {
+    // Daar is maar één rij, dus staan ze op de kaart zelf.
+    const [rij] = toRows({
+      columns: 2,
+      align: "midden",
+      column_names: ["Links", "Rechts"],
+      items: ["light.a", "light.b"],
+    });
+    assert.equal(rij.align, "midden");
+    assert.deepEqual(rij.column_names, ["Links", "Rechts"]);
+  });
+
+  it("laat een bestaande config precies zoals hij was — REGRESSIEWACHT", () => {
+    const [rij] = toRows({ items: ["light.a", "light.b"] });
+    assert.equal(rij.align, "links");
+    assert.equal(rij.image_size, BEELD_STANDAARD);
+    assert.deepEqual(rij.column_names, []);
+    assert.equal(rij.layout, "row");
+  });
+});
+
+describe("kolomkoppen kosten hun eigen regel", () => {
+  it("maakt de kaart hoger", () => {
+    const zonder = toRows({ columns: 2, items: ["light.a", "light.b"] });
+    const met = toRows({ columns: 2, column_names: ["A", "B"], items: ["light.a", "light.b"] });
+    const h1 = kaartHoogte({ rows: zonder });
+    const h2 = kaartHoogte({ rows: met });
+    assert.equal(h2 - h1, KOP_H + GAP);
+  });
+
+  it("kost niets als er geen koppen staan", () => {
+    const leeg = toRows({ columns: 2, column_names: ["", ""], items: ["light.a", "light.b"] });
+    const zonder = toRows({ columns: 2, items: ["light.a", "light.b"] });
+    assert.equal(kaartHoogte({ rows: leeg }), kaartHoogte({ rows: zonder }));
   });
 });
