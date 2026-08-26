@@ -27,11 +27,14 @@ import {
   BALK_MIN,
   BALK_STANDAARD,
   ITEMS_MAX,
+  SUB_MAX,
   actieVoor,
   asItem,
   gevuld,
+  heeftSub,
   itemsVan,
   klemBalk,
+  subVan,
   verdeel,
 } from "../../src/cards/navbar-logica.js";
 
@@ -109,6 +112,9 @@ describe("een knop uit de config", () => {
       name: "",
       icon: "",
       path: "/lovelace/keuken",
+      // Sinds 26 augustus 2026 draagt elke knop een (meestal lege) lijst
+      // subknoppen mee.
+      items: [],
     });
   });
 
@@ -120,8 +126,13 @@ describe("een knop uit de config", () => {
   });
 
   it("maakt van rommel lege velden in plaats van undefined", () => {
-    assert.deepEqual(asItem({ name: 42, icon: null }), { name: "", icon: "", path: "" });
-    assert.deepEqual(asItem(null), { name: "", icon: "", path: "" });
+    assert.deepEqual(asItem({ name: 42, icon: null }), {
+      name: "",
+      icon: "",
+      path: "",
+      items: [],
+    });
+    assert.deepEqual(asItem(null), { name: "", icon: "", path: "", items: [] });
   });
 
   it("noemt een knop gevuld zodra er iets in staat", () => {
@@ -171,5 +182,72 @@ describe("wat een tik doet", () => {
     for (const leeg of ["", "   ", null, undefined]) {
       assert.deepEqual(actieVoor(leeg), { action: "none" });
     }
+  });
+});
+
+/**
+ * Subknoppen: een knop die een menu opent boven zichzelf.
+ *
+ * NIEUW GEDRAG (26 augustus 2026). De eigenaar miste "extra navigatie knoppen
+ * die boven de geklikte icon openen". Wat hier bewaakt wordt is de grens
+ * eromheen: één laag diep, een dak op het aantal, en een half ingevulde
+ * subknop die wel in de editor staat en niet op de kaart.
+ */
+describe("subknoppen", () => {
+  it("leest ze uit de config", () => {
+    const item = asItem({
+      name: "Licht",
+      icon: "bulb",
+      items: [
+        { name: "Woonkamer", path: "/lovelace/woonkamer" },
+        { name: "Keuken", path: "/lovelace/keuken" },
+      ],
+    });
+    assert.equal(item.items.length, 2);
+    assert.equal(heeftSub(item), true);
+    assert.deepEqual(namen(subVan(item)), ["Woonkamer", "Keuken"]);
+  });
+
+  it("gaat maar EEN laag diep", () => {
+    // Een menu in een menu in een balk van vijf knoppen is geen navigatie meer.
+    const item = asItem({
+      name: "Licht",
+      items: [{ name: "Boven", items: [{ name: "Zolder", path: "/zolder" }] }],
+    });
+    assert.deepEqual(item.items[0].items, []);
+  });
+
+  it("kapt af op SUB_MAX", () => {
+    const veel = Array.from({ length: SUB_MAX + 5 }, (_, i) => ({ name: `s${i}`, path: `/s${i}` }));
+    assert.equal(asItem({ name: "Licht", items: veel }).items.length, SUB_MAX);
+  });
+
+  it("laat een lege subknop niet op de kaart komen", () => {
+    const item = asItem({
+      name: "Licht",
+      items: [{ name: "Woonkamer", path: "/w" }, {}, { name: "", icon: "", path: "" }],
+    });
+    // In de editor staan er drie -- je bent er een aan het maken.
+    assert.equal(item.items.length, 3);
+    // Op de kaart staat er een.
+    assert.equal(subVan(item).length, 1);
+  });
+
+  it("noemt een knop zonder subknoppen ook zo", () => {
+    assert.equal(heeftSub(asItem({ name: "Thuis", path: "/" })), false);
+    assert.equal(heeftSub(asItem("/alleen-een-pad")), false);
+    assert.equal(heeftSub(null), false);
+    assert.deepEqual(subVan(undefined), []);
+  });
+
+  it("laat rommel in items geen fout worden", () => {
+    assert.deepEqual(asItem({ name: "x", items: "geen lijst" }).items, []);
+    assert.deepEqual(asItem({ name: "x", items: [null, 3] }).items.length, 2);
+    assert.deepEqual(subVan(asItem({ name: "x", items: [null, 3] })), []);
+  });
+
+  it("draagt ze mee door itemsVan heen", () => {
+    const uit = itemsVan({ items: [{ name: "Licht", items: [{ name: "Keuken", path: "/k" }] }] });
+    assert.equal(subVan(uit[0]).length, 1);
   });
 });

@@ -118,6 +118,12 @@ de vaatwasser. Allemaal met de hand aangemaakt via de websocket
 | `input_boolean.vaatwasser_slim` | de slimme-sturingsknop |
 | `input_button.vaatwasser_start` / `_stop` | de twee knoppen |
 
+In `.ha-dev-config` stond nog een Lovelace-resource naar
+`/domotiapp_scene/domotiapp-scene-card.js` — die integratie staat hier niet, dus
+hij gaf 503. Zolang de service worker een kopie had, viel dat niet op; zodra die
+gewist wordt (valkuil 15) breekt hij het laden van de views. Op 26 augustus 2026
+uit de resourcelijst gehaald.
+
 Het testdashboard heet **`kaart-test`**. De view `navbalk` is de werkbank: die
 wordt per ronde opnieuw ingericht via `lovelace/config/save`.
 
@@ -129,6 +135,7 @@ wordt per ronde opnieuw ingericht via `lovelace/config/save`.
 npm run build              # bundelt src/ -> custom_components/.../frontend/
 npm run verify             # faalt als de gecommitte bundel afwijkt van de bron
 npm run check:registratie  # bewaakt de registratieregel (zie valkuil 1)
+npm run check:css          # hover op aanraakschermen + backticks in CSS (14, 16)
 npm test                   # JS-unittests (node --test), geen jsdom
 ```
 
@@ -235,6 +242,32 @@ Python-tests.
    capture-listener op `window` en lees `event.composedPath()` — robuuster, en
    dichter bij wat een echte klik doet.
 
+15. **`fetch(url, {cache: "reload"})` is NIET genoeg om verse code te meten.**
+   De service worker van Home Assistant zit ervoor en serveert zijn eigen kopie.
+   Op 26 augustus 2026 leverde hij 393.653 bytes terwijl er 407.177 op schijf
+   stonden — en de container gaf diezelfde 407.177 wél uit toen we hem van
+   binnenuit opvroegen. Wis eerst de service worker én de caches:
+   ```js
+   for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+   for (const n of await caches.keys()) await caches.delete(n);
+   ```
+   Daarna pas meten, en de sha256 vergelijken met het bestand op schijf.
+
+16. **Geen backticks in een CSS-commentaar.** Alle CSS staat in een
+   sjabloonliteral, dus een backtick in een commentaar sluit die string af. Vaak
+   is dat een bouwfout binnen een minuut — maar niet altijd: `` `.surface` ``
+   werd `` ` + .surface + ` ``, en dat is geldige JavaScript. Het bouwde, het
+   laadde, en toen viel de hele bundel om op `X(...).surface is not a function`,
+   met geen enkele geregistreerde kaart en een leeg dashboard. Bewaakt door
+   `npm run check:css`, die niet de backtick meet maar het gevolg: een sjabloon
+   dat midden in een blokcommentaar ophoudt.
+
+17. **`Array.map(functie)` geeft de INDEX als tweede argument mee.** Heeft die
+   functie een tweede parameter met een standaardwaarde — `asItem(ruw, diep =
+   true)` — dan krijgt element 0 daar `0` voor, en alleen element 0 gedraagt
+   zich anders dan de rest. In de navbalk verloor daardoor uitsluitend de eerste
+   knop zijn submenu. Schrijf `.map((x) => f(x))`.
+
 ---
 
 ## Projectstand
@@ -258,12 +291,15 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.10.0** (25 augustus 2026) — navbalk, tabbladen,
-vaatwasserkaart, zoeken in de icoonkiezer, zeventien iconen erbij, "achtergrond
-weglaten" op elke kaart, en de overlapbug uit `grid_options`.
+**Laatste release: 0.11.0** (26 augustus 2026) — acht meldingen van de eigenaar
+op de dag na 0.10.0: "achtergrond weglaten" houdt zijn rand, Nederlandse namen in
+een keuzelijst, subknoppen op de navbalk, geen hover die op een aanraakscherm
+blijft plakken, de navbalk duwt geen separator meer weg, kaarten toevoegen in de
+tabbladeneditor, en een rookmelderkaart die groeit in plaats van schuift. Zie
+`docs/feedback-26-augustus/RAPPORT.md`.
 
-**Tellingen op het moment van schrijven:** 485 JS-tests en 136 Python-tests,
-alle groen; bundel 393.656 bytes; 112 getekende iconen.
+**Tellingen op het moment van schrijven:** 526 JS-tests en 136 Python-tests,
+alle groen; bundel 414.109 bytes; 112 getekende iconen.
 
 **Wat er open staat:** een donkere vlek in twee van zijn bubble-pop-ups. Die
 komt **niet** van onze kaarten — in beide pop-ups staan alleen mushroom-,

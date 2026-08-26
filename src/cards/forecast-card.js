@@ -45,7 +45,7 @@ class ForecastCard extends DacCard {
       min-height: var(--dac-raster, 56px); padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     /* ---- vandaag ---- */
     .nu { display: flex; align-items: center; gap: 11px; min-height: 40px; cursor: pointer; }

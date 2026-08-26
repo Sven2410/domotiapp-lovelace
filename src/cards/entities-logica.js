@@ -47,7 +47,7 @@ export const KADER = 12;
 export const TITEL_H = 22;
 
 export const VORMEN = ["row", "tile", "compact"];
-export const VLAKKEN = ["card", "items", "none"];
+export const VLAKKEN = ["card", "items", "none", "open"];
 
 /**
  * De naam van de kaart als geheel, of "".

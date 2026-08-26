@@ -81,7 +81,7 @@ class HeaderCard extends DacCard {
       box-shadow: var(--dac-shadow);
       position: relative; overflow: hidden;
     }
-    :host([bare]) .strip { background: none; border: 0; box-shadow: none; padding: 6px 2px; }
+    :host([bare]) .strip { background: none; box-shadow: none; }
 
     /* Haarlijn accent onderlangs, dezelfde die de Coach-kop draagt. */
     .strip::after {

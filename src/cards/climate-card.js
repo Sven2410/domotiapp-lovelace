@@ -67,7 +67,7 @@ class ClimateCard extends DacCard {
       height: 100%; min-height: 56px; padding: 7px 12px;
       display: flex; align-items: center; gap: 11px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     .chip {
       width: 40px; height: 40px; flex: 0 0 auto; cursor: pointer;
@@ -113,7 +113,7 @@ class ClimateCard extends DacCard {
       border-radius: var(--dac-radius-pill);
       transition: background 180ms ease, color 180ms ease;
     }
-    .set button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); }
+    @media (hover: hover) { .set button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); } }
     .set button:active { background: rgba(255,255,255,.14); }
     .set button:disabled { opacity: .3; cursor: default; }
     .set button .icon { width: 16px; height: 16px; }

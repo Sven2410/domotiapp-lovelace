@@ -470,13 +470,11 @@ class DomotiappAlarmCard extends LitElement {
       min-height: var(--dac-raster, 56px);
     }
 
-    /* Geen achtergrond -- zie de andere kaarten in de familie. */
+    /* Achtergrond weglaten -- zie de andere kaarten in de familie: de vulling
+       gaat weg, de rand blijft staan. */
     :host([bare]) .card {
       background: none;
-      border: 0;
       box-shadow: none;
-      padding-left: 0;
-      padding-right: 0;
     }
 
     /* Geen overflow:hidden op de kaart: de stopknop houdt daarom zelf de
@@ -610,8 +608,10 @@ class DomotiappAlarmCard extends LitElement {
       justify-content: center;
       padding: 0;
     }
-    button.icoonknop:hover {
-      background: var(--dac-border);
+    @media (hover: hover) {
+      button.icoonknop:hover {
+        background: var(--dac-border);
+      }
     }
     .icoon {
       width: 24px;
@@ -684,8 +684,10 @@ class DomotiappAlarmCard extends LitElement {
       font-family: inherit;
       white-space: nowrap;
     }
-    button.tekstknop:hover {
-      background: var(--dac-border);
+    @media (hover: hover) {
+      button.tekstknop:hover {
+        background: var(--dac-border);
+      }
     }
     button.tekstknop.gevaar {
       color: var(--dac-bad);

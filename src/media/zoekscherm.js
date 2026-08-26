@@ -108,7 +108,7 @@ const css = /* css */ `
     background: var(--dac-surface); border: 1px solid var(--dac-border);
     color: var(--dac-ink-2); font: inherit;
   }
-  .rond:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  @media (hover: hover) { .rond:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
   .rond .icon { width: 18px; height: 18px; }
 
   /* ------------------------------------------------------------ zoeken */
@@ -132,7 +132,7 @@ const css = /* css */ `
     border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
     transition: background 160ms ease;
   }
-  .zoekknop:hover { background: color-mix(in srgb, var(--dac-accent-hi) 28%, transparent); }
+  @media (hover: hover) { .zoekknop:hover { background: color-mix(in srgb, var(--dac-accent-hi) 28%, transparent); } }
   .zoek .veld:focus-within { border-color: var(--dac-accent-hi); }
   .zoek .veld .icon { width: 18px; height: 18px; color: var(--dac-ink-3); flex: 0 0 auto; }
   .zoek input {
@@ -155,7 +155,7 @@ const css = /* css */ `
     border: 0; border-bottom: 2px solid transparent;
     transition: color 160ms ease, border-color 160ms ease;
   }
-  .tabs button:hover { color: var(--dac-ink); }
+  @media (hover: hover) { .tabs button:hover { color: var(--dac-ink); } }
   .tabs button[aria-selected="true"] {
     color: var(--dac-ink); border-bottom-color: var(--dac-accent-hi);
   }
@@ -215,7 +215,7 @@ const css = /* css */ `
     background: none; border: 0; color: var(--dac-ink-3);
     transition: color 160ms ease, background 160ms ease;
   }
-  .meer:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  @media (hover: hover) { .meer:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
   .meer .icon { width: 20px; height: 20px; }
 
   /* Een hidden-attribuut verliest het van een display in een regel
@@ -231,7 +231,7 @@ const css = /* css */ `
     cursor: pointer; text-align: left; font: inherit; color: inherit;
     transition: background 160ms ease, border-color 160ms ease;
   }
-  .tr:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+  @media (hover: hover) { .tr:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
   .tr:active { transform: scale(.99); }
   .tr .hoes {
     flex: 0 0 auto; width: 52px; height: 52px; border-radius: 9px; overflow: hidden;
@@ -350,7 +350,7 @@ const css = /* css */ `
     background: none; border: 0; color: var(--dac-ink-3);
     transition: color 160ms ease, background 160ms ease;
   }
-  .hart:hover, .weg:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  @media (hover: hover) { .hart:hover, .weg:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
   .hart[aria-pressed="true"] { color: var(--dac-device-1); }
   .hart .icon, .weg .icon { width: 20px; height: 20px; }
 
@@ -370,7 +370,7 @@ const css = /* css */ `
     background: color-mix(in srgb, var(--dac-accent-hi) 12%, transparent);
     border: 1px dashed color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
   }
-  .nieuwe:hover { background: color-mix(in srgb, var(--dac-accent-hi) 20%, transparent); }
+  @media (hover: hover) { .nieuwe:hover { background: color-mix(in srgb, var(--dac-accent-hi) 20%, transparent); } }
   .nieuwe[hidden] { display: none; }
 
   /* De naamregel van een nieuwe lijst. Geen prompt(): die is op een tablet in
@@ -452,7 +452,7 @@ const css = /* css */ `
     padding: 10px 12px; cursor: pointer; font: inherit; font-size: 13px; text-align: left;
     background: none; border: 0; border-radius: 8px; color: var(--dac-ink);
   }
-  .menu button:hover { background: var(--dac-surface-hi); }
+  @media (hover: hover) { .menu button:hover { background: var(--dac-surface-hi); } }
   .menu .titel {
     padding: 6px 12px 8px; font-size: 11.5px; color: var(--dac-ink-3);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;

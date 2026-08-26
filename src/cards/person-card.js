@@ -58,7 +58,7 @@ class PersonCard extends DacCard {
       height: 100%; padding: 4px 10px;
       display: flex; flex-direction: column; justify-content: center;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     .chips {
       display: grid; gap: 6px;
@@ -70,7 +70,7 @@ class PersonCard extends DacCard {
       font: inherit; color: inherit; border-radius: var(--dac-radius-sm);
       transition: background 200ms ease;
     }
-    .p:hover { background: var(--dac-surface); }
+    @media (hover: hover) { .p:hover { background: var(--dac-surface); } }
     .nm {
       font-size: 11px; font-weight: 500; line-height: 1.15; text-align: center;
       max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

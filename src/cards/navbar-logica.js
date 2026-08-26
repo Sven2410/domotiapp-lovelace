@@ -27,6 +27,14 @@ export const BALK_STANDAARD = 4;
 /** Meer dan dit wordt onbeheersbaar in de editor en onvindbaar in het menu. */
 export const ITEMS_MAX = 20;
 
+/**
+ * Hoeveel subknoppen er onder één knop mogen hangen.
+ *
+ * Ze klappen boven de knop open, en die lijst mag het scherm niet vullen: dan
+ * is het geen menu meer maar een pagina, en dan hoort het een pagina te zijn.
+ */
+export const SUB_MAX = 8;
+
 /** Houd het aantal binnen de grenzen; alles onleesbaars wordt de standaard. */
 export function klemBalk(waarde) {
   // Niets ingevuld is niet hetzelfde als nul ingevuld. `Number(null)` en
@@ -45,8 +53,8 @@ export function klemBalk(waarde) {
  * een met de hand geschreven config er meestal uitziet, en hem weigeren zou
  * betekenen dat de kaart leeg blijft zonder te zeggen waarom.
  */
-export function asItem(ruw) {
-  if (typeof ruw === "string") return { name: "", icon: "", path: ruw };
+export function asItem(ruw, diep = true) {
+  if (typeof ruw === "string") return { name: "", icon: "", path: ruw, items: [] };
   const i = ruw ?? {};
   return {
     name: typeof i.name === "string" ? i.name : "",
@@ -61,8 +69,29 @@ export function asItem(ruw) {
           : typeof i.navigation_path === "string"
             ? i.navigation_path
             : "",
+    // Eén laag diep en niet meer. Een menu in een menu in een navbalk is geen
+    // navigatie meer maar een boomstructuur, en die hoort in de zijbalk van
+    // Home Assistant en niet in een balk van vijf knoppen. `diep = false` is
+    // wat die grens bewaakt: een subknop met zelf weer `items` verliest ze
+    // hier, in plaats van in de kaart een verrassing te worden.
+    items:
+      diep && Array.isArray(i.items)
+        ? i.items.slice(0, SUB_MAX).map((s) => asItem(s, false))
+        : [],
   };
 }
+
+/**
+ * De subknoppen van een knop die echt iets voorstellen.
+ *
+ * Los van `asItem` omdat de kaart en de editor er allebei op rekenen en het
+ * antwoord hetzelfde moet zijn: een half ingevulde subknop hoort in de editor
+ * te blijven staan terwijl je hem maakt, en niet in de kaart te verschijnen.
+ */
+export const subVan = (item) => (Array.isArray(item?.items) ? item.items.filter(gevuld) : []);
+
+/** Heeft deze knop een menu in plaats van een bestemming? */
+export const heeftSub = (item) => subVan(item).length > 0;
 
 /**
  * Heeft deze plek iets om te tonen?
@@ -77,7 +106,11 @@ export const gevuld = (item) =>
 /** De knoppen uit een config, genormaliseerd en afgekapt. */
 export function itemsVan(config) {
   const ruw = Array.isArray(config?.items) ? config.items : [];
-  return ruw.slice(0, ITEMS_MAX).map(asItem);
+  // Expres een pijlfunctie en geen kale `asItem`: Array.map geeft de INDEX als
+  // tweede argument mee, en dat is bij deze functie het vlaggetje dat bepaalt
+  // of de subknoppen meekomen. Met `.map(asItem)` verloor knop 0 -- en alleen
+  // knop 0 -- zijn hele menu. Gevonden door de test hieronder, niet op de kaart.
+  return ruw.slice(0, ITEMS_MAX).map((i) => asItem(i));
 }
 
 /**

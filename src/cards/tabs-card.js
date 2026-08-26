@@ -47,9 +47,7 @@ class TabsCard extends DacCard {
       padding: 8px;
       display: flex; flex-direction: column; gap: 10px;
     }
-    :host([bare]) .card {
-      background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
-    }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     /* ------------------------------------------------------------ de rij */
 
@@ -80,7 +78,7 @@ class TabsCard extends DacCard {
       -webkit-tap-highlight-color: transparent;
       transition: background 180ms ease, color 180ms ease;
     }
-    .tab:hover { color: var(--dac-ink); }
+    @media (hover: hover) { .tab:hover { color: var(--dac-ink); } }
     /* De actieve tab draagt de kleur. Dat is hier geen statuskleur maar
        navigatie: je moet kunnen zien waar je bent. */
     .tab[aria-selected="true"] {
