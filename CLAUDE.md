@@ -280,6 +280,26 @@ Python-tests.
    je alleen de hover, dan blijft de helft van de klacht staan — dat is precies
    wat er gebeurde.
 
+19. **Het bewerkgereedschap van Home Assistant is te leen, en dat scheelt een
+   nabouw.** In de bewerkmodus zijn `hui-card-edit-mode` (de overlay met het
+   potlood en het driepuntsmenu), `ha-sortable` (slepen) en `hui-section`
+   allemaal gedefinieerd. Ze hebben genoeg aan een NEP-`lovelace`
+   (`{editMode: true, saveConfig: async () => {}}`) en melden wat ze doen met
+   gebeurtenissen die omhoog borrelen (`ll-edit-card`, `ll-duplicate-card`,
+   `ll-delete-card`, `ll-copy-card`, `ll-change-grid-options`). En de
+   kaartkiezer (`hui-dialog-create-card`) is niet aan te roepen maar wel uit te
+   lokken: een verborgen `hui-section` met een nepdashboard, en dan
+   `ll-create-card` afvuren vanuit zijn `_layoutElement`. Vondst van Bubble
+   Card; zie `docs/kaarten-bewerken-als-in-ha/RAPPORT.md`.
+
+20. **Maar die kiezer opent daarna HA's eigen `hui-dialog-edit-card`, en dat is
+   DEZELFDE dialoog waar jouw editor in staat.** Home Assistant hergebruikt het
+   element en zet er andere parameters in; jouw editor is dan weg, met de config
+   die erin stond. Gemeten op 26 augustus 2026. Vang het `show-dialog`-signaal af
+   (`stopImmediatePropagation`), haal `detail.dialogParams.cardConfig` eruit, en
+   **sluit de kiezer zelf** — hij sluit normaal pas bij het doorgeven dat je net
+   hebt tegengehouden.
+
 ---
 
 ## Projectstand
@@ -303,15 +323,17 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.12.0** (26 augustus 2026) — de tweede ronde van die dag:
-geen omlijning meer om een meting op de rookmelderkaart, een naam die afbreekt in
-plaats van afgekapt te worden, de personenkaart 1,5px lager (gemeten), meerdere
-kaarten in één tabblad, en de focusring die na een pop-up bleef staan. Zie
-`docs/rookmelder-personen-en-meer-kaarten/RAPPORT.md`. De ronde ervoor,
-**0.11.0**, staat in `docs/feedback-26-augustus/RAPPORT.md`.
+**Laatste release: 0.13.0** (26 augustus 2026) — de derde ronde van die dag: de
+kaarten in een tabblad worden bewerkt met het gereedschap van Home Assistant
+zelf. Slepen, het driepuntsmenu met Bewerken/Dupliceren/Kopiëren/Knippen/
+Verwijderen, en "Toevoegen aan dashboard" als kaartkiezer. Zie
+`docs/kaarten-bewerken-als-in-ha/RAPPORT.md` en valkuil 19 en 20.
 
-**Tellingen op het moment van schrijven:** 528 JS-tests en 136 Python-tests,
-alle groen; bundel 418.834 bytes; 112 getekende iconen.
+Die dag kende drie rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
+(`docs/rookmelder-personen-en-meer-kaarten/`) en deze.
+
+**Tellingen op het moment van schrijven:** 546 JS-tests en 136 Python-tests,
+alle groen; bundel 426.031 bytes; 112 getekende iconen.
 
 **Wat er open staat:** een donkere vlek in twee van zijn bubble-pop-ups. Die
 komt **niet** van onze kaarten — in beide pop-ups staan alleen mushroom-,
