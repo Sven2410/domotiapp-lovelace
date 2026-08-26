@@ -34,6 +34,7 @@ import { resolve } from "../icons.js";
 import { bindActions, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { zetScrollSlot } from "../scrollslot.js";
+import { Herkansing, nogNietGereed } from "../herkansing.js";
 import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
 import {
   BIB_SOORTEN,
@@ -473,6 +474,12 @@ class MediaBrowser extends HTMLElement {
     this.treffers_ = [];
     this.speakers_ = null;
     this.opruimen_ = [];
+    // Ook hier bestaan onze commando's pas als de config entry is opgezet.
+    // Zie de kop van herkansing.js; dit scherm ging tot 0.18.0 meteen op de
+    // kale fout, en dat is precies de melding die de eigenaar op zijn telefoon
+    // zag -- alleen dan voor de scenes.
+    this.zoekHerkansing_ = new Herkansing(() => this.zoek_());
+    this.speakerHerkansing_ = new Herkansing(() => this.haalSpeakers_());
   }
 
   /* ------------------------------------------------------------ openen */
@@ -705,7 +712,11 @@ class MediaBrowser extends HTMLElement {
   }
 
   async zoek_() {
-    const vraag = this.$(".zoek input").value.trim();
+    // Het veld kan weg zijn: een herkansing die afgaat terwijl het scherm net
+    // opnieuw is opgebouwd, heeft niets om te lezen.
+    const veld = this.$(".zoek input");
+    if (!veld) return;
+    const vraag = veld.value.trim();
     if (!vraag) {
       this.treffers_ = this.zoekTreffers_ = [];
       this.leegMelding_(
@@ -730,9 +741,23 @@ class MediaBrowser extends HTMLElement {
       });
       if (beurt !== this.beurt_) return;
       this.treffers_ = this.zoekTreffers_ = antwoord?.results ?? [];
+      this.zoekHerkansing_.herstel();
       this.teken_();
     } catch (fout) {
       if (beurt !== this.beurt_) return;
+
+      // Home Assistant kent het commando nog niet: dat is niet stuk, dat is te
+      // vroeg. Zeg dat ook zo -- "Zoeken lukte niet" stuurt iemand op zoek
+      // naar een fout die er niet is -- en vraag het straks zelf opnieuw.
+      if (nogNietGereed(fout)) {
+        this.zoekHerkansing_.plan();
+        this.leegMelding_(
+          "Home Assistant start nog op",
+          "Zodra DomotiApp klaar is met opstarten, wordt er vanzelf gezocht."
+        );
+        return;
+      }
+
       this.leegMelding_(
         "Zoeken lukte niet",
         fout?.message ?? "Music Assistant gaf geen antwoord.",
@@ -1325,10 +1350,14 @@ class MediaBrowser extends HTMLElement {
       this.speakers_ = await this.hass.callWS({
         type: "domotiapp_lovelace/media/speakers",
       });
-    } catch {
+      this.speakerHerkansing_.herstel();
+    } catch (fout) {
       // Geen speakerlijst is geen reden om het zoeken te blokkeren: dan staat
-      // de voet er gewoon niet.
+      // de voet er gewoon niet. Maar is Home Assistant alleen nog niet klaar,
+      // dan komt de balk er zo alsnog -- zonder dat het scherm dicht en open
+      // hoeft.
       this.speakers_ = null;
+      if (nogNietGereed(fout)) this.speakerHerkansing_.plan();
     }
     this.tekenSpeakers_();
   }
@@ -1491,6 +1520,9 @@ class MediaBrowser extends HTMLElement {
 
   disconnectedCallback() {
     clearTimeout(this.timer_);
+    // Een scherm dat weg is hoeft niets meer te vragen.
+    this.zoekHerkansing_.stop();
+    this.speakerHerkansing_.stop();
     // Ook hier losmaken: wordt het scherm uit de DOM gehaald terwijl het
     // openstaat (een dashboard dat opnieuw opbouwt), dan is er niemand meer die
     // `sluit()` aanroept en zou de pagina voorgoed vaststaan.

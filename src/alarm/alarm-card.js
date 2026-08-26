@@ -60,7 +60,7 @@ import {
   stubConfig,
   valideerConfig,
 } from "./kaartconfig.js";
-import { Herkansing, nogNietGereed } from "../herkansing.js";
+import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
 import { meldAan, meldInKiezer } from "../registratie.js";
 import {
   TEKST_STOPPEN,
@@ -126,6 +126,7 @@ class DomotiappAlarmCard extends LitElement {
     this._afmelden = null;
     // Zolang Home Assistant nog opstart bestaat ons commando nog niet.
     this._herkansing = new Herkansing(() => this._haalOp());
+    this._verbinding = new Verbindingswacht();
   }
 
   /**
@@ -201,6 +202,12 @@ class DomotiappAlarmCard extends LitElement {
     // `hass` komt na `setConfig`, dus het abonnement kan pas hier beginnen.
     if (gewijzigd.has("hass") && this.hass) {
       this._startAbonnement();
+      // Home Assistant is weg geweest en is er weer: na een herstart is dit
+      // het moment waarop onze commando's er alsnog zijn. Zie herkansing.js.
+      if (this._verbinding.herverbonden(this.hass)) {
+        this._herkansing.herstel();
+        this._haalOp();
+      }
     }
     this._volgRaster();
   }

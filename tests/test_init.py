@@ -422,3 +422,47 @@ async def test_setup_gaat_niet_stuk_zonder_lovelace_opslag(
     assert hass.data[DOMAIN][DATA_RESOURCE_ID] is None
     # Ter controle dat de nabootsing echt raakte: er staat geen resource.
     assert await onze_resources(hass) == []
+
+
+async def test_commandos_staan_er_voordat_de_frontend_wordt_geregistreerd(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """De WebSocket-commando's worden als EERSTE geregistreerd. NIEUW GEDRAG.
+
+    Waarom dit een test verdient. Zolang een commando niet geregistreerd is,
+    antwoordt Home Assistant `unknown_command: Unknown command.` -- de fout die
+    de eigenaar op 26 augustus 2026 op zijn telefoon zag. Elke `await` die
+    vóór de registratie staat, verlengt dat gat. Tot 0.18.0 stond de registratie
+    achteraan, ná het lezen van de bundel, het statische pad, de lader én het
+    wegschrijven van de Lovelace-resource.
+
+    Dit meet niet onze eigen vlag maar het register van `websocket_api` zelf,
+    en het meet het op het laatste moment van de frontendketen: als de
+    commando's dán al bestaan, staan ze er dus vóór alles wat eraan voorafging.
+    """
+    from homeassistant.components import websocket_api
+
+    from custom_components.domotiapp_lovelace import resource as resource_mod
+    from custom_components.domotiapp_lovelace.const import DATA_STORE
+
+    gezien: dict[str, object] = {}
+    echte = resource_mod.async_zorg_voor_resource
+
+    async def kijk_mee(hass_, js_url):
+        register = hass_.data.get(websocket_api.const.DOMAIN) or {}
+        gezien["commando_er"] = "domotiapp_lovelace/scenes/get" in register
+        gezien["opslag_er"] = DATA_STORE in hass_.data.get(DOMAIN, {})
+        return await echte(hass_, js_url)
+
+    monkeypatch.setattr(resource_mod, "async_zorg_voor_resource", kijk_mee)
+
+    entry = await zet_integratie_op(hass)
+    assert entry.state is ConfigEntryState.LOADED
+
+    assert gezien["commando_er"] is True, (
+        "scenes/get was nog niet geregistreerd toen de frontendketen al liep; "
+        "een kaart die op dat moment vraagt krijgt 'Unknown command.'"
+    )
+    # En de opslag hoort er dan ook al te zijn: een geregistreerd commando
+    # zonder opslag antwoordt 'niet geladen' en is dus geen winst.
+    assert gezien["opslag_er"] is True

@@ -51,10 +51,20 @@ import "./alarm/alarm-card.js";
 import "./vraag.js";
 
 import { startRegistratie } from "./registratie.js";
+import { startVerversing } from "./verouderd.js";
 
 // Pas hier, als alle kaarten zich hebben aangemeld: één wachtlus voor de hele
 // bundel in plaats van tien.
 startRegistratie((bericht) => console.warn(`domotiapp-lovelace: ${bericht}`));
+
+// Draait deze pagina straks verouderde code, dan herlaadt hij zichzelf. Dat is
+// hier de plek en niet in een kaart: het gaat over de hele bundel, en het hoort
+// één keer te gebeuren en niet per kaart op het dashboard.
+//
+// `import.meta.url` is de URL waarmee deze bundel geladen is, inclusief de
+// `?v=`-hash die de lader eraan gaf. Zie verouderd.js voor waarom de lader
+// alléén niet genoeg was.
+startVerversing({ eigenUrl: import.meta.url });
 
 // Eén regel, één keer. Een bundel die niets zegt is een bundel die je niet kunt
 // onderscheiden van een bundel die niet geladen is.
