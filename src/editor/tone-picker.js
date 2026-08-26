@@ -19,6 +19,23 @@
  *
  * `compact` leaves out the frame and the explanation, for editors that show one
  * of these per row in a list.
+ *
+ * WAT ER OP 27 AUGUSTUS 2026 IS VERANDERD, EN WAAROM
+ *
+ * De rij met negen identiteitskleuren staat er niet meer. De eigenaar: "van
+ * elke kaart de kleuren eruit hebben. Alles gewoon op automatisch en de accent
+ * color gebruiken als dat nodig is." Dat is ook wat een dashboard rustig houdt
+ * -- negen kleuren aanbieden is negen kleuren op een scherm.
+ *
+ * Wat er WEL blijft:
+ *   - Automatisch en Accent, de twee die er nog toe doen.
+ *   - De eigen kleur, ingeklapt. Die is de uitweg voor de huisstijl van een
+ *     klant of een kliko in de kleur van de gemeente, en die uitweg weghalen
+ *     zou functie kosten in plaats van rust opleveren.
+ *   - Een kleur die AL in een config staat. Die krijgt zijn eigen vakje terug
+ *     zolang hij gekozen is, zodat je hem ziet en kunt wegklikken. Hem stil
+ *     verbergen zou betekenen dat een dashboard een kleur draagt die nergens
+ *     meer te vinden is.
  */
 
 import { TONES, TONE_LABELS } from "../base.js";
@@ -26,8 +43,14 @@ import { icons } from "../icons.js";
 import { sheet, tokens } from "../theme.js";
 import { meldAan } from "../registratie.js";
 
-const IDENTITY = ["accent", "solar", "house", "water", "magenta", "pink", "teal", "lit", "neutral"];
-const STATUS = ["good", "warn", "bad"];
+/**
+ * De kleuren die de kiezer AANBIEDT: automatisch, en accent.
+ *
+ * Het palet eronder bestaat nog wel -- `TONES` in base.js kent er negen, en een
+ * dashboard dat er een draagt blijft hem gewoon tonen. Dit is de lijst die je
+ * te KIEZEN krijgt, en die is met opzet kort.
+ */
+const AANGEBODEN = ["accent"];
 
 /** Wat `toneValue` in base.js als losse kleur doorlaat, en dus wat wij toestaan. */
 const EIGEN = /^(#[0-9a-f]{3,8}|var\(--[\w-]+\)|rgba?\([^)]*\))$/i;
@@ -100,6 +123,19 @@ const css = /* css */ `
   .vrij button:hover { color: var(--primary-text-color, var(--dac-ink)); }
   :host([compact]) .vrij { display: none; }
 
+  /* De eigen kleur is ingeklapt: hij hoort te bestaan, maar niet als eerste
+     aanbod. Zie de kop van dit bestand. */
+  .eigenvak { margin-top: 12px; }
+  .eigenvak > summary {
+    list-style: none; cursor: pointer; font-size: 12px;
+    color: var(--secondary-text-color, var(--dac-ink-2));
+  }
+  .eigenvak > summary::-webkit-details-marker { display: none; }
+  .eigenvak > summary::before { content: "▸ "; }
+  .eigenvak[open] > summary::before { content: "▾ "; }
+  .eigenvak .rij2 { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  :host([compact]) .eigenvak { display: none; }
+
   .note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.45;
           color: var(--secondary-text-color, var(--dac-ink-3)); }
 
@@ -155,44 +191,50 @@ class DacTonePicker extends HTMLElement {
     return Boolean(this.value_) && !(this.value_ in TONES);
   }
 
+  /**
+   * Een palet-kleur die gekozen is maar niet meer wordt aangeboden.
+   *
+   * Die krijgt zijn eigen vakje terug, zolang hij gekozen is. Anders draagt een
+   * bestaand dashboard een kleur die nergens meer te zien of weg te klikken is,
+   * en dat is erger dan een vakje te veel.
+   */
+  oudeToon_() {
+    const v = this.value_;
+    return v && !AANGEBODEN.includes(v) && v in TONES ? v : "";
+  }
+
   swatch(key) {
     return `<button type="button" class="sw" data-tone="${key}" style="--c:${TONES[key]}"
       title="${TONE_LABELS[key]}" aria-label="${TONE_LABELS[key]}" aria-pressed="false">${icons.check}</button>`;
   }
 
   build_() {
+    this.getoondeOude_ = this.oudeToon_();
     this.shadowRoot.innerHTML = `
       <div class="label"></div>
       <div class="box">
-        ${this.statuses ? "<h4>Identiteit</h4>" : ""}
         <div class="row">
           <button type="button" class="sw auto" data-tone="" title="Automatisch"
             aria-label="Automatisch" aria-pressed="false">${icons.check}</button>
-          ${IDENTITY.map((k) => this.swatch(k)).join("")}
-          <span class="sw eigen leeg" title="Eigen kleur" aria-pressed="false">
-            ${icons.check}
-            <input type="color" aria-label="Eigen kleur kiezen" />
-          </span>
+          ${AANGEBODEN.map((k) => this.swatch(k)).join("")}
+          ${this.getoondeOude_ ? this.swatch(this.getoondeOude_) : ""}
         </div>
-        ${
-          this.statuses
-            ? `<h4>Status</h4>
-               <div class="row">${STATUS.map((k) => this.swatch(k)).join("")}</div>
-               <p class="note">
-                 Statuskleuren betekenen iets: goed, let op, kritiek. Gebruik ze niet om
-                 een kaart mooier te maken &mdash; dan zegt rood straks niets meer.
-               </p>`
-            : ""
-        }
-        <div class="vrij">
-          <label for="vrij">Of eigen kleur</label>
-          <input id="vrij" type="text" spellcheck="false" placeholder="#198fd9 of var(--primary-color)" />
-          <button type="button" class="wissen">Wissen</button>
-        </div>
-        <p class="note vrijnote">
-          Een eigen kleur mag een hexwaarde zijn of een variabele uit je thema.
-          <b>var(--primary-color)</b> volgt je thema mee; een hexwaarde staat vast.
-        </p>
+        <details class="eigenvak">
+          <summary>Eigen kleur</summary>
+          <div class="rij2">
+            <span class="sw eigen leeg" title="Eigen kleur" aria-pressed="false">
+              ${icons.check}
+              <input type="color" aria-label="Eigen kleur kiezen" />
+            </span>
+            <input id="vrij" type="text" spellcheck="false"
+              placeholder="#198fd9 of var(--primary-color)" />
+            <button type="button" class="wissen">Wissen</button>
+          </div>
+          <p class="note vrijnote">
+            Een eigen kleur mag een hexwaarde zijn of een variabele uit je thema.
+            <b>var(--primary-color)</b> volgt je thema mee; een hexwaarde staat vast.
+          </p>
+        </details>
         <div class="chosen"></div>
       </div>`;
 
@@ -224,6 +266,13 @@ class DacTonePicker extends HTMLElement {
 
   paint_() {
     if (!this.shadowRoot.firstElementChild) return;
+    // Is er een oude palet-kleur bij- of afgekomen, dan hoort de rij vakjes
+    // opnieuw gezet te worden. `build_` eindigt zelf op `paint_`, en daarna is
+    // dit gelijk -- dus geen lus.
+    if (this.oudeToon_() !== this.getoondeOude_) {
+      this.build_();
+      return;
+    }
     this.$(".label").textContent = this.label ?? "Kleur";
 
     const eigen = this.eigen_();

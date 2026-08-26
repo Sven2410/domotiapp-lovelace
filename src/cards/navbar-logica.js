@@ -54,7 +54,7 @@ export function klemBalk(waarde) {
  * betekenen dat de kaart leeg blijft zonder te zeggen waarom.
  */
 export function asItem(ruw, diep = true) {
-  if (typeof ruw === "string") return { name: "", icon: "", path: ruw, items: [] };
+  if (typeof ruw === "string") return { name: "", icon: "", path: ruw, action: null, items: [] };
   const i = ruw ?? {};
   return {
     name: typeof i.name === "string" ? i.name : "",
@@ -69,6 +69,10 @@ export function asItem(ruw, diep = true) {
           : typeof i.navigation_path === "string"
             ? i.navigation_path
             : "",
+    // Een volledige actieconfig van Home Assistant, voor knoppen die iets DOEN
+    // in plaats van ergens heen te gaan -- "Herstart Home Assistant" is de
+    // eerste. Hij wint van het pad: staat hij er, dan is dat wat de knop doet.
+    action: i.action && typeof i.action === "object" ? { ...i.action } : null,
     // Eén laag diep en niet meer. Een menu in een menu in een navbalk is geen
     // navigatie meer maar een boomstructuur, en die hoort in de zijbalk van
     // Home Assistant en niet in een balk van vijf knoppen. `diep = false` is
@@ -101,7 +105,7 @@ export const heeftSub = (item) => subVan(item).length > 0;
  * terwijl je hem aan het maken bent.
  */
 export const gevuld = (item) =>
-  Boolean(item && (item.name?.trim() || item.icon?.trim() || item.path?.trim()));
+  Boolean(item && (item.name?.trim() || item.icon?.trim() || item.path?.trim() || item.action));
 
 /** De knoppen uit een config, genormaliseerd en afgekapt. */
 export function itemsVan(config) {
@@ -111,6 +115,78 @@ export function itemsVan(config) {
   // of de subknoppen meekomen. Met `.map(asItem)` verloor knop 0 -- en alleen
   // knop 0 -- zijn hele menu. Gevonden door de test hieronder, niet op de kaart.
   return ruw.slice(0, ITEMS_MAX).map((i) => asItem(i));
+}
+
+/**
+ * Kant-en-klare subknoppen.
+ *
+ * WAAROM DIT HIER STAAT EN NIET IN DE EDITOR
+ *
+ * Het is data, geen scherm: een naam, een icoon en wat de knop doet. Hier is
+ * het te toetsen zonder DOM, en dat is precies wat je wilt bij een knop die een
+ * dienst aanroept -- een typefout in `homeassistant.restart` merk je anders pas
+ * als je erop drukt.
+ *
+ * `bovenaan` bepaalt waar hij in de lijst belandt. Een lege subknop hoort
+ * onderaan, in de volgorde waarin je ze maakt; een kant-en-klare knop is een
+ * vaste plek in het menu en hoort bovenaan te staan. Zo staat hij ook op de
+ * schermafdruk van 27 augustus 2026: DomotiTech als bovenste, Herstart eronder.
+ */
+export const VOORAF = [
+  {
+    id: "domotitech",
+    label: "DomotiTech",
+    uitleg: "Opent domotitech.nl in een nieuw tabblad, met het logo erop.",
+    bovenaan: true,
+    maak: () => ({
+      name: "DomotiTech",
+      icon: "domotitech",
+      path: "https://domotitech.nl",
+      action: null,
+      items: [],
+    }),
+  },
+  {
+    id: "herstart",
+    label: "Herstart Home Assistant",
+    uitleg: "Roept homeassistant.restart aan, met een bevestiging ervoor.",
+    bovenaan: true,
+    maak: () => ({
+      name: "Herstart",
+      icon: "power",
+      path: "",
+      action: {
+        action: "perform-action",
+        perform_action: "homeassistant.restart",
+        // De vraag komt van Home Assistant zelf, met zijn eigen dialoog. Een
+        // herstart zonder vraag is een herstart die je per ongeluk doet.
+        confirmation: {
+          title: "Weet je het zeker?",
+          text: "Weet je het zeker dat je Home Assistant wilt herstarten?",
+        },
+      },
+      items: [],
+    }),
+  },
+];
+
+/** Een kant-en-klare subknop op zijn id, of null. */
+export const voorafOp = (id) => VOORAF.find((v) => v.id === id) ?? null;
+
+/**
+ * Zet er een subknop bij, op de plek die erbij hoort.
+ *
+ * Geeft de NIEUWE lijst terug en de index waar hij terechtkwam, zodat de editor
+ * weet welk blok hij moet openklappen en in beeld moet brengen. Zit de lijst
+ * vol, dan verandert er niets en is `plek` -1: stilletjes de laatste eraf
+ * duwen zou werk weggooien.
+ */
+export function voegSubToe(lijst, knop, bovenaan = false) {
+  const uit = Array.isArray(lijst) ? [...lijst] : [];
+  if (uit.length >= SUB_MAX) return { lijst: uit, plek: -1 };
+  const plek = bovenaan ? 0 : uit.length;
+  uit.splice(plek, 0, knop);
+  return { lijst: uit, plek };
 }
 
 /**
@@ -147,8 +223,15 @@ export function verdeel(items, maxBalk = BALK_STANDAARD) {
  * Een leeg pad geeft `{action: "none"}` en niet `null`: de kaart geeft dit
  * rechtstreeks aan `runAction`, en die kent "none" al als "doe niets".
  */
-export function actieVoor(pad) {
-  const p = String(pad ?? "").trim();
+export function actieVoor(padOfKnop) {
+  // Een knop mag een kant-en-klare actie dragen; die wint van zijn pad. Een
+  // string blijft toegestaan, want zo werd deze functie het eerst aangeroepen
+  // en zo staat hij in de tests.
+  if (padOfKnop && typeof padOfKnop === "object") {
+    if (padOfKnop.action) return padOfKnop.action;
+    return actieVoor(padOfKnop.path);
+  }
+  const p = String(padOfKnop ?? "").trim();
   if (!p) return { action: "none" };
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(p) || p.startsWith("mailto:"))
     return { action: "url", url_path: p };

@@ -204,6 +204,25 @@ class TabsCard extends DacCard {
   }
 
   /**
+   * Een nieuwe config betekent een nieuwe kaartenlijst, dus de cache moet leeg.
+   *
+   * `DacCard.setConfig` gooit de hele shadow-DOM weg en bouwt opnieuw op. De
+   * gebouwde kindkaarten in `kinderen_` hingen in die weggegooide DOM: ze staan
+   * nergens meer, maar de Map wist dat niet en `bouw_()` haakte af op
+   * `kinderen_.has(i)`. Het gevolg was een tab die na de eerste wijziging in de
+   * editor LEEG bleef -- dus ook: een kaart toevoegen die daarna niet
+   * verscheen. Gemeld op 27 augustus 2026 met een schermafdruk van een tab die
+   * "Deze tab heeft nog geen kaart" bleef zeggen.
+   *
+   * Op een echt dashboard draait `setConfig` één keer; in de editor bij elke
+   * toetsaanslag, en daar is opnieuw bouwen precies de bedoeling.
+   */
+  setConfig(config) {
+    this.kinderen_.clear();
+    super.setConfig(config);
+  }
+
+  /**
    * Elke nieuwe `hass` moet naar de kinderen, ook als deze kaart zelf niets
    * hoeft te hertekenen. Zie de kop.
    */
@@ -317,8 +336,16 @@ class TabsCard extends DacCard {
     if (!vak || !tab) return;
 
     if (!tab.cards.length) {
-      vak.innerHTML = `<div class="leeg">Deze tab heeft nog geen kaart.</div>`;
+      const leeg = document.createElement("div");
+      leeg.className = "leeg";
+      leeg.textContent = "Deze tab heeft nog geen kaart.";
+      vak.replaceChildren(leeg);
       meetRaster(this.$(".card"));
+      // In het voorbeeld van de editor hoort hier de knop te staan waarmee je er
+      // een toevoegt. Zonder die knop verwees de editor ernaast naar iets dat er
+      // niet was: "voeg er een toe in het voorbeeld hiernaast", en dan een leeg
+      // vak. Gemeld op 27 augustus 2026.
+      this.knopLater_(i);
       return;
     }
 
@@ -352,7 +379,7 @@ class TabsCard extends DacCard {
             maakKaart: (_, index) => elementen[index] ?? null,
             opActie: (soort, gegevens) => bewerker.uitVoorbeeld?.(i, soort, gegevens),
           }),
-          this.voegToeKnop_(bewerker, i),
+          this.voegToeKnop_(i),
         );
         meetRaster(this.$(".card"));
         return;
@@ -371,15 +398,69 @@ class TabsCard extends DacCard {
     }
   }
 
-  /** De knop onder de kaarten in het voorbeeld, in de vorm die HA aanhoudt. */
-  voegToeKnop_(bewerker, i) {
+  /**
+   * Zet de toevoegknop in een LEGE tab, zodra de editor te vinden is.
+   *
+   * Waarom met een herkansing en niet meteen: Home Assistant bouwt het
+   * VOORBEELD en de EDITOR los van elkaar, en wie er eerst is verschilt per
+   * keer. Bij een tab MET kaarten valt dat niet op -- daar wordt er pas gekeken
+   * na `await loadCardHelpers()`, en dan staat alles er. Een lege tab tekent
+   * meteen, en dan is de editor er nog niet. Gemeten op 27 augustus 2026: de
+   * kaart en de editor stonden er allebei, en tóch bleef de knop weg.
+   *
+   * Er wordt hoogstens een halve seconde gekeken. Staat de editor er dan nog
+   * niet, dan is dit geen voorbeeld maar een echt dashboard -- en daar hoort
+   * geen knop.
+   */
+  knopLater_(i, pogingen = 60) {
+    // Het vak wordt ELKE ronde opnieuw opgezocht en niet vastgehouden. Een
+    // vastgehouden verwijzing is de val die deze knop de eerste keer kostte:
+    // bij de eerste opbouw hangt de kaart nog NIET in het document, `isConnected`
+    // is dan false, en een enkele toets daarop stopte de hele herkansing --
+    // waarna de knop nooit meer kwam. Gemeten op 27 augustus 2026.
+    const vak = this.$(`.vak[data-i="${i}"]`);
+    if (!vak || vak.querySelector(".voegtoe")) return;
+    // Inmiddels toch een kaart erin? Dan tekent `bouw_` de lijst en hoort deze
+    // herkansing zich er niet meer mee te bemoeien.
+    if (this.config?.tabs?.[i]?.cards?.length) return;
+    // Er wordt op de DIALOOG gewacht en niet op de editor. Gemeten op
+    // 27 augustus 2026: de dialoog staat er binnen een tel, de editor erin pas
+    // een stuk later -- een halve seconde wachten was te kort en de knop bleef
+    // weg. En de editor hoeft hier ook niet te bestaan: die wordt pas bij de
+    // KLIK opgezocht, en dan is hij er zeker.
+    if (this.inVoorbeeld_()) {
+      vak.appendChild(this.voegToeKnop_(i));
+      meetRaster(this.$(".card"));
+      return;
+    }
+    if (pogingen <= 0) return;
+    const id = setTimeout(() => this.knopLater_(i, pogingen - 1), 50);
+    this.teardown_.push(() => clearTimeout(id));
+  }
+
+  /** Staat deze kaart in het voorbeeld van een kaarteditor? */
+  inVoorbeeld_() {
+    for (const v of voorouders(this)) {
+      if (v.tagName?.toLowerCase?.() === "hui-dialog-edit-card") return true;
+    }
+    return false;
+  }
+
+  /**
+   * De knop onder de kaarten in het voorbeeld, in de vorm die HA aanhoudt.
+   *
+   * De editor wordt pas bij de KLIK opgezocht en niet nu: hij komt later dan de
+   * kaart, en een knop die op een verwijzing van vroeger wacht is een knop die
+   * er soms niet is. Zie `knopLater_`.
+   */
+  voegToeKnop_(i) {
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "voegtoe";
     knop.textContent = "＋  Kaart toevoegen";
     knop.addEventListener("click", (e) => {
       e.stopPropagation();
-      bewerker.uitVoorbeeld?.(i, "toevoegen", {});
+      bewerkerVan(this)?.uitVoorbeeld?.(i, "toevoegen", {});
     });
     return knop;
   }

@@ -39,6 +39,8 @@ import {
   BALK_MIN,
   ITEMS_MAX,
   SUB_MAX,
+  VOORAF,
+  voegSubToe,
   asItem,
   gevuld,
   heeftSub,
@@ -70,7 +72,7 @@ const CSS = `
     flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center;
     border-radius: 9px; background: rgba(127,127,127,.14); color: var(--primary-color);
   }
-  .dac-nav .voor svg, .dac-nav .voor ha-icon {
+  .dac-nav .voor svg, .dac-nav .voor ha-icon, .dac-nav .voor img {
     width: 17px; height: 17px; --mdc-icon-size: 17px;
   }
 
@@ -147,7 +149,7 @@ const CSS = `
   .dac-nav .sub[open] > summary { border-bottom: 1px solid var(--divider-color); }
   .dac-nav .sub > summary:hover { background: rgba(127,127,127,.06); }
   .dac-nav .sub .voor { width: 24px; height: 24px; border-radius: 7px; }
-  .dac-nav .sub .voor svg, .dac-nav .sub .voor ha-icon {
+  .dac-nav .sub .voor svg, .dac-nav .sub .voor ha-icon, .dac-nav .sub .voor img {
     width: 14px; height: 14px; --mdc-icon-size: 14px;
   }
   .dac-nav .sub .body { padding: 8px; gap: 8px; }
@@ -159,6 +161,46 @@ const CSS = `
   }
   .dac-nav .subtoevoegen:hover { background: rgba(127,127,127,.08); }
   .dac-nav .subtoevoegen:disabled { opacity: .4; cursor: default; }
+
+  /* ---- het keuzemenu achter "Subknop toevoegen" ----
+     Een gewone details/summary en geen ha-button-menu: dit moet het ook doen
+     als Home Assistant zijn menu-element nog niet geladen heeft, en een lijst
+     die openklapt is hier net zo duidelijk. */
+  .dac-nav .subkeuze { position: relative; }
+  .dac-nav .subkeuze > summary {
+    display: block; list-style: none;
+    padding: 9px; cursor: pointer; font-size: 13px;
+    border: 1px dashed var(--divider-color); border-radius: 10px;
+    color: var(--primary-color); text-align: center;
+  }
+  .dac-nav .subkeuze > summary::-webkit-details-marker { display: none; }
+  .dac-nav .subkeuze > summary:hover { background: rgba(127,127,127,.08); }
+  .dac-nav .subkeuze[vol] > summary { opacity: .4; pointer-events: none; }
+
+  .dac-nav .keuzes {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-top: 6px; padding: 6px;
+    border: 1px solid var(--divider-color); border-radius: 10px;
+    background: var(--card-background-color);
+  }
+  .dac-nav .keuzes button {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 8px 10px; cursor: pointer; text-align: left; font: inherit;
+    border: 0; border-radius: 8px; background: transparent;
+    color: var(--primary-text-color);
+  }
+  .dac-nav .keuzes button:hover { background: rgba(127,127,127,.1); }
+  .dac-nav .keuzes .voor {
+    flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center;
+    border-radius: 8px; background: rgba(127,127,127,.12);
+  }
+  .dac-nav .keuzes .voor svg, .dac-nav .keuzes .voor ha-icon,
+  .dac-nav .keuzes .voor img {
+    width: 16px; height: 16px; --mdc-icon-size: 16px;
+  }
+  .dac-nav .keuzes .tekst { display: flex; flex-direction: column; min-width: 0; }
+  .dac-nav .keuzes .tekst b { font-size: 13px; font-weight: 500; }
+  .dac-nav .keuzes .tekst small { font-size: 11.5px; color: var(--secondary-text-color); }
 `;
 
 /**
@@ -173,6 +215,9 @@ const kaal = (i) => ({
   ...(i.name ? { name: i.name } : {}),
   ...(i.icon ? { icon: i.icon } : {}),
   ...(i.path ? { path: i.path } : {}),
+  // Een voorgedefinieerde knop draagt een hele actieconfig. Vergeet je hem
+  // hier, dan overleeft "Herstart Home Assistant" zijn eigen editor niet.
+  ...(i.action ? { action: structuredClone(i.action) } : {}),
 });
 
 /** Wat er in de YAML komt: geen lege sleutels, en altijd verse objecten. */
@@ -472,27 +517,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     lijst.className = "sublijst";
     item.items.forEach((sub, j) => lijst.appendChild(this.subItemBlok_(item, sub, i, j)));
 
-    const knop = document.createElement("button");
-    knop.type = "button";
-    knop.className = "subtoevoegen";
-    knop.textContent = "＋  Subknop toevoegen";
-    knop.disabled = item.items.length >= SUB_MAX;
-    knop.addEventListener("click", () => {
-      // ACHTERAAN, niet vooraan: een nieuwe subknop hoort onder de vorige te
-      // komen, in de volgorde waarin je ze maakt. Gemeld op 26 augustus 2026.
-      const plek = item.items.length;
-      item.items.push({ name: "", icon: "", path: "", items: [] });
-      this.open_.add(`i${i}`);
-      this.open_.add(`i${i}s${plek}`);
-      this.emit_();
-      this.build_();
-      // En in beeld brengen. Zonder dit blijft de schuifbalk staan waar hij
-      // stond, en dan lijkt het alsof er bovenaan iets is bijgekomen in plaats
-      // van onderaan.
-      requestAnimationFrame(() => {
-        this.querySelectorAll("details.sub")[plek]?.scrollIntoView({ block: "nearest" });
-      });
-    });
+    const knop = this.subKeuze_(item, i);
 
     const uitleg = document.createElement("p");
     uitleg.className = "uitleg";
@@ -502,6 +527,77 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       "staan zijn subknoppen daar ingesprongen onder hem.";
 
     return [kop, lijst, knop, uitleg];
+  }
+
+  /**
+   * "Subknop toevoegen", met de kant-en-klare knoppen eronder.
+   *
+   * De eigenaar vroeg er op 27 augustus 2026 om: "ik wil gewoon als ik subknop
+   * toevoegen klik een optie hebben om domotitech aan te klikken". Dus is de
+   * knop een menu geworden -- eerst de lege, dan wat er kant en klaar is.
+   */
+  subKeuze_(item, i) {
+    const det = document.createElement("details");
+    det.className = "subkeuze";
+    if (item.items.length >= SUB_MAX) det.setAttribute("vol", "");
+
+    const sum = document.createElement("summary");
+    sum.textContent = "＋  Subknop toevoegen";
+    det.appendChild(sum);
+
+    const keuzes = document.createElement("div");
+    keuzes.className = "keuzes";
+    det.appendChild(keuzes);
+
+    const zet = (knop, bovenaan) => {
+      const { lijst, plek } = voegSubToe(item.items, knop, bovenaan);
+      if (plek < 0) return;
+      item.items = lijst;
+      this.open_.add(`i${i}`);
+      this.open_.add(`i${i}s${plek}`);
+      this.emit_();
+      this.build_();
+      // En in beeld brengen. Zonder dit blijft de schuifbalk staan waar hij
+      // stond, en dan lijkt het alsof er ergens anders iets is bijgekomen.
+      requestAnimationFrame(() => {
+        this.querySelectorAll("details.sub")[plek]?.scrollIntoView({ block: "nearest" });
+      });
+    };
+
+    keuzes.appendChild(
+      this.keuzeKnop_("plus", "Lege subknop", "Zelf een naam, een icoon en een pad invullen.", () =>
+        // ACHTERAAN, in de volgorde waarin je ze maakt. Gemeld op 26 augustus 2026.
+        zet({ name: "", icon: "", path: "", action: null, items: [] }, false),
+      ),
+    );
+
+    for (const v of VOORAF) {
+      const gemaakt = v.maak();
+      keuzes.appendChild(
+        this.keuzeKnop_(gemaakt.icon, v.label, v.uitleg, () => zet(v.maak(), v.bovenaan)),
+      );
+    }
+
+    return det;
+  }
+
+  /** Een regel in dat menu: icoon, naam, en een zin over wat hij doet. */
+  keuzeKnop_(icoon, label, uitleg, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    const voor = document.createElement("span");
+    voor.className = "voor";
+    voor.innerHTML = resolve(icoon, "plus");
+    const tekst = document.createElement("span");
+    tekst.className = "tekst";
+    const naam = document.createElement("b");
+    naam.textContent = label;
+    const klein = document.createElement("small");
+    klein.textContent = uitleg;
+    tekst.append(naam, klein);
+    b.append(voor, tekst);
+    b.addEventListener("click", onClick);
+    return b;
   }
 
   subItemBlok_(ouder, sub, i, j) {
@@ -521,7 +617,9 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     const kop = () => {
       voor.innerHTML = resolve(sub.icon, "grid");
       b.textContent = sub.name || (gevuld(sub) ? sub.path || "Zonder naam" : "Nieuwe subknop");
-      small.textContent = sub.path || "Nog geen pad";
+      small.textContent = sub.action
+        ? `Roept ${sub.action.perform_action ?? sub.action.service ?? sub.action.action} aan`
+        : sub.path || "Nog geen pad";
     };
     kop();
     this.koppen_.push(kop);
@@ -560,6 +658,18 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       { name: "path", selector: { text: {} } },
     ];
     form.computeLabel = (s) => ({ name: "Naam", path: "Waar gaat hij heen" })[s.name] ?? s.name;
+    // Een kant-en-klare knop DOET iets in plaats van ergens heen te gaan. Zijn
+    // pad wordt dan niet gebruikt, en een veld dat niets doet is een veld waar
+    // je aan blijft zitten.
+    if (sub.action) {
+      form.schema = [{ name: "name", selector: { text: {} } }];
+      form.computeHelper = (s) =>
+        s.name === "name"
+          ? `Deze knop voert een actie uit (${
+              sub.action.perform_action ?? sub.action.service ?? sub.action.action
+            }) en gaat dus nergens heen. Weg met de knop rechtsboven.`
+          : undefined;
+    }
     form.data = { name: sub.name, path: sub.path };
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();

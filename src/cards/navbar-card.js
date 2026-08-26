@@ -481,7 +481,7 @@ class NavbarCard extends DacCard {
     if (!item) return;
     const doel = subIndex === undefined ? item : subVan(item)[Number(subIndex)];
     if (!doel) return;
-    runAction(this, this.hass, {}, actieVoor(doel.path));
+    runAction(this, this.hass, {}, actieVoor(doel));
   }
 
   /* ------------------------------------------------------------- de menu's */

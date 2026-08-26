@@ -224,3 +224,96 @@ export function mediaIcoon(st) {
   if (dc === "receiver") return "radio";
   return "speaker";
 }
+
+/* ==========================================================================
+   DE ALGEMENE MEDIASPELER
+
+   Gevraagd op 27 augustus 2026: "een vinkje bij de mediaspeler kaart dat het
+   een algemene mediaspeler wordt zodat ik speaker kan selecteren waar ik media
+   op wil afspelen -- een soort sonos card. De inhoud moet hetzelfde blijven."
+
+   Dat laatste is wat de vorm bepaalt. De kaart wordt NIET iets anders: hij
+   krijgt er een keuze bovenop, en die keuze wisselt alleen welke speler hij
+   bedient. Zoeken, groeperen, Music Assistant, het volume -- alles blijft
+   werken zoals het werkte, want alles hangt aan `config.entity` en dat is
+   precies de sleutel die de keuze omzet.
+
+   DE KEUZE HOORT BIJ HET APPARAAT, net als bij de tabbladenkaart. Kies je op je
+   telefoon de keuken, dan mag de tablet in de gang op de woonkamer blijven
+   staan. Dus `localStorage`, en niets server-side.
+   ========================================================================== */
+
+const SPELER_VOORVOEGSEL = "domotiapp-media-speler:";
+
+/**
+ * De speakers waaruit je mag kiezen.
+ *
+ * Niets ingesteld betekent ALLE mediaspelers in huis -- dat is wat "algemeen"
+ * betekent. Staat er een lijst, dan is dat de lijst; de vaste speler van de
+ * kaart hoort er altijd bij, anders kun je nooit terug naar waar je begon.
+ *
+ * Op naam gesorteerd, want een keuzelijst op entiteits-id leest als een
+ * databasedump.
+ */
+export function spelersVan(config, hass) {
+  const naam = (id) => hass?.states?.[id]?.attributes?.friendly_name ?? id;
+  const bestaat = (id) => Boolean(hass?.states?.[id]);
+
+  // Let op de volgorde: eerst kijken of er een lijst IS, en pas daarna of er
+  // iets van over is. Filteren we eerst, dan valt een lijst met alleen een
+  // verhuisde entiteit terug op "alle speakers in huis" -- precies het
+  // tegenovergestelde van wat er ingesteld staat.
+  const ingesteld = Array.isArray(config?.players) && config.players.length;
+  const lijst = ingesteld
+    ? [
+        ...new Set([
+          ...(bestaat(config?.entity) ? [config.entity] : []),
+          ...config.players.filter(bestaat),
+        ]),
+      ]
+    : Object.keys(hass?.states ?? {}).filter((id) => id.startsWith("media_player."));
+
+  return lijst.sort((a, b) => String(naam(a)).localeCompare(String(naam(b)), "nl"));
+}
+
+/**
+ * De sleutel waaronder de keuze van dit apparaat staat.
+ *
+ * Afgeleid van de LIJST en niet van de kaart: twee kaarten met dezelfde
+ * speakers zijn voor de gebruiker dezelfde keuze, en een kaart die je hernoemt
+ * hoort zijn keuze niet kwijt te raken. Dezelfde afweging als bij de
+ * tabbladenkaart.
+ */
+export const spelerSleutel = (lijst) => SPELER_VOORVOEGSEL + (lijst ?? []).join("|");
+
+/**
+ * Welke speler de kaart bedient: het onthouden ervan, anders die uit de config.
+ *
+ * Een onthouden speler die niet meer bestaat -- verhuisd, hernoemd, integratie
+ * eruit -- telt als niets onthouden. Anders bedient de kaart een entiteit die
+ * er niet is en blijft hij leeg zonder te zeggen waarom.
+ */
+export function actieveSpeler(config, lijst, opslag) {
+  if (!config?.speaker_select) return config?.entity ?? "";
+  let ruw = null;
+  try {
+    ruw = opslag?.getItem?.(spelerSleutel(lijst)) ?? null;
+  } catch {
+    // Een privévenster dat localStorage dichthoudt is geen reden om niets te
+    // spelen.
+    ruw = null;
+  }
+  if (ruw && lijst?.includes(ruw)) return ruw;
+  if (config.entity && lijst?.includes(config.entity)) return config.entity;
+  return config.entity || lijst?.[0] || "";
+}
+
+/** Onthoud de gekozen speler. Faalt stil: een keuze is geen data. */
+export function schrijfSpeler(opslag, lijst, id) {
+  try {
+    opslag?.setItem?.(spelerSleutel(lijst), String(id));
+    return true;
+  } catch {
+    return false;
+  }
+}

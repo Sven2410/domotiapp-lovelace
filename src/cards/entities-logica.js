@@ -183,8 +183,16 @@ export function vlakVan(config) {
  */
 export const regelsIn = (row) => Math.max(1, Math.ceil((row.items?.length || 1) / row.columns));
 
-/** De hoogte van de kolomkoppen boven een rij. */
-export const KOP_H = 15;
+/**
+ * De hoogte van de kolomkoppen boven een rij.
+ *
+ * De GEMETEN regelhoogte van 14px tekst op 600 is 22.4px; dit getal komt daar
+ * vandaan en niet uit een schatting (gemeten op 27 augustus 2026 in de
+ * testinstance). Verandert het formaat in `entities-card.js`, dan verandert dit
+ * getal mee -- anders komt de kaart op een halve rasterrij uit en schildert hij
+ * over zijn buurman (valkuil 8 en 12).
+ */
+export const KOP_H = 22;
 
 /**
  * Hoe hoog één regel van deze rij is.
