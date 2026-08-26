@@ -177,3 +177,31 @@ describe("de bewaker", () => {
     assert.deepEqual(zwevend, []);
   });
 });
+
+describe("De weermetingen van 27 augustus 2026 — NIEUW GEDRAG", () => {
+  /**
+   * Sven vroeg ze op de woorden die hij zelf gebruikt. Dat is precies waar dit
+   * bestand voor bestaat: de sleutels zijn Engels en hij typt Nederlands. Vindt
+   * hij ze niet op zijn eigen woord, dan bestaan ze voor hem niet.
+   */
+  const GEVRAAGD = [
+    ["vochtigheid", "humidity"],
+    ["luchtvochtigheid", "humidity"],
+    ["lux", "lux"],
+    ["lichtsterkte", "lux"],
+    ["windsnelheid", "windSpeed"],
+    ["weercode", "weatherCode"],
+    ["uv index", "uv"],
+    ["voorspelling", "forecast"],
+    ["regen", "rain"],
+    ["regenmeter", "rainfall"],
+    ["weerstation", "weatherStation"],
+    ["buienradar", "rainRadar"],
+  ];
+
+  for (const [woord, sleutel] of GEVRAAGD) {
+    it(`vindt ${sleutel} op "${woord}"`, () => {
+      assert.ok(zoek(woord).includes(sleutel), `"${woord}" vond ${sleutel} niet`);
+    });
+  }
+});

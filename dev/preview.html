@@ -703,6 +703,9 @@ const COLUMNS = [
     { type: "custom:domotiapp-climate-card", entity: "climate.badkamer", humidity: "sensor.vocht_slaapkamer" },
     { type: "custom:domotiapp-climate-card", temperature: "sensor.temp_logeerkamer" },
     { type: "custom:domotiapp-climate-card", temperature: "sensor.temp_slaapkamer", humidity: "sensor.vocht_slaapkamer", name: "Slaapkamer Sven" },
+    // Gestapeld (27-08-2026): met thermostaat, en alleen metend.
+    { type: "custom:domotiapp-climate-card", entity: "climate.badkamer", humidity: "sensor.vocht_slaapkamer", name: "Badkamer gestapeld", layout: "gestapeld" },
+    { type: "custom:domotiapp-climate-card", temperature: "sensor.temp_slaapkamer", humidity: "sensor.vocht_slaapkamer", name: "Alleen meten gestapeld", layout: "gestapeld" },
   ]],
   ["Entiteiten, rijen", [
     { type: "custom:domotiapp-entities-card", rows: [

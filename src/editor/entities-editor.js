@@ -65,7 +65,7 @@
 import "./icon-picker.js";
 import { meldAan } from "../registratie.js";
 import { BEELD_MAX, BEELD_MIN, clampBeeld, gevuld } from "../cards/entities-logica.js";
-import { naarRijen as toRows, uitgekleed, vul } from "./entities-rijen.js";
+import { naarRijen as toRows, schuifOpen, uitgekleed, vul } from "./entities-rijen.js";
 
 /** Wat een rij is en wat een plek is: één keer opgeschreven, in `entities-logica.js`. */
 const VORMEN = [
@@ -148,6 +148,9 @@ const CSS = `
   }
   .dac-ed .weg:hover { background: rgba(127,127,127,.16); color: var(--error-color, #d03b3b); }
   .dac-ed .weg[hidden] { display: none; }
+  /* Dupliceren is geen weggooien, dus geen rood. */
+  .dac-ed .weg.dupliceer:hover { color: var(--primary-color, #198fd9); }
+  .dac-ed .weg.dupliceer svg { width: 15px; height: 15px; }
 
   .dac-ed .rijbody { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -279,15 +282,17 @@ class EntitiesEditor extends HTMLElement {
    * rij 2 de open-stand van zijn buurman, en klapt er willekeurig iets open.
    */
   rijWeg_(r) {
-    const nieuw = new Set();
-    for (const k of this.open_) {
-      const m = /^r(\d+)(?:i(\d+))?$/.exec(k);
-      if (!m) continue;
-      const n = Number(m[1]);
-      if (n === r) continue;
-      nieuw.add(n > r ? `r${n - 1}${m[2] === undefined ? "" : `i${m[2]}`}` : k);
-    }
-    this.open_ = nieuw;
+    this.open_ = schuifOpen(this.open_, r, "weg");
+  }
+
+  /**
+   * En de andere kant op: er komt een rij BIJ, vlak achter `r`.
+   *
+   * Zonder dit erft de nieuwe rij de open-stand van de rij die nu op zijn plek
+   * stond, en klapt er bij het dupliceren willekeurig iets open of dicht.
+   */
+  rijErbij_(r) {
+    this.open_ = schuifOpen(this.open_, r, "erbij");
   }
 
   /** Hetzelfde, voor een plek die leeggemaakt wordt en waar de rest opschuift. */
@@ -525,6 +530,33 @@ class EntitiesEditor extends HTMLElement {
       { inKop: true }
     );
 
+    // Gevraagd op 27 augustus 2026. Een rij van drie tegels met iconen, kleuren
+    // en tikacties opnieuw invullen voor de kamer ernaast is puur overtypen --
+    // en overtypen is waar de fouten in sluipen.
+    const kopie = document.createElement("button");
+    kopie.type = "button";
+    kopie.className = "weg dupliceer";
+    kopie.title = "Rij dupliceren";
+    // Getekend en niet als teken: het glyph voor "dupliceren" ontbreekt op
+    // genoeg systemen om er een leeg vakje van te maken.
+    kopie.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="9" y="9" width="11" height="11" rx="2"/>' +
+      '<path d="M6.5 15H5.6A1.6 1.6 0 0 1 4 13.4V5.6A1.6 1.6 0 0 1 5.6 4h7.8A1.6 1.6 0 0 1 15 5.6v.9"/>' +
+      "</svg>";
+    this.binnenKop_(kopie, () => {
+      // Diep kopiëren: de plekken in een rij zijn eigen objecten, en een ondiepe
+      // kopie zou twee rijen op dezelfde items laten wijzen. Dan verandert de
+      // ene mee met de andere en lijkt de editor betoverd.
+      this.rows_.splice(r + 1, 0, structuredClone(this.rows_[r]));
+      this.rijErbij_(r);
+      // De kopie meteen open, want daar ga je iets aan veranderen.
+      this.open_.add(`r${r + 1}`);
+      this.emit_();
+      this.build_();
+    });
+
     const weg = document.createElement("button");
     weg.type = "button";
     weg.className = "weg";
@@ -537,7 +569,7 @@ class EntitiesEditor extends HTMLElement {
       this.build_();
     });
 
-    sum.append(pijl, titel, kolommen.wrap, weg);
+    sum.append(pijl, titel, kolommen.wrap, kopie, weg);
 
     // ---- body: de vorm van deze rij, en daaronder de plekken erin ----
     const body = document.createElement("div");

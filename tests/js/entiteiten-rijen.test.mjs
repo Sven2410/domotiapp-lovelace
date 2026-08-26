@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { naarRijen, uitgekleed } from "../../src/editor/entities-rijen.js";
+import { naarRijen, schuifOpen, uitgekleed } from "../../src/editor/entities-rijen.js";
 
 /**
  * De echo-lus van de entiteiten-editor.
@@ -100,5 +100,46 @@ describe("de rijen van de entiteitenkaart, heen en terug", () => {
     });
     assert.equal(uit.length, 1);
     assert.equal(uit[0].items[0].entity, "light.a");
+  });
+});
+
+describe("schuifOpen — NIEUW GEDRAG (rij dupliceren, 27-08-2026)", () => {
+  const set = (...k) => new Set(k);
+  const uit = (s) => [...s].sort();
+
+  it("REGRESSIEWACHT: bij verwijderen schuift alles erna een plek terug", () => {
+    assert.deepEqual(uit(schuifOpen(set("r0", "r1", "r2"), 1, "weg")), ["r0", "r1"]);
+  });
+
+  it("REGRESSIEWACHT: verwijderen neemt de plekken van die rij mee", () => {
+    assert.deepEqual(uit(schuifOpen(set("r1", "r1i0", "r2i1"), 1, "weg")), ["r1i1"]);
+  });
+
+  it("bij dupliceren schuift alles ná die rij een plek op", () => {
+    // Rij 1 wordt gedupliceerd: de kopie komt op r2, dus de oude r2 wordt r3.
+    assert.deepEqual(uit(schuifOpen(set("r0", "r1", "r2"), 1, "erbij")), ["r0", "r1", "r3"]);
+  });
+
+  it("de gedupliceerde rij zelf blijft staan waar hij stond", () => {
+    assert.ok(schuifOpen(set("r1", "r1i0"), 1, "erbij").has("r1"));
+    assert.ok(schuifOpen(set("r1", "r1i0"), 1, "erbij").has("r1i0"));
+  });
+
+  it("neemt de plekken van latere rijen mee omhoog", () => {
+    assert.deepEqual(uit(schuifOpen(set("r2i0", "r2i1"), 0, "erbij")), ["r3i0", "r3i1"]);
+  });
+
+  it("dupliceren van de laatste rij verschuift niets", () => {
+    assert.deepEqual(uit(schuifOpen(set("r0", "r1"), 1, "erbij")), ["r0", "r1"]);
+  });
+
+  it("laat de meegegeven set met rust", () => {
+    const origineel = set("r0", "r1");
+    schuifOpen(origineel, 0, "erbij");
+    assert.deepEqual(uit(origineel), ["r0", "r1"]);
+  });
+
+  it("gooit onbegrijpelijke sleutels weg in plaats van erover te vallen", () => {
+    assert.deepEqual(uit(schuifOpen(set("r0", "rommel", ""), 0, "erbij")), ["r0"]);
   });
 });
