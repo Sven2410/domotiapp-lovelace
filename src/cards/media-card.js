@@ -335,6 +335,26 @@ class MediaCard extends DacCard {
     return spelersVan(this.ruw_ ?? this.config, this.hass);
   }
 
+  /**
+   * De speakers die in het zoekscherm samen te laten spelen zijn.
+   *
+   * Een eigen lijst in de config wint. Anders, op een ALGEMENE mediaspeler:
+   * dezelfde lijst als de speakerkiezer aanbiedt. Dat zijn precies de speakers
+   * waar je muziek naartoe stuurt, dus zijn het ook precies de speakers die je
+   * wilt kunnen koppelen.
+   *
+   * Zonder dit viel het zoekscherm terug op het label "Music Assistant Media"
+   * in Home Assistant, en op een algemene kaart is dat label meestal nergens
+   * geplakt: dan stond er een lege voet met een uitlegzin in plaats van je
+   * speakers, en viel er niets te groeperen. Gemeld op 26 augustus 2026.
+   */
+  groepsSpelers_() {
+    const eigen = this.config.speakers;
+    if (Array.isArray(eigen) && eigen.length) return eigen;
+    if (!this.config.speaker_select) return eigen;
+    return this.spelers_();
+  }
+
   /** Een andere speaker: onthouden, en de kaart erop omzetten. */
   kiesSpeler_(id) {
     if (!id || id === this.config.entity) return;
@@ -525,7 +545,7 @@ class MediaCard extends DacCard {
         // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
         return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name), {
           radioModus: this.config.radio_mode === true,
-          speakers: this.config.speakers,
+          speakers: this.groepsSpelers_(),
         });
       default:
         return undefined;
@@ -884,7 +904,7 @@ class MediaEditor extends DacEditor {
     if (s.name === "speaker_select")
       return "De kaart krijgt er een balk bij waarmee je kiest waar de muziek heen gaat. De speler hierboven is de standaard; de keuze wordt per apparaat onthouden, dus je telefoon en de tablet in de gang kunnen op iets anders staan.";
     if (s.name === "players")
-      return "Laat je dit leeg, dan staan alle mediaspelers in huis in de lijst. Vul je er een paar in, dan alleen die -- plus de speler hierboven.";
+      return "Laat je dit leeg, dan staan de speakers van Music Assistant in de lijst -- geen televisies of streamers, want daar stuur je geen muziek naartoe. Vul je er zelf een paar in, dan is dat de lijst, wat er ook in staat.";
     if (s.name === "layout")
       return "Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.";
     if (s.name === "volume_entity")
@@ -894,7 +914,7 @@ class MediaEditor extends DacEditor {
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
     if (s.name === "speakers")
-      return "De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg, dan valt de kaart terug op het label \"Music Assistant Media\" in Home Assistant.";
+      return "De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg op een algemene mediaspeler, dan zijn dat dezelfde speakers als in de keuzelijst; op een gewone kaart valt hij terug op het label \"Music Assistant Media\" in Home Assistant.";
     if (s.name === "radio_mode")
       return "Zoals Spotify: is het gekozen nummer klaar, dan zoekt Music Assistant er zelf muziek bij in plaats van te stoppen. Staat dit uit, dan kan het nog steeds per keer via het menu bij een treffer.";
     if (s.name === "show_source")

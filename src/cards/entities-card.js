@@ -229,7 +229,7 @@ class EntitiesCard extends DacCard {
       /* Vol formaat en volle inkt. Dit is een KOP boven een kolom -- "Begane
          grond" naast "1e verdieping" -- en niet een bijschrift; op 11px in
          --dac-ink-3 las hij als iets dat je mocht overslaan. Gemeld op
-         27 augustus 2026. Verander je dit formaat, verander dan KOP_H mee:
+         26 augustus 2026. Verander je dit formaat, verander dan KOP_H mee:
          daar hangt de rasterhoogte van de kaart aan. */
       font-size: 14px; font-weight: 600; letter-spacing: -.01em;
       color: var(--dac-ink);

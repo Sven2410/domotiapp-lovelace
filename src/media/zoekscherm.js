@@ -1471,7 +1471,13 @@ class MediaBrowser extends HTMLElement {
     // -- in een slaapkamer, om elf uur 's avonds, en een kleine speaker kan er
     // stuk van gaan. Wat je hoort hoort te zijn wat de schuif aangeeft, dus
     // krijgt de nieuwe speaker het volume van de speler waar hij bij komt.
-    const nu = volumePct(stateOf(this.hass, this.entity_));
+    const hoofd = stateOf(this.hass, this.entity_);
+    // Alleen overnemen als de hoofdspeaker ECHT een volume heeft. Een speler
+    // zonder `volume_level` -- een tv-kastje, een groep die het niet meldt --
+    // geeft hier 0, en dan zou de speaker die erbij komt op stil gezet worden.
+    // Dat is een speaker die het niet doet en waar je de oorzaak niet van ziet.
+    if (typeof hoofd?.attributes?.volume_level !== "number") return;
+    const nu = volumePct(hoofd);
     const erbij = stateOf(this.hass, entityId);
     if (!kan(erbij, KENMERK.VOLUME_SET)) return;
     if (volumePct(erbij) === nu) return;

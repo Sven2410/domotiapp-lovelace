@@ -228,7 +228,7 @@ export function mediaIcoon(st) {
 /* ==========================================================================
    DE ALGEMENE MEDIASPELER
 
-   Gevraagd op 27 augustus 2026: "een vinkje bij de mediaspeler kaart dat het
+   Gevraagd op 26 augustus 2026: "een vinkje bij de mediaspeler kaart dat het
    een algemene mediaspeler wordt zodat ik speaker kan selecteren waar ik media
    op wil afspelen -- een soort sonos card. De inhoud moet hetzelfde blijven."
 
@@ -258,6 +258,7 @@ const SPELER_VOORVOEGSEL = "domotiapp-media-speler:";
 export function spelersVan(config, hass) {
   const naam = (id) => hass?.states?.[id]?.attributes?.friendly_name ?? id;
   const bestaat = (id) => Boolean(hass?.states?.[id]);
+  const alle = () => Object.keys(hass?.states ?? {}).filter((id) => id.startsWith("media_player."));
 
   // Let op de volgorde: eerst kijken of er een lijst IS, en pas daarna of er
   // iets van over is. Filteren we eerst, dan valt een lijst met alleen een
@@ -271,9 +272,27 @@ export function spelersVan(config, hass) {
           ...config.players.filter(bestaat),
         ]),
       ]
-    : Object.keys(hass?.states ?? {}).filter((id) => id.startsWith("media_player."));
+    : automatisch(alle(), hass);
 
   return lijst.sort((a, b) => String(naam(a)).localeCompare(String(naam(b)), "nl"));
+}
+
+/**
+ * Welke spelers er vanzelf in de lijst komen als er niets is ingesteld.
+ *
+ * ALLEEN DE SPEAKERS VAN MUSIC ASSISTANT, en dat is een keuze met een reden.
+ * "Alle mediaspelers in huis" leverde een lijst met de Apple TV en de
+ * televisie erin -- gemeld op 26 augustus 2026. Dat zijn geen plekken waar je
+ * muziek naartoe stuurt; dat zijn schermen. Music Assistant markeert zijn eigen
+ * spelers met `mass_player_type`, en dat is precies het onderscheid dat je hier
+ * wilt.
+ *
+ * Draait er geen Music Assistant, dan valt hij terug op alles. Anders is de
+ * keuzelijst leeg en lijkt de kaart stuk, terwijl er niets stuk is.
+ */
+function automatisch(ids, hass) {
+  const ma = ids.filter((id) => isMaSpeler(hass?.states?.[id]));
+  return ma.length ? ma : ids;
 }
 
 /**

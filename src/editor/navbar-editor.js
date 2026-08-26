@@ -532,7 +532,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
   /**
    * "Subknop toevoegen", met de kant-en-klare knoppen eronder.
    *
-   * De eigenaar vroeg er op 27 augustus 2026 om: "ik wil gewoon als ik subknop
+   * De eigenaar vroeg er op 26 augustus 2026 om: "ik wil gewoon als ik subknop
    * toevoegen klik een optie hebben om domotitech aan te klikken". Dus is de
    * knop een menu geworden -- eerst de lege, dan wat er kant en klaar is.
    */
