@@ -138,7 +138,13 @@ class TabsCard extends DacCard {
     // De `null` is de bouw-vlag uit bouw_(): een tab die nog aan het laden is.
     // Zonder deze toets zet de eerste hass een eigenschap op null en valt de hele
     // view om -- gemeten in de echte instance, de kaart bleef leeg.
-    for (const el of this.kinderen_.values()) if (el) el.hass = hass;
+    //
+    // Een tab draagt sinds 26 augustus 2026 een LIJST kaarten, dus dit is een
+    // lijst van lijsten.
+    for (const kaarten of this.kinderen_.values()) {
+      if (!kaarten) continue;
+      for (const el of kaarten) if (el) el.hass = hass;
+    }
   }
 
   get hass() {
@@ -236,7 +242,7 @@ class TabsCard extends DacCard {
     const tab = this.config.tabs[i];
     if (!vak || !tab) return;
 
-    if (!tab.card) {
+    if (!tab.cards.length) {
       vak.innerHTML = `<div class="leeg">Deze tab heeft nog geen kaart.</div>`;
       meetRaster(this.$(".card"));
       return;
@@ -248,11 +254,17 @@ class TabsCard extends DacCard {
     try {
       const helpers = await window.loadCardHelpers?.();
       if (!helpers) throw new Error("loadCardHelpers ontbreekt");
-      const el = helpers.createCardElement(tab.card);
-      el.hass = this.hass;
-      this.kinderen_.set(i, el);
-      vak.replaceChildren(el);
-      // De kaart is er, maar zijn opmaak nog niet -- meetRaster heeft daar zijn
+      // Alle kaarten van deze tab, onder elkaar. Geen `vertical-stack`
+      // eromheen: die zou een eigen vlak meebrengen en zijn eigen
+      // tussenruimte, en dan staat er een kaart in een kaart in een tab.
+      const elementen = tab.cards.map((kaart) => {
+        const el = helpers.createCardElement(kaart);
+        el.hass = this.hass;
+        return el;
+      });
+      this.kinderen_.set(i, elementen);
+      vak.replaceChildren(...elementen);
+      // De kaarten zijn er, hun opmaak nog niet -- meetRaster heeft daar zijn
       // eigen herkansing voor.
       meetRaster(this.$(".card"));
     } catch (e) {

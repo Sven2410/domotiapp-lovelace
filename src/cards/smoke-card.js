@@ -69,9 +69,16 @@ class SmokeCard extends DacCard {
     .chip .icon { width: 20px; height: 20px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+    /* De naam BREEKT AF en wordt niet afgekapt.
+       "Slaapkamer B.G." is de langste naam in het huis van de eigenaar en paste
+       er net niet op; met een ellipsis lees je dan "Slaapkamer B..." en weet je
+       niet welke kamer het is. Twee regels mag, en de kaart groeit mee (zie
+       getGridOptions) -- dus er valt niets meer af. Meer dan twee regels zou de
+       kop groter maken dan de metingen eronder, en dan is het geen kop meer. */
     .nm {
       font-size: 13.5px; font-weight: 500; line-height: 1.25;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; overflow-wrap: anywhere;
     }
     .st { font-size: 11.5px; line-height: 1.25; color: var(--dac-ink-2); }
     /* Bij alarm draagt de tekst de kleur mee: wie de chip niet ziet, leest hem. */
@@ -113,15 +120,23 @@ class SmokeCard extends DacCard {
        title-attribuut en in aria-label, dus een schermlezer en een muis
        vinden ze terug. */
     .meta {
-      display: flex; flex-wrap: wrap; gap: 6px;
+      display: flex; flex-wrap: wrap; gap: 13px;
       overflow: hidden;
     }
     .meta[hidden] { display: none; }
+
+    /* GEEN omhulsel om een meting. Er zat een pil omheen -- een vlak met een
+       rand -- en die viel weg zodra de kaart smal werd. Dat gaf twee gezichten
+       voor hetzelfde ding: een brede kaart met omlijnde metingen naast een
+       smalle met kale. De eigenaar zag de omlijnde versie terug op een kaart
+       met één sensor en meldde het op 26 augustus 2026: "dan hebben de icons
+       een omlijning dat moet niet."
+
+       Nu is er één gezicht: het icoon met zijn waarde, en verder niets. Een
+       meting is geen knop, dus hij hoort er ook niet als een uit te zien. */
     .pil {
       flex: 0 0 auto;
-      display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 8px;
-      border-radius: var(--dac-radius-pill);
-      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      display: flex; align-items: center; gap: 5px;
       font-size: 11.5px; color: var(--dac-ink-2);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -137,20 +152,12 @@ class SmokeCard extends DacCard {
 
     .top.unavailable { opacity: .42; }
 
-    /* ---- twee stappen uitkleden ----
+    /* ---- krapper ----
        Gemeten en niet geraden. Een @container-regel op een vaste breedte kan
        dit niet: of de rij past hangt af van HOEVEEL metingen er staan (een
        melder met alleen rook en batterij past ruim waar een met vijf sensoren
        klem zit) en van hoe breed de waarden zijn -- "100 %" is breder dan
-       "5 %". Daarom meet pasAan_ de echte rij en zet deze twee standen. */
-    :host([krap]) .meta { gap: 13px; }
-    :host([krap]) .pil {
-      padding: 0; gap: 5px;
-      background: none; border-color: transparent;
-    }
-    :host([krap]) .pil[data-let="warn"],
-    :host([krap]) .pil[data-let="bad"] { border-color: transparent; }
-
+       "5 %". Daarom meet pasAan_ de echte rij en zet deze stand. */
     :host([krapper]) .meta { gap: 9px; }
     :host([krapper]) .pil { font-size: 11px; gap: 4px; }
     :host([krapper]) .pil .icon { width: 13px; height: 13px; }
@@ -281,24 +288,26 @@ class SmokeCard extends DacCard {
   }
 
   /**
-   * Kleedt de metingenrij net zover uit tot hij op een regel past.
+   * Krimpt de metingenrij als hij anders zou afbreken.
    *
-   * Twee standen, in deze volgorde: eerst het omhulsel van de pillen weg
-   * (`krap`), dan de tussenruimte en een halve punt van de letter (`krapper`).
-   * Daarna houdt het op -- verder uitkleden zou de waarden zelf raken, en die
-   * horen te blijven staan. Wat er dan nog niet past breekt af naar een
-   * volgende regel, en de kaart wordt een rasterrij hoger.
+   * Eén stand: de tussenruimte en een halve punt van de letter. Daarna houdt
+   * het op -- verder krimpen zou de waarden onleesbaar maken, en wat er dan nog
+   * niet past breekt gewoon af naar een volgende regel. De kaart wordt daar een
+   * rasterrij hoger van (zie getGridOptions), dus er raakt niets verborgen.
    *
-   * WAAROM ER NA ELKE STAP OPNIEUW GEMETEN WORDT
+   * Er stond hier een stap vóór deze: het omhulsel van de pillen weghalen. Dat
+   * omhulsel is er sinds 26 augustus 2026 helemaal niet meer, dus die stap is
+   * weg. Zie de opmerking bij `.pil` hierboven.
    *
-   * Elke stand verandert de breedte van de pillen, dus na het zetten van een
-   * stand zegt de vorige meting niets meer. Er wordt daarom teruggerekend vanaf
-   * de ruimste stand: uitkleden, meten, verder uitkleden. Andersom -- meten en
-   * dan een stand kiezen -- meet je de rij zoals hij ER NU UITZIET en niet
-   * zoals hij eruit zou zien.
+   * WAAROM ER NA HET ZETTEN OPNIEUW GEMETEN WORDT
+   *
+   * De stand verandert de breedte van de metingen, dus de vorige meting zegt
+   * daarna niets meer. Er wordt teruggerekend vanaf de ruimste stand: krimpen,
+   * meten. Andersom -- meten en dan een stand kiezen -- meet je de rij zoals
+   * hij ER NU UITZIET en niet zoals hij eruit zou zien.
    *
    * Gemeten wordt het AANTAL REGELS en niet de overloop: de rij mag afbreken,
-   * dus hij loopt nooit over. De hoogte van de eerste pil is de maat van een
+   * dus hij loopt nooit over. De hoogte van de eerste meting is de maat van een
    * regel; staat er nog niets, dan valt er ook niets aan te passen.
    */
   pasAan_() {
@@ -313,11 +322,7 @@ class SmokeCard extends DacCard {
       return Math.round((meta.scrollHeight + hoog / 2) / hoog - 0.5) || 1;
     };
 
-    this.removeAttribute("krap");
     this.removeAttribute("krapper");
-    if (regels() <= 1) return;
-
-    this.setAttribute("krap", "");
     if (regels() <= 1) return;
 
     this.setAttribute("krapper", "");

@@ -122,6 +122,33 @@ const CSS = `
   .dac-tabs .kaartkop button.weg { color: var(--error-color, #d03b3b); }
 
   .dac-tabs .kaartvak { display: flex; flex-direction: column; gap: 10px; }
+
+  .dac-tabs .subkop {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--secondary-text-color);
+  }
+  .dac-tabs .subkop::after {
+    content: ""; flex: 1 1 auto; height: 1px; background: var(--divider-color);
+  }
+
+  .dac-tabs .sub {
+    border: 1px solid var(--divider-color); border-radius: 10px;
+    background: rgba(127,127,127,.05); overflow: hidden;
+  }
+  .dac-tabs .sub > summary {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 6px 6px 10px; cursor: pointer; list-style: none;
+  }
+  .dac-tabs .sub > summary::-webkit-details-marker { display: none; }
+  .dac-tabs .sub[open] > summary { border-bottom: 1px solid var(--divider-color); }
+  .dac-tabs .sub > summary:hover { background: rgba(127,127,127,.06); }
+  .dac-tabs .sub .voor { width: 24px; height: 24px; border-radius: 7px; }
+  .dac-tabs .sub .voor svg, .dac-tabs .sub .voor ha-icon {
+    width: 14px; height: 14px; --mdc-icon-size: 14px;
+  }
+  .dac-tabs .sub .titel b { font-size: 12.5px; }
+  .dac-tabs .sub .body { padding: 8px; }
   .dac-tabs .kiezer { display: flex; flex-direction: column; gap: 8px; }
   .dac-tabs .kiezer input {
     width: 100%; box-sizing: border-box; padding: 9px 11px;
@@ -154,20 +181,32 @@ const uitgekleed = (tabs) =>
   tabs.filter(gevuld).map((t) => ({
     ...(t.name ? { name: t.name } : {}),
     ...(t.icon ? { icon: t.icon } : {}),
-    // Een verse kopie, want Home Assistant BEVRIEST wat er langskomt: geef je
+    // Verse kopieën, want Home Assistant BEVRIEST wat er langskomt: geef je
     // hetzelfde object terug dat je van hem kreeg, dan is de eerstvolgende
     // wijziging in de kaarteditor een TypeError in een stille catch.
-    ...(t.card ? { card: structuredClone(t.card) } : {}),
+    //
+    // Altijd `cards` en nooit meer `card`: een tab draagt een lijst. Een
+    // bestaande config met `card` wordt bij het inlezen omgezet (zie asTab) en
+    // komt er hier dus als lijst weer uit.
+    ...(t.cards?.length ? { cards: t.cards.map((k) => structuredClone(k)) } : {}),
   }));
+
+/** De naam van één kaart, zonder het voorvoegsel dat niemand leest. */
+function kaartNaam(kaart) {
+  const type = String(kaart?.type ?? "").replace(/^custom:/, "");
+  if (!type) return "een kaart";
+  // De custom kaarten melden zichzelf aan met een leesbare naam; die is beter
+  // dan hun tagnaam.
+  const bekend = (window.customCards ?? []).find((c) => c?.type === type);
+  return bekend?.name || type;
+}
 
 /** Waar een tab naar wijst, in één regel. */
 function inhoudRegel(tab) {
-  if (!tab.card) return "Nog geen kaart";
-  const type = String(tab.card.type ?? "").replace(/^custom:/, "");
-  if (type === "vertical-stack" || type === "horizontal-stack" || type === "grid") {
-    return `${type} met ${(tab.card.cards ?? []).length} kaarten`;
-  }
-  return type || "een kaart";
+  const n = tab.cards?.length ?? 0;
+  if (!n) return "Nog geen kaart";
+  if (n === 1) return kaartNaam(tab.cards[0]);
+  return `${n} kaarten`;
 }
 
 class TabsEditor extends HTMLElement {
@@ -256,7 +295,7 @@ class TabsEditor extends HTMLElement {
     knop.textContent = "＋  Tabblad toevoegen";
     knop.disabled = this.tabs_.length >= TABS_MAX;
     knop.addEventListener("click", () => {
-      this.tabs_.push({ name: "", icon: "", card: null });
+      this.tabs_.push({ name: "", icon: "", cards: [] });
       this.open_.add(`t${this.tabs_.length - 1}`);
       this.emit_();
       this.build_();
@@ -435,6 +474,7 @@ class TabsEditor extends HTMLElement {
   inhoudBlok_(tab, i) {
     const blok = document.createElement("div");
     blok.className = "kaartvak";
+    if (!Array.isArray(tab.cards)) tab.cards = [];
 
     if (!heeftKaartEditor()) {
       const uitleg = document.createElement("div");
@@ -444,54 +484,75 @@ class TabsEditor extends HTMLElement {
       return blok;
     }
 
-    if (!tab.card) {
-      if (this.kiest_ === `t${i}`) {
-        blok.appendChild(this.kiezerBlok_(tab, i));
-      } else {
-        const knop = document.createElement("button");
-        knop.type = "button";
-        knop.className = "toevoegen";
-        knop.textContent = "＋  Kaart toevoegen";
-        knop.addEventListener("click", () => {
-          this.kiest_ = `t${i}`;
-          this.zoek_ = "";
-          this.build_();
-        });
-        blok.appendChild(knop);
-      }
+    if (tab.cards.length) {
+      const kop = document.createElement("div");
+      kop.className = "subkop";
+      kop.textContent = tab.cards.length === 1 ? "Kaart" : `${tab.cards.length} kaarten`;
+      blok.appendChild(kop);
+      tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
+    }
+
+    if (this.kiest_ === `t${i}`) {
+      blok.appendChild(this.kiezerBlok_(tab, i));
       return blok;
     }
 
-    const kop = document.createElement("div");
-    kop.className = "kaartkop";
-    const naam = document.createElement("b");
-    naam.textContent = inhoudRegel(tab);
-    const vervang = document.createElement("button");
-    vervang.type = "button";
-    vervang.textContent = "Andere kaart";
-    vervang.addEventListener("click", () => {
+    const knop = document.createElement("button");
+    knop.type = "button";
+    knop.className = "toevoegen";
+    knop.textContent = "＋  Kaart toevoegen";
+    knop.addEventListener("click", () => {
       this.kiest_ = `t${i}`;
       this.zoek_ = "";
-      tab.card = null;
-      this.emit_();
       this.build_();
     });
-    const weg = document.createElement("button");
-    weg.type = "button";
-    weg.className = "weg";
-    weg.textContent = "Weghalen";
-    weg.addEventListener("click", () => {
-      tab.card = null;
-      this.kiest_ = null;
-      this.emit_();
-      this.build_();
-    });
-    kop.append(naam, vervang, weg);
+    blok.appendChild(knop);
+    return blok;
+  }
+
+  /**
+   * Eén kaart uit een tab: de kop met zijn knoppen, en de editor eronder.
+   *
+   * Een uitklapblok en geen open editor, want een tab mag meerdere kaarten
+   * dragen en drie editors onder elkaar is geen scherm meer. Dicht zie je wat
+   * erin zit en in welke volgorde; open bewerk je er één.
+   */
+  kaartBlok2_(tab, kaart, i, j) {
+    const det = document.createElement("details");
+    det.className = "sub";
+    this.onthoud_(det, `t${i}k${j}`);
+
+    const sum = document.createElement("summary");
+    const voor = document.createElement("span");
+    voor.className = "voor";
+    voor.innerHTML = resolve("grid");
+    const titel = document.createElement("span");
+    titel.className = "titel";
+    const b = document.createElement("b");
+    b.textContent = kaartNaam(kaart);
+    const small = document.createElement("small");
+    small.textContent = String(kaart?.type ?? "");
+    titel.append(b, small);
+
+    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaatsKaart_(tab, i, j, -1));
+    omhoog.disabled = j === 0;
+    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () =>
+      this.verplaatsKaart_(tab, i, j, 1),
+    );
+    omlaag.disabled = j === tab.cards.length - 1;
+    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijderKaart_(tab, i, j));
+    weg.classList.add("weg");
+
+    sum.append(voor, titel, omhoog, omlaag, weg);
+    det.appendChild(sum);
+
+    const body = document.createElement("div");
+    body.className = "body";
 
     const editor = document.createElement("hui-card-element-editor");
     editor.hass = this.hass_;
     if (this.lovelace_) editor.lovelace = this.lovelace_;
-    editor.value = tab.card;
+    editor.value = kaart;
     // DE VAL: `hui-card-element-editor` vuurt `config-changed`, en dat is
     // precies de gebeurtenis waarmee wij onze eigen config aan de dialoog
     // doorgeven. Laat je hem doorborrelen, dan denkt Home Assistant dat de
@@ -500,16 +561,52 @@ class TabsEditor extends HTMLElement {
       e.stopPropagation();
       const verse = e.detail?.config;
       if (!verse) return;
-      tab.card = verse;
+      tab.cards[j] = verse;
       this.emit_();
-      naam.textContent = inhoudRegel(tab);
+      b.textContent = kaartNaam(verse);
+      small.textContent = String(verse.type ?? "");
     });
     // Idem voor de GUI/YAML-schakelaar: die hoort bij DEZE editor en niet bij
     // de dialoog eromheen.
     editor.addEventListener("GUImode-changed", (e) => e.stopPropagation());
 
-    blok.append(kop, editor);
-    return blok;
+    body.appendChild(editor);
+    det.appendChild(body);
+    return det;
+  }
+
+  verplaatsKaart_(tab, i, j, richting) {
+    const k = j + richting;
+    if (k < 0 || k >= tab.cards.length) return;
+    [tab.cards[j], tab.cards[k]] = [tab.cards[k], tab.cards[j]];
+    const jOpen = this.open_.has(`t${i}k${j}`);
+    const kOpen = this.open_.has(`t${i}k${k}`);
+    this.open_.delete(`t${i}k${j}`);
+    this.open_.delete(`t${i}k${k}`);
+    if (kOpen) this.open_.add(`t${i}k${j}`);
+    if (jOpen) this.open_.add(`t${i}k${k}`);
+    this.emit_();
+    this.build_();
+  }
+
+  verwijderKaart_(tab, i, j) {
+    tab.cards.splice(j, 1);
+    // Dezelfde val als overal waar de sleutels nummers zijn: zonder dit erft
+    // kaart 3 de open-stand van zijn weggegooide buurman.
+    const nieuw = new Set();
+    for (const sleutel of this.open_) {
+      const m = new RegExp(`^t${i}k(\\d+)$`).exec(sleutel);
+      if (!m) {
+        nieuw.add(sleutel);
+        continue;
+      }
+      const n = Number(m[1]);
+      if (n === j) continue;
+      nieuw.add(`t${i}k${n > j ? n - 1 : n}`);
+    }
+    this.open_ = nieuw;
+    this.emit_();
+    this.build_();
   }
 
   /** De lijst met kaarttypes, met een zoekveld erboven. */
@@ -545,9 +642,12 @@ class TabsEditor extends HTMLElement {
         small.textContent = soort.uitleg || soort.type;
         knop.append(b, small);
         knop.addEventListener("click", async () => {
-          tab.card = await beginConfig(soort.type, this.hass_);
+          tab.cards.push(await beginConfig(soort.type, this.hass_));
           this.kiest_ = null;
           this.open_.add(`t${i}`);
+          // De nieuwe kaart staat open: je hebt hem net gekozen, dus je wilt
+          // hem meteen invullen.
+          this.open_.add(`t${i}k${tab.cards.length - 1}`);
           this.emit_();
           this.build_();
         });
