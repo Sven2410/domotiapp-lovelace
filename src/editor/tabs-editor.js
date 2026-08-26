@@ -4,13 +4,15 @@
  * Wat hier WEL kan: een tab bijmaken, hernoemen, een icoon geven, verplaatsen
  * en weggooien. Dat is de vorm van de kaart, en dat is wat je vaak doet.
  *
- * Wat hier NIET kan: de kaart kiezen die in een tab zit. Home Assistant heeft
- * daar wel een component voor -- dezelfde kaartkiezer als in de bewerkdialoog --
- * maar die is intern en niet aan te roepen zonder je vast te maken aan een
- * versie. Een half nagemaakte kaartkiezer zou minder kunnen dan de echte en bij
- * de eerste wijziging in Home Assistant breken. De inhoud van een tab hoort
- * daarom (voorlopig) in de code-editor, en dat staat er ook met zoveel woorden
- * bij in plaats van dat je het moet ontdekken.
+ * En sinds 26 augustus 2026: de KAART die in een tab zit. Dat kon hier eerst
+ * niet -- de kaartkiezer van Home Assistant is intern -- en de eigenaar wilde
+ * het toch: "Kan je de tablad editor niet zo maken dat ik Kaarten kan toevoegen
+ * zoals de gewone Home Assistant UI editor?"
+ *
+ * Het is een taakverdeling geworden: kiezen doet een eigen lijst, bewerken doet
+ * `hui-card-element-editor` van Home Assistant zelf -- met de GUI van de kaart
+ * en de knop naar de code-editor erin. Zie `kaartkiezer.js` voor wat er gemeten
+ * is en waarom het zo verdeeld is.
  *
  * Voor het overige gelden dezelfde twee vallen als bij de navbalk-editor: Home
  * Assistant BEVRIEST de config die je meestuurt, en duwt hem bij elke
@@ -23,6 +25,12 @@ import { meldAan } from "../registratie.js";
 import { icons, resolve } from "../icons.js";
 import { naamVan } from "./icoon-zoek.js";
 import { TABS_MAX, asTab, gevuld } from "../cards/tabs-logica.js";
+import {
+  beginConfig,
+  filterSoorten,
+  heeftKaartEditor,
+  kaartsoorten,
+} from "./kaartkiezer.js";
 
 const CSS = `
   .dac-tabs { display: flex; flex-direction: column; gap: 12px; }
@@ -94,6 +102,51 @@ const CSS = `
   .dac-tabs .uitleg {
     margin: 0; font-size: 12px; line-height: 1.45; color: var(--secondary-text-color);
   }
+
+  /* ---- de kaart in een tab ---- */
+
+  .dac-tabs .kaartkop {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--secondary-text-color);
+  }
+  .dac-tabs .kaartkop b {
+    flex: 1 1 auto; min-width: 0; color: var(--primary-text-color); font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dac-tabs .kaartkop button {
+    flex: 0 0 auto; padding: 5px 10px; cursor: pointer; font: inherit; font-size: 12px;
+    border: 1px solid var(--divider-color); border-radius: 999px;
+    background: transparent; color: var(--primary-color);
+  }
+  .dac-tabs .kaartkop button:hover { background: rgba(127,127,127,.10); }
+  .dac-tabs .kaartkop button.weg { color: var(--error-color, #d03b3b); }
+
+  .dac-tabs .kaartvak { display: flex; flex-direction: column; gap: 10px; }
+  .dac-tabs .kiezer { display: flex; flex-direction: column; gap: 8px; }
+  .dac-tabs .kiezer input {
+    width: 100%; box-sizing: border-box; padding: 9px 11px;
+    font: inherit; font-size: 13.5px;
+    color: var(--primary-text-color);
+    background-color: var(--card-background-color);
+    border: 1px solid var(--divider-color); border-radius: 10px;
+  }
+  .dac-tabs .soorten {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px;
+    max-height: 260px; overflow-y: auto; padding: 2px;
+  }
+  .dac-tabs .soort {
+    display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+    padding: 8px 10px; cursor: pointer; text-align: left; font: inherit;
+    border: 1px solid var(--divider-color); border-radius: 10px;
+    background: transparent; color: var(--primary-text-color);
+  }
+  .dac-tabs .soort:hover { background: rgba(127,127,127,.10); border-color: var(--primary-color); }
+  .dac-tabs .soort b { font-size: 13px; font-weight: 600; }
+  .dac-tabs .soort small {
+    font-size: 11px; color: var(--secondary-text-color);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .dac-tabs .leeg { font-size: 12.5px; color: var(--secondary-text-color); }
 `;
 
 /** Wat er in de YAML komt: geen lege sleutels, en altijd verse objecten. */
@@ -101,8 +154,9 @@ const uitgekleed = (tabs) =>
   tabs.filter(gevuld).map((t) => ({
     ...(t.name ? { name: t.name } : {}),
     ...(t.icon ? { icon: t.icon } : {}),
-    // De kaart zelf wordt hier niet bewerkt, maar moet wél bewaard blijven --
-    // anders gooit een naamswijziging in deze editor de inhoud van de tab weg.
+    // Een verse kopie, want Home Assistant BEVRIEST wat er langskomt: geef je
+    // hetzelfde object terug dat je van hem kreeg, dan is de eerstvolgende
+    // wijziging in de kaarteditor een TypeError in een stille catch.
     ...(t.card ? { card: structuredClone(t.card) } : {}),
   }));
 
@@ -138,7 +192,9 @@ class TabsEditor extends HTMLElement {
 
   set hass(hass) {
     this.hass_ = hass;
-    for (const el of this.querySelectorAll("ha-form, dac-icon-picker, dac-tone-picker")) {
+    for (const el of this.querySelectorAll(
+      "ha-form, dac-icon-picker, dac-tone-picker, hui-card-element-editor",
+    )) {
       el.hass = hass;
     }
     if (!this.gebouwd_) this.build_();
@@ -146,6 +202,24 @@ class TabsEditor extends HTMLElement {
 
   get hass() {
     return this.hass_;
+  }
+
+  /**
+   * Home Assistant zet dit op de config-editor -- maar alleen als de
+   * eigenschap BESTAAT: `hui-element-editor` doet `if ("lovelace" in
+   * configElement)`. Op een kale HTMLElement is dat false, en dan krijgen we
+   * hem nooit. Vandaar dit paar, dat verder alleen doorgeeft.
+   *
+   * `hui-card-element-editor` heeft hem nodig om de editor van sommige kaarten
+   * te bouwen -- die kijken naar de rest van het dashboard.
+   */
+  set lovelace(lovelace) {
+    this.lovelace_ = lovelace;
+    for (const el of this.querySelectorAll("hui-card-element-editor")) el.lovelace = lovelace;
+  }
+
+  get lovelace() {
+    return this.lovelace_;
   }
 
   connectedCallback() {
@@ -175,12 +249,6 @@ class TabsEditor extends HTMLElement {
     wrap.appendChild(lijst);
     this.tabs_.forEach((tab, i) => lijst.appendChild(this.tabBlok_(tab, i)));
 
-    const uitleg = document.createElement("p");
-    uitleg.className = "uitleg";
-    uitleg.textContent =
-      "De kaart die in een tab zit, stel je in via Code-editor weergeven. " +
-      "Naam, icoon en volgorde kunnen hier; de inhoud blijft staan als je die aanpast.";
-    wrap.appendChild(uitleg);
 
     const knop = document.createElement("button");
     knop.type = "button";
@@ -343,13 +411,170 @@ class TabsEditor extends HTMLElement {
       this.emit_();
     });
 
-    const inhoud = document.createElement("div");
-    inhoud.className = "inhoud";
-    inhoud.innerHTML = `${resolve("grid")}<span>Inhoud: <b>${inhoudRegel(tab)}</b> — aan te passen via Code-editor weergeven.</span>`;
-
-    body.append(kiezer, form, inhoud);
+    body.append(kiezer, form, this.inhoudBlok_(tab, i));
     det.appendChild(body);
     return det;
+  }
+
+  /* ------------------------------------------------- de kaart in een tab */
+
+  /**
+   * Het blok waarin de kaart van deze tab gekozen en bewerkt wordt.
+   *
+   * Drie standen, en welke je krijgt hangt af van wat er is:
+   *
+   *   geen kaart       -> de kiezer, of een knop die hem opent
+   *   een kaart        -> de editor van Home Assistant, met een kop erboven
+   *   geen kaarteditor -> de oude tekst: dan is de code-editor de weg
+   *
+   * Die laatste is geen theorie. `hui-card-element-editor` wordt lui geladen;
+   * in de bewerkdialoog is hij er (gemeten op 26 augustus 2026), maar deze
+   * editor kan ook ergens anders staan, en dan is een zin die uitlegt wat je
+   * moet doen beter dan een leeg vak.
+   */
+  inhoudBlok_(tab, i) {
+    const blok = document.createElement("div");
+    blok.className = "kaartvak";
+
+    if (!heeftKaartEditor()) {
+      const uitleg = document.createElement("div");
+      uitleg.className = "inhoud";
+      uitleg.innerHTML = `${resolve("grid")}<span>Inhoud: <b>${inhoudRegel(tab)}</b> — aan te passen via Code-editor weergeven.</span>`;
+      blok.appendChild(uitleg);
+      return blok;
+    }
+
+    if (!tab.card) {
+      if (this.kiest_ === `t${i}`) {
+        blok.appendChild(this.kiezerBlok_(tab, i));
+      } else {
+        const knop = document.createElement("button");
+        knop.type = "button";
+        knop.className = "toevoegen";
+        knop.textContent = "＋  Kaart toevoegen";
+        knop.addEventListener("click", () => {
+          this.kiest_ = `t${i}`;
+          this.zoek_ = "";
+          this.build_();
+        });
+        blok.appendChild(knop);
+      }
+      return blok;
+    }
+
+    const kop = document.createElement("div");
+    kop.className = "kaartkop";
+    const naam = document.createElement("b");
+    naam.textContent = inhoudRegel(tab);
+    const vervang = document.createElement("button");
+    vervang.type = "button";
+    vervang.textContent = "Andere kaart";
+    vervang.addEventListener("click", () => {
+      this.kiest_ = `t${i}`;
+      this.zoek_ = "";
+      tab.card = null;
+      this.emit_();
+      this.build_();
+    });
+    const weg = document.createElement("button");
+    weg.type = "button";
+    weg.className = "weg";
+    weg.textContent = "Weghalen";
+    weg.addEventListener("click", () => {
+      tab.card = null;
+      this.kiest_ = null;
+      this.emit_();
+      this.build_();
+    });
+    kop.append(naam, vervang, weg);
+
+    const editor = document.createElement("hui-card-element-editor");
+    editor.hass = this.hass_;
+    if (this.lovelace_) editor.lovelace = this.lovelace_;
+    editor.value = tab.card;
+    // DE VAL: `hui-card-element-editor` vuurt `config-changed`, en dat is
+    // precies de gebeurtenis waarmee wij onze eigen config aan de dialoog
+    // doorgeven. Laat je hem doorborrelen, dan denkt Home Assistant dat de
+    // tabbladenkaart zelf van type veranderd is en overschrijft hij alles.
+    editor.addEventListener("config-changed", (e) => {
+      e.stopPropagation();
+      const verse = e.detail?.config;
+      if (!verse) return;
+      tab.card = verse;
+      this.emit_();
+      naam.textContent = inhoudRegel(tab);
+    });
+    // Idem voor de GUI/YAML-schakelaar: die hoort bij DEZE editor en niet bij
+    // de dialoog eromheen.
+    editor.addEventListener("GUImode-changed", (e) => e.stopPropagation());
+
+    blok.append(kop, editor);
+    return blok;
+  }
+
+  /** De lijst met kaarttypes, met een zoekveld erboven. */
+  kiezerBlok_(tab, i) {
+    const vak = document.createElement("div");
+    vak.className = "kiezer";
+
+    const zoek = document.createElement("input");
+    zoek.type = "text";
+    zoek.placeholder = "Zoek een kaart...";
+    zoek.value = this.zoek_ ?? "";
+
+    const lijst = document.createElement("div");
+    lijst.className = "soorten";
+
+    const teken = () => {
+      const gevonden = filterSoorten(kaartsoorten(), this.zoek_);
+      lijst.replaceChildren();
+      if (!gevonden.length) {
+        const leeg = document.createElement("p");
+        leeg.className = "leeg";
+        leeg.textContent = "Niets gevonden. Kies iets anders, of gebruik de code-editor.";
+        lijst.appendChild(leeg);
+        return;
+      }
+      for (const soort of gevonden) {
+        const knop = document.createElement("button");
+        knop.type = "button";
+        knop.className = "soort";
+        const b = document.createElement("b");
+        b.textContent = soort.naam;
+        const small = document.createElement("small");
+        small.textContent = soort.uitleg || soort.type;
+        knop.append(b, small);
+        knop.addEventListener("click", async () => {
+          tab.card = await beginConfig(soort.type, this.hass_);
+          this.kiest_ = null;
+          this.open_.add(`t${i}`);
+          this.emit_();
+          this.build_();
+        });
+        lijst.appendChild(knop);
+      }
+    };
+    teken();
+
+    // Niet herbouwen bij elke toetsaanslag: dan verdwijnt het veld onder je
+    // vingers -- dezelfde val als bij de config zelf. Alleen de lijst wordt
+    // hertekend; het veld blijft staan.
+    zoek.addEventListener("input", () => {
+      this.zoek_ = zoek.value;
+      teken();
+    });
+
+    const stop = document.createElement("button");
+    stop.type = "button";
+    stop.className = "toevoegen";
+    stop.textContent = "Annuleren";
+    stop.addEventListener("click", () => {
+      this.kiest_ = null;
+      this.build_();
+    });
+
+    vak.append(zoek, lijst, stop);
+    return vak;
   }
 
   kopKnop_(titel, svg, onClick) {

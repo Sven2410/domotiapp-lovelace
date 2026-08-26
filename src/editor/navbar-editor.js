@@ -38,9 +38,12 @@ import {
   BALK_MAX,
   BALK_MIN,
   ITEMS_MAX,
+  SUB_MAX,
   asItem,
   gevuld,
+  heeftSub,
   klemBalk,
+  subVan,
   verdeel,
 } from "../cards/navbar-logica.js";
 
@@ -117,15 +120,67 @@ const CSS = `
   .dac-nav .uitleg {
     margin: 0; font-size: 12px; line-height: 1.45; color: var(--secondary-text-color);
   }
+
+  /* ---- de subknoppen van een knop ---- */
+
+  .dac-nav .subkop {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 2px; font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--secondary-text-color);
+  }
+  .dac-nav .subkop::after {
+    content: ""; flex: 1 1 auto; height: 1px; background: var(--divider-color);
+  }
+
+  .dac-nav .sublijst { display: flex; flex-direction: column; gap: 6px; }
+
+  .dac-nav .sub {
+    border: 1px solid var(--divider-color); border-radius: 10px;
+    background: rgba(127,127,127,.05); overflow: hidden;
+  }
+  .dac-nav .sub > summary {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 6px 6px 10px; cursor: pointer; list-style: none;
+    font-size: 12.5px;
+  }
+  .dac-nav .sub > summary::-webkit-details-marker { display: none; }
+  .dac-nav .sub[open] > summary { border-bottom: 1px solid var(--divider-color); }
+  .dac-nav .sub > summary:hover { background: rgba(127,127,127,.06); }
+  .dac-nav .sub .voor { width: 24px; height: 24px; border-radius: 7px; }
+  .dac-nav .sub .voor svg, .dac-nav .sub .voor ha-icon {
+    width: 14px; height: 14px; --mdc-icon-size: 14px;
+  }
+  .dac-nav .sub .body { padding: 8px; gap: 8px; }
+
+  .dac-nav .subtoevoegen {
+    padding: 9px; cursor: pointer; font: inherit; font-size: 13px;
+    border: 1px dashed var(--divider-color); border-radius: 10px;
+    background: transparent; color: var(--primary-color); text-align: center;
+  }
+  .dac-nav .subtoevoegen:hover { background: rgba(127,127,127,.08); }
+  .dac-nav .subtoevoegen:disabled { opacity: .4; cursor: default; }
 `;
+
+/**
+ * De sleutel van een opengeklapt blok: "i2" voor een knop, "i2s0" voor een
+ * subknop eronder. Eén patroon, zodat verplaatsen en verwijderen ze allebei
+ * meenemen.
+ */
+const SLEUTEL = /^i(\d+)(s\d+)?$/;
+
+/** Een knop zonder lege sleutels. Los, want een subknop is dezelfde vorm. */
+const kaal = (i) => ({
+  ...(i.name ? { name: i.name } : {}),
+  ...(i.icon ? { icon: i.icon } : {}),
+  ...(i.path ? { path: i.path } : {}),
+});
 
 /** Wat er in de YAML komt: geen lege sleutels, en altijd verse objecten. */
 const uitgekleed = (items) =>
-  items.filter(gevuld).map((i) => ({
-    ...(i.name ? { name: i.name } : {}),
-    ...(i.icon ? { icon: i.icon } : {}),
-    ...(i.path ? { path: i.path } : {}),
-  }));
+  items.filter(gevuld).map((i) => {
+    const sub = (i.items ?? []).filter(gevuld).map(kaal);
+    return { ...kaal(i), ...(sub.length ? { items: sub } : {}) };
+  });
 
 class NavbarEditor extends HTMLElement {
   constructor() {
@@ -147,7 +202,8 @@ class NavbarEditor extends HTMLElement {
     // kopie van gemaakt is.
     if (this.gebouwd_ && config === this.uitObject_) return;
 
-    const binnen = (Array.isArray(config?.items) ? config.items : []).map(asItem);
+    // Geen kale `asItem`: zie de opmerking in navbar-logica.js bij itemsVan.
+    const binnen = (Array.isArray(config?.items) ? config.items : []).map((i) => asItem(i));
     if (this.gebouwd_ && JSON.stringify(uitgekleed(binnen)) === this.uit_) return;
 
     this.items_ = binnen;
@@ -324,11 +380,16 @@ class NavbarEditor extends HTMLElement {
       det.dataset.leeg = String(leeg);
       voor.innerHTML = resolve(item.icon, "grid");
       b.textContent = item.name || (leeg ? "Nieuwe knop" : item.path || "Zonder naam");
-      small.textContent = item.path
-        ? item.path
-        : item.icon
-          ? `${naamVan(item.icon)} -- nog geen pad`
-          : "Nog geen pad";
+      const sub = subVan(item).length;
+      // Een knop met een menu gaat nergens heen, dus zijn pad noemen zou
+      // liegen. Wat hij wél doet staat er dan: hoeveel knoppen erin zitten.
+      small.textContent = sub
+        ? `Menu met ${sub} knop${sub === 1 ? "" : "pen"}`
+        : item.path
+          ? item.path
+          : item.icon
+            ? `${naamVan(item.icon)} -- nog geen pad`
+            : "Nog geen pad";
     };
     kop();
     this.koppen_.push(kop);
@@ -365,10 +426,19 @@ class NavbarEditor extends HTMLElement {
       { name: "path", selector: { text: {} } },
     ];
     form.computeLabel = (s) => ({ name: "Naam", path: "Waar gaat hij heen" })[s.name] ?? s.name;
-    form.computeHelper = (s) =>
-      s.name === "path"
-        ? "/lovelace/keuken voor een view, #keuken voor een pop-up van bubble-card, of een https-adres voor iets buiten Home Assistant."
-        : undefined;
+    form.computeHelper = (s) => {
+      if (s.name !== "path") return undefined;
+      const basis =
+        "/lovelace/keuken voor een view, #keuken voor een pop-up van bubble-card, of een https-adres voor iets buiten Home Assistant.";
+      // Eerlijk zijn over wat er gebeurt: een knop met subknoppen klapt open en
+      // gaat niet naar zijn eigen pad. Twee dingen op één tik (kort tikken
+      // navigeert, lang tikken opent) is bediening die niemand vindt.
+      return heeftSub(item)
+        ? `${basis}
+
+Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; zijn eigen pad wordt niet gebruikt.`
+        : basis;
+    };
     form.data = { name: item.name, path: item.path };
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();
@@ -378,9 +448,155 @@ class NavbarEditor extends HTMLElement {
       this.emit_();
     });
 
+    body.append(kiezer, form, ...this.subBlok_(item, i));
+    det.appendChild(body);
+    return det;
+  }
+
+  /* ---------------------------------------------------------- subknoppen */
+
+  /**
+   * De knoppen die boven deze knop openklappen.
+   *
+   * Zelfde vorm als een gewone knop -- naam, icoon, pad -- want dat is wat het
+   * is. Het verschil zit in waar hij verschijnt, niet in wat hij kan.
+   */
+  subBlok_(item, i) {
+    if (!Array.isArray(item.items)) item.items = [];
+
+    const kop = document.createElement("div");
+    kop.className = "subkop";
+    kop.textContent = "Subknoppen";
+
+    const lijst = document.createElement("div");
+    lijst.className = "sublijst";
+    item.items.forEach((sub, j) => lijst.appendChild(this.subItemBlok_(item, sub, i, j)));
+
+    const knop = document.createElement("button");
+    knop.type = "button";
+    knop.className = "subtoevoegen";
+    knop.textContent = "＋  Subknop toevoegen";
+    knop.disabled = item.items.length >= SUB_MAX;
+    knop.addEventListener("click", () => {
+      item.items.push({ name: "", icon: "", path: "", items: [] });
+      this.open_.add(`i${i}`);
+      this.open_.add(`i${i}s${item.items.length - 1}`);
+      this.emit_();
+      this.build_();
+    });
+
+    const uitleg = document.createElement("p");
+    uitleg.className = "uitleg";
+    uitleg.textContent =
+      "Hangt hier iets onder, dan klapt deze knop een menu open BOVEN zichzelf in " +
+      "plaats van ergens heen te gaan. Valt de knop zelf achter de meer-knop, dan " +
+      "staan zijn subknoppen daar ingesprongen onder hem.";
+
+    return [kop, lijst, knop, uitleg];
+  }
+
+  subItemBlok_(ouder, sub, i, j) {
+    const det = document.createElement("details");
+    det.className = "sub";
+    this.onthoud_(det, `i${i}s${j}`);
+
+    const sum = document.createElement("summary");
+    const voor = document.createElement("span");
+    voor.className = "voor";
+    const titel = document.createElement("span");
+    titel.className = "titel";
+    const b = document.createElement("b");
+    const small = document.createElement("small");
+    titel.append(b, small);
+
+    const kop = () => {
+      voor.innerHTML = resolve(sub.icon, "grid");
+      b.textContent = sub.name || (gevuld(sub) ? sub.path || "Zonder naam" : "Nieuwe subknop");
+      small.textContent = sub.path || "Nog geen pad";
+    };
+    kop();
+    this.koppen_.push(kop);
+
+    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaatsSub_(ouder, i, j, -1));
+    omhoog.disabled = j === 0;
+    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () =>
+      this.verplaatsSub_(ouder, i, j, 1),
+    );
+    omlaag.disabled = j === ouder.items.length - 1;
+    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijderSub_(ouder, i, j));
+    weg.classList.add("weg");
+
+    sum.append(voor, titel, omhoog, omlaag, weg);
+    det.appendChild(sum);
+
+    const body = document.createElement("div");
+    body.className = "body";
+
+    const kiezer = document.createElement("dac-icon-picker");
+    kiezer.label = "Icoon";
+    kiezer.fallback = "grid";
+    kiezer.auto = false;
+    kiezer.hass = this.hass_;
+    kiezer.value = sub.icon;
+    kiezer.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      sub.icon = e.detail.value ?? "";
+      this.emit_();
+    });
+
+    const form = document.createElement("ha-form");
+    form.hass = this.hass_;
+    form.schema = [
+      { name: "name", selector: { text: {} } },
+      { name: "path", selector: { text: {} } },
+    ];
+    form.computeLabel = (s) => ({ name: "Naam", path: "Waar gaat hij heen" })[s.name] ?? s.name;
+    form.data = { name: sub.name, path: sub.path };
+    form.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      const v = e.detail.value ?? {};
+      sub.name = v.name ?? "";
+      sub.path = v.path ?? "";
+      this.emit_();
+    });
+
     body.append(kiezer, form);
     det.appendChild(body);
     return det;
+  }
+
+  verplaatsSub_(ouder, i, j, richting) {
+    const k = j + richting;
+    if (k < 0 || k >= ouder.items.length) return;
+    [ouder.items[j], ouder.items[k]] = [ouder.items[k], ouder.items[j]];
+    const jOpen = this.open_.has(`i${i}s${j}`);
+    const kOpen = this.open_.has(`i${i}s${k}`);
+    this.open_.delete(`i${i}s${j}`);
+    this.open_.delete(`i${i}s${k}`);
+    if (kOpen) this.open_.add(`i${i}s${j}`);
+    if (jOpen) this.open_.add(`i${i}s${k}`);
+    this.emit_();
+    this.build_();
+  }
+
+  verwijderSub_(ouder, i, j) {
+    ouder.items.splice(j, 1);
+    // Dezelfde val als bij de knoppen zelf: de sleutels zijn nummers, dus
+    // zonder dit erft subknop 3 de open-stand van zijn weggegooide buurman.
+    const nieuw = new Set();
+    for (const k of this.open_) {
+      const m = /^i(\d+)s(\d+)$/.exec(k);
+      if (!m || Number(m[1]) !== i) {
+        nieuw.add(k);
+        continue;
+      }
+      const n = Number(m[2]);
+      if (n === j) continue;
+      nieuw.add(`i${i}s${n > j ? n - 1 : n}`);
+    }
+    this.open_ = nieuw;
+    this.emit_();
+    this.build_();
   }
 
   kopKnop_(titel, svg, onClick) {
@@ -414,12 +630,16 @@ class NavbarEditor extends HTMLElement {
   verwijder_(i) {
     this.items_.splice(i, 1);
     // De sleutels zijn nummers, dus zonder dit erft knop 3 na het verwijderen
-    // van knop 2 de open-stand van zijn buurman.
+    // van knop 2 de open-stand van zijn buurman. Sinds er subknoppen zijn, zit
+    // er ook een tweede nummer in ("i2s0"), en dat moet mee verschuiven --
+    // `Number("i2s0".slice(1))` is NaN, en dan verdwenen ze allemaal.
     const nieuw = new Set();
     for (const k of this.open_) {
-      const n = Number(k.slice(1));
+      const m = SLEUTEL.exec(k);
+      if (!m) continue;
+      const n = Number(m[1]);
       if (n === i) continue;
-      nieuw.add(`i${n > i ? n - 1 : n}`);
+      nieuw.add(`i${n > i ? n - 1 : n}${m[2] ?? ""}`);
     }
     this.open_ = nieuw;
     this.emit_();
@@ -428,12 +648,20 @@ class NavbarEditor extends HTMLElement {
 
   /** Twee blokken wisselen van plek, dus hun open-stand wisselt mee. */
   schuifOpen_(i, j) {
-    const iOpen = this.open_.has(`i${i}`);
-    const jOpen = this.open_.has(`i${j}`);
-    this.open_.delete(`i${i}`);
-    this.open_.delete(`i${j}`);
-    if (jOpen) this.open_.add(`i${i}`);
-    if (iOpen) this.open_.add(`i${j}`);
+    // Alles wat bij knop i hoort gaat mee naar j en andersom -- het blok zelf
+    // ("i2") én de subblokken erin ("i2s0", "i2s1"). Zonder dat laatste blijft
+    // een opengeklapte subknop achter bij de knop die er niet meer is.
+    const nieuw = new Set();
+    for (const k of this.open_) {
+      const m = SLEUTEL.exec(k);
+      if (!m) continue;
+      const n = Number(m[1]);
+      const staart = m[2] ?? "";
+      if (n === i) nieuw.add(`i${j}${staart}`);
+      else if (n === j) nieuw.add(`i${i}${staart}`);
+      else nieuw.add(k);
+    }
+    this.open_ = nieuw;
   }
 
   onthoud_(det, sleutel) {

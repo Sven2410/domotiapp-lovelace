@@ -9,7 +9,8 @@
     "watch": "node scripts/build.mjs --watch",
     "test": "node --test \"tests/js/**/*.test.mjs\"",
     "check:registratie": "node scripts/check-registratie.mjs",
-    "check:controls": "node scripts/check-controls.mjs"
+    "check:controls": "node scripts/check-controls.mjs",
+    "check:css": "node scripts/check-css.mjs"
   },
   "dependencies": {
     "lit": "3.3.1"

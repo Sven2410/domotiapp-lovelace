@@ -62,7 +62,7 @@ const css = /* css */ `
     background: var(--dac-surface); border: 1px solid var(--dac-border);
     color: var(--dac-ink-2); font: inherit;
   }
-  .rond:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+  @media (hover: hover) { .rond:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
   .rond .icon { width: 18px; height: 18px; }
 
   .zoek { flex: 0 0 auto; padding: 14px 16px 8px; display: flex; gap: 10px; align-items: center; }
@@ -98,7 +98,7 @@ const css = /* css */ `
     background: var(--dac-surface); border: 1px solid var(--dac-border);
     transition: background 160ms ease, border-color 160ms ease;
   }
-  .bron:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+  @media (hover: hover) { .bron:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
   .bron b { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 500;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

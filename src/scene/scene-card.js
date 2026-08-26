@@ -87,16 +87,11 @@ class DomotiappSceneCard extends LitElement {
       }
 
 
-      /* Geen achtergrond: hetzelfde bare als bij de andere kaarten in de
-         familie, zodat een dashboard zonder vlakken ook zonder vlakken is als
-         deze kaart ertussen staat. De binnenmarge gaat mee weg -- die hoort bij
-         het vlak, en zonder vlak duwt hij de inhoud alleen uit het raster. */
+      /* Achtergrond weglaten: de VULLING gaat weg, de rand blijft. Zie de
+         uitleg bij .surface in theme.js. */
       :host([bare]) .card {
         background: none;
-        border: 0;
         box-shadow: none;
-        padding-left: 0;
-        padding-right: 0;
       }
 
       .rij {
@@ -134,8 +129,10 @@ class DomotiappSceneCard extends LitElement {
         height: 20px;
         --mdc-icon-size: 20px;
       }
-      .chip:hover {
-        box-shadow: 0 0 14px -2px color-mix(in srgb, var(--tone) 55%, transparent);
+      @media (hover: hover) {
+        .chip:hover {
+          box-shadow: 0 0 14px -2px color-mix(in srgb, var(--tone) 55%, transparent);
+        }
       }
       .chip:active {
         transform: scale(0.94);
@@ -152,9 +149,11 @@ class DomotiappSceneCard extends LitElement {
         background: none;
         border-color: transparent;
       }
-      .potlood:hover {
-        background: var(--dac-surface-hi);
-        box-shadow: none;
+      @media (hover: hover) {
+        .potlood:hover {
+          background: var(--dac-surface-hi);
+          box-shadow: none;
+        }
       }
 
       .scheiding {

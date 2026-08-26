@@ -480,6 +480,7 @@ class EntitiesEditor extends HTMLElement {
             mode: "dropdown",
             options: [
               { value: "card", label: "Om de hele kaart" },
+              { value: "open", label: "Alleen een rand, geen vulling" },
               { value: "items", label: "Om elke entiteit apart" },
               { value: "none", label: "Geen vlak" },
             ],
@@ -527,7 +528,8 @@ class EntitiesEditor extends HTMLElement {
       // De standaard hoort niet in de YAML: wat er staat is wat afwijkt.
       if (typeof v.name === "string" && v.name.trim()) this.rest_.name = v.name;
       else delete this.rest_.name;
-      if (v.surface === "items" || v.surface === "none") this.rest_.surface = v.surface;
+      if (v.surface === "items" || v.surface === "none" || v.surface === "open")
+        this.rest_.surface = v.surface;
       else delete this.rest_.surface;
       delete this.rest_.bare;
       if (v.state_position === "right") this.rest_.state_position = "right";

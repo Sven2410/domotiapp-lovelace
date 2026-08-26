@@ -75,6 +75,16 @@ export const tokens = /* css */ `
 export const baseCss = /* css */ `
   *, *::before, *::after { box-sizing: border-box; }
 
+  /* Het kaartvlak: vulling, rand, hoeken en schaduw.
+   *
+   * "Achtergrond weglaten" (bare: true) haalt hiervan de VULLING en de
+   * SCHADUW weg, en laat de rand en de hoeken staan. Dat was tot 0.10.0 anders
+   * -- toen ging de rand mee, en dan houd je geen doorzichtige kaart over maar
+   * losse inhoud zonder vorm. Op een donker dashboard is die haarlijn het
+   * enige dat nog zegt waar de kaart begint en ophoudt; de eigenaar miste hem
+   * op 26 augustus 2026 op de eerste kaart waar hij het vinkje aanzette. Wie
+   * echt niets wil, zet de kaart in een surface: none (entiteitenkaart) of
+   * laat het vinkje uit en gebruikt geen kaart. */
   .surface {
     background: var(--dac-surface);
     border: 1px solid var(--dac-border);

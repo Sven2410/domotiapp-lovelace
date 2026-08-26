@@ -22,7 +22,8 @@
  * ziet.
  */
 
-import { DacCard, registerCard, registerEditor, rowsFor, TONES, INCOMPLETE } from "../base.js";
+import { DacCard, registerCard, registerEditor, TONES, INCOMPLETE } from "../base.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import {
@@ -61,7 +62,7 @@ class SmokeCard extends DacCard {
       height: 100%; min-height: 56px; padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     .top { display: flex; align-items: center; gap: 11px; min-height: 40px; cursor: pointer; }
     .chip { width: 40px; height: 40px; }
@@ -86,31 +87,44 @@ class SmokeCard extends DacCard {
     }
 
     /* ---- de metingen ----
-       Eén regel die schuift, en niet twee die afbreken. De kaart claimt twee
-       rasterrijen; zouden de pillen doorlopen naar een derde regel, dan valt de
-       onderste buiten de hoogte die Home Assistant heeft gereserveerd. Bij een
-       kaart over de volle breedte passen alle vijf ernaast. */
+       Eén regel, en die SCHUIFT NIET. Dat deed hij wel, met een vervaging aan
+       de rechterkant om te laten zien dat er meer stond -- en dat is precies de
+       verkeerde afspraak voor een kaart die bij een klant op de muur hangt: wie
+       niet wéét dat je kunt vegen, ziet gegevens die er niet zijn. Gemeld door
+       de eigenaar op 26 augustus 2026: "ik wil niet kunnen scrollen want
+       klanten weten dan niet of er iets verborgen zit."
+
+       Wat er in de plaats komt zijn twee dingen samen. De kaart MEET hoeveel
+       regels de pillen nodig hebben (pasAan_) en kleedt ze uit tot ze op een
+       regel passen: eerst het omhulsel van de pil -- de rand, het vlak en de
+       binnenmarge -- en als dat niet genoeg is ook de tussenruimte en een halve
+       punt van de letter. Past het dan nog niet, dan BREEKT de rij af en GROEIT
+       de kaart mee (rows: auto, zie getGridOptions). Dat laatste is de reden
+       dat er niets meer verborgen kan raken: er is geen vaste hoogte meer
+       waarin het moet passen.
+
+       De gegevens zelf blijven dus altijd staan; alleen de decoratie eromheen
+       gaat weg, en anders wordt de kaart een rasterrij hoger.
+
+       De labels ("Rook", "Temperatuur", "Batterij") zijn er helemaal af. Het
+       icoon zegt hetzelfde in een zesde van de breedte, en de kaart heeft die
+       breedte hard nodig -- hij claimt twee vaste rasterrijen, dus afbreken
+       naar een derde regel kan niet. De woorden staan nog wel in het
+       title-attribuut en in aria-label, dus een schermlezer en een muis
+       vinden ze terug. */
     .meta {
-      display: flex; flex-wrap: nowrap; gap: 6px;
-      overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      overflow: hidden;
     }
-    .meta::-webkit-scrollbar { display: none; }
-    /* Loopt de rij door, dan hoort de laatste pil te VERVAGEN en niet halverwege
-       tegen de kaartrand te knallen. Zonder dit leest een afgesneden pil als een
-       kapotte kaart in plaats van als "er staat hier meer". Past alles, dan valt
-       er in die laatste 20px niets te vervagen en zie je er niets van. */
-    .meta {
-      mask-image: linear-gradient(90deg, #000 0 calc(100% - 20px), transparent 100%);
-      -webkit-mask-image: linear-gradient(90deg, #000 0 calc(100% - 20px), transparent 100%);
-    }
-    .pil { flex: 0 0 auto; }
     .meta[hidden] { display: none; }
     .pil {
+      flex: 0 0 auto;
       display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 8px;
       border-radius: var(--dac-radius-pill);
       background: var(--dac-surface); border: 1px solid var(--dac-border);
       font-size: 11.5px; color: var(--dac-ink-2);
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
     .pil .icon { width: 14px; height: 14px; color: var(--dac-ink-3); flex: 0 0 auto; }
     .pil b { font-weight: 600; color: var(--dac-ink); }
@@ -123,22 +137,23 @@ class SmokeCard extends DacCard {
 
     .top.unavailable { opacity: .42; }
 
-    /* ---- smal ----
-       Twee kaarten naast elkaar in een sectie geeft een kaart van rond de 200px.
-       Daar passen drie pillen mét label niet in, en dan schuift de derde half
-       buiten beeld. Onder deze breedte vervalt daarom het OMHULSEL van de pil --
-       de rand, het vlak en de binnenmarge -- en het label; wat overblijft is het
-       icoon met zijn waarde, en dat past wel. De gegevens blijven dus staan;
-       alleen de decoratie eromheen gaat weg. */
-    @container (max-width: 340px) {
-      .meta { gap: 13px; }
-      .pil {
-        padding: 0; gap: 5px;
-        background: none; border-color: transparent;
-      }
-      .pil .lb { display: none; }
-      .pil[data-let="warn"], .pil[data-let="bad"] { border-color: transparent; }
+    /* ---- twee stappen uitkleden ----
+       Gemeten en niet geraden. Een @container-regel op een vaste breedte kan
+       dit niet: of de rij past hangt af van HOEVEEL metingen er staan (een
+       melder met alleen rook en batterij past ruim waar een met vijf sensoren
+       klem zit) en van hoe breed de waarden zijn -- "100 %" is breder dan
+       "5 %". Daarom meet pasAan_ de echte rij en zet deze twee standen. */
+    :host([krap]) .meta { gap: 13px; }
+    :host([krap]) .pil {
+      padding: 0; gap: 5px;
+      background: none; border-color: transparent;
     }
+    :host([krap]) .pil[data-let="warn"],
+    :host([krap]) .pil[data-let="bad"] { border-color: transparent; }
+
+    :host([krapper]) .meta { gap: 9px; }
+    :host([krapper]) .pil { font-size: 11px; gap: 4px; }
+    :host([krapper]) .pil .icon { width: 13px; height: 13px; }
   `;
 
   validate(config) {
@@ -181,13 +196,9 @@ class SmokeCard extends DacCard {
 
   template() {
     if (this.config.bare) this.setAttribute("bare", "");
-    // Zonder dit kijkt de @container-query hierboven naar de dichtstbijzijnde
-    // container-voorouder, en dat kan er een van Home Assistant zijn.
-    this.style.containerType = "inline-size";
     const pillen = this.gekozen_()
       .map(
-        (s) => `<span class="pil" data-soort="${s.sleutel}">${resolve(s.icoon)}
-          <span class="lb">${s.label}</span> <b></b></span>`
+        (s) => `<span class="pil" data-soort="${s.sleutel}" title="${s.label}">${resolve(s.icoon)}<b></b></span>`
       )
       .join("");
     return `
@@ -225,6 +236,20 @@ class SmokeCard extends DacCard {
       this.on(pil, "pointerdown", (e) => e.stopPropagation());
       pil.style.cursor = "pointer";
     });
+
+    // De rij past of past niet afhankelijk van de BREEDTE van de kaart, en die
+    // verandert zonder dat er een waarde verandert: een venster dat smaller
+    // wordt, een sectie die van twee kolommen naar een gaat. `paint()` draait
+    // dan niet. Waargenomen wordt `.card` en niet `.meta`: `pasAan_()`
+    // verandert de breedte van `.meta` zelf, en dan meldt de waarnemer zijn
+    // eigen werk terug.
+    const kaart = this.$(".card");
+    if (kaart && typeof ResizeObserver === "function") {
+      const waarnemer = new ResizeObserver(() => this.pasAan_());
+      waarnemer.observe(kaart);
+      this.teardown_.push(() => waarnemer.disconnect());
+    }
+    this.teardown_.push(volgRaster(this.$(".card")));
   }
 
   paint() {
@@ -251,6 +276,51 @@ class SmokeCard extends DacCard {
 
     this.$$(".pil").forEach((pil) => this.paintPil_(pil));
     this.$(".meta").hidden = this.gekozen_().length <= 1 && !this.config.always_meta;
+    this.pasAan_();
+    meetRaster(this.$(".card"));
+  }
+
+  /**
+   * Kleedt de metingenrij net zover uit tot hij op een regel past.
+   *
+   * Twee standen, in deze volgorde: eerst het omhulsel van de pillen weg
+   * (`krap`), dan de tussenruimte en een halve punt van de letter (`krapper`).
+   * Daarna houdt het op -- verder uitkleden zou de waarden zelf raken, en die
+   * horen te blijven staan. Wat er dan nog niet past breekt af naar een
+   * volgende regel, en de kaart wordt een rasterrij hoger.
+   *
+   * WAAROM ER NA ELKE STAP OPNIEUW GEMETEN WORDT
+   *
+   * Elke stand verandert de breedte van de pillen, dus na het zetten van een
+   * stand zegt de vorige meting niets meer. Er wordt daarom teruggerekend vanaf
+   * de ruimste stand: uitkleden, meten, verder uitkleden. Andersom -- meten en
+   * dan een stand kiezen -- meet je de rij zoals hij ER NU UITZIET en niet
+   * zoals hij eruit zou zien.
+   *
+   * Gemeten wordt het AANTAL REGELS en niet de overloop: de rij mag afbreken,
+   * dus hij loopt nooit over. De hoogte van de eerste pil is de maat van een
+   * regel; staat er nog niets, dan valt er ook niets aan te passen.
+   */
+  pasAan_() {
+    const meta = this.$(".meta");
+    if (!meta || meta.hidden) return;
+
+    const regels = () => {
+      const pil = meta.querySelector(".pil");
+      const hoog = pil?.offsetHeight ?? 0;
+      if (!hoog) return 1;
+      // Halve regel marge: subpixels mogen geen tweede regel verzinnen.
+      return Math.round((meta.scrollHeight + hoog / 2) / hoog - 0.5) || 1;
+    };
+
+    this.removeAttribute("krap");
+    this.removeAttribute("krapper");
+    if (regels() <= 1) return;
+
+    this.setAttribute("krap", "");
+    if (regels() <= 1) return;
+
+    this.setAttribute("krapper", "");
   }
 
   paintPil_(pil) {
@@ -258,8 +328,15 @@ class SmokeCard extends DacCard {
     const st = stateOf(this.hass, this.config[soort.sleutel]);
     const waarde = pil.querySelector("b");
 
+    // Het label staat niet meer op de kaart, dus het moet ergens anders te
+    // vinden zijn: een muis krijgt het via `title` (gezet in template()), een
+    // schermlezer via aria-label -- en die moet de WAARDE meelezen, anders
+    // hoort iemand "temperatuur" zonder te horen hoeveel.
+    const zeg = (tekst) => pil.setAttribute("aria-label", `${soort.label}: ${tekst}`);
+
     if (!st || isDead(st)) {
       waarde.textContent = "—";
+      zeg("onbekend");
       pil.dataset.let = "";
       return;
     }
@@ -274,11 +351,13 @@ class SmokeCard extends DacCard {
       // van 24 graden is geen nieuws; die kleurt dus niet.
       const pct = soort.sleutel === "battery" ? this.batterijPct_() : null;
       pil.dataset.let = pct != null && pct <= BATTERIJ_LAAG ? "warn" : "";
+      zeg(waarde.textContent);
       return;
     }
 
     const aan = isOn(st);
     waarde.textContent = aan ? "Alarm" : rustWoord(soort);
+    zeg(waarde.textContent);
     pil.dataset.let = aan ? "bad" : "";
   }
 
@@ -290,9 +369,23 @@ class SmokeCard extends DacCard {
     return this.regels_();
   }
 
+  /**
+   * `rows: "auto"` en een GEMETEN ondergrens, en geen vast getal meer.
+   *
+   * Tot 26 augustus 2026 stond hier een vaste hoogte van twee rasterrijen. Dat
+   * werkte zolang de metingen op een regel pasten, en dwong daarmee de rij om
+   * te schuiven zodra dat niet zo was -- want in een vak dat niet meegroeit
+   * moet het overschot ergens heen. Nu groeit het vak mee, en dan kan de rij
+   * gewoon afbreken. Zie valkuil 8 en 12 in CLAUDE.md voor waarom dat "auto"
+   * met een gemeten `min_rows` moet zijn en niet een groter vast getal.
+   */
   getGridOptions() {
-    const rijen = this.regels_() === 1 ? 1 : rowsFor(14 + 40 + 8 + 28);
-    return { columns: 12, rows: rijen, min_columns: 4, min_rows: rijen, max_rows: rijen };
+    return {
+      columns: 12,
+      rows: "auto",
+      min_columns: 4,
+      min_rows: this.minRijen_(".card", this.regels_()),
+    };
   }
 
   static getConfigElement() {

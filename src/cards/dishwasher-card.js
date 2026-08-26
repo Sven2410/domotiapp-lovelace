@@ -33,6 +33,7 @@ import { resolve } from "../icons.js";
 import { isOn, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { huidigeKeuze, keuzes, kiesOproep } from "./keuzeveld.js";
+import { keuzeNaam } from "./programmanaam.js";
 import {
   bezig,
   draait,
@@ -65,9 +66,7 @@ class DishwasherCard extends DacCard {
       padding: 8px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
-    :host([bare]) .card {
-      background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
-    }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     /* ------------------------------------------------------------- de kop */
 
@@ -133,7 +132,21 @@ class DishwasherCard extends DacCard {
       :host([draait][onbekend]) .vul { animation: none; }
     }
 
-    /* ------------------------------------------------------- de bediening */
+    /* ------------------------------------------------------- de bediening
+
+       TWEE RIJEN EN NIET EEN, EN DAT IS GEMETEN
+
+       Ze stonden naast elkaar: de programmakeuze, en daarnaast Slim, Start en
+       Stop. In een pop-up van 430 pixels breed liep dat mis -- de keuzelijst
+       nam de ruimte die hij kon krijgen en de drie knoppen werden zo smal dat
+       hun woorden over elkaar vielen ("Slim" en "Start" in elkaar geschoven op
+       de schermafdruk van 26 augustus 2026). Dat is de val van flex: 1 1 auto
+       naast flex: 1 1 0: allebei willen groeien, en wie het eerst komt wint.
+
+       Nu heeft de keuzelijst een regel voor zichzelf -- hij draagt de langste
+       tekst van de kaart -- en delen de knoppen de regel eronder in gelijke
+       stukken. Dat kost een rasterrij, en die is het waard: een startknop die
+       "Sta" zegt is geen startknop. */
 
     .rij { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
     .rij[hidden] { display: none; }
@@ -151,7 +164,7 @@ class DishwasherCard extends DacCard {
       padding: 7px 10px; cursor: pointer;
       text-overflow: ellipsis;
     }
-    .keuze:hover { border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .keuze:hover { border-color: var(--dac-border-hi); } }
     .keuze:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
     .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
     .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
@@ -167,7 +180,7 @@ class DishwasherCard extends DacCard {
       transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
     }
     .knop .icon { width: 15px; height: 15px; flex: 0 0 auto; }
-    .knop:hover { color: var(--dac-ink); border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .knop:hover { color: var(--dac-ink); border-color: var(--dac-border-hi); } }
     .knop:active { transform: scale(.97); }
     .knop[hidden] { display: none; }
 
@@ -177,13 +190,13 @@ class DishwasherCard extends DacCard {
       border-color: color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
       background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
     }
-    .knop.start:hover { background: color-mix(in srgb, var(--dac-accent-hi) 24%, transparent); }
+    @media (hover: hover) { .knop.start:hover { background: color-mix(in srgb, var(--dac-accent-hi) 24%, transparent); } }
 
     .knop.stop {
       color: var(--dac-bad);
       border-color: color-mix(in srgb, var(--dac-bad) 40%, transparent);
     }
-    .knop.stop:hover { background: color-mix(in srgb, var(--dac-bad) 14%, transparent); }
+    @media (hover: hover) { .knop.stop:hover { background: color-mix(in srgb, var(--dac-bad) 14%, transparent); } }
 
     /* De slimme knop is een schakelaar en laat dat ook zien. */
     .knop.slim[data-aan="true"] {
@@ -250,8 +263,11 @@ class DishwasherCard extends DacCard {
 
         <div class="balk" hidden><span class="vul"></span></div>
 
-        <div class="rij" hidden>
+        <div class="rij programma" hidden>
           <span class="programslot" style="display:contents"></span>
+        </div>
+
+        <div class="rij knoppen" hidden>
           ${knop("slim", "bolt", "Slim")}
           ${knop("start", "play", "Start")}
           ${knop("stop", "stop", "Stop")}
@@ -280,7 +296,7 @@ class DishwasherCard extends DacCard {
 
     // De keuzelijst wordt in `paint()` gebouwd -- de opties staan in de
     // attributen. Daarom hangt het gedrag aan de RIJ en niet aan de lijst.
-    this.on(this.$(".rij"), "change", (e) => {
+    this.on(this.$(".rij.programma"), "change", (e) => {
       const lijst = e.target?.closest?.(".keuze");
       if (!lijst || !c.program) return;
       e.stopPropagation();
@@ -374,12 +390,22 @@ class DishwasherCard extends DacCard {
     const slot = this.$(".programslot");
     const st = stateOf(this.hass, c.program);
     const opties = c.program ? keuzes(st) : [];
-    const vinger = JSON.stringify(opties);
+
+    // De WAARDE blijft de sleutel van de entiteit -- daar wordt straks mee
+    // geschakeld -- en alleen het label wordt Nederlands. Zie
+    // programmanaam.js voor waar die naam vandaan komt.
+    const namen = opties.map((o) => keuzeNaam(o, this.hass?.formatEntityState?.(st, o)));
+
+    // De vingerafdruk draagt de NAMEN mee en niet alleen de sleutels: de
+    // vertaling van Home Assistant komt soms een tel later binnen dan de lijst,
+    // en zonder dit blijft de kaart dan op de sleutels staan tot je hem
+    // herlaadt.
+    const vinger = JSON.stringify([opties, namen]);
     if (slot.dataset.opties !== vinger) {
       slot.dataset.opties = vinger;
       slot.innerHTML = opties.length
         ? `<select class="keuze" aria-label="Programma">${opties
-            .map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`)
+            .map((o, i) => `<option value="${escapeHtml(o)}">${escapeHtml(namen[i])}</option>`)
             .join("")}</select>`
         : "";
     }
@@ -396,7 +422,8 @@ class DishwasherCard extends DacCard {
     this.$(".knop.start").hidden = !c.start;
     this.$(".knop.stop").hidden = !c.stop;
 
-    this.$(".rij").hidden = !lijst && !c.smart && !c.start && !c.stop;
+    this.$(".rij.programma").hidden = !lijst;
+    this.$(".rij.knoppen").hidden = !c.smart && !c.start && !c.stop;
   }
 
   /* ------------------------------------------------- Lovelace-afspraken */

@@ -41,6 +41,13 @@ jobs:
       - name: Bedieningselementen
         run: npm run check:controls
 
+      # Twee dingen aan de CSS van de kaarten: geen :hover die op een
+      # aanraakscherm blijft plakken nadat je hem hebt aangetikt, en geen
+      # sjabloon dat door een backtick in een CSS-commentaar halverwege
+      # afgesloten wordt. Allebei gemeten fouten, zie scripts/check-css.mjs.
+      - name: CSS van de kaarten
+        run: npm run check:css
+
       - name: Toon het verschil bij een mislukking
         if: failure()
         run: |

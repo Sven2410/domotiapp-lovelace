@@ -55,7 +55,7 @@ class WasteCard extends DacCard {
       height: 100%; padding: 10px 12px;
       display: flex; flex-direction: column; gap: 8px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     /* ---- hero ---- */
     .hero {

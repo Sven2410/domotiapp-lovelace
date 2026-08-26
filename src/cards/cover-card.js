@@ -48,7 +48,7 @@ class CoverCard extends DacCard {
       height: 100%; padding: 6px 12px;
       display: flex; flex-direction: column; justify-content: center;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     .cv {
       display: grid; grid-template-columns: 40px 1fr auto; gap: 11px; align-items: center;
@@ -92,7 +92,7 @@ class CoverCard extends DacCard {
       border-radius: var(--dac-radius-pill);
       transition: background 180ms ease, color 180ms ease;
     }
-    .keys button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); }
+    @media (hover: hover) { .keys button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); } }
     .keys button:active { background: rgba(255,255,255,.14); }
     .keys button .icon { width: 18px; height: 18px; }
     .keys button:disabled { opacity: .3; cursor: default; }

@@ -171,5 +171,5 @@ export const toggleCss = /* css */ `
   }
   .toggle[aria-checked="true"] .knob { --knob: ${REIS}px; background: var(--dac-ink); }
   .toggle.dragging .knob { transition: none; }
-  .toggle:hover { border-color: var(--dac-border-hi); }
+  @media (hover: hover) { .toggle:hover { border-color: var(--dac-border-hi); } }
 `;

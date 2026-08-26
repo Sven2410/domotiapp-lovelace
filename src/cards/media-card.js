@@ -109,7 +109,7 @@ class MediaCard extends DacCard {
       min-height: var(--dac-raster, 56px); padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 7px;
     }
-    :host([bare]) .card { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+    :host([bare]) .card { background: none; box-shadow: none; }
 
     .top { display: flex; align-items: center; gap: 11px; min-height: 40px; }
 
@@ -145,7 +145,7 @@ class MediaCard extends DacCard {
       transition: background 200ms ease, color 200ms ease, border-color 200ms ease,
                   transform 120ms ease;
     }
-    .k:hover { background: var(--dac-surface-hi); color: var(--dac-ink); border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .k:hover { background: var(--dac-surface-hi); color: var(--dac-ink); border-color: var(--dac-border-hi); } }
     .k:active { transform: scale(.94); }
     .k .icon { width: 17px; height: 17px; }
 
@@ -156,7 +156,7 @@ class MediaCard extends DacCard {
       background: color-mix(in srgb, var(--tone) 14%, transparent);
       border-color: color-mix(in srgb, var(--tone) 32%, transparent);
     }
-    .k.hoofd:hover { background: color-mix(in srgb, var(--tone) 22%, transparent); }
+    @media (hover: hover) { .k.hoofd:hover { background: color-mix(in srgb, var(--tone) 22%, transparent); } }
 
     /* ---- volume ---- */
     ${sliderCss}
@@ -182,7 +182,7 @@ class MediaCard extends DacCard {
       border: 1px solid var(--dac-border);
       transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
     }
-    .bronknop:hover { background: var(--dac-surface-hi); color: var(--dac-ink); border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .bronknop:hover { background: var(--dac-surface-hi); color: var(--dac-ink); border-color: var(--dac-border-hi); } }
     .bronknop .icon { width: 15px; height: 15px; flex: 0 0 auto; }
     .bronknop b {
       min-width: 0; font-weight: 600;

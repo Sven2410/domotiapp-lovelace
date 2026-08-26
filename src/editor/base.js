@@ -79,7 +79,7 @@ export const section = (name, icon, schema, expanded = false) => ({
 const GEDEELD = [{ name: "bare", selector: sel.bool() }];
 
 const GEDEELDE_HELPERS = {
-  bare: "Haalt de achtergrond, de rand en de schaduw onder de kaart weg. De inhoud blijft staan -- handig als de kaart al in iets anders zit, of voor een dashboard zonder vlakken.",
+  bare: "Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan, zodat de kaart nog een vorm heeft op een dashboard zonder vlakken.",
 };
 
 export class DacEditor extends HTMLElement {

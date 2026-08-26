@@ -41,7 +41,16 @@ import { DacCard, INCOMPLETE, escapeHtml, registerCard, toneValue } from "../bas
 import "../editor/navbar-editor.js";
 import { icons, resolve } from "../icons.js";
 import { runAction } from "../ha.js";
-import { actieVoor, BALK_MAX, BALK_MIN, itemsVan, klemBalk, verdeel } from "./navbar-logica.js";
+import {
+  actieVoor,
+  BALK_MAX,
+  BALK_MIN,
+  heeftSub,
+  itemsVan,
+  klemBalk,
+  subVan,
+  verdeel,
+} from "./navbar-logica.js";
 
 /* ------------------------------------------------------- waar we in zitten */
 
@@ -90,6 +99,35 @@ function vakVan(el) {
   return null;
 }
 
+/**
+ * De sectie waar deze kaart in staat, of null.
+ *
+ * `hui-section` draagt zijn eigen config, en daar staat in hoeveel kaarten
+ * erin horen. Dat is het antwoord dat we nodig hebben en het is er zonder te
+ * tellen: een eigen deep-query door shadow roots om kaarten te tellen heeft in
+ * dit project al twee keer ten onrechte "nul" opgeleverd (valkuil 14).
+ */
+function sectieVan(el) {
+  for (const v of voorouders(el)) {
+    if (v.tagName?.toLowerCase?.() === "hui-section") return v;
+  }
+  return null;
+}
+
+/**
+ * Het VAK van een sectie in het raster van de view.
+ *
+ * Home Assistant zet de sectie in een `div.section`, en dat is het element dat
+ * een kolom (of op een telefoon: een rij) van het raster inneemt. `hui-section`
+ * zelf is daar een kind van en zegt niets over de plaatsing.
+ */
+function sectieVakVan(sectie) {
+  for (const v of voorouders(sectie)) {
+    if (v.classList?.contains?.("section")) return v;
+  }
+  return null;
+}
+
 /** De view waar deze kaart in staat, zodat er onderaan ruimte bij kan. */
 function viewVan(el) {
   for (const v of voorouders(el)) {
@@ -119,7 +157,10 @@ class NavbarCard extends DacCard {
 
       background: color-mix(in srgb, var(--dac-bg-raise) 88%, transparent);
       border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-pill);
+      /* Dezelfde hoek als elke andere losse kaart in de familie, en niet een
+         pil. Een balk met een andere ronding dan de kaarten erboven leest als
+         iets dat er niet bij hoort -- gemeld op 26 augustus 2026. */
+      border-radius: var(--dac-radius);
       box-shadow: 0 20px 44px -20px rgba(0, 0, 0, .92),
                   0 1px 0 rgba(255, 255, 255, .04) inset;
       /* Achter een halfdoorzichtige balk hoort iets te bewegen, anders is hij
@@ -144,8 +185,9 @@ class NavbarCard extends DacCard {
       }
     }
 
+    /* De vulling en het waas gaan weg, de rand blijft -- zie theme.js. */
     :host([bare]) .balk {
-      background: none; border: 0; box-shadow: none;
+      background: none; box-shadow: none;
       backdrop-filter: none; -webkit-backdrop-filter: none;
     }
 
@@ -173,7 +215,7 @@ class NavbarCard extends DacCard {
     @media (min-width: 620px) {
       .knop { flex: 0 0 auto; min-width: 66px; }
     }
-    .knop:hover { background: var(--dac-surface); color: var(--dac-ink); }
+    @media (hover: hover) { .knop:hover { background: var(--dac-surface); color: var(--dac-ink); } }
     .knop:active { transform: scale(.96); }
     .knop[aria-expanded="true"] { background: var(--dac-surface-hi); color: var(--tone); }
 
@@ -182,7 +224,7 @@ class NavbarCard extends DacCard {
        van een navigatieknop -- vier ringen naast elkaar leest als vier knoppen
        die aanstaan. Hier is het icoon zelf de knop. */
     .knop .ico { display: flex; color: var(--dac-ink); }
-    .knop:hover .ico { color: var(--tone); }
+    @media (hover: hover) { .knop:hover .ico { color: var(--tone); } }
     .knop .icon, .knop ha-icon {
       width: 22px; height: 22px; --mdc-icon-size: 22px;
     }
@@ -196,11 +238,25 @@ class NavbarCard extends DacCard {
     :host([geen-namen]) .knop { padding: 9px 10px; }
     :host([geen-namen]) .knop .naam { display: none; }
 
-    /* -------------------------------------------------------- het meer-menu */
+    /* ------------------------------------------------------------- de menu's
+
+       Er zijn er twee soorten, en ze delen alles behalve waar ze hangen:
+
+       - het MEER-menu, rechts onder de meer-knop, met wat er niet in de balk
+         paste. Dat was er al.
+       - een SUBMENU, boven de knop waar je op tikte, met de knoppen die je daar
+         zelf onder hebt gehangen. Dat is er sinds 26 augustus 2026 bij: de
+         eigenaar miste "extra navigatie knoppen die boven de geklikte icon
+         openen".
+
+       Een submenu staat GECENTREERD boven zijn knop en niet aan een van de
+       randen: dat is wat de tik aanwijst. De horizontale plek wordt gemeten en
+       in --x gezet (plaatsMenu_), want die hangt af van waar de knop staat, en
+       dat kan CSS niet weten. */
 
     .menu {
       position: absolute;
-      right: 4px; bottom: calc(100% + 10px);
+      bottom: calc(100% + 10px);
       min-width: 190px; max-width: min(280px, calc(100vw - 32px));
       max-height: min(60vh, 420px); overflow-y: auto;
 
@@ -214,16 +270,29 @@ class NavbarCard extends DacCard {
       backdrop-filter: blur(16px) saturate(140%);
       -webkit-backdrop-filter: blur(16px) saturate(140%);
     }
-    :host([menu-open]) .menu {
-      display: flex;
-      animation: opkomen 160ms ease-out;
-    }
+    /* Het meer-menu hangt aan de rechterrand, want daar hangt zijn knop ook. */
+    .menu.meermenu { right: 4px; }
+    /* Een submenu hangt om --x heen. Zonder gemeten waarde valt hij op het
+       midden van de balk terug -- dan staat hij misschien niet onder de goede
+       knop, maar wel in beeld. */
+    .menu.submenu { left: var(--x, 50%); transform: translateX(-50%); }
+
+    .menu[open] { display: flex; }
+    .menu.meermenu[open] { animation: opkomen 160ms ease-out; }
+    .menu.submenu[open] { animation: opkomen-mid 160ms ease-out; }
     @keyframes opkomen {
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: none; }
     }
+    /* Een eigen animatie, want een submenu draagt al een transform om zich te
+       centreren. Zou hij opkomen gebruiken, dan gooit de laatste stap
+       (transform: none) die centrering weg en springt het menu naar rechts. */
+    @keyframes opkomen-mid {
+      from { opacity: 0; transform: translate(-50%, 6px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
     @media (prefers-reduced-motion: reduce) {
-      :host([menu-open]) .menu { animation: none; }
+      .menu[open] { animation: none; }
     }
 
     .regel {
@@ -234,13 +303,23 @@ class NavbarCard extends DacCard {
       font: inherit; font-size: 13.5px; color: var(--dac-ink);
       -webkit-tap-highlight-color: transparent;
     }
-    .regel:hover { background: var(--dac-surface); }
+    @media (hover: hover) { .regel:hover { background: var(--dac-surface); } }
     .regel:active { background: var(--dac-surface-hi); }
     .regel .mi { display: flex; flex: 0 0 auto; color: var(--dac-ink); }
     .regel .icon, .regel ha-icon {
       width: 19px; height: 19px; --mdc-icon-size: 19px;
     }
     .regel .mt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Een subknop van een knop die zelf achter Meer viel. Die krijgt geen menu
+       in een menu -- dat is navigeren in een boom -- maar staat ingesprongen
+       onder zijn eigen knop. */
+    .regel.sub { padding-left: 26px; font-size: 13px; color: var(--dac-ink-2); }
+    .regel.sub .icon, .regel.sub ha-icon {
+      width: 17px; height: 17px; --mdc-icon-size: 17px;
+    }
+    /* De knop waar die subknoppen onder hangen is zelf geen bestemming meer:
+       hij is een kopje. */
+    .regel.kop { font-weight: 600; }
 
     :focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
   `;
@@ -272,52 +351,95 @@ class NavbarCard extends DacCard {
 
     const { balk, meer, heeftMeer } = verdeel(c.items, c.max);
 
-    const knop = (item, index) => `
-      <button type="button" class="knop" data-i="${index}" title="${escapeHtml(item.name)}">
+    // De index is die van de VOLLEDIGE lijst, niet van de deellijst: dan hoeft
+    // een tik niet uit te zoeken waar hij vandaan komt.
+    const vol = c.items.filter((i) => i.name || i.icon || i.path);
+
+    // Een knop met subknoppen navigeert niet maar klapt open. Zijn eigen pad
+    // wordt dan niet gebruikt -- dat staat ook zo in de editor. Twee dingen op
+    // één tik leggen (kort tikken navigeert, lang tikken opent) is precies het
+    // soort verborgen bediening dat je een keer uitlegt en daarna zelf vergeet.
+    const knop = (item, index) => {
+      const sub = subVan(item);
+      const menu = sub.length ? ` data-menu="s${index}" aria-haspopup="true" aria-expanded="false"` : "";
+      return `
+      <button type="button" class="knop" data-i="${index}" title="${escapeHtml(item.name)}"${menu}>
         <span class="ico">${resolve(item.icon, "grid")}</span>
         <span class="naam">${escapeHtml(item.name)}</span>
       </button>`;
+    };
 
-    const regel = (item, index) => `
-      <button type="button" class="regel" data-i="${index}">
+    const regel = (item, index, subIndex = null, klasse = "") => `
+      <button type="button" class="regel${klasse ? ` ${klasse}` : ""}" data-i="${index}"${
+        subIndex === null ? "" : ` data-s="${subIndex}"`
+      }>
         <span class="mi">${resolve(item.icon, "grid")}</span>
         <span class="mt">${escapeHtml(item.name || item.path)}</span>
       </button>`;
 
-    // De index is die van de VOLLEDIGE lijst, niet van de deellijst: dan hoeft
-    // een tik niet uit te zoeken waar hij vandaan komt.
-    const vol = c.items.filter((i) => i.name || i.icon || i.path);
+    // Een knop die achter Meer viel én subknoppen heeft, krijgt geen tweede
+    // menu bovenop het eerste: zijn subknoppen staan ingesprongen onder hem in
+    // dezelfde lijst. Een menu in een menu is op een telefoon niet te raken.
+    const meerRegels = meer
+      .map((item) => {
+        const i = vol.indexOf(item);
+        const sub = subVan(item);
+        if (!sub.length) return regel(item, i);
+        const kop = `
+      <div class="regel kop">
+        <span class="mi">${resolve(item.icon, "grid")}</span>
+        <span class="mt">${escapeHtml(item.name || item.path)}</span>
+      </div>`;
+        return kop + sub.map((s, j) => regel(s, i, j, "sub")).join("");
+      })
+      .join("");
+
+    // Een submenu per knop in de balk die er een heeft. Ze staan als broer van
+    // de knoppen in de balk en niet erin: een menu in een knop erft zijn
+    // afmetingen en zijn overflow, en dan valt het menu binnen de balk weg.
+    const submenus = balk
+      .map((item) => {
+        const sub = subVan(item);
+        if (!sub.length) return "";
+        const i = vol.indexOf(item);
+        return `<div class="menu submenu" data-id="s${i}" role="menu">${sub
+          .map((s, j) => regel(s, i, j))
+          .join("")}</div>`;
+      })
+      .join("");
 
     return `
       <div class="balk" style="--tone:${toneValue(c.tone)}">
         ${balk.map((item) => knop(item, vol.indexOf(item))).join("")}
         ${
           heeftMeer
-            ? `<button type="button" class="knop meer" aria-expanded="false" aria-haspopup="true">
+            ? `<button type="button" class="knop meer" data-menu="meer" aria-expanded="false" aria-haspopup="true">
                  <span class="ico">${icons.dots}</span>
                  <span class="naam">Meer</span>
                </button>`
             : ""
         }
-        <div class="menu" role="menu">
-          ${meer.map((item) => regel(item, vol.indexOf(item))).join("")}
+        ${submenus}
+        <div class="menu meermenu" data-id="meer" role="menu">
+          ${meerRegels}
         </div>
       </div>`;
   }
 
   wire() {
     for (const el of this.$$(".knop[data-i], .regel[data-i]")) {
+      // Een knop met een menu navigeert niet; die staat hieronder.
+      if (el.dataset.menu) continue;
       this.on(el, "click", () => {
-        this.sluitMenu_();
-        this.ga_(Number(el.dataset.i));
+        this.sluitMenus_();
+        this.ga_(Number(el.dataset.i), el.dataset.s);
       });
     }
 
-    const meer = this.$(".meer");
-    if (meer) {
-      this.on(meer, "click", (e) => {
+    for (const el of this.$$("[data-menu]")) {
+      this.on(el, "click", (e) => {
         e.stopPropagation();
-        this.wisselMenu_();
+        this.wisselMenu_(el);
       });
     }
 
@@ -329,21 +451,22 @@ class NavbarCard extends DacCard {
       window,
       "pointerdown",
       (e) => {
-        if (!this.hasAttribute("menu-open")) return;
+        if (!this.ietsOpen_()) return;
         const pad = e.composedPath?.() ?? [];
-        if (pad.includes(this.$(".menu")) || pad.includes(this.$(".meer"))) return;
-        this.sluitMenu_();
+        const eigen = [...this.$$(".menu[open]"), ...this.$$("[data-menu]")];
+        if (eigen.some((el) => pad.includes(el))) return;
+        this.sluitMenus_();
       },
       true
     );
 
     this.on(window, "keydown", (e) => {
-      if (e.key === "Escape" && this.hasAttribute("menu-open")) this.sluitMenu_();
+      if (e.key === "Escape" && this.ietsOpen_()) this.sluitMenus_();
     });
 
     // Een view-wissel hoort het menu te sluiten: anders sta je op de nieuwe
     // pagina met het menu van de vorige nog open.
-    this.on(window, "location-changed", () => this.sluitMenu_());
+    this.on(window, "location-changed", () => this.sluitMenus_());
   }
 
   paint() {
@@ -353,21 +476,64 @@ class NavbarCard extends DacCard {
 
   /* ------------------------------------------------------------- gedrag */
 
-  ga_(index) {
+  ga_(index, subIndex) {
     const item = this.config.items.filter((i) => i.name || i.icon || i.path)[index];
     if (!item) return;
-    runAction(this, this.hass, {}, actieVoor(item.path));
+    const doel = subIndex === undefined ? item : subVan(item)[Number(subIndex)];
+    if (!doel) return;
+    runAction(this, this.hass, {}, actieVoor(doel.path));
   }
 
-  wisselMenu_() {
-    const open = this.toggleAttribute("menu-open");
-    this.$(".meer")?.setAttribute("aria-expanded", String(open));
+  /* ------------------------------------------------------------- de menu's */
+
+  ietsOpen_() {
+    return Boolean(this.$(".menu[open]"));
   }
 
-  sluitMenu_() {
-    if (!this.hasAttribute("menu-open")) return;
-    this.removeAttribute("menu-open");
-    this.$(".meer")?.setAttribute("aria-expanded", "false");
+  menuVan_(knop) {
+    return this.$$(".menu").find((m) => m.dataset.id === knop.dataset.menu) ?? null;
+  }
+
+  wisselMenu_(knop) {
+    const menu = this.menuVan_(knop);
+    const stond = Boolean(menu?.hasAttribute("open"));
+    // Altijd eerst alles dicht: twee open menu's over elkaar heen is geen
+    // navigatie meer, en op een telefoon zijn ze dan allebei half te raken.
+    this.sluitMenus_();
+    if (!menu || stond) return;
+    menu.setAttribute("open", "");
+    knop.setAttribute("aria-expanded", "true");
+    this.plaatsMenu_(menu, knop);
+  }
+
+  sluitMenus_() {
+    for (const m of this.$$(".menu[open]")) m.removeAttribute("open");
+    for (const k of this.$$("[data-menu]")) k.setAttribute("aria-expanded", "false");
+  }
+
+  /**
+   * Zet een submenu boven zijn eigen knop.
+   *
+   * Gemeten en niet gerekend: waar een knop staat hangt af van hoeveel knoppen
+   * er zijn, hoe breed hun namen zijn en of de balk randbreed is of een pil.
+   *
+   * De klemming houdt het menu binnen de balk. Zonder dat schuift het menu van
+   * de eerste knop links buiten beeld -- precies waar de duim hem niet meer
+   * kan raken. Is de balk smaller dan het menu, dan wint het midden: dan is er
+   * niets te klemmen en is scheef staan erger dan gecentreerd.
+   */
+  plaatsMenu_(menu, knop) {
+    if (!menu.classList.contains("submenu")) return;
+    const balk = this.$(".balk")?.getBoundingClientRect();
+    const r = knop.getBoundingClientRect();
+    if (!balk?.width) return;
+
+    const halve = menu.offsetWidth / 2;
+    const midden = r.left + r.width / 2 - balk.left;
+    const min = halve + 6;
+    const max = balk.width - halve - 6;
+    const x = max < min ? balk.width / 2 : Math.min(Math.max(midden, min), max);
+    menu.style.setProperty("--x", `${Math.round(x)}px`);
   }
 
   /* ------------------------------------------ uit het rooster, en weer terug */
@@ -395,22 +561,39 @@ class NavbarCard extends DacCard {
 
     // Het vak uit de rasterstroom halen. Niet verbergen: een verborgen
     // voorouder verbergt ook wat vast gepositioneerd is, en dan is de balk weg.
+    //
+    // GEEN pointer-events: none hier. Dat stond er wel, en het maakte de hele
+    // balk onklikbaar: pointer-events erft door, en de balk is een afstammeling
+    // van dit vak ook al staat hij ergens anders op het scherm. Gemeten met een
+    // hit-test op het klikpunt -- die kwam uit op de view eronder in plaats van
+    // op de knop. Het vak is nul bij nul, dus het vangt uit zichzelf niets af.
     const vak = vakVan(this);
-    if (vak && !this.vakStijl_) {
-      this.vak_ = vak;
-      this.vakStijl_ = vak.getAttribute("style") ?? "";
-      vak.style.position = "absolute";
-      vak.style.width = "0";
-      vak.style.height = "0";
-      vak.style.margin = "0";
-      vak.style.padding = "0";
-      vak.style.overflow = "visible";
-      // GEEN pointer-events: none hier. Dat stond er wel, en het maakte de hele
-      // balk onklikbaar: pointer-events erft door, en de balk is een afstammeling
-      // van dit vak ook al staat hij ergens anders op het scherm. Gemeten met een
-      // hit-test op het klikpunt -- die kwam uit op de view eronder in plaats van
-      // op de knop. Het vak is nul bij nul, dus het vangt uit zichzelf niets af.
-    }
+    this.klapIn_(vak);
+
+    // En het vak van het vak.
+    //
+    // Home Assistant hangt zijn `hui-card` sinds 2026.8 in een `div.card` met
+    // de klasse `fit-rows`, en DIE is het rasteritem: hij krijgt een vaste
+    // hoogte van rows x 64 - 8. Alleen de `hui-card` uit de stroom halen laat
+    // die wikkel van 56 pixels staan -- een lege regel waar de balk had moeten
+    // staan. Gemeten op 26 augustus 2026, nadat de eigenaar meldde dat de
+    // navbalk zijn separator naar beneden duwde.
+    const wikkel = vak?.parentElement;
+    if (wikkel?.classList?.contains?.("card")) this.klapIn_(wikkel);
+
+    // En als de balk ALLEEN in zijn sectie staat, de sectie zelf.
+    //
+    // Een sectie zonder zichtbare inhoud houdt anders zijn plek in het raster
+    // van de view: op een breed scherm een lege kolom, op een telefoon een gat
+    // van een kaarthoogte tussen de sectie erboven en die eronder. Dat gat is
+    // precies wat er op zijn schermafdruk stond, tussen "Favorieten" en
+    // "Woning".
+    //
+    // Alleen bij EEN kaart in de sectie. Deelt de balk zijn sectie met andere
+    // kaarten, dan hoort die sectie te blijven staan -- die andere kaarten
+    // moeten ergens.
+    const sectie = sectieVan(this);
+    if (sectie?.config?.cards?.length === 1) this.klapIn_(sectieVakVan(sectie));
 
     // Ruimte onderaan de view, zodat de balk niet over de laatste kaart ligt.
     const view = viewVan(this);
@@ -440,15 +623,35 @@ class NavbarCard extends DacCard {
     this.style.setProperty("--dac-nav-mid", `${Math.round(r.left + r.width / 2)}px`);
   }
 
+  /**
+   * Haal een element uit de rasterstroom, en onthoud hoe het stond.
+   *
+   * `position: absolute` en nul bij nul, en met opzet geen `display: none`:
+   * een verborgen voorouder verbergt ook wat er vast gepositioneerd in hangt,
+   * en dan is de balk zelf weg.
+   */
+  klapIn_(el) {
+    if (!el) return;
+    this.ingeklapt_ ??= new Map();
+    if (this.ingeklapt_.has(el)) return;
+    this.ingeklapt_.set(el, el.getAttribute("style"));
+    el.style.position = "absolute";
+    el.style.width = "0";
+    el.style.height = "0";
+    el.style.minHeight = "0";
+    el.style.margin = "0";
+    el.style.padding = "0";
+    el.style.overflow = "visible";
+  }
+
   herstel_() {
     this.waarnemer_?.disconnect();
     this.waarnemer_ = null;
-    if (this.vak_) {
-      if (this.vakStijl_) this.vak_.setAttribute("style", this.vakStijl_);
-      else this.vak_.removeAttribute("style");
-      this.vak_ = null;
-      this.vakStijl_ = null;
+    for (const [el, stijl] of this.ingeklapt_ ?? []) {
+      if (stijl) el.setAttribute("style", stijl);
+      else el.removeAttribute("style");
     }
+    this.ingeklapt_ = null;
     if (this.view_) {
       this.view_.style.paddingBottom = this.viewStijl_ || "";
       this.view_ = null;

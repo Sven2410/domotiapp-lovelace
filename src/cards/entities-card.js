@@ -80,6 +80,7 @@ import { resolve, defaultIcon } from "../icons.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { kanTijdZetten, tijdSoort, veldWaarde, zetOproep } from "./tijdveld.js";
 import { huidigeKeuze, kanKiezen, keuzes, kiesOproep } from "./keuzeveld.js";
+import { keuzeNaam } from "./programmanaam.js";
 import "../editor/entities-editor.js";
 import {
   GAP,
@@ -121,6 +122,9 @@ class EntitiesCard extends DacCard {
     :host([vlak="items"]) .card, :host([vlak="none"]) .card {
       background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
     }
+    /* En de tussenvorm: geen vulling, wél de rand. Dat is wat "achtergrond
+       weglaten" op de andere kaarten in de familie doet. */
+    :host([vlak="open"]) .card { background: none; box-shadow: none; }
 
     /* De kop van de kaart. Optioneel; zie kaartNaam() in entities-logica.js.
        Hij staat in de flexkolom boven de rijen, dus de kaart centreert kop en
@@ -151,7 +155,7 @@ class EntitiesCard extends DacCard {
       transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
       touch-action: manipulation;
     }
-    .it:hover { background: var(--dac-surface); }
+    @media (hover: hover) { .it:hover { background: var(--dac-surface); } }
     /* Draagt de plek zelf het vlak, dan hoort hij ook zelf te reageren -- en
        met dezelfde ronding als elke andere kaart in de familie.
 
@@ -164,7 +168,7 @@ class EntitiesCard extends DacCard {
       border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius); padding: 2px 10px 2px 6px;
     }
-    .it.surface:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .it.surface:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
     .it.surface:active { transform: scale(.985); }
 
     .chip {
@@ -247,7 +251,7 @@ class EntitiesCard extends DacCard {
       padding: 5px 10px; cursor: pointer; text-align: center;
       transition: background 200ms ease, border-color 200ms ease;
     }
-    .tijd:hover { background-color: var(--dac-surface-hi); border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .tijd:hover { background-color: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
     .tijd:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
     .tijd::-webkit-calendar-picker-indicator { display: none; }
     .tijd::-webkit-datetime-edit { padding: 0; }
@@ -276,7 +280,7 @@ class EntitiesCard extends DacCard {
       text-overflow: ellipsis;
       transition: background 200ms ease, border-color 200ms ease;
     }
-    .keuze:hover { border-color: var(--dac-border-hi); }
+    @media (hover: hover) { .keuze:hover { border-color: var(--dac-border-hi); } }
     .keuze:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
     .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
     .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
@@ -627,16 +631,20 @@ class EntitiesCard extends DacCard {
       let keuzelijst = null;
       if (keuzeslot) {
         const opties = dead ? [] : keuzes(st);
+        // De waarde blijft de sleutel van de entiteit, het label wordt leesbaar
+        // -- zie programmanaam.js. Een `select` van een apparaat meldt zijn
+        // standen als sleutels, en die horen niet op een dashboard te staan.
+        const namen = opties.map((o) => keuzeNaam(o, this.hass?.formatEntityState?.(st, o)));
         // Alleen opnieuw bouwen als de LIJST verandert, niet als de keuze
         // verandert: opnieuw bouwen tijdens een uitgeklapte lijst klapt hem
         // dicht, en een dashboard krijgt bij elke toestandswijziging in huis
         // een nieuwe hass.
-        const vinger = JSON.stringify(opties);
+        const vinger = JSON.stringify([opties, namen]);
         if (keuzeslot.dataset.opties !== vinger) {
           keuzeslot.dataset.opties = vinger;
           keuzeslot.innerHTML = opties.length
             ? `<select class="keuze">${opties
-                .map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`)
+                .map((o, i) => `<option value="${escapeHtml(o)}">${escapeHtml(namen[i])}</option>`)
                 .join("")}</select>`
             : "";
         }

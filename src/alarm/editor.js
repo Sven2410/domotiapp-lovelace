@@ -500,8 +500,10 @@ export class DomotiappAlarmEditor extends LitElement {
       font-size: 13.5px;
       white-space: nowrap;
     }
-    button.knop:hover:not(:disabled) {
-      background: var(--dac-border);
+    @media (hover: hover) {
+      button.knop:hover:not(:disabled) {
+        background: var(--dac-border);
+      }
     }
     button.knop:disabled {
       opacity: 0.45;
@@ -571,8 +573,10 @@ export class DomotiappAlarmEditor extends LitElement {
     .treffer:last-child {
       border-bottom: none;
     }
-    .treffer:hover {
-      background: var(--dac-border);
+    @media (hover: hover) {
+      .treffer:hover {
+        background: var(--dac-border);
+      }
     }
     .treffer img,
     .gekozen img {
