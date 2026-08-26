@@ -194,6 +194,58 @@ export const icons = {
 
   drop: draw(`<path d="M12 3.4s5.6 6.1 5.6 9.8a5.6 5.6 0 0 1-11.2 0C6.4 9.5 12 3.4 12 3.4Z"/>`),
 
+  /* Een druppel MET een procentteken erin. `drop` blijft de algemene druppel
+     -- lekkage, water, nat -- en dit is de meting die een vochtsensor geeft.
+     Twee iconen omdat het twee dingen zijn: een lekkage is geen percentage. */
+  humidity: draw(`<path d="M12 3.4s5.6 6.1 5.6 9.8a5.6 5.6 0 0 1-11.2 0C6.4 9.5 12 3.4 12 3.4Z"/>
+    <path d="M10.1 16.1 13.9 12"/>
+    <circle cx="10.2" cy="12.3" r=".95"/>
+    <circle cx="13.8" cy="15.8" r=".95"/>`),
+
+  /* Licht dat op een sensorvlak valt. Niet nog een zonnetje: het onderwerp is
+     de meting, dus het meetvlak staat eronder en vangt de stralen op. */
+  lux: draw(`<circle cx="12" cy="6.9" r="2.8"/>
+    <path d="M12 1.9v1.3M16.4 3.5l-.9.9M18.4 8.1h-1.3M5.6 8.1H4.3M7.6 4.4l.9.9"/>
+    <path d="M8.6 14.1 9.7 12M12 14.5v-2.1M15.4 14.1 14.3 12"/>
+    <path d="M5.6 16.2h12.8a1.2 1.2 0 0 1 1.2 1.2v2.4a1.2 1.2 0 0 1-1.2 1.2H5.6a1.2 1.2 0 0 1-1.2-1.2v-2.4a1.2 1.2 0 0 1 1.2-1.2Z"/>`),
+
+  /* Wind MET een meter eronder. `wind` zegt dat het waait, dit zegt hoe hard. */
+  windSpeed: draw(`<path d="M3.6 6.6h7.6a2.3 2.3 0 1 0-2.3-2.3"/>
+    <path d="M3.6 10.6h4.8"/>
+    <path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0"/>
+    <path d="M12 20.2 16.2 15"/>
+    <circle cx="12" cy="20.2" r=".9"/>`),
+
+  /* De code die een weerdienst teruggeeft: een wolk met een cijferrooster. */
+  weatherCode: draw(`<path d="M7.6 14.4a3.7 3.7 0 0 1-.5-7.4 4.9 4.9 0 0 1 9.5-1 3.4 3.4 0 0 1 .5 6.7"/>
+    <path d="M10.6 16.4 9.8 21M15 16.4l-.8 4.6"/>
+    <path d="M8.6 17.9h7.2M8.2 19.6h7.2"/>`),
+
+  /* Voorspelling: een wolk met de lijn die de kant op gaat waar het heen gaat. */
+  forecast: draw(`<path d="M7.4 11.8a3.6 3.6 0 0 1-.4-7.2 4.8 4.8 0 0 1 9.3-1 3.3 3.3 0 0 1 .5 6.5"/>
+    <path d="m3.8 20.4 4.2-4.1 3 2.6 4.5-5.1"/>
+    <path d="M15.9 12.8h4.3v4.3"/>`),
+
+  /* De regenmeter: hoeveel er gevallen is, niet dát het regent. */
+  rainfall: draw(`<path d="M7.6 2.6 6.7 4.8M12 2.2l-.9 2.2M16.4 2.6l-.9 2.2"/>
+    <path d="M9.2 7.4h5.6a1 1 0 0 1 1 1v10.8a2.4 2.4 0 0 1-2.4 2.4h-2.8a2.4 2.4 0 0 1-2.4-2.4V8.4a1 1 0 0 1 1-1Z"/>
+    <path d="M9.2 11.8h2.1M9.2 14.8h2.1M9.2 17.8h2.1"/>`),
+
+  /* Het weerstation zelf: een mast met cupjes en een voet. */
+  weatherStation: draw(`<path d="M12 8.2v12.4"/>
+    <path d="M8.2 20.6h7.6"/>
+    <circle cx="12" cy="6.4" r="1.1"/>
+    <path d="M10.9 6.4H7.6a1.7 1.7 0 1 0 1.7 1.7"/>
+    <path d="M13.1 6.4h3.3a1.7 1.7 0 1 1-1.7-1.7"/>
+    <path d="M9.6 12.6h4.8M9.6 16h4.8"/>`),
+
+  /* Buienradar: de ringen met de veeg, en de bui die eroverheen trekt. */
+  rainRadar: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <circle cx="12" cy="12" r="4.3"/>
+    <path d="M12 12 18.1 7.9"/>
+    <circle cx="12" cy="12" r=".9"/>
+    <path d="M8.6 16.2l-.8 1.9M11.4 17l-.8 1.9M14.2 16.2l-.8 1.9"/>`),
+
   uv: draw(`<circle cx="12" cy="11.4" r="3.4"/>
     <path d="M12 3.6v1.8M12 17.4v1.6M4.6 11.4h1.8M17.6 11.4h1.8M6.6 6l1.3 1.3M16.1 15.5l1.3 1.3M6.6 16.8l1.3-1.3M16.1 7.3l1.3-1.3"/>
     <path d="M8.4 21.4h7.2"/>`),

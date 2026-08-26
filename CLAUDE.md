@@ -756,6 +756,33 @@ die daar niet staan:
    Componenten die het wél goed doen zetten `*, *::before, *::after {
    box-sizing: border-box; }` bovenaan hun eigen CSS.
 
+30. **"De server is bij" zegt NIETS over wat een client draait.** Op 26 augustus
+   2026 meldde de eigenaar een fout die in de uitgave van een uur eerder was
+   opgelost. Gemeten op zijn installatie: de bundel die zijn Home Assistant
+   uitserveerde was tot op de sha256 gelijk aan die op schijf. **Zijn telefoon
+   draaide gewoon oude code**, en dat is bevestigd doordat het legen van de
+   frontendcache het verhielp.
+
+   De reden is de companion-app: die houdt zijn webview **dagen** in leven. Een
+   herstart van Home Assistant herstelt de websocket en laat de JavaScript
+   staan. `loader.py` zorgt dat elke PAGINALADING op de juiste bundel uitkomt --
+   maar er komt geen paginalading.
+
+   Sinds 0.18.0 lost `src/verouderd.js` dat op: de bundel vergelijkt zijn eigen
+   hash (`import.meta.url`) met die van de lader en herlaadt eenmalig zodra de
+   pagina zichtbaar wordt. **Trek dus nooit een conclusie over de code op een
+   toestel uit wat de server serveert**, en vraag bij een melding die "al
+   opgelost" zou moeten zijn éérst welke versie dat toestel draait.
+
+31. **esbuild gooit commentaar weg, dus een commentaarwijziging geeft dezelfde
+   bundelhash.** Bij het naspelen van een verouderde pagina is er eerst een
+   regel commentaar aan een bronbestand toegevoegd en opnieuw gebouwd; de bundel
+   was byte-identiek (`480465 bytes`, dezelfde sha256) en er viel dus niets te
+   meten. Wil je een andere hash, wijzig dan iets dat de bundel HAALT -- een
+   constante, een string. Handig om te weten voor het omgekeerde geval ook: een
+   commit die alleen commentaar aanraakt hoeft de gecommitte bundel niet te
+   veranderen, en `npm run verify` klaagt dan terecht niet.
+
 ---
 
 ## Projectstand

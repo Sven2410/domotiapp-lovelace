@@ -24,6 +24,7 @@ import { DacCard, registerCard, registerEditor, toneValue, INCOMPLETE } from "..
 import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { attrsOf, bindActions, fmtNumber, isDead, moreInfo, nameOf, stateOf } from "../ha.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Een getal uit een sensor, of null als er niets bruikbaars staat. */
 function num(st) {
@@ -127,6 +128,57 @@ class ClimateCard extends DacCard {
 
     :host([dead]) .card { opacity: .42; }
     :host([dead]) .set { pointer-events: none; }
+
+    /* ---- gestapeld ----------------------------------------------------
+       Gevraagd op 27 augustus 2026: "anders past het niet op telefoon."
+       Op een telefoon is de kolom smal, en dan duwt de stelknop rechts de
+       naam en de meting samen tot er niets meer van te lezen valt. Dus:
+       kop bovenaan, de metingen als twee tegels eronder, en de stelknop
+       over de volle breedte daaronder. Dat is de vorm van zijn eigen
+       klimaat-pop-up.
+
+       De rij-vorm blijft de standaard. Een kaart die uit zichzelf van vorm
+       verandert bij een smalle kolom zou hetzelfde dashboard op twee
+       schermen anders laten lezen, en dat is niet aan de kaart. */
+    :host([vorm="gestapeld"]) { height: auto; }
+    :host([vorm="gestapeld"]) .card {
+      flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px;
+      /* Niet 100%: de hoogte volgt de inhoud, en meetRaster duwt hem daarna op
+         naar 56, 120, 184 of 248 zodat hij op HA's rasterrijen valt. */
+      height: auto; min-height: var(--dac-raster, 120px);
+    }
+    .kop { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    :host(:not([vorm="gestapeld"])) .kop {
+      display: contents;
+    }
+
+    .tegels { display: none; }
+    :host([vorm="gestapeld"]) .tegels {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .tegel {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 7px 6px;
+      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-s);
+    }
+    .tegel .w {
+      font-size: 15px; font-weight: 500; letter-spacing: -.01em;
+      font-variant-numeric: tabular-nums; color: var(--dac-ink);
+    }
+    .tegel .l { font-size: 10.5px; line-height: 1.2; color: var(--dac-ink-3); }
+    /* Een tegel zonder meting hoort er niet te staan; de andere neemt de
+       volle breedte, anders staat er een gat naast. */
+    .tegel[hidden] { display: none; }
+    :host([vorm="gestapeld"]) .tegels:has(.tegel[hidden]) { grid-template-columns: 1fr; }
+
+    /* Over de volle breedte, en de knoppen aan de uiteinden: op een telefoon
+       wil je met één duim bij allebei kunnen. */
+    :host([vorm="gestapeld"]) .set { display: flex; justify-content: space-between; }
+    :host([vorm="gestapeld"]) .set .target { flex: 1 1 auto; font-size: 16px; }
+    /* In de gestapelde vorm staat de meting in de tegels, dus de regel onder
+       de naam draagt alleen nog wat de ketel doet. */
+    :host([vorm="gestapeld"]) .read .sep { display: none; }
   `;
 
   validate(config) {
@@ -150,21 +202,35 @@ class ClimateCard extends DacCard {
     return Number(this.config.step ?? a.target_temp_step) || 0.5;
   }
 
+  /** Staat deze kaart onder elkaar? */
+  gestapeld_() {
+    return this.config.layout === "gestapeld";
+  }
+
   template() {
     const c = this.config;
     if (c.bare) this.setAttribute("bare", "");
     if (!c.entity) this.setAttribute("readout", "");
+    // Een attribuut en geen klasse: de CSS hierboven hangt eraan, en zo is in
+    // de inspector meteen te zien welke vorm er staat.
+    this.setAttribute("vorm", this.gestapeld_() ? "gestapeld" : "rij");
 
     return `
       <div class="card surface">
-        <button class="chip" type="button" aria-label="Meer info"></button>
-        <div class="txt">
-          <div class="nm"></div>
-          <div class="read">
-            <span class="temp"></span>
-            <span class="sep"></span>
-            <span class="hum"></span>
+        <div class="kop">
+          <button class="chip" type="button" aria-label="Meer info"></button>
+          <div class="txt">
+            <div class="nm"></div>
+            <div class="read">
+              <span class="temp"></span>
+              <span class="sep"></span>
+              <span class="hum"></span>
+            </div>
           </div>
+        </div>
+        <div class="tegels">
+          <div class="tegel t-temp"><span class="w"></span><span class="l">Temperatuur</span></div>
+          <div class="tegel t-hum"><span class="w"></span><span class="l">Vochtigheid</span></div>
         </div>
         ${
           c.entity
@@ -182,6 +248,11 @@ class ClimateCard extends DacCard {
     const c = this.config;
     // Een lopende verzending overleeft een verplaatsing niet.
     this.teardown_.push(() => clearTimeout(this.sendTimer_));
+
+    // Alleen de gestapelde vorm groeit; de rij-vorm staat vast op één rij en
+    // heeft geen waarnemer nodig. Zie CLAUDE.md valkuil 8: een ResizeObserver
+    // meldt niets als een kind op display:none gaat, dus meet paint() zelf ook.
+    if (this.gestapeld_()) this.teardown_.push(volgRaster(this.$(".card")));
 
     this.teardown_.push(
       bindActions(this.$(".chip"), {
@@ -275,14 +346,33 @@ class ClimateCard extends DacCard {
 
     const h = c.humidity ? num(stateOf(this.hass, c.humidity)) : null;
     const humEl = this.$(".hum");
-    humEl.innerHTML =
-      h == null ? "" : `${icons.drop}${fmtNumber(this.hass, h, 0)}%`;
-    this.text(".sep", h == null ? "" : "·");
 
-    // Wat de ketel doet staat er alleen bij als er iets te melden valt.
-    if (c.entity && !c.humidity && ACTION_WORD[act] && act !== "idle") {
-      this.text(".sep", "·");
-      humEl.textContent = ACTION_WORD[act];
+    if (this.gestapeld_()) {
+      // De getallen staan in de tegels; de regel onder de naam meldt alleen nog
+      // wat de ketel doet -- precies zoals de rij-vorm dat doet als er geen
+      // vochtsensor is.
+      this.text(".temp", "");
+      humEl.textContent = ACTION_WORD[act] ?? "";
+
+      const tempTegel = this.$(".t-temp");
+      const humTegel = this.$(".t-hum");
+      tempTegel.hidden = !Number.isFinite(t);
+      humTegel.hidden = h == null;
+      if (!tempTegel.hidden) {
+        tempTegel.querySelector(".w").textContent = `${fmtNumber(this.hass, t, 1)} ${unit}`;
+      }
+      if (!humTegel.hidden) {
+        humTegel.querySelector(".w").textContent = `${fmtNumber(this.hass, h, 0)}%`;
+      }
+    } else {
+      humEl.innerHTML = h == null ? "" : `${icons.drop}${fmtNumber(this.hass, h, 0)}%`;
+      this.text(".sep", h == null ? "" : "·");
+
+      // Wat de ketel doet staat er alleen bij als er iets te melden valt.
+      if (c.entity && !c.humidity && ACTION_WORD[act] && act !== "idle") {
+        this.text(".sep", "·");
+        humEl.textContent = ACTION_WORD[act];
+      }
     }
 
     this.paintTarget_();
@@ -294,14 +384,34 @@ class ClimateCard extends DacCard {
       set.querySelector('[data-d="-1"]').disabled = dead || v <= Number(a.min_temp ?? 5);
       set.querySelector('[data-d="1"]').disabled = dead || v >= Number(a.max_temp ?? 35);
     }
+
+    // Zelf meten en niet op de waarnemer vertrouwen: die meldt niets als een
+    // tegel op display:none gaat, en dat gebeurt hier zodra een sensor wegvalt.
+    if (this.gestapeld_()) meetRaster(this.$(".card"));
   }
 
   getCardSize() {
-    return 1;
+    return this.gestapeld_() ? 3 : 1;
   }
 
+  /**
+   * De rij-vorm is en blijft precies één rasterrij. De gestapelde vorm groeit
+   * met zijn inhoud -- twee tegels erbij, en met thermostaat ook nog een
+   * stelrij -- en dan is een vast getal juist gevaarlijk: `computeCardGridSize`
+   * klemt het vak op `rows * 64 - 8` en de kaart schildert over zijn buurman
+   * heen. Zie CLAUDE.md valkuil 8 en 12; vandaar `rows: "auto"` met een
+   * GEMETEN ondergrens.
+   */
   getGridOptions() {
-    return { columns: 12, rows: 1, min_columns: 4, min_rows: 1, max_rows: 1 };
+    if (!this.gestapeld_()) {
+      return { columns: 12, rows: 1, min_columns: 4, min_rows: 1, max_rows: 1 };
+    }
+    return {
+      columns: 12,
+      rows: "auto",
+      min_columns: 4,
+      min_rows: this.minRijen_(".card", this.config.entity ? 3 : 2),
+    };
   }
 
   static getConfigElement() {
@@ -327,6 +437,13 @@ class ClimateEditor extends DacEditor {
       { name: "temperature", selector: { entity: { domain: "sensor", device_class: "temperature" } } },
       { name: "humidity", selector: { entity: { domain: "sensor", device_class: "humidity" } } },
       { name: "name", selector: sel.text() },
+      {
+        name: "layout",
+        selector: sel.select([
+          { value: "rij", label: "Rij (één rasterrij hoog)" },
+          { value: "gestapeld", label: "Onder elkaar (past op een telefoon)" },
+        ]),
+      },
       { name: "step", selector: sel.number(0.1, 5, 0.1) },
     ];
   }
@@ -338,6 +455,7 @@ class ClimateEditor extends DacEditor {
         temperature: "Temperatuursensor (optioneel)",
         humidity: "Vochtigheidssensor (optioneel)",
         name: "Naam",
+        layout: "Vorm",
         step: "Stap van de knoppen",
       }[s.name] ?? super.label(s)
     );
@@ -348,6 +466,8 @@ class ClimateEditor extends DacEditor {
       return "Leeg laten voor een kaart die alleen meet. Met thermostaat komen de stelknoppen erbij.";
     if (s.name === "temperature")
       return "Wint van de meting van de thermostaat zelf. Handig als er een betere sensor in de kamer hangt.";
+    if (s.name === "layout")
+      return "Onder elkaar zet de metingen als twee tegels neer met de stelknop over de volle breedte eronder. Bedoeld voor een smalle kolom of een pop-up, waar de rij-vorm de naam en de meting samendrukt.";
     if (s.name === "step")
       return "Leeg laten volgt de thermostaat, en anders een halve graad.";
     return undefined;

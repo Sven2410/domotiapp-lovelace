@@ -142,3 +142,43 @@ export const uitgekleed = (rows) =>
     })
     .filter((r) => r.items.length);
 
+
+/**
+ * Schuif de onthouden open-standen mee als er een rij bij komt of af gaat.
+ *
+ * De editor onthoudt per uitklapblok of het openstaat, met sleutels als `r2`
+ * (rij 3) en `r2i1` (de tweede plek daarin). Die sleutels zijn NUMMERS, dus
+ * zodra er een rij tussenuit valt of bij komt, wijst elke sleutel erna naar
+ * zijn buurman. Zonder deze correctie klapt er bij het verwijderen of
+ * dupliceren van een rij willekeurig iets open of dicht.
+ *
+ * Het staat hier en niet in de editor omdat het rekenwerk is en geen DOM --
+ * precies de scheiding waar valkuil 23 om vroeg, en waardoor het met een
+ * gewone unittest te dekken is.
+ *
+ * @param {Set<string>} open  de huidige sleutels
+ * @param {number} r          de rij die verdwijnt (`weg`) of gedupliceerd wordt (`erbij`)
+ * @param {"weg"|"erbij"} wat
+ * @returns {Set<string>} een NIEUWE set; de meegegeven set blijft ongemoeid
+ */
+export function schuifOpen(open, r, wat) {
+  const nieuw = new Set();
+  for (const k of open) {
+    const m = /^r(\d+)(?:i(\d+))?$/.exec(k);
+    if (!m) continue;
+    const n = Number(m[1]);
+    const staart = m[2] === undefined ? "" : `i${m[2]}`;
+
+    if (wat === "weg") {
+      // De rij zelf verdwijnt, met alles wat eronder hing.
+      if (n === r) continue;
+      nieuw.add(n > r ? `r${n - 1}${staart}` : k);
+      continue;
+    }
+
+    // Erbij: de kopie komt op r+1 te staan, dus alles daarboven schuift op.
+    // Rij r zelf blijft waar hij is -- je dupliceert hem, je verplaatst hem niet.
+    nieuw.add(n > r ? `r${n + 1}${staart}` : k);
+  }
+  return nieuw;
+}
