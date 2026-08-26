@@ -340,26 +340,33 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.14.0** (26 augustus 2026) — de vierde ronde van die dag: de
-kaartenlijst van een tabblad staat nu in het VOORBEELD (zoals Bubble Card), de
-editor bouwt zichzelf niet meer opnieuw op terwijl je typt, de slagschaduw onder
-de kaarten is weg, en de scenekaart kreeg zijn vinkje "achtergrond weglaten".
-Zie `docs/voorbeeld-bewerken-en-de-schaduw/RAPPORT.md` en valkuil 21 en 22.
+**Laatste release: 0.15.0** (26 augustus 2026) — de vijfde ronde van die dag:
+kolomkoppen en een beeldvorm op de entiteitenkaart, een naam per rolluik, tien
+iconen erbij, en de schaduwaudit over alle kaarten. Zie
+`docs/kolomkoppen-beeld-en-tien-iconen/RAPPORT.md`.
 
-Die dag kende vier rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
+**Die ronde is NIET in een browser geverifieerd** — de testinstance was
+onbruikbaar geworden (valkuil 21) en niet meer te herstellen zonder de ingelogde
+sessie weg te gooien. Alles wat zonder browser te controleren is, is
+gecontroleerd; hoe het eruitziet niet. Dat staat groot in het rapport.
+
+Die dag kende vijf rondes: **0.11.0** (`docs/feedback-26-augustus/`), **0.12.0**
 (`docs/rookmelder-personen-en-meer-kaarten/`), **0.13.0**
-(`docs/kaarten-bewerken-als-in-ha/`) en deze.
+(`docs/kaarten-bewerken-als-in-ha/`), **0.14.0**
+(`docs/voorbeeld-bewerken-en-de-schaduw/`) en deze.
 
-**Tellingen op het moment van schrijven:** 546 JS-tests en 136 Python-tests,
-alle groen; bundel 428.942 bytes; 112 getekende iconen.
+**Tellingen op het moment van schrijven:** 562 JS-tests en 136 Python-tests,
+alle groen; bundel 439.005 bytes; 122 getekende iconen.
 
-**Wat er open staat**, gevraagd op 26 augustus 2026 en nog niet gebouwd:
+**Wat er open staat:**
 
-- **Kopjes boven de kolommen van de entiteitenkaart.** Twee kolommen, twee
-  namen erboven.
-- **Een entiteit met een afbeelding groter tonen**, zodat er een wifi-kaart met
-  een QR-code van te maken is, en de inhoud kunnen **centreren** in plaats van
-  links uitlijnen.
+- **Het logo van DomotiTech als icoon in de set**, zodat er een subknop op de
+  navbalk mee gemaakt kan worden die naar `https://domotitech.nl` gaat. Het
+  mechanisme is er al (een subknop met een icoon en een https-pad werkt); wat
+  ontbreekt is de tekening. Gevraagd op 26 augustus 2026; het bestand moet nog
+  aangeleverd worden in `dev/domotitech.svg`.
+- **Alles van ronde 0.15.0 moet nog met eigen ogen bekeken worden**, want die
+  ronde is zonder browser gebouwd. Zie de projectstand hierboven.
 
 De donkere vlek waar hij sinds 0.10.0 zijn thema van verdacht, is opgelost: het
 was onze eigen slagschaduw (valkuil 22).

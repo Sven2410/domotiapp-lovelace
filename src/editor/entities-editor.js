@@ -65,13 +65,29 @@
 import "./icon-picker.js";
 import "./tone-picker.js";
 import { meldAan } from "../registratie.js";
-import { asItem, clampCols, clampVorm, gevuld } from "../cards/entities-logica.js";
+import {
+  BEELD_MAX,
+  BEELD_MIN,
+  BEELD_STANDAARD,
+  asItem,
+  clampBeeld,
+  clampCols,
+  clampUitlijning,
+  clampVorm,
+  gevuld,
+} from "../cards/entities-logica.js";
 
 /** Wat een rij is en wat een plek is: één keer opgeschreven, in `entities-logica.js`. */
 const VORMEN = [
   { waarde: "row", label: "Rij" },
   { waarde: "tile", label: "Tegel" },
   { waarde: "compact", label: "Compact" },
+  { waarde: "beeld", label: "Beeld" },
+];
+
+const UITLIJNING = [
+  { waarde: "links", label: "Links" },
+  { waarde: "midden", label: "Midden" },
 ];
 const vormLabel = (v) => VORMEN.find((x) => x.waarde === v)?.label ?? "Rij";
 
@@ -102,6 +118,9 @@ function toRows(config) {
     ? config.rows.map((r) => ({
         columns: clampCols(r.columns),
         layout: clampVorm(r.layout),
+        align: clampUitlijning(r.align),
+        image_size: clampBeeld(r.image_size),
+        column_names: Array.isArray(r.column_names) ? [...r.column_names] : [],
         items: (r.items ?? r.entities ?? []).map(asItem),
       }))
     : (() => {
@@ -137,15 +156,26 @@ function toRows(config) {
  */
 const uitgekleed = (rows) =>
   rows
-    .map((r) => ({
-      columns: r.columns,
-      ...(r.layout && r.layout !== "row" ? { layout: r.layout } : {}),
-      items: r.items.filter(gevuld).map((i) => structuredClone(i)),
-    }))
+    .map((r) => {
+      // Alleen zoveel namen als er kolommen zijn, en alleen als er iets staat.
+      const namen = (r.column_names ?? []).slice(0, r.columns).map((n) => String(n ?? "").trim());
+      return {
+        columns: r.columns,
+        ...(r.layout && r.layout !== "row" ? { layout: r.layout } : {}),
+        ...(r.align === "midden" ? { align: "midden" } : {}),
+        ...(r.layout === "beeld" && r.image_size !== BEELD_STANDAARD
+          ? { image_size: clampBeeld(r.image_size) }
+          : {}),
+        ...(namen.some(Boolean) ? { column_names: namen } : {}),
+        items: r.items.filter(gevuld).map((i) => structuredClone(i)),
+      };
+    })
     .filter((r) => r.items.length);
 
 const CSS = `
   .dac-ed { display: flex; flex-direction: column; gap: 12px; }
+
+  .dac-ed .beeldvak, .dac-ed .kolomvak { display: block; }
 
   /* ---------------------------------------------------------------- rij */
   .dac-ed .rij {
@@ -481,7 +511,6 @@ class EntitiesEditor extends HTMLElement {
             options: [
               { value: "card", label: "Om de hele kaart" },
               { value: "open", label: "Alleen een rand, geen vulling" },
-              { value: "items", label: "Om elke entiteit apart" },
               { value: "none", label: "Geen vlak" },
             ],
           },
@@ -510,7 +539,7 @@ class EntitiesEditor extends HTMLElement {
       if (s.name === "name")
         return "Een kop boven de entiteiten. Laat leeg voor geen kop -- de kaart is dan een rasterrij lager.";
       if (s.name === "surface")
-        return "Om elke entiteit apart geeft losse blokken in plaats van een lijst op een vlak -- dat is de vorm van een raster ruimtetegels of een rij losse knoppen.";
+        return "Alleen een rand geeft een doorzichtige kaart die nog wel een vorm heeft; geen vlak laat de plekken los op het dashboard staan.";
       if (s.name === "state_position")
         return "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar of een tijdveld tonen geen tekst, en op een tegel staat de status altijd onder de naam.";
       return undefined;
@@ -528,6 +557,9 @@ class EntitiesEditor extends HTMLElement {
       // De standaard hoort niet in de YAML: wat er staat is wat afwijkt.
       if (typeof v.name === "string" && v.name.trim()) this.rest_.name = v.name;
       else delete this.rest_.name;
+      // `items` staat niet meer in de keuzelijst (de eigenaar gebruikt "alleen
+      // een rand" in plaats daarvan), maar wordt hier wél nog geaccepteerd: een
+      // dashboard dat er al op staat mag niet stil van vorm veranderen.
       if (v.surface === "items" || v.surface === "none" || v.surface === "open")
         this.rest_.surface = v.surface;
       else delete this.rest_.surface;
@@ -613,6 +645,80 @@ class EntitiesEditor extends HTMLElement {
     vormrij.append(vormNaam, vormen.wrap);
     body.appendChild(vormrij);
 
+    // ---- uitlijning ----
+    const uitlijning = this.segment_(
+      UITLIJNING.map((u) => ({ waarde: u.waarde, label: u.label })),
+      () => row.align ?? "links",
+      (u) => {
+        row.align = u;
+        this.emit_();
+      },
+    );
+    const uitrij = document.createElement("div");
+    uitrij.className = "vormrij";
+    const uitNaam = document.createElement("b");
+    uitNaam.textContent = "Uitlijning";
+    uitrij.append(uitNaam, uitlijning.wrap);
+    body.appendChild(uitrij);
+
+    // ---- de maat van de afbeelding, alleen bij de beeldvorm ----
+    //
+    // Verstopt bij de andere vormen: daar doet hij niets, en een schuif die
+    // niets doet is een schuif waar je aan blijft draaien.
+    const beeldVak = document.createElement("div");
+    beeldVak.className = "beeldvak";
+    const beeldForm = document.createElement("ha-form");
+    beeldForm.hass = this.hass_;
+    beeldForm.schema = [
+      {
+        name: "image_size",
+        selector: { number: { min: BEELD_MIN, max: BEELD_MAX, step: 4, mode: "slider" } },
+      },
+    ];
+    beeldForm.computeLabel = () => "Grootte van de afbeelding";
+    beeldForm.computeHelper = () =>
+      "In pixels. Groot genoeg om een QR-code te scannen begint rond de 160.";
+    beeldForm.data = { image_size: clampBeeld(row.image_size) };
+    beeldForm.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      row.image_size = clampBeeld(e.detail.value?.image_size);
+      this.emit_();
+    });
+    beeldVak.appendChild(beeldForm);
+    body.appendChild(beeldVak);
+
+    const toonBeeld = () => {
+      beeldVak.style.display = row.layout === "beeld" ? "" : "none";
+    };
+    toonBeeld();
+
+    // ---- namen boven de kolommen ----
+    const kolomVak = document.createElement("div");
+    kolomVak.className = "kolomvak";
+    const kolomForm = document.createElement("ha-form");
+    kolomForm.hass = this.hass_;
+    const kolomSchema = () =>
+      Array.from({ length: row.columns }, (_, i) => ({ name: `k${i}`, selector: { text: {} } }));
+    kolomForm.schema = kolomSchema();
+    kolomForm.computeLabel = (schema) => `Kop boven kolom ${Number(schema.name.slice(1)) + 1}`;
+    kolomForm.computeHelper = (schema) =>
+      schema.name === "k0"
+        ? "Laat leeg voor geen koppen. Handig als er twee dingen naast elkaar staan die allebei een naam verdienen."
+        : undefined;
+    const kolomData = () =>
+      Object.fromEntries(
+        Array.from({ length: row.columns }, (_, i) => [`k${i}`, row.column_names?.[i] ?? ""]),
+      );
+    kolomForm.data = kolomData();
+    kolomForm.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      const waarde = e.detail.value ?? {};
+      row.column_names = Array.from({ length: row.columns }, (_, i) => waarde[`k${i}`] ?? "");
+      this.emit_();
+    });
+    kolomVak.appendChild(kolomForm);
+    body.appendChild(kolomVak);
+
     // De samenvatting is wat een dichtgeklapte rij nog bruikbaar maakt: je moet
     // hem kunnen herkennen zonder hem open te doen.
     const vernieuwKop = () => {
@@ -620,9 +726,16 @@ class EntitiesEditor extends HTMLElement {
       const delen = [`${row.columns} kolom${row.columns > 1 ? "men" : ""}`];
       if (row.layout !== "row") delen.push(vormLabel(row.layout));
       delen.push(ingevuld.length ? ingevuld.map((i) => this.itemNaam_(i)).join(", ") : "nog leeg");
+      if (row.column_names?.some?.(Boolean)) delen.push("met kolomkoppen");
       sub.textContent = delen.join(" · ");
       kolommen.vernieuw();
       vormen.vernieuw();
+      uitlijning.vernieuw();
+      toonBeeld();
+      // Het aantal kolommen kan veranderd zijn, en dan hoort er een veld bij of
+      // af te gaan. `ha-form` bouwt zichzelf opnieuw op een nieuw schema.
+      if (kolomForm.schema.length !== row.columns) kolomForm.schema = kolomSchema();
+      kolomForm.data = kolomData();
     };
     this.koppen_.push(vernieuwKop);
 

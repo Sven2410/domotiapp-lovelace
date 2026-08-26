@@ -478,11 +478,20 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     knop.textContent = "＋  Subknop toevoegen";
     knop.disabled = item.items.length >= SUB_MAX;
     knop.addEventListener("click", () => {
+      // ACHTERAAN, niet vooraan: een nieuwe subknop hoort onder de vorige te
+      // komen, in de volgorde waarin je ze maakt. Gemeld op 26 augustus 2026.
+      const plek = item.items.length;
       item.items.push({ name: "", icon: "", path: "", items: [] });
       this.open_.add(`i${i}`);
-      this.open_.add(`i${i}s${item.items.length - 1}`);
+      this.open_.add(`i${i}s${plek}`);
       this.emit_();
       this.build_();
+      // En in beeld brengen. Zonder dit blijft de schuifbalk staan waar hij
+      // stond, en dan lijkt het alsof er bovenaan iets is bijgekomen in plaats
+      // van onderaan.
+      requestAnimationFrame(() => {
+        this.querySelectorAll("details.sub")[plek]?.scrollIntoView({ block: "nearest" });
+      });
     });
 
     const uitleg = document.createElement("p");

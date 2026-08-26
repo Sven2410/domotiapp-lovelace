@@ -212,6 +212,60 @@ class EntitiesCard extends DacCard {
     .row[data-vorm="tile"] .txt { flex: 0 0 auto; margin-top: 12px; width: 100%; }
     .row[data-vorm="tile"] .nm { font-size: 14px; }
 
+    /* ---- kolomkoppen ----
+       Namen boven de kolommen, voor een kaart die twee dingen naast elkaar
+       zet die allebei een naam verdienen -- een ketel naast een warmtepomp,
+       met dezelfde meetwaarden eronder. Gevraagd op 26 augustus 2026.
+
+       Ze staan in een EIGEN raster met dezelfde kolommen en niet als eerste
+       rij in het bestaande raster: anders zouden ze meetellen in de
+       rijhoogte van de plekken eronder en even hoog worden als een knop. */
+    .kolomkoppen {
+      display: grid; gap: ${GAP}px;
+      grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+      padding: 0 2px;
+    }
+    .kolomkoppen span {
+      font-size: 11px; font-weight: 600; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--dac-ink-3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ---- gecentreerd ----
+       Standaard staat alles links: dat is wat een lijst leesbaar maakt. Maar een
+       raster van vier gelijke plekken -- of een afbeelding met een naam
+       eronder -- leest beter als het midden ligt waar het oog het zoekt. */
+    .row[data-uit="midden"] .it { justify-content: center; text-align: center; }
+    .row[data-uit="midden"] .txt { flex: 0 0 auto; align-items: center; }
+    .row[data-uit="midden"] .st.rechts { margin-left: 0; }
+    .row[data-vorm="tile"][data-uit="midden"] .it { align-items: center; }
+    .row[data-vorm="tile"][data-uit="midden"] .txt { text-align: center; }
+
+    /* ---- beeld: de afbeelding is de kaart ----
+       Voor alles wat je moet KUNNEN ZIEN in plaats van aflezen: een QR-code van
+       je wifi, een plattegrond, een cameraplaatje. De afbeelding komt boven de
+       naam en is zo groot als je hem instelt; zonder afbeelding blijft het
+       icoon staan, op dezelfde maat, zodat de rij niet verspringt. */
+    .row[data-vorm="beeld"] .it {
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 10px;
+    }
+    .row[data-vorm="beeld"] .chip {
+      width: var(--beeld, 120px); height: var(--beeld, 120px);
+      border-radius: var(--dac-radius-sm);
+    }
+    .row[data-vorm="beeld"] .chip .icon,
+    .row[data-vorm="beeld"] .chip ha-icon {
+      width: 45%; height: 45%; --mdc-icon-size: 45%;
+    }
+    /* Een foto vult het vak helemaal -- een QR-code met een rand van 20% is
+       een QR-code die je telefoon niet meer pakt. */
+    .row[data-vorm="beeld"] .chip.pic { background: none; border-color: var(--dac-border); }
+    .row[data-vorm="beeld"] .chip.pic img { object-fit: contain; }
+    .row[data-vorm="beeld"] .txt { flex: 0 0 auto; align-items: center; text-align: center; }
+    .row[data-vorm="beeld"] .nm { font-size: 13.5px; white-space: normal; }
+    .row[data-vorm="beeld"] .st { white-space: normal; }
+
     /* ---- compact: icoon en naam, meer niet. Voor een dichte favorietenrij. ---- */
     .row[data-vorm="compact"] .it { padding: 4px 14px 4px 4px; border-radius: var(--dac-radius-pill); }
     .row[data-vorm="compact"] .chip { width: 32px; height: 32px; border-radius: var(--dac-radius-pill); }
@@ -399,9 +453,20 @@ class EntitiesCard extends DacCard {
           </div>`
           )
           .join("");
-        return `
-      <div class="row" data-vorm="${row.layout}"
-           style="--cols:${row.columns};--it-h:${HOOGTE[row.layout]}px">${items}</div>`;
+        // De kolomkoppen staan in een eigen raster met dezelfde kolommen, zodat
+        // ze precies boven hun kolom uitkomen -- ook als een kolom breder is
+        // dan zijn buurman omdat er een lange naam in staat.
+        const koppen = row.column_names.length
+          ? `<div class="kolomkoppen" style="--cols:${row.columns}">${row.column_names
+              .map((naam) => `<span>${escapeHtml(naam)}</span>`)
+              .join("")}</div>`
+          : "";
+
+        return `${koppen}
+      <div class="row" data-vorm="${row.layout}" data-uit="${row.align}"
+           style="--cols:${row.columns};--it-h:${
+             row.layout === "beeld" ? row.image_size + 34 : HOOGTE[row.layout]
+           }px;--beeld:${row.image_size}px">${items}</div>`;
       })
       .join("");
 

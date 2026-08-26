@@ -329,14 +329,53 @@ class CoverEditor extends DacEditor {
     ];
   }
 
+  /**
+   * De editor werkt op een platte vorm, de config op een lijst met objecten.
+   *
+   * Dezelfde steiger als bij de personenkaart, en om dezelfde reden: `ha-form`
+   * kent geen herhalende rij, dus wordt elk gekozen rolluik een eigen tekstveld
+   * `naam:<entity>` in het formulier, en vouwt `serialize` dat terug in
+   * `covers: [{ entity, name }]`. De steiger komt nooit in de YAML terecht.
+   *
+   * De KAART kende die naam al -- `nameOf(hass, cfg.entity, cfg.name)` staat er
+   * sinds hij bestaat -- maar er was geen veld om hem in te typen. Gemeld op
+   * 26 augustus 2026: "ik kan een rolluik entity niet de naam aanpassen".
+   */
+  setConfig(config) {
+    const flat = { ...config };
+    const lijst = (config.covers ?? config.entities ?? (config.entity ? [config.entity] : [])).map(
+      (c) => (typeof c === "string" ? { entity: c } : c),
+    );
+    flat.covers = lijst.map((c) => c.entity);
+    for (const c of lijst) if (c.name) flat[`naam:${c.entity}`] = c.name;
+    super.setConfig(flat);
+  }
+
+  serialize(config) {
+    const uit = { ...config };
+    const ids = uit.covers ?? [];
+    uit.covers = ids.map((id) => {
+      const naam = uit[`naam:${id}`];
+      return naam ? { entity: id, name: naam } : id;
+    });
+    for (const k of Object.keys(uit)) if (k.startsWith("naam:")) delete uit[k];
+    return uit;
+  }
+
   schema() {
+    const ids = (this.config_?.covers ?? []).filter((x) => typeof x === "string");
     return [
       { name: "covers", selector: { entity: { domain: "cover", multiple: true } } },
+      ...ids.map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
       { name: "show_stop", selector: sel.bool() },
     ];
   }
 
   label(s) {
+    if (s.name.startsWith("naam:")) {
+      const id = s.name.slice(5);
+      return `Naam voor ${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}`;
+    }
     return (
       {
         covers: "Rolluiken",
@@ -347,7 +386,7 @@ class CoverEditor extends DacEditor {
 
   helper(s) {
     if (s.name === "covers")
-      return "Melden ze hun stand terug, dan komt er vanzelf een schuif bij. Zo niet, dan blijven het open, stop en dicht, en volgt het icoon de knop die je indrukt.";
+      return "Melden ze hun stand terug, dan komt er vanzelf een schuif bij. Zo niet, dan blijven het open, stop en dicht, en volgt het icoon de knop die je indrukt. Per rolluik kun je hieronder een eigen naam zetten.";
     return undefined;
   }
 }
