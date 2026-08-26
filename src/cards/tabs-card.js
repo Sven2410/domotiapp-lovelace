@@ -211,7 +211,7 @@ class TabsCard extends DacCard {
    * nergens meer, maar de Map wist dat niet en `bouw_()` haakte af op
    * `kinderen_.has(i)`. Het gevolg was een tab die na de eerste wijziging in de
    * editor LEEG bleef -- dus ook: een kaart toevoegen die daarna niet
-   * verscheen. Gemeld op 27 augustus 2026 met een schermafdruk van een tab die
+   * verscheen. Gemeld op 26 augustus 2026 met een schermafdruk van een tab die
    * "Deze tab heeft nog geen kaart" bleef zeggen.
    *
    * Op een echt dashboard draait `setConfig` één keer; in de editor bij elke
@@ -344,7 +344,7 @@ class TabsCard extends DacCard {
       // In het voorbeeld van de editor hoort hier de knop te staan waarmee je er
       // een toevoegt. Zonder die knop verwees de editor ernaast naar iets dat er
       // niet was: "voeg er een toe in het voorbeeld hiernaast", en dan een leeg
-      // vak. Gemeld op 27 augustus 2026.
+      // vak. Gemeld op 26 augustus 2026.
       this.knopLater_(i);
       return;
     }
@@ -405,7 +405,7 @@ class TabsCard extends DacCard {
    * VOORBEELD en de EDITOR los van elkaar, en wie er eerst is verschilt per
    * keer. Bij een tab MET kaarten valt dat niet op -- daar wordt er pas gekeken
    * na `await loadCardHelpers()`, en dan staat alles er. Een lege tab tekent
-   * meteen, en dan is de editor er nog niet. Gemeten op 27 augustus 2026: de
+   * meteen, en dan is de editor er nog niet. Gemeten op 26 augustus 2026: de
    * kaart en de editor stonden er allebei, en tóch bleef de knop weg.
    *
    * Er wordt hoogstens een halve seconde gekeken. Staat de editor er dan nog
@@ -417,14 +417,14 @@ class TabsCard extends DacCard {
     // vastgehouden verwijzing is de val die deze knop de eerste keer kostte:
     // bij de eerste opbouw hangt de kaart nog NIET in het document, `isConnected`
     // is dan false, en een enkele toets daarop stopte de hele herkansing --
-    // waarna de knop nooit meer kwam. Gemeten op 27 augustus 2026.
+    // waarna de knop nooit meer kwam. Gemeten op 26 augustus 2026.
     const vak = this.$(`.vak[data-i="${i}"]`);
     if (!vak || vak.querySelector(".voegtoe")) return;
     // Inmiddels toch een kaart erin? Dan tekent `bouw_` de lijst en hoort deze
     // herkansing zich er niet meer mee te bemoeien.
     if (this.config?.tabs?.[i]?.cards?.length) return;
     // Er wordt op de DIALOOG gewacht en niet op de editor. Gemeten op
-    // 27 augustus 2026: de dialoog staat er binnen een tel, de editor erin pas
+    // 26 augustus 2026: de dialoog staat er binnen een tel, de editor erin pas
     // een stuk later -- een halve seconde wachten was te kort en de knop bleef
     // weg. En de editor hoeft hier ook niet te bestaan: die wordt pas bij de
     // KLIK opgezocht, en dan is hij er zeker.

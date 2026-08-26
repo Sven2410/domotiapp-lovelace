@@ -6,7 +6,7 @@
  *
  * Home Assistant heeft er een: `dialog-box`, geopend met een `show-dialog`-
  * signaal. Dat was ook de eerste opzet. Maar dat element wordt LUI GELADEN, en
- * op 27 augustus 2026 is in de testinstance gemeten dat het op een vers geladen
+ * op 26 augustus 2026 is in de testinstance gemeten dat het op een vers geladen
  * dashboard helemaal niet gedefinieerd is:
  *
  *     customElements.get("dialog-box")   ->  undefined

@@ -130,7 +130,7 @@ export function itemsVan(config) {
  * `bovenaan` bepaalt waar hij in de lijst belandt. Een lege subknop hoort
  * onderaan, in de volgorde waarin je ze maakt; een kant-en-klare knop is een
  * vaste plek in het menu en hoort bovenaan te staan. Zo staat hij ook op de
- * schermafdruk van 27 augustus 2026: DomotiTech als bovenste, Herstart eronder.
+ * schermafdruk van 26 augustus 2026: DomotiTech als bovenste, Herstart eronder.
  */
 export const VOORAF = [
   {

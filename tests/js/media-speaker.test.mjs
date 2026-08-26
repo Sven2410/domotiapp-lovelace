@@ -15,24 +15,63 @@ const opslag = (start = {}) => {
   };
 };
 
+// Drie speakers van Music Assistant (herkenbaar aan `mass_player_type`) en
+// een Apple TV die dat niet is.
 const hass = {
   states: {
-    "media_player.woonkamer": { state: "playing", attributes: { friendly_name: "Woonkamer" } },
-    "media_player.keuken": { state: "off", attributes: { friendly_name: "Keuken" } },
-    "media_player.badkamer": { state: "idle", attributes: { friendly_name: "Badkamer" } },
+    "media_player.woonkamer": {
+      state: "playing",
+      attributes: { friendly_name: "Woonkamer", mass_player_type: "player" },
+    },
+    "media_player.keuken": {
+      state: "off",
+      attributes: { friendly_name: "Keuken", mass_player_type: "player" },
+    },
+    "media_player.badkamer": {
+      state: "idle",
+      attributes: { friendly_name: "Badkamer", mass_player_type: "player" },
+    },
+    "media_player.apple_tv": { state: "off", attributes: { friendly_name: "Apple TV" } },
     "light.hal": { state: "on", attributes: {} },
   },
 };
 
 describe("de algemene mediaspeler", () => {
-  it("biedt alle mediaspelers aan als er niets is ingesteld", () => {
+  it("biedt alleen de speakers van Music Assistant aan", () => {
     const lijst = spelersVan({ entity: "media_player.keuken" }, hass);
-    // Op naam gesorteerd, en niets uit een ander domein.
+    // Op naam gesorteerd, niets uit een ander domein, en GEEN Apple TV: dat is
+    // een scherm en geen plek waar je muziek naartoe stuurt.
     assert.deepEqual(lijst, [
       "media_player.badkamer",
       "media_player.keuken",
       "media_player.woonkamer",
     ]);
+  });
+
+  it("valt terug op alles als er geen Music Assistant draait", () => {
+    // Anders is de keuzelijst leeg en lijkt de kaart stuk, terwijl er niets
+    // stuk is.
+    const zonderMa = {
+      states: {
+        "media_player.tv": { state: "off", attributes: { friendly_name: "TV" } },
+        "media_player.apple_tv": { state: "off", attributes: { friendly_name: "Apple TV" } },
+      },
+    };
+    assert.deepEqual(spelersVan({ entity: "media_player.tv" }, zonderMa), [
+      "media_player.apple_tv",
+      "media_player.tv",
+    ]);
+  });
+
+  it("laat een ingestelde lijst met rust, ook als er iets in staat dat geen MA is", () => {
+    // Vul je hem zelf in, dan is dat wat je bedoelde -- ook een Apple TV.
+    assert.deepEqual(
+      spelersVan(
+        { entity: "media_player.keuken", players: ["media_player.apple_tv"] },
+        hass,
+      ),
+      ["media_player.apple_tv", "media_player.keuken"],
+    );
   });
 
   it("houdt zich aan een ingestelde lijst, met de vaste speler erbij", () => {
@@ -103,5 +142,14 @@ describe("de algemene mediaspeler", () => {
     const config = { entity: "", speaker_select: true };
     const lijst = spelersVan(config, hass);
     assert.equal(actieveSpeler(config, lijst, opslag()), "media_player.badkamer");
+  });
+
+  it("blijft de vaste speler bedienen als die geen MA-speler is", () => {
+    // De kaart staat op de Apple TV en het vinkje gaat aan. Die staat niet in
+    // de lijst -- maar hij hoort wel te blijven spelen tot je iets kiest.
+    const config = { entity: "media_player.apple_tv", speaker_select: true };
+    const lijst = spelersVan(config, hass);
+    assert.ok(!lijst.includes("media_player.apple_tv"));
+    assert.equal(actieveSpeler(config, lijst, opslag()), "media_player.apple_tv");
   });
 });

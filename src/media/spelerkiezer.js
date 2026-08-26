@@ -1,7 +1,7 @@
 /**
  * De speakerkiezer: op welke speler speelt dit af?
  *
- * Gevraagd op 27 augustus 2026: de mediakaart mag een ALGEMENE mediaspeler
+ * Gevraagd op 26 augustus 2026: de mediakaart mag een ALGEMENE mediaspeler
  * worden, "een soort sonos card" -- één kaart waarop je kiest waar de muziek
  * heen gaat, in plaats van een kaart per speaker.
  *

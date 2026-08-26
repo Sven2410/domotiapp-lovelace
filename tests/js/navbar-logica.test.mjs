@@ -115,7 +115,7 @@ describe("een knop uit de config", () => {
       name: "",
       icon: "",
       path: "/lovelace/keuken",
-      // Sinds 27 augustus 2026 mag een knop een hele actieconfig dragen, voor
+      // Sinds 26 augustus 2026 mag een knop een hele actieconfig dragen, voor
       // knoppen die iets DOEN in plaats van ergens heen te gaan.
       action: null,
       // Sinds 26 augustus 2026 draagt elke knop een (meestal lege) lijst

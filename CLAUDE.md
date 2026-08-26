@@ -207,8 +207,8 @@ Python-tests.
 9. **Een view heeft na een harde herlading TOT RUIM TIEN SECONDEN nodig om te
    bouwen**, en in bewerkmodus eerder meer dan minder. Meet je te vroeg, dan
    vind je nul kaarten en lijkt het of alles stuk is. Dat is inmiddels vier keer
-   ten onrechte voor een regressie aangezien -- op 27 augustus 2026 nog twee
-   keer, met acht seconden wachten. Wacht tot `hui-card`-elementen kinderen
+   ten onrechte voor een regressie aangezien -- op 26 augustus 2026 nog twee
+   keer op een rij, met acht seconden wachten. Wacht tot `hui-card`-elementen kinderen
    hebben, en trek pas een conclusie als de console een fout toont.
 
 10. **`.chip` is een GEDEELDE klasse in `theme.js`** die een gevulde cirkel met
@@ -311,10 +311,10 @@ Python-tests.
    deze build geeft rechtstreeks naar `?edit=1` navigeren ook een lege view;
    de bewerkmodus zet je aan met het potlood rechtsboven.
 
-   **Bijstelling van 27 augustus 2026:** het is NIET onherstelbaar. Hetzelfde
-   profiel dat op 26 augustus geen enkele view meer bouwde -- ook niet zonder
-   onze kaarten -- deed het de volgende dag weer, zonder ingrijpen. Trek dus
-   geen conclusie over onbruikbaarheid; probeer het later opnieuw.
+   **Bijstelling van later diezelfde dag:** het is NIET onherstelbaar. Hetzelfde
+   profiel dat 's middags geen enkele view meer bouwde -- ook niet zonder onze
+   kaarten -- deed het 's avonds weer, zonder ingrijpen. Trek dus geen conclusie
+   over onbruikbaarheid; probeer het later opnieuw.
 
 22. **De slagschaduw op een kaart van één rasterrij is een vlek.** Een schaduw
    van 18px omlaag met 40px onscherpte valt weg onder een kaart van drie rijen,
@@ -331,7 +331,7 @@ Python-tests.
    (`uitgekleed`) maar niet aan het INLEZEN (`naarRijen`), dan verschilt die
    vergelijking altijd, herbouwt de editor per aanslag, en verdwijnt het veld
    onder je vingers. Dat kostte de kolomkoppen én het typen tegelijk. Het
-   rekenwerk staat daarom sinds 27 augustus 2026 los in
+   rekenwerk staat daarom sinds 26 augustus 2026 los in
    `src/editor/entities-rijen.js`, met een test die eist dat alles wat eruit
    gaat er ook weer in komt.
 
@@ -353,7 +353,7 @@ Python-tests.
    dashboard is `customElements.get("dialog-box")` gewoon `undefined`; hij wordt
    lui geladen. Een `show-dialog` met die tag doet dan niets, zonder fout. Voor
    "Weet je het zeker?" gebruiken we daarom `src/vraag.js` -- een eigen scherm
-   dat er altijd is. Gemeten op 27 augustus 2026.
+   dat er altijd is. Gemeten op 26 augustus 2026.
 
 27. **Importeer geen custom element vanuit `ha.js`.** Dat bestand wordt in
    gewone Node-tests geladen, en een `class ... extends HTMLElement` op
@@ -383,25 +383,27 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.16.0** (27 augustus 2026) — voorgedefinieerde subknoppen
+**Laatste release: 0.16.1** (26 augustus 2026) — voorgedefinieerde subknoppen
 (DomotiTech en "Herstart Home Assistant", met een eigen bevestigingsscherm), een
 **algemene mediaspeler** met een speakerkiezer, de kleurkiezer teruggebracht tot
 Automatisch en Accent, zeventien iconen erbij, en de fout die maakte dat je uit
-het naamveld van de entiteiten-editor werd gegooid. Zie
+het naamveld van de entiteiten-editor werd gegooid. In 0.16.1 kort daarna: de
+speakerkiezer toont alleen nog de spelers van Music Assistant, niet elke
+mediaspeler in huis. Zie
 `docs/voorgedefinieerde-knoppen-en-de-algemene-speler/RAPPORT.md`.
 
 Deze ronde is **wél** in een echte browser geverifieerd: de testinstance is
 vanzelf hersteld (zie de bijstelling bij valkuil 21).
 
-26 augustus kende vijf rondes: **0.11.0** (`docs/feedback-26-augustus/`),
+De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 **0.12.0** (`docs/rookmelder-personen-en-meer-kaarten/`), **0.13.0**
 (`docs/kaarten-bewerken-als-in-ha/`), **0.14.0**
 (`docs/voorbeeld-bewerken-en-de-schaduw/`) en **0.15.0**
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op het moment van schrijven:** 586 JS-tests en 526 Python-tests,
-alle groen; bundel 474.321 bytes; 137 getekende iconen (het DomotiTech-logo
+**Tellingen op het moment van schrijven:** 589 JS-tests en 526 Python-tests,
+alle groen; bundel 474.493 bytes; 137 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **Wat er open staat:**

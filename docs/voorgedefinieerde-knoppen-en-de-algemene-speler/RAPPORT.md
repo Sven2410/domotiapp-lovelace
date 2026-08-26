@@ -200,7 +200,29 @@ De keuze staat in `localStorage`, net als bij de tabbladenkaart: kies je op je
 telefoon de keuken, dan mag de tablet in de gang op de woonkamer blijven staan.
 Een onthouden speaker die niet meer bestaat telt als niets onthouden.
 
-Instelbaar: **welke** speakers je mag kiezen. Leeg is alle mediaspelers in huis.
+Instelbaar: **welke** speakers je mag kiezen.
+
+**Bijstelling nog dezelfde avond (0.16.1).** "Ik wil alleen dat hij Music
+Assistant-speakers laat zien, nu zie ik ook Apple TV." Terecht: "alle
+mediaspelers in huis" leverde ook de televisie en de streamer op, en daar stuur
+je geen muziek naartoe. Music Assistant markeert zijn eigen spelers met
+`mass_player_type`, en dat is precies het onderscheid dat je hier wilt.
+
+Twee dingen die daarbij horen:
+
+- **Draait er geen Music Assistant, dan valt hij terug op alles.** Anders is de
+  keuzelijst leeg en lijkt de kaart stuk terwijl er niets stuk is.
+- **Vul je de lijst zelf in, dan is dat de lijst** -- wat er ook in staat. Wie
+  een Apple TV in zijn keuzelijst wil, kan hem erin zetten.
+
+Gemeten in de browser, met de vlag op twee van de acht demo-spelers gezet:
+
+```
+alle mediaspelers in de instance:  8
+met de Music Assistant-vlag:       [media_player.bedroom, media_player.kitchen]
+wat de kaart aanbiedt:             [media_player.bedroom, media_player.kitchen]
+op het scherm:                     "2 speakers" -- Bedroom en Kitchen
+```
 
 **Gemeten in de browser:**
 
@@ -238,10 +260,10 @@ in het raster én zoekwoorden. Die staat groen, dus "warmtepomp", "sportschool",
 
 ## De testinstance
 
-**Hij doet het weer.** Zonder ingrijpen: het browserprofiel dat gisteren geen
-enkele view meer bouwde, bouwde vanmiddag weer alles. Dat betekent ook dat de
-diagnose van gisteren niet klopte — het lag niet aan iets onherstelbaars, het
-lag aan iets tijdelijks. Hulp is dus niet nodig geweest.
+**Hij doet het weer.** Zonder ingrijpen: het browserprofiel dat een paar uur
+eerder geen enkele view meer bouwde, bouwde vanavond weer alles. Dat betekent
+ook dat de diagnose van die middag niet klopte — het lag niet aan iets
+onherstelbaars, het lag aan iets tijdelijks. Hulp is dus niet nodig geweest.
 
 Wat er onderweg wél scherper geworden is: **valkuil 9 is erger dan hij stond.**
 Een view heeft na een harde herlading niet "seconden" nodig maar tot ruim
@@ -253,11 +275,11 @@ er kort daarna gewoon stond. Dat staat nu met dat getal in `CLAUDE.md`.
 ## Tests
 
 ```
-npm test                   586 tests, 586 pass, 0 fail   (was 562)
+npm test                   589 tests, 589 pass, 0 fail   (was 562)
 npm run check:registratie  OK
 npm run check:controls     OK
 npm run check:css          OK
-npm run verify             OK   (0.16.0)
+npm run verify             OK   (0.16.1)
 pytest                     526 passed
 ```
 

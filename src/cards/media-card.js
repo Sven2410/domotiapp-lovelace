@@ -884,7 +884,7 @@ class MediaEditor extends DacEditor {
     if (s.name === "speaker_select")
       return "De kaart krijgt er een balk bij waarmee je kiest waar de muziek heen gaat. De speler hierboven is de standaard; de keuze wordt per apparaat onthouden, dus je telefoon en de tablet in de gang kunnen op iets anders staan.";
     if (s.name === "players")
-      return "Laat je dit leeg, dan staan alle mediaspelers in huis in de lijst. Vul je er een paar in, dan alleen die -- plus de speler hierboven.";
+      return "Laat je dit leeg, dan staan de speakers van Music Assistant in de lijst -- geen televisies of streamers, want daar stuur je geen muziek naartoe. Vul je er zelf een paar in, dan is dat de lijst, wat er ook in staat.";
     if (s.name === "layout")
       return "Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.";
     if (s.name === "volume_entity")
