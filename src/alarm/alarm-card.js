@@ -60,6 +60,7 @@ import {
   stubConfig,
   valideerConfig,
 } from "./kaartconfig.js";
+import { Herkansing, nogNietGereed } from "../herkansing.js";
 import { meldAan, meldInKiezer } from "../registratie.js";
 import {
   TEKST_STOPPEN,
@@ -123,6 +124,8 @@ class DomotiappAlarmCard extends LitElement {
     /** De persoon waarvoor het huidige abonnement loopt. */
     this._abonnementVoor = null;
     this._afmelden = null;
+    // Zolang Home Assistant nog opstart bestaat ons commando nog niet.
+    this._herkansing = new Herkansing(() => this._haalOp());
   }
 
   /**
@@ -187,6 +190,7 @@ class DomotiappAlarmCard extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    this._herkansing.stop();
     this._stopAbonnement();
     this._rasterUit?.();
     this._rasterUit = null;
@@ -310,8 +314,15 @@ class DomotiappAlarmCard extends LitElement {
       }
       this._toestand = toestand;
       this._fout = null;
+      this._herkansing.herstel();
     } catch (fout) {
       if (this._config?.person !== person) {
+        return;
+      }
+      // Zolang Home Assistant nog opstart kent hij dit commando niet. Niets
+      // laten zien en het straks opnieuw vragen; zie de kop van
+      // `src/herkansing.js` voor de meting waar dat uit komt.
+      if (nogNietGereed(fout) && this._herkansing.plan()) {
         return;
       }
       this._toestand = null;

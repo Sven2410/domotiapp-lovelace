@@ -30,6 +30,7 @@ import {
 import { DomotiappSceneCardEditor } from "./editor.js";
 import { DomotiappSceneEditor } from "./scene-editor.js";
 import { meldAan, meldInKiezer } from "../registratie.js";
+import { Herkansing, nogNietGereed } from "../herkansing.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -67,6 +68,9 @@ class DomotiappSceneCard extends LitElement {
     // Voor welk entity-ID we al hebben opgehaald, en of dat toen bestond.
     this._opgehaaldVoor = null;
     this._bestondVorigeKeer = false;
+    // Zolang Home Assistant nog opstart bestaat ons commando nog niet. Zie de
+    // kop van herkansing.js voor de meting waar dit uit komt.
+    this._herkansing = new Herkansing(() => this._haalScenesOp());
   }
 
   static styles = [
@@ -222,6 +226,8 @@ class DomotiappSceneCard extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    // Een kaart die van het scherm is hoeft niets meer te vragen.
+    this._herkansing.stop();
     this._rasterUit?.();
     this._rasterUit = null;
     this._rasterVak = null;
@@ -321,6 +327,7 @@ class DomotiappSceneCard extends LitElement {
       this._scenes = antwoord.scenes;
       this._leden = antwoord.member_entity_ids ?? [];
       this._toestand = this._leden.length === 0 ? LEEG : KLAAR;
+      this._herkansing.herstel();
     } catch (fout) {
       this._verwerkFout(fout, entityId);
     }
@@ -329,6 +336,14 @@ class DomotiappSceneCard extends LitElement {
   _verwerkFout(fout, entityId) {
     const code = fout?.code;
     this._melding = fout?.message ?? String(fout);
+
+    // "Unknown command" betekent niet dat er iets stuk is, maar dat Home
+    // Assistant deze integratie nog niet heeft opgezet. Blijven laden en het
+    // straks opnieuw vragen; pas als het echt op is, staat er een fout.
+    if (nogNietGereed(fout) && this._herkansing.plan()) {
+      this._toestand = LADEN;
+      return;
+    }
 
     if (code === "home_assistant_error") {
       // Onleesbare opslag: geen editor aanbieden (SPEC 18.2).
@@ -443,7 +458,14 @@ class DomotiappSceneCard extends LitElement {
           this._melding,
         );
       case FOUT:
-        return this._renderFout("De scenes konden niet geladen worden.", this._melding);
+        // Met een knop erbij: als de herkansingen op zijn -- of als Home
+        // Assistant er langer over deed dan twee minuten -- hoort er iets te
+        // zijn waar je op kunt drukken in plaats van de kaart weg te gooien.
+        return this._renderFout(
+          "De scenes konden niet geladen worden.",
+          this._melding,
+          true,
+        );
       default:
         return this._renderKaart();
     }
@@ -457,17 +479,28 @@ class DomotiappSceneCard extends LitElement {
    * ontbreekt. Een kaart die in plaats daarvan gooit levert "Ongeldige
    * configuratie" op, en dat vertelt de installateur niets.
    */
-  _renderFout(tekst, detail) {
+  _renderFout(tekst, detail, metKnop = false) {
     return html`
       <div class="needs">
         <span class="mark">${this._icoon("question")}</span>
         <span>
           <b>${tekst}</b>
           ${detail ? html`<span class="detail">${detail}</span>` : nothing}
+          ${metKnop
+            ? html`<button type="button" class="opnieuw" @click=${this._opnieuw}>
+                Opnieuw proberen
+              </button>`
+            : nothing}
         </span>
       </div>
     `;
   }
+
+  /** Met de hand opnieuw: de teller terug op nul en meteen vragen. */
+  _opnieuw = () => {
+    this._herkansing.herstel();
+    this._haalScenesOp();
+  };
 
   /**
    * Een icoon als lit-fragment.

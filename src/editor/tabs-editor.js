@@ -20,7 +20,6 @@
  */
 
 import "./icon-picker.js";
-import "./tone-picker.js";
 import { meldAan } from "../registratie.js";
 import { icons, resolve } from "../icons.js";
 import { naamVan } from "./icoon-zoek.js";
@@ -153,6 +152,24 @@ const CSS = `
   }
   .dac-tabs .bewerkvak > .body { padding: 8px; }
 
+  /* De drie tabbladen van HA's eigen kaartdialoog, hier binnen ons bewerkvak.
+     Zie de kop van kaartTabbladen_ voor waarom ze hier staan en niet boven
+     de hele dialoog. */
+  .dac-tabs .bewerkvak > .kaarttabs {
+    display: flex; gap: 2px; padding: 6px 8px 0;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  .dac-tabs .bewerkvak > .kaarttabs button {
+    flex: 1 1 0; min-width: 0; padding: 8px 6px 9px;
+    font: inherit; font-size: 12.5px; cursor: pointer;
+    border: 0; border-bottom: 2px solid transparent;
+    background: transparent; color: var(--secondary-text-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dac-tabs .bewerkvak > .kaarttabs button[aria-selected="true"] {
+    color: var(--primary-color); border-bottom-color: var(--primary-color);
+  }
+
   .dac-tabs .subkop {
     display: flex; align-items: center; gap: 8px;
     font-size: 11px; font-weight: 600; letter-spacing: .08em;
@@ -262,7 +279,8 @@ class TabsEditor extends HTMLElement {
   set hass(hass) {
     this.hass_ = hass;
     for (const el of this.querySelectorAll(
-      "ha-form, dac-icon-picker, dac-tone-picker, hui-card-element-editor",
+      "ha-form, dac-icon-picker, hui-card-element-editor, " +
+        "hui-card-visibility-editor, hui-card-layout-editor",
     )) {
       el.hass = hass;
     }
@@ -321,7 +339,6 @@ class TabsEditor extends HTMLElement {
     this.append(style, wrap);
 
     wrap.appendChild(this.kaartBlok_());
-    wrap.appendChild(this.kleurKiezer_());
 
     const lijst = document.createElement("div");
     lijst.className = "lijst";
@@ -409,21 +426,6 @@ class TabsEditor extends HTMLElement {
       this.emit_();
     });
     return form;
-  }
-
-  kleurKiezer_() {
-    const el = document.createElement("dac-tone-picker");
-    el.label = "Kleur van het actieve tabblad";
-    el.hass = this.hass_;
-    el.value = this.rest_.tone ?? "accent";
-    el.addEventListener("value-changed", (e) => {
-      e.stopPropagation();
-      const v = e.detail.value;
-      if (v && v !== "accent") this.rest_.tone = v;
-      else delete this.rest_.tone;
-      this.emit_();
-    });
-    return el;
   }
 
   /* ----------------------------------------------------------- een tab */
@@ -620,6 +622,11 @@ class TabsEditor extends HTMLElement {
    */
   kaartActie_(tab, i, soort, gegevens) {
     if (soort === "bewerk") {
+      // Een andere kaart begint weer bij de configuratie: dat is waarvoor je
+      // op het potlood drukt.
+      if (this.bewerkt_?.tab !== i || this.bewerkt_?.index !== gegevens.index) {
+        this.kaartBlad_ = "config";
+      }
       this.bewerkt_ = { tab: i, index: gegevens.index };
       // Alleen het bewerkblok verversen, en de tab openklappen als hij dicht
       // stond -- een herbouw van de hele editor zou de schuifbalk terugzetten
@@ -668,6 +675,9 @@ class TabsEditor extends HTMLElement {
     const body = document.createElement("div");
     body.className = "body";
 
+    const tabs = this.kaartTabbladen_(tab, i, j, body, naam);
+    if (tabs) vak.append(kop, tabs, body);
+
     const editor = document.createElement("hui-card-element-editor");
     editor.hass = this.hass_;
     if (this.lovelace_) editor.lovelace = this.lovelace_;
@@ -695,9 +705,119 @@ class TabsEditor extends HTMLElement {
     });
     editor.addEventListener("GUImode-changed", (e) => e.stopPropagation());
 
+    this.kaartEditor_ = editor;
     body.appendChild(editor);
-    vak.append(kop, body);
+    if (!tabs) vak.append(kop, body);
     return vak;
+  }
+
+  /**
+   * Configuratie / Zichtbaarheid / Indeling, met HA's eigen elementen erin.
+   *
+   * WAAROM DIT ER IS
+   *
+   * De eigenaar, met een schermafdruk van HA's kaartdialoog erbij: *"in het
+   * visuele kaart toevoegen werkt nu, dat is top, alleen mis ik deze editor om
+   * de kaart size aan te passen en zichtbaar ook. De configuratie komt links in
+   * de GUI editor te staan dus we moeten even kijken hoe we dit gaan
+   * oplossen."*
+   *
+   * Dat "links" is het antwoord op zijn eigen vraag. Home Assistant zet die
+   * drie tabbladen bovenaan de hele dialoog, maar die dialoog is bij ons al
+   * bezet: daar staat de tabbladenkaart zelf in. De kaart IN een tab wordt een
+   * regel lager bewerkt, en daar horen zijn eigen drie tabbladen dus ook.
+   *
+   * WAT ER GEMETEN IS
+   *
+   * In een open kaartdialoog (Home Assistant 2026.8.3, 26 augustus 2026):
+   *
+   *     hui-card-element-editor      gedefinieerd
+   *     hui-card-visibility-editor   gedefinieerd
+   *     hui-card-layout-editor       gedefinieerd
+   *
+   * Alle drie zijn dus te leen, net als het gereedschap uit kaartenlijst.js.
+   * Beide laatste vuren `value-changed` met de VOLLEDIGE nieuwe kaartconfig
+   * erin -- `{...config, visibility}` en `{...config, grid_options}` -- dus
+   * verwerken gaat precies zoals bij de gewone editor.
+   *
+   * Zijn ze er niet (een dashboard buiten de bewerkmodus), dan komt er geen
+   * balk en staat de configuratie er zoals eerst.
+   *
+   * @returns {Element|null}
+   */
+  kaartTabbladen_(tab, i, j, body, naam) {
+    const heeftZicht = Boolean(customElements.get("hui-card-visibility-editor"));
+    const heeftIndeling = Boolean(customElements.get("hui-card-layout-editor"));
+    if (!heeftZicht && !heeftIndeling) return null;
+
+    const balk = document.createElement("div");
+    balk.className = "kaarttabs";
+
+    const bladen = [
+      { id: "config", naam: "Configuratie" },
+      ...(heeftZicht ? [{ id: "zicht", naam: "Zichtbaarheid" }] : []),
+      ...(heeftIndeling ? [{ id: "indeling", naam: "Indeling" }] : []),
+    ];
+
+    const toon = (id) => {
+      this.kaartBlad_ = id;
+      for (const knop of balk.querySelectorAll("button")) {
+        knop.setAttribute("aria-selected", String(knop.dataset.blad === id));
+      }
+      body.replaceChildren(this.bladInhoud_(id, tab, i, j, naam));
+    };
+
+    for (const blad of bladen) {
+      const knop = document.createElement("button");
+      knop.type = "button";
+      knop.dataset.blad = blad.id;
+      knop.textContent = blad.naam;
+      knop.setAttribute("role", "tab");
+      knop.setAttribute("aria-selected", "false");
+      knop.addEventListener("click", () => toon(blad.id));
+      balk.appendChild(knop);
+    }
+
+    // Bij het openen staat de configuratie voor: dat is wat je in negen van de
+    // tien gevallen komt doen. De keuze blijft wel staan zolang je in dezelfde
+    // kaart bezig bent, zodat een herbouw je niet terugzet.
+    const start = bladen.some((b) => b.id === this.kaartBlad_) ? this.kaartBlad_ : "config";
+    setTimeout(() => toon(start), 0);
+    return balk;
+  }
+
+  /** De inhoud van één van die drie tabbladen. */
+  bladInhoud_(id, tab, i, j, naam) {
+    if (id === "config") return this.kaartEditor_;
+
+    const el = document.createElement(
+      id === "zicht" ? "hui-card-visibility-editor" : "hui-card-layout-editor",
+    );
+    el.hass = this.hass_;
+    el.config = tab.cards[j];
+    if (id === "indeling") {
+      // Een tab is even breed als een sectie van Home Assistant: twaalf
+      // kolommen. Zie src/cards/tab-indeling.js.
+      el.sectionConfig = { type: "grid", column_span: 1 };
+    }
+
+    el.addEventListener("value-changed", (e) => {
+      e.stopPropagation();
+      const verse = e.detail?.value;
+      if (!verse) return;
+      tab.cards[j] = verse;
+      // TERUGGEVEN, en dat is geen netheid. Deze twee elementen tekenen zich
+      // uit hun EIGEN `config`, niet uit die van ons. Zetten we hem niet terug,
+      // dan is de voorwaarde wel opgeslagen maar blijft er "er zijn geen
+      // zichtbaarheidsvoorwaarden ingesteld" staan -- en dan denk je dat het
+      // niet gelukt is en druk je nog een keer. Gemeten op 26 augustus 2026,
+      // met echte kliks: de config van de editor bleef zonder `visibility`
+      // staan terwijl Opslaan wél aansprong.
+      el.config = verse;
+      this.emit_();
+      naam.textContent = kaartNaam(verse);
+    });
+    return el;
   }
 
   /** De echte kaartkiezer van Home Assistant, met wat eruit komt. */

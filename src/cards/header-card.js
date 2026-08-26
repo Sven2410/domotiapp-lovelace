@@ -378,10 +378,6 @@ class HeaderEditor extends DacEditor {
     };
   }
 
-  pickers() {
-    return [{ key: "tone", kind: "tone", label: "Kleur weericoon" }];
-  }
-
   schema() {
     return [
       row(

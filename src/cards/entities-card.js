@@ -235,6 +235,14 @@ class EntitiesCard extends DacCard {
       color: var(--dac-ink);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* De kop staat boven zijn kolom, dus hij hoort te liggen waar de kolom
+       ligt. Bij de BEELDVORM staat de afbeelding altijd in het midden van zijn
+       vak -- zie hieronder -- en dan is een kop die links blijft plakken scheef
+       ten opzichte van het enige dat eronder staat. Gemeld op 26 augustus 2026
+       met een schermafdruk van drie QR-codes met hun naam ernaast in plaats van
+       erboven. */
+    .kolomkoppen[data-uit="midden"] span,
+    .kolomkoppen[data-vorm="beeld"] span { text-align: center; }
 
     /* ---- gecentreerd ----
        Standaard staat alles links: dat is wat een lijst leesbaar maakt. Maar een
@@ -462,7 +470,8 @@ class EntitiesCard extends DacCard {
         // ze precies boven hun kolom uitkomen -- ook als een kolom breder is
         // dan zijn buurman omdat er een lange naam in staat.
         const koppen = row.column_names.length
-          ? `<div class="kolomkoppen" style="--cols:${row.columns}">${row.column_names
+          ? `<div class="kolomkoppen" data-vorm="${row.layout}" data-uit="${row.align}"
+              style="--cols:${row.columns}">${row.column_names
               .map((naam) => `<span>${escapeHtml(naam)}</span>`)
               .join("")}</div>`
           : "";

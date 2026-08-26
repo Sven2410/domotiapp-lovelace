@@ -176,6 +176,16 @@ export const baseCss = /* css */ `
   .needs .mark .icon { width: 20px; height: 20px; }
   .needs b { display: block; font-size: 13.5px; font-weight: 600; }
   .needs span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--dac-ink-2); }
+  /* Een knop in een foutblok. Alleen daar waar opnieuw proberen ergens toe
+     leidt -- een verkeerde entiteit wordt niet beter van nog een poging, een
+     integratie die nog aan het opstarten was wel. */
+  .needs button.opnieuw {
+    display: inline-block; margin-top: 8px;
+    font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+    padding: 6px 12px; border-radius: var(--dac-radius-pill);
+    border: 1px solid var(--dac-border-hi);
+    background: transparent; color: var(--dac-ink);
+  }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

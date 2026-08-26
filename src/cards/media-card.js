@@ -834,7 +834,6 @@ class MediaEditor extends DacEditor {
   pickers() {
     return [
       { key: "icon", kind: "icon", label: "Icoon", fallback: "speaker" },
-      { key: "tone", kind: "tone", label: "Kleur" },
     ];
   }
 
