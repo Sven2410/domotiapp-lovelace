@@ -70,8 +70,56 @@ def _bereken_hash(pad: Path) -> str:
     return digest[:HASH_LENGTE]
 
 
+async def _async_zet_commandos_klaar(hass: HomeAssistant, data: dict) -> None:
+    """De opslaglagen en daarna de WebSocket-commando's, vóór al het andere.
+
+    DIT STAAT MET OPZET VOORAAN, en het stond tot 0.18.0 achteraan.
+
+    Zolang een commando niet geregistreerd is antwoordt Home Assistant
+    `unknown_command: Unknown command.` -- de fout die de eigenaar op zijn
+    telefoon zag. Elke `await` die hiervóór staat verlengt dus het gat waarin
+    een kaart die net verbonden is bot vangt: het lezen van de bundel, het
+    statische pad, de lader, het wegschrijven van de Lovelace-resource. Dat is
+    geen twee minuten, maar het is meetbaar en het is gratis om weg te nemen.
+
+    De opslaglagen gaan er direct aan vooraf en niet erna, want een commando
+    dat geregistreerd is terwijl zijn opslag nog ontbreekt is geen winst: de
+    scenekant zou `not_allowed` antwoorden en de wekkerkant zou op een
+    KeyError stuklopen.
+
+    Wat híer niet naartoe verhuist is de frontendregistratie. Die mag wachten:
+    een kaart die nog niet geladen is, vraagt ook nog niets.
+    """
+    # Wie van de losse pakketten komt neemt zijn scenes en wekkers mee. Vóór de
+    # opslaglagen, want die lezen meteen. Raakt niets aan als ons eigen bestand
+    # er al is -- en ook niet als het oude er nooit was. Zie migratie.py.
+    await migratie.async_neem_over(hass, STORAGE_KEY, LEGACY_STORAGE_KEY, STORAGE_VERSION)
+    await migratie.async_neem_over(
+        hass, ALARM_STORAGE_KEY, ALARM_LEGACY_STORAGE_KEY, ALARM_STORAGE_VERSION
+    )
+
+    # Opslaglaag: één instantie voor alle config entries.
+    if DATA_STORE not in data:
+        store = SceneStore(hass)
+        await store.async_load()
+        data[DATA_STORE] = store
+
+    if ALARM_DATA_STORE not in data:
+        alarm_store = AlarmStore(hass)
+        await alarm_store.async_load()
+        data[ALARM_DATA_STORE] = alarm_store
+
+    # Vanaf hier antwoordt Home Assistant op onze commando's. De mediakant
+    # heeft geen eigen opslag; die twee commando's praten met Music Assistant.
+    websocket.async_register(hass)
+    alarm_websocket.async_register(hass)
+    media_websocket.async_register(hass)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Zet de integratie op."""
+    await _async_zet_commandos_klaar(hass, hass.data.setdefault(DOMAIN, {}))
+
     integration = await async_get_integration(hass, DOMAIN)
     bundel = Path(integration.file_path) / "frontend" / CARD_FILENAME
 
@@ -127,40 +175,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # cachebusting uit SPEC 16.2 niet meer. Deze aanroep gooit nooit.
     data[DATA_RESOURCE_ID] = await resource.async_zorg_voor_resource(hass, js_url)
 
-    # Wie van de losse pakketten komt neemt zijn scenes en wekkers mee. Vóór de
-    # opslaglagen, want die lezen meteen. Raakt niets aan als ons eigen bestand
-    # er al is -- en ook niet als het oude er nooit was. Zie migratie.py.
-    await migratie.async_neem_over(hass, STORAGE_KEY, LEGACY_STORAGE_KEY, STORAGE_VERSION)
-    await migratie.async_neem_over(
-        hass, ALARM_STORAGE_KEY, ALARM_LEGACY_STORAGE_KEY, ALARM_STORAGE_VERSION
-    )
-
-    # Opslaglaag: één instantie voor alle config entries.
-    if DATA_STORE not in data:
-        store = SceneStore(hass)
-        await store.async_load()
-        data[DATA_STORE] = store
-
-    websocket.async_register(hass)
-
-    # ---- de wekkerkant ------------------------------------------------
-    #
-    # Eén op één overgenomen uit de losse wekkerintegratie. Zijn sleutels in
-    # hass.data dragen een `alarm_`-voorvoegsel, want beide kanten hadden een
+    # De opslaglagen, de scene-, wekker- en mediacommando's staan hierboven in
+    # `_async_zet_commandos_klaar`, dat als eerste draait. De sleutels van de
+    # wekkerkant dragen een `alarm_`-voorvoegsel, want beide kanten hadden een
     # `store` en een `ws_registered`; zie alarm/const.py.
-    if ALARM_DATA_STORE not in data:
-        alarm_store = AlarmStore(hass)
-        await alarm_store.async_load()
-        data[ALARM_DATA_STORE] = alarm_store
-
-    alarm_websocket.async_register(hass)
-
-    # ---- de mediakant -------------------------------------------------
-    #
-    # Twee commando's, geen opslag: zoeken in Music Assistant en de gelabelde
-    # speakers opsommen. Al het andere -- afspelen, groeperen, shuffle -- doet
-    # de kaart met gewone service-aanroepen.
-    media_websocket.async_register(hass)
 
     # Reparatiemeldingen voor onleesbare opslag. Idempotent: meldingen die er
     # niet meer horen te zijn worden opgeruimd.

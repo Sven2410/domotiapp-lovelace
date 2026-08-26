@@ -30,7 +30,7 @@ import {
 import { DomotiappSceneCardEditor } from "./editor.js";
 import { DomotiappSceneEditor } from "./scene-editor.js";
 import { meldAan, meldInKiezer } from "../registratie.js";
-import { Herkansing, nogNietGereed } from "../herkansing.js";
+import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -71,6 +71,9 @@ class DomotiappSceneCard extends LitElement {
     // Zolang Home Assistant nog opstart bestaat ons commando nog niet. Zie de
     // kop van herkansing.js voor de meting waar dit uit komt.
     this._herkansing = new Herkansing(() => this._haalScenesOp());
+    // Na een herstart van Home Assistant is de herverbinding hét moment waarop
+    // onze commando's er alsnog zijn. Zie herkansing.js.
+    this._verbinding = new Verbindingswacht();
   }
 
   static styles = [
@@ -298,6 +301,17 @@ class DomotiappSceneCard extends LitElement {
     if (this._opgehaaldVoor !== entityId) {
       this._opgehaaldVoor = entityId;
       this._bestondVorigeKeer = bestaatNu;
+      this._haalScenesOp();
+      return;
+    }
+
+    // Home Assistant is weg geweest en is er weer -- een herstart, of een
+    // telefoon die uit zijn slaap komt. Precies in dat gat worden onze
+    // WebSocket-commando's opnieuw geregistreerd, dus hier begint alles
+    // overnieuw: ook een kaart die de fout al toonde, komt zo weer bij.
+    if (this._verbinding.herverbonden(this.hass)) {
+      this._bestondVorigeKeer = bestaatNu;
+      this._herkansing.herstel();
       this._haalScenesOp();
       return;
     }

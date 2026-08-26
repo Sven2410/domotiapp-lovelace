@@ -7,7 +7,13 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
-import { Herkansing, WACHTTIJDEN, nogNietGereed } from "../../src/herkansing.js";
+import {
+  Herkansing,
+  TRAGE_WACHTTIJD,
+  Verbindingswacht,
+  WACHTTIJDEN,
+  nogNietGereed,
+} from "../../src/herkansing.js";
 
 /** Een klok die niet loopt, zodat een test hem zelf mag verzetten. */
 function nepKlok() {
@@ -81,12 +87,41 @@ describe("Herkansing — NIEUW GEDRAG", () => {
     assert.equal(pogingen, 3);
   });
 
-  it("geeft false zodra de pogingen op zijn, zodat de kaart de fout mag tonen", () => {
+  it("geeft false zodra de wachttijden op zijn, zodat de kaart de fout mag tonen", () => {
     const k = nepKlok();
-    const h = new Herkansing(() => {}, { ...k, wachttijden: [10] });
+    const h = new Herkansing(() => {}, { ...k, wachttijden: [10], traag: 999 });
     assert.equal(h.plan(), true);
     k.tik();
     assert.equal(h.plan(), false);
+  });
+
+  it("BLIJFT daarna doorvragen op de trage wachttijd — opgeven bestaat niet", () => {
+    const k = nepKlok();
+    let pogingen = 0;
+    const h = new Herkansing(() => (pogingen += 1), { ...k, wachttijden: [10], traag: 999 });
+
+    h.plan();
+    assert.equal(k.tik(), 10);
+
+    // Tien keer verder: elke keer wordt er opnieuw gepland, op de trage tijd.
+    for (let i = 0; i < 10; i += 1) {
+      assert.equal(h.plan(), false, "de kaart hoort de fout te tonen");
+      assert.equal(k.tik(), 999, "maar er hoort wél een volgende poging te staan");
+    }
+    assert.equal(pogingen, 11);
+  });
+
+  it("herstelt zich ook nog uit de trage staart", () => {
+    const k = nepKlok();
+    const h = new Herkansing(() => {}, { ...k, wachttijden: [10], traag: 999 });
+    h.plan();
+    k.tik();
+    h.plan();
+    k.tik();
+    // Het antwoord komt alsnog: terug naar de korte wachttijd.
+    h.herstel();
+    assert.equal(h.plan(), true);
+    assert.equal(k.wachtrij.at(-1).ms, 10);
   });
 
   it("plant er niet twee tegelijk — hass komt per seconde langs", () => {
@@ -121,8 +156,45 @@ describe("Herkansing — NIEUW GEDRAG", () => {
     assert.equal(pogingen, 0);
   });
 
-  it("wacht bij elkaar ruim twee minuten — genoeg voor een grote installatie", () => {
+  it("laat de kaart ruim een minuut laden voordat hij een fout toont", () => {
     const totaal = WACHTTIJDEN.reduce((a, b) => a + b, 0);
-    assert.ok(totaal >= 120000, `slechts ${totaal}ms`);
+    assert.ok(totaal >= 60000, `slechts ${totaal}ms`);
+    // En niet veel langer: minutenlang naar een laadanimatie kijken terwijl er
+    // iets echt mis is, is geen eerlijk scherm.
+    assert.ok(totaal <= 90000, `${totaal}ms is te lang om te blijven laden`);
+  });
+
+  it("de trage wachttijd is er, en is niet zo kort dat het pollen wordt", () => {
+    assert.ok(TRAGE_WACHTTIJD >= 30000, `${TRAGE_WACHTTIJD}ms vraagt te vaak`);
+  });
+});
+
+describe("Verbindingswacht — NIEUW GEDRAG", () => {
+  it("meldt niets bij de eerste ronde: dat is geen herverbinding", () => {
+    const v = new Verbindingswacht();
+    assert.equal(v.herverbonden({ connected: true }), false);
+  });
+
+  it("meldt de herverbinding precies één keer", () => {
+    const v = new Verbindingswacht();
+    v.herverbonden({ connected: true });
+    assert.equal(v.herverbonden({ connected: false }), false, "weg is geen herverbinding");
+    assert.equal(v.herverbonden({ connected: true }), true, "en nu is hij terug");
+    assert.equal(v.herverbonden({ connected: true }), false, "maar niet nog een keer");
+  });
+
+  it("merkt een tweede herstart net zo goed op", () => {
+    const v = new Verbindingswacht();
+    v.herverbonden({ connected: false });
+    assert.equal(v.herverbonden({ connected: true }), true);
+    v.herverbonden({ connected: false });
+    assert.equal(v.herverbonden({ connected: true }), true);
+  });
+
+  it("houdt een hass zonder `connected` voor verbonden — de werkbank en oudere frontends", () => {
+    const v = new Verbindingswacht();
+    assert.equal(v.herverbonden({}), false);
+    assert.equal(v.herverbonden({}), false);
+    assert.equal(v.herverbonden(undefined), false);
   });
 });
