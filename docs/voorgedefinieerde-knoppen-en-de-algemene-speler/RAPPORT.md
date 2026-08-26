@@ -224,6 +224,45 @@ wat de kaart aanbiedt:             [media_player.bedroom, media_player.kitchen]
 op het scherm:                     "2 speakers" -- Bedroom en Kitchen
 ```
 
+### En groeperen, over diezelfde speakers
+
+"Ook wil ik bij een algemene kaart de mediaspelers kunnen groeperen, hetzelfde
+als de normale mediaplayer kaart."
+
+Het groeperen zat er al -- onderin het zoekscherm -- maar op een algemene kaart
+was die voet leeg. Hij viel terug op het label "Music Assistant Media" in Home
+Assistant, en dat label is op zo'n kaart meestal nergens geplakt. Dan stond er
+een uitlegzin waar je speakers hoorden te staan.
+
+Nu neemt het zoekscherm op een algemene kaart dezelfde lijst als de
+speakerkiezer, tenzij er een eigen lijst in de config staat. Dat zijn precies de
+speakers waar je muziek naartoe stuurt, dus precies de speakers die je wilt
+kunnen koppelen.
+
+Gemeten, met één abonnement op `call_service` (valkuil 7):
+
+```
+voet van het zoekscherm:   Bedroom | Kitchen | Lounge room (deze, gemarkeerd)
+klik op Kitchen:
+  join  {group_members: [media_player.kitchen],
+         entity_id:     [media_player.lounge_room]}
+```
+
+De speler van de kaart wordt dus de baas van de groep, en dat is ook de speler
+waar de muziek al op staat.
+
+**En daar kwam een fout uit rollen die geen test had.** Het volume van de
+hoofdspeaker wordt bij het koppelen overgenomen -- dat zat er al, en het is geen
+nettigheid maar een veiligheid: een speaker die uit een vorige sessie op vol
+volume staat begint anders op vol volume, in een slaapkamer, om elf uur 's
+avonds. Maar een speler ZONDER `volume_level` (een tv-kastje, een groep die het
+niet meldt) geeft in `volumePct` een 0, en die 0 werd doorgezet naar de speaker
+die erbij kwam. Die stond dan stil, zonder zichtbare oorzaak.
+
+Nu wordt er alleen overgenomen als de hoofdspeaker echt een volume heeft. In de
+meting hierboven volgde er geen `volume_set`, en dat klopte: beide stonden al op
+100%.
+
 **Gemeten in de browser:**
 
 ```
@@ -322,10 +361,11 @@ Niets van wat gevraagd is. Wel drie dingen om te weten:
   aantoonbaar niet beschikbaar.
 - **"Om elke entiteit apart" (`surface: items`) staat nog steeds niet in de
   keuzelijst** maar wordt nog wel begrepen. Dat was de afspraak van gisteren.
-- **De speakerkiezer groepeert nog niet.** Hij kiest waar je afspeelt; samen
-  laten spelen zit nog steeds in het zoekscherm van Music Assistant, waar het al
-  zat. Een echte Sonos-kaart doet dat op één scherm. Als je dat erbij wilt, is
-  dat een volgende ronde.
+- **Groeperen zit in het zoekscherm, niet in de speakerkiezer.** De kiezer kiest
+  waar je afspeelt; koppelen doe je een scherm verder, via de zoekknop -- net als
+  op een gewone mediakaart. Sinds 0.16.1 gaat dat wel over dezelfde speakers.
+  Een echte Sonos-kaart doet allebei op één scherm; als je dat wilt, is dat een
+  volgende ronde.
 
 ## Aannames
 

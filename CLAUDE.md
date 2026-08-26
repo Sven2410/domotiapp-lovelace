@@ -388,8 +388,9 @@ options flow.
 **algemene mediaspeler** met een speakerkiezer, de kleurkiezer teruggebracht tot
 Automatisch en Accent, zeventien iconen erbij, en de fout die maakte dat je uit
 het naamveld van de entiteiten-editor werd gegooid. In 0.16.1 kort daarna: de
-speakerkiezer toont alleen nog de spelers van Music Assistant, niet elke
-mediaspeler in huis. Zie
+speakerkiezer toont alleen nog de spelers van Music Assistant, groeperen op een
+algemene kaart gaat over diezelfde speakers, en het volume van de hoofdspeaker
+wordt alleen overgenomen als die er een heeft. Zie
 `docs/voorgedefinieerde-knoppen-en-de-algemene-speler/RAPPORT.md`.
 
 Deze ronde is **wél** in een echte browser geverifieerd: de testinstance is
