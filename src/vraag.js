@@ -33,19 +33,40 @@ const css = /* css */ `
     display: none; font-family: var(--dac-font); color: var(--dac-ink);
   }
   :host([open]) { display: block; }
+  /* DIT was waarom het vak op een telefoon niet paste, en niet de maten.
+     Zonder deze regel telt de padding NIET mee in de breedte, dus een vak van
+     "min(420px, 100%)" werd op een scherm van 390 CSS-pixels 350 + 44 padding
+     + 2 rand = 396 breed, in een laag die er maar 350 te geven had. Het liep
+     dus over zijn eigen marge heen en raakte allebei de schermranden. Gemeten
+     op 26 augustus 2026: 466 breed in een venster van 500. */
+  *, *::before, *::after { box-sizing: border-box; }
 
+  /* De marge om het vak heen is wat een dialoog op een telefoon een dialoog
+     laat lijken in plaats van een tweede scherm. De inkeping van het toestel
+     telt mee: op een telefoon met een ronde hoek of een balk onderin valt een
+     vak dat tot de rand loopt daar deels achter. */
   .laag {
     position: absolute; inset: 0;
     display: grid; place-items: center;
-    padding: 20px;
+    padding:
+      max(24px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
     background: color-mix(in srgb, #000 58%, transparent);
     animation: op 140ms ease;
   }
   @keyframes op { from { opacity: 0 } to { opacity: 1 } }
 
+  /* 340px en niet 420: op een telefoon van 390 CSS-pixels breed werd dat vak
+     zo goed als schermbreed, en dan leest een vraag als een pagina. Gemeld op
+     26 augustus 2026 met een schermafdruk van de herstartvraag. De maten
+     eronder zijn in dezelfde slag kleiner geworden: een vraag van twee regels
+     hoort geen kaart van een halve telefoon te zijn. */
   .vak {
-    width: min(420px, 100%);
-    padding: 22px;
+    width: min(340px, 100%);
+    max-width: 100%;
+    padding: 16px 18px 14px;
     border-radius: var(--dac-radius);
     background: var(--dac-bg-raise);
     border: 1px solid var(--dac-border);
@@ -54,12 +75,12 @@ const css = /* css */ `
   }
   @keyframes omhoog { from { transform: translateY(8px); opacity: 0 } to { transform: none; opacity: 1 } }
 
-  h2 { margin: 0 0 10px; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
-  p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--dac-ink-2); }
+  h2 { margin: 0 0 6px; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+  p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); }
 
-  .knoppen { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .knoppen { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
   button {
-    padding: 10px 18px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 500;
+    padding: 7px 14px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
     border-radius: var(--dac-radius-pill); border: 1px solid var(--dac-border);
     background: transparent; color: var(--dac-ink-2);
   }

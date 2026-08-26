@@ -126,6 +126,8 @@ const nepLovelace = (config) => ({
   saveConfig: async () => {},
 });
 
+import { pasIndelingToe } from "../cards/tab-indeling.js";
+
 /** Het `home-assistant`-element, of null als we ergens anders draaien. */
 const gastheer = () => document.querySelector("home-assistant");
 
@@ -166,6 +168,9 @@ export function kaartenLijst({ kaarten, hass, maakKaart, opActie }) {
     if (!el) return;
     const vak = document.createElement("div");
     vak.className = "dac-kaart";
+    // Dezelfde plek in het raster als op het dashboard: wat je in het
+    // voorbeeld ziet moet zijn wat er straks staat. Zie tab-indeling.js.
+    pasIndelingToe(vak, config?.grid_options);
 
     const overlay = document.createElement("hui-card-edit-mode");
     overlay.hass = hass;

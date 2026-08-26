@@ -11,7 +11,7 @@
  */
 
 import { DacCard, registerCard, registerEditor, toneValue } from "../base.js";
-import { DacEditor, sel, LABELS } from "../editor/base.js";
+import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { localizeState, stateOf } from "../ha.js";
 
@@ -144,7 +144,6 @@ class SeparatorEditor extends DacEditor {
   pickers() {
     return [
       { key: "icon", kind: "icon", label: "Icoon links", fallback: "star", auto: false },
-      { key: "tone", kind: "tone", label: LABELS.tone },
       { key: "secondary_icon", kind: "icon", label: "Icoon bij de waarde rechts", auto: false },
     ];
   }

@@ -318,7 +318,6 @@ class ClimateEditor extends DacEditor {
   pickers() {
     return [
       { key: "icon", kind: "icon", label: "Icoon", fallback: "thermo" },
-      { key: "tone", kind: "tone", label: "Vaste kleur (leeg = volgt de ketel)" },
     ];
   }
 

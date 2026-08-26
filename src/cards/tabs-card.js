@@ -38,6 +38,7 @@ import { resolve } from "../icons.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { heeftHaGereedschap, kaartenLijst } from "../editor/kaartenlijst.js";
 import { openTab, schrijfKeuze, sleutelVoor, tabsVan } from "./tabs-logica.js";
+import { KOLOMMEN, pasIndelingToe } from "./tab-indeling.js";
 
 /** Eén stap omhoog, dwars door shadow roots heen. */
 const omhoog = (knoop) =>
@@ -153,16 +154,36 @@ class TabsCard extends DacCard {
 
     .vakken { flex: 1 1 auto; min-height: 0; display: block; }
     .vak { display: none; }
-    .vak[data-open="true"] { display: block; }
 
-    /* De kaarten in een tab staan onder elkaar met dezelfde tussenruimte als
-       Home Assistant zelf aanhoudt. */
-    .vak > * + * { margin-top: 8px; }
+    /* De kaarten in een tab staan in HETZELFDE raster als in een sectie van
+       Home Assistant: twaalf kolommen, 8px ertussen. Dat is wat de schuif
+       "Indeling" in de kaartdialoog bedient, en zonder dit raster zou die
+       schuif een getal wegschrijven dat niemand leest. Zie tab-indeling.js.
+
+       Een kaart zonder keuze staat op alle twaalf de kolommen, dus een tabblad
+       van vóór deze ronde ziet er precies zo uit als eerst. */
+    .vak[data-open="true"] {
+      display: grid;
+      grid-template-columns: repeat(${KOLOMMEN}, minmax(0, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+    .vak > * { grid-column: span ${KOLOMMEN}; }
 
     /* ---- het gereedschap in het voorbeeld van de kaarteditor ---- */
 
-    .vak .dac-kaarten { display: flex; flex-direction: column; gap: 8px; }
-    .vak .dac-kaart { position: relative; user-select: none; -webkit-user-select: none; }
+    /* Ook een raster, en om dezelfde reden: wat je in het voorbeeld ziet moet
+       zijn wat er op het dashboard staat. */
+    .vak .dac-kaarten {
+      display: grid;
+      grid-template-columns: repeat(${KOLOMMEN}, minmax(0, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+    .vak .dac-kaart {
+      position: relative; user-select: none; -webkit-user-select: none;
+      grid-column: span ${KOLOMMEN};
+    }
 
     .voegtoe {
       width: 100%; margin-top: 8px; padding: 13px;
@@ -358,9 +379,23 @@ class TabsCard extends DacCard {
       // Alle kaarten van deze tab, onder elkaar. Geen `vertical-stack`
       // eromheen: die zou een eigen vlak meebrengen en zijn eigen
       // tussenruimte, en dan staat er een kaart in een kaart in een tab.
+      // `hui-card` en niet `createCardElement`: dat is het element waar Home
+      // Assistant zelf elke kaart in een sectie in zet, en het is de plek waar
+      // ZICHTBAARHEID wordt afgehandeld. Gemeten op 26 augustus 2026 met een
+      // voorwaarde die niet klopte: `hidden` werd `true` en de hoogte 0, waar
+      // een kale `createCardElement` de kaart gewoon liet staan. Zonder dit
+      // schrijft het tabblad Zichtbaarheid iets weg dat niemand leest.
+      //
+      // In het VOORBEELD van de editor staat `preview` aan, want een kaart die
+      // op dit moment verborgen zou zijn moet je wel kunnen aanwijzen.
+      const bewerker = bewerkerVan(this);
+      const inVoorbeeld = Boolean(bewerker);
       const elementen = tab.cards.map((kaart) => {
-        const el = helpers.createCardElement(kaart);
+        const el = document.createElement("hui-card");
         el.hass = this.hass;
+        el.preview = inVoorbeeld;
+        el.config = kaart;
+        pasIndelingToe(el, kaart?.grid_options);
         return el;
       });
       this.kinderen_.set(i, elementen);
@@ -370,7 +405,6 @@ class TabsCard extends DacCard {
       // driepuntsmenu, slepen, en een knop om er een bij te zetten. Zo bewerk
       // je de tab waar je hem ziet, en niet in een lijst ernaast. Zie de kop
       // van kaartenlijst.js.
-      const bewerker = bewerkerVan(this);
       if (bewerker && heeftHaGereedschap()) {
         vak.replaceChildren(
           kaartenLijst({

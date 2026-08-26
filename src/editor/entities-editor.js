@@ -63,7 +63,6 @@
  */
 
 import "./icon-picker.js";
-import "./tone-picker.js";
 import { meldAan } from "../registratie.js";
 import { BEELD_MAX, BEELD_MIN, clampBeeld, gevuld } from "../cards/entities-logica.js";
 import { naarRijen as toRows, uitgekleed, vul } from "./entities-rijen.js";
@@ -248,7 +247,7 @@ class EntitiesEditor extends HTMLElement {
     this.hass_ = hass;
     // Alleen doorgeven, niet herbouwen: HA duwt hier een nieuw hass-object
     // doorheen bij elke toestandswijziging in huis.
-    for (const el of this.querySelectorAll("ha-form, dac-icon-picker, dac-tone-picker")) {
+    for (const el of this.querySelectorAll("ha-form, dac-icon-picker")) {
       el.hass = hass;
     }
     if (!this.gebouwd_) this.build_();
@@ -550,7 +549,9 @@ class EntitiesEditor extends HTMLElement {
       (v) => {
         row.layout = v;
         // Geen herbouw: er verandert niets aan wélke velden er staan, alleen aan
-        // wat de kaart ernaast tekent.
+        // wat de kaart ernaast tekent. Wel meteen laten zien welke instellingen
+        // bij deze vorm horen -- zie toonVormvelden verderop.
+        toonVormvelden();
         this.emit_();
       }
     );
@@ -603,10 +604,18 @@ class EntitiesEditor extends HTMLElement {
     beeldVak.appendChild(beeldForm);
     body.appendChild(beeldVak);
 
-    const toonBeeld = () => {
-      beeldVak.style.display = row.layout === "beeld" ? "" : "none";
+    // Wat er bij welke vorm hoort. Verstopt bij de vormen waar het niets doet:
+    // een schuif die niets doet is een schuif waar je aan blijft draaien.
+    //
+    // De uitlijning hoort daarbij. Bij de BEELDVORM staat de afbeelding altijd
+    // in het midden van zijn vak -- dat is wat die vorm ís -- en dan liegt een
+    // knop die "Links" zegt over wat je ziet.
+    const toonVormvelden = () => {
+      const beeld = row.layout === "beeld";
+      beeldVak.style.display = beeld ? "" : "none";
+      uitrij.style.display = beeld ? "none" : "";
     };
-    toonBeeld();
+    toonVormvelden();
 
     // ---- namen boven de kolommen ----
     const kolomVak = document.createElement("div");
@@ -647,7 +656,7 @@ class EntitiesEditor extends HTMLElement {
       kolommen.vernieuw();
       vormen.vernieuw();
       uitlijning.vernieuw();
-      toonBeeld();
+      toonVormvelden();
       // Het aantal kolommen kan veranderd zijn, en dan hoort er een veld bij of
       // af te gaan. `ha-form` bouwt zichzelf opnieuw op een nieuw schema.
       if (kolomForm.schema.length !== row.columns) kolomForm.schema = kolomSchema();
@@ -739,16 +748,6 @@ class EntitiesEditor extends HTMLElement {
       this.emit_();
     });
 
-    const kleur = document.createElement("dac-tone-picker");
-    kleur.label = "Kleur";
-    kleur.hass = this.hass_;
-    kleur.addEventListener("value-changed", (e) => {
-      e.stopPropagation();
-      if (e.detail.value) item.tone = e.detail.value;
-      else delete item.tone;
-      this.emit_();
-    });
-
     const rest = document.createElement("ha-form");
     rest.hass = this.hass_;
     rest.schema = [
@@ -829,7 +828,6 @@ class EntitiesEditor extends HTMLElement {
     // terwijl iemand typt zou de cursor laten wegspringen.
     kiezer.data = { entity: item.entity || undefined };
     icoon.value = item.icon ?? "";
-    kleur.value = item.tone ?? "";
     rest.data = {
       name: item.name ?? "",
       toggle: item.toggle ?? false,
@@ -843,7 +841,7 @@ class EntitiesEditor extends HTMLElement {
       double_tap_action: item.double_tap_action,
     };
 
-    body.append(kiezer, icoon, kleur, rest);
+    body.append(kiezer, icoon, rest);
     det.append(sum, body);
     vernieuwKop();
     return det;

@@ -30,7 +30,6 @@
  */
 
 import "./icon-picker.js";
-import "./tone-picker.js";
 import { meldAan } from "../registratie.js";
 import { icons, resolve } from "../icons.js";
 import { naamVan } from "./icoon-zoek.js";
@@ -259,7 +258,7 @@ class NavbarEditor extends HTMLElement {
     this.hass_ = hass;
     // Alleen doorgeven, niet herbouwen: HA duwt hier een nieuw hass-object
     // doorheen bij elke toestandswijziging in huis.
-    for (const el of this.querySelectorAll("ha-form, dac-icon-picker, dac-tone-picker")) {
+    for (const el of this.querySelectorAll("ha-form, dac-icon-picker")) {
       el.hass = hass;
     }
     if (!this.gebouwd_) this.build_();
@@ -289,7 +288,6 @@ class NavbarEditor extends HTMLElement {
     this.append(style, wrap);
 
     wrap.appendChild(this.kaartBlok_());
-    wrap.appendChild(this.kleurKiezer_());
 
     const lijst = document.createElement("div");
     lijst.className = "knoppen";
@@ -383,21 +381,6 @@ class NavbarEditor extends HTMLElement {
       this.build_();
     });
     return form;
-  }
-
-  kleurKiezer_() {
-    const el = document.createElement("dac-tone-picker");
-    el.label = "Kleur";
-    el.hass = this.hass_;
-    el.value = this.rest_.tone ?? "accent";
-    el.addEventListener("value-changed", (e) => {
-      e.stopPropagation();
-      const v = e.detail.value;
-      if (v && v !== "accent") this.rest_.tone = v;
-      else delete this.rest_.tone;
-      this.emit_();
-    });
-    return el;
   }
 
   /* --------------------------------------------------------------- knop */
