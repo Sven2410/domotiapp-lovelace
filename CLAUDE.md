@@ -130,10 +130,23 @@ hetzelfde uitziet of het apparaat aan of uit staat, is kapot. De kleur volgt wat
 eraan hangt — een lamp draagt de kleur die hij maakt, al het andere krijgt het
 accent.
 
-**Sinds 26 augustus 2026 biedt de kleurkiezer nog maar twee kleuren aan:**
-Automatisch en Accent, met de eigen kleur ingeklapt eronder. Een kleur die al in
-een config staat houdt zijn vakje zolang hij gekozen is; hem stil verbergen zou
-betekenen dat een dashboard een kleur draagt die nergens meer te vinden is.
+**Er is geen kleurkiezer meer, op één plek na.** Hij bood eerst negen kleuren
+aan, daarna nog twee (Automatisch en Accent), en sinds 0.17.0 geen enkele. De
+eigenaar op 26 augustus 2026: *"Nu staat er accent en automatisch. Ik wil gewoon
+dat dat helemaal weg is."* Kleur is op deze kaarten identiteit, en de identiteit
+is het accent van het merk; een knop die zelf een kleur mag kiezen is een knop
+die uit de rij gaat lopen.
+
+De uitzondering is de **afvalkaart**, waar de kleur de bák is -- grijs naast
+groen naast oranje is de enige manier om te zien welke er woensdag aan straat
+moet. Ook daar staat geen Automatisch en geen Accent: één vakje dat de
+systeemkleurkiezer opent, een veld voor wie liever typt, en Wissen. Leeg =
+de kaart kiest zelf.
+
+**Een `tone` die al in een config staat blijft gewoon getekend**, en een oude
+paletnaam houdt zijn eigen vakje met de Nederlandse naam erbij. Hem stil
+verbergen zou betekenen dat een dashboard een kleur draagt die nergens meer te
+vinden is.
 
 **Tekst verschijnt zoals het is ingetypt.** Geen `text-transform: uppercase`;
 het toetsenbord gaf "Woonkamer" en het scherm maakte er "WOONKAMER" van.
@@ -210,7 +223,9 @@ bundelhash wordt berekend bij het opzetten van de integratie (valkuil 2).
 
 ## Omgeving
 
-- Windows 11, PowerShell, `C:\dev\domotiapp-lovelace`.
+- Windows 11, PowerShell, `C:\dev\domotiapp-lovelace`. Op de MacBook is het
+  `~/dev/domotiapp-lovelace`, en daar draait de testinstance ZONDER Docker --
+  zie *Een testinstance zonder Docker* hieronder.
 - **Testinstance:** container `ha-lovelace`, compose-project
   `domotiapp-lovelace-dev`, **poort 8127**, image gepind op `2026.8`.
   Config in `.ha-dev-config/` (gitignored).
@@ -233,6 +248,45 @@ bundelhash wordt berekend bij het opzetten van de integratie (valkuil 2).
   `C:\dev\notities\domotiapp-lovelace\`. Hier niet, want deze repo is publiek.
 - `C:\dev\_ref\ultimate-scene-card` is uitsluitend leesmateriaal, zonder remote.
   **Nooit in schrijven.** De analyse ervan staat in `INVENTARIS.md`.
+
+### Een testinstance zonder Docker (macOS)
+
+Op de MacBook staat geen Docker, en dat hoeft ook niet: Home Assistant draait
+daar gewoon in een virtualenv. Opgezet en gebruikt op 26 augustus 2026; de hele
+ronde 0.17.0 is er in een echte browser mee nagemeten.
+
+```bash
+python3.14 -m venv venv
+./venv/bin/pip install "homeassistant==2026.8.*"
+ln -s ~/dev/domotiapp-lovelace/custom_components/domotiapp_lovelace \
+      ./config/custom_components/domotiapp_lovelace
+./venv/bin/hass -c ./config          # poort 8127, net als in de container
+```
+
+Onboarding, de config entry, een lichtgroep en een dashboard gaan allemaal via
+de API; er hoeft geen dialoog aan te pas te komen. `/api/onboarding/users` geeft
+een `auth_code` die je op `/auth/token` inwisselt, en daarna is het dezelfde
+REST- en WebSocket-API als altijd.
+
+Drie dingen die daarbij tijd hebben gekost:
+
+- **De demo-integratie start niet op macOS.** `demo/camera.py` wil
+  `libturbojpeg`, die er niet is, en dan valt de HELE entry om -- inclusief de
+  demolampen, die je juist nodig hebt. Sjabloonlampen in `configuration.yaml`
+  doen hetzelfde werk. En let op: `light: - platform: template` bestaat niet
+  meer in 2026.8, het moet onder de eigen `template:`-sleutel.
+- **`hass` herstart zichzelf niet.** De service `homeassistant.restart` laat het
+  proces afsluiten met code 100 en verwacht iets dat hem weer start. Een lusje
+  van drie regels eromheen is genoeg -- zonder dat is je instance na één
+  herstartproef weg.
+- **Een access token uit de onboarding verloopt binnen het uur.** Loopt een
+  `curl` ineens op `401: Unauthorized`, dan is dat het; werk verder vanuit de
+  paginacontext (`window.hassConnection`) of haal een nieuw token.
+
+**De Python-tests draaien er ook gewoon** (526 groen op 26 augustus 2026):
+`./venv/bin/pip install -r requirements-test.txt` en dan `python -m pytest -q`.
+Op macOS is de omweg via Docker uit *Commando's* dus niet nodig; die geldt
+alleen voor Windows, waar Home Assistant `fcntl` importeert.
 
 ### Testmateriaal in `.ha-dev-config`
 
@@ -665,6 +719,43 @@ die daar niet staan:
    modulescope gooit daar de halve testsuite om. Laat het element zich AANMELDEN
    bij `ha.js` (`meldVraagAan`) en importeer het vanuit `index.js`.
 
+28. **"Unknown command." betekent niet dat er iets stuk is, maar dat je te vroeg
+   bent.** De WebSocket-commando's van deze integratie worden geregistreerd als
+   de config entry wordt OPGEZET; tot dat moment kent Home Assistant ze niet en
+   antwoordt hij `unknown_command`. Gemeten op 26 augustus 2026, meteen na een
+   herstart:
+
+   ```
+   [  3.36s] websocket open
+   [  3.36s] FOUT — unknown_command: Unknown command.
+   [  3.87s] OK — scenes geladen
+   ```
+
+   Op een kale testinstance een halve seconde; op een installatie met veel
+   integraties veel langer. Wie het eerst terug is na een herstart verliest --
+   de companion-app op een telefoon verbindt onmiddellijk opnieuw en tekent het
+   scherm dat openstond. Dat is precies hoe de eigenaar het meldde: op één
+   telefoon deed hij het niet, op een andere telefoon en op Windows wel.
+
+   **En het is NIET de gebruiker.** Zijn vermoeden was dat het aan het gewone
+   (niet-beheerders)account lag; nagemeten met twee echte logins in één instance
+   en het maakt geen verschil. Het commandoregister van `websocket_api` staat
+   per HA-installatie, niet per verbinding en niet per gebruiker. Neem die
+   diagnose dus niet over -- meet hem.
+
+   Elke kaart die een eigen WS-commando aanroept hoort daarom `nogNietGereed`
+   uit `src/herkansing.js` te gebruiken en het straks opnieuw te vragen.
+
+29. **`box-sizing` staat NIET overal op `border-box`.** De bevestigingsvraag
+   stond op `width: min(420px, 100%)` met 22px padding, en zonder border-box
+   telt die padding er bovenop: op een scherm van 390 CSS-pixels werd dat vak
+   396 breed in een laag die er 350 te geven had, en liep het dus over allebei
+   de schermranden. Dat las als "past niet op mobiel", en de verleiding is dan
+   om aan de MATEN te gaan draaien. Meet eerst de breedte van het vak tegen
+   `window.innerWidth`: 466 in een venster van 500 is geen smaakkwestie.
+   Componenten die het wél goed doen zetten `*, *::before, *::after {
+   box-sizing: border-box; }` bovenaan hun eigen CSS.
+
 ---
 
 ## Projectstand
@@ -688,7 +779,17 @@ Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
 options flow.
 
-**Laatste release: 0.16.1** (26 augustus 2026) — voorgedefinieerde subknoppen
+**Laatste release: 0.17.0** (26 augustus 2026) — vier meldingen van de eigenaar:
+de scenes die het op één telefoon niet deden (een wedloop met het opstarten, zie
+valkuil 28, opgelost met `src/herkansing.js`), de bevestigingsvraag die niet op
+een telefoon paste (valkuil 29), de kolomkoppen die bij de beeldvorm niet in het
+midden stonden, en de kleurkiezer die overal weg moest. Daarbij: een kaart in een
+tabblad heeft nu de drie tabbladen van Home Assistant zelf — Configuratie,
+Zichtbaarheid, Indeling — en die dóen ook iets, want de kaarten in een tab gaan
+sindsdien door `hui-card` en staan in een raster van twaalf kolommen. Zie
+`docs/vier-meldingen-van-26-augustus/RAPPORT.md`.
+
+**Daarvoor 0.16.1** (26 augustus 2026) — voorgedefinieerde subknoppen
 (DomotiTech en "Herstart Home Assistant", met een eigen bevestigingsscherm), een
 **algemene mediaspeler** met een speakerkiezer, de kleurkiezer teruggebracht tot
 Automatisch en Accent, zeventien iconen erbij, en de fout die maakte dat je uit
@@ -708,19 +809,22 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op het moment van schrijven:** 589 JS-tests en 526 Python-tests,
-alle groen; bundel 474.493 bytes; 137 getekende iconen (het DomotiTech-logo
+**Tellingen op het moment van schrijven:** 612 JS-tests en 526 Python-tests,
+alle groen; bundel 478.453 bytes; 137 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **Wat er open staat:**
 
-- **Het logo van DomotiTech als icoon in de set**, zodat er een subknop op de
-  navbalk mee gemaakt kan worden die naar `https://domotitech.nl` gaat. Het
-  mechanisme is er al (een subknop met een icoon en een https-pad werkt); wat
-  ontbreekt is de tekening. Gevraagd op 26 augustus 2026; het bestand moet nog
-  aangeleverd worden in `dev/domotitech.svg`.
-- **Alles van ronde 0.15.0 moet nog met eigen ogen bekeken worden**, want die
-  ronde is zonder browser gebouwd. Zie de projectstand hierboven.
+- **Groeperen op één scherm.** Sinds 0.16.1 kun je op een algemene mediakaart
+  groeperen, maar dat gaat via de zoekknop -- een scherm verder dan de
+  speakerkiezer. Een echte Sonos-kaart doet kiezen én koppelen op één scherm.
+  De eigenaar is hier niet naar gevraagd; als hij het wil, is het een volgende
+  ronde.
+- **De kleurkiezer op de afvalkaart.** Die is als enige blijven staan, met een
+  reden (zie *Vormregels*). Zegt de eigenaar dat hij ook daar weg moet, dan is
+  dat één regel.
 
-De donkere vlek waar hij sinds 0.10.0 zijn thema van verdacht, is opgelost: het
-was onze eigen slagschaduw (valkuil 22).
+Twee dingen die HIER STONDEN en niet meer open staan: het logo van DomotiTech is
+op 26 augustus 2026 geleverd als `dev/domotitech.png` en zit als data-URI in de
+icoonset; en de donkere vlek waar hij sinds 0.10.0 zijn thema van verdacht bleek
+onze eigen slagschaduw (valkuil 22).
