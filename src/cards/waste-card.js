@@ -17,10 +17,11 @@
  * reads as the green bin without spending the colour that means "in orde".
  */
 
-import { DacCard, registerCard, registerEditor, rowsFor, toneValue, INCOMPLETE } from "../base.js";
-import { DacEditor } from "../editor/base.js";
+import { DacCard, registerCard, registerEditor, rowsFor, toneValue, INCOMPLETE, escapeHtml } from "../base.js";
+import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { dayCount, daysBetween, nameOf, parseDate, relativeDay, shortDate, stateOf } from "../ha.js";
+import { korteNamen } from "./afval-namen.js";
 
 /** Bin colours, matched on what the sensor happens to be called. */
 const FRACTIONS = [
@@ -41,6 +42,13 @@ function fractionStyle(label) {
 }
 
 /** Strip the boilerplate integrations put in front of the useful bit. */
+/** Waarom een bak niet in de gewone lijst staat, in gewone taal. */
+const REDEN = {
+  "geen datum": "geen datum",
+  voorbij: "is geweest",
+  "bestaat niet": "sensor ontbreekt",
+};
+
 const cleanLabel = (name) =>
   String(name ?? "")
     .replace(/^(afvalbeheer|afvalwijzer|mijnafvalwijzer)\s*/i, "")
@@ -56,6 +64,59 @@ class WasteCard extends DacCard {
       display: flex; flex-direction: column; gap: 8px;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
+
+    /* Een bak zonder ophaaldatum: hij staat er wél, maar rustig. Verdwijnen
+       zou erger zijn -- dan vul je vier bakken in, zie je er twee, en staat er
+       nergens waarom. */
+    .r[data-stil="true"] { opacity: .55; }
+    .r[data-stil="true"] .d { font-style: italic; }
+
+    /* ---- de brede vorm ----
+       Gevraagd op 27 augustus 2026: "ook wil ik de afvalkaart over de breedte
+       kunnen maken en een stuk minder hoog, om veel meer ruimte te besparen."
+
+       Alle bakken naast elkaar in plaats van onder elkaar. Vier bakken passen
+       dan op EEN rasterrij in plaats van vier -- dat scheelt 192 pixels op een
+       dashboard waar hij hem naast andere kaarten zet.
+
+       De eerstvolgende bak licht op; de rest staat er rustig bij. Zonder dat
+       verschil zijn het vier gelijke vakjes en moet je de datums lezen om te
+       zien welke er woensdag uit moet. */
+    :host([vorm="breed"]) .hero,
+    :host([vorm="breed"]) .list { display: none; }
+
+    .breed { display: none; }
+    :host([vorm="breed"]) .breed {
+      display: grid; gap: 6px; flex: 1 1 auto;
+      grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+      align-content: center;
+    }
+    .breed .b {
+      display: flex; align-items: center; gap: 7px; min-width: 0;
+      padding: 5px 8px; border-radius: var(--dac-radius-sm);
+      border: 1px solid var(--dac-border);
+      background: color-mix(in srgb, var(--tone) 9%, transparent);
+    }
+    /* De eerstvolgende: dezelfde kleur, maar duidelijk aanwezig. */
+    .breed .b[data-eerst="true"] {
+      background: color-mix(in srgb, var(--tone) 24%, transparent);
+      border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+    }
+    .breed .b[data-stil="true"] { opacity: .5; }
+    .breed .b i {
+      width: 9px; height: 9px; flex: 0 0 auto; border-radius: 3px;
+      background: var(--tone);
+    }
+    .breed .t { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+    .breed .n {
+      font-size: 11.5px; font-weight: 600; color: var(--dac-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .breed .w {
+      font-size: 10px; color: var(--dac-ink-3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .breed .b[data-eerst="true"] .w { color: var(--tone); font-weight: 600; }
 
     /* ---- hero ---- */
     .hero {
@@ -119,40 +180,85 @@ class WasteCard extends DacCard {
     return this.config.sensors.map((s) => s.entity);
   }
 
-  /** Read every sensor, drop the ones without a usable date, sort by date. */
+  /**
+   * Lees elke sensor, en laat er GEEN stil verdwijnen.
+   *
+   * Wat hier veranderd is, en waarom -- gemeld op 27 augustus 2026 met twee
+   * schermafdrukken naast elkaar: *"ik zie volledige namen en mis de helft."*
+   *
+   * De helft miste omdat een sensor zonder bruikbare datum werd weggefilterd.
+   * Dat leest als een kaart die stuk is: je vult vier bakken in, je ziet er
+   * twee, en er staat nergens waarom. Nu komen ze allemaal terug -- de bakken
+   * met een datum bovenaan op volgorde, en wat er niet te plaatsen valt
+   * daaronder met de reden erbij.
+   *
+   * En de namen worden ingekort op wat ze DELEN, niet op een lijstje bekende
+   * integraties. Zie afval-namen.js.
+   */
   read_() {
     const now = new Date();
-    return this.config.sensors
-      .map((cfg) => {
-        const st = stateOf(this.hass, cfg.entity);
-        if (!st) return null;
-        // The date is usually the state; some integrations park it in an attribute.
-        const date =
-          parseDate(st.state) ??
+    const ruw = this.config.sensors.map((cfg) => {
+      const st = stateOf(this.hass, cfg.entity);
+      const date = st
+        ? parseDate(st.state) ??
           parseDate(st.attributes.date) ??
-          parseDate(st.attributes.next_date);
-        if (!date) return null;
+          parseDate(st.attributes.next_date)
+        : null;
+      return { cfg, st, date };
+    });
 
-        const label = cfg.label ?? cleanLabel(nameOf(this.hass, cfg.entity, cfg.name));
-        const style = fractionStyle(cfg.label ?? cfg.entity + label);
+    // De namen samen inkorten: wat elke bak in zijn naam deelt is geen
+    // informatie. Dat kan alleen als je ze naast elkaar legt.
+    const vol = ruw.map((r) => cleanLabel(nameOf(this.hass, r.cfg.entity, r.cfg.name)));
+    const kort = korteNamen(vol);
+
+    return ruw
+      .map((r, i) => {
+        const label = r.cfg.label ?? kort[i] ?? vol[i];
+        const style = fractionStyle(r.cfg.label ?? r.cfg.entity + label);
         // Wat de config zegt wint van wat de naam suggereert: een gemeente die
         // haar bakken anders kleurt hoeft niet met de regexen te vechten.
-        const perEntity = this.config.tones?.[cfg.entity];
+        const perEntity = this.config.tones?.[r.cfg.entity];
         return {
           label,
-          date,
-          days: daysBetween(now, date),
-          tone: toneValue(perEntity ?? cfg.tone ?? style.tone),
-          icon: cfg.icon ?? style.icon,
+          entity: r.cfg.entity,
+          date: r.date,
+          days: r.date ? daysBetween(now, r.date) : null,
+          tone: toneValue(perEntity ?? r.cfg.tone ?? style.tone),
+          icon: r.cfg.icon ?? style.icon,
+          // Waarom hij niet in de gewone lijst staat, als dat zo is.
+          reden: !r.st
+            ? "bestaat niet"
+            : !r.date
+              ? "geen datum"
+              : daysBetween(now, r.date) < 0
+                ? "voorbij"
+                : null,
         };
       })
-      .filter((x) => x && x.days >= 0)
-      .sort((a, b) => a.date - b.date);
+      .sort((a, b) => {
+        // Eerst wat er nog komt, op datum. Daarna de rest, op naam.
+        if (!a.reden && !b.reden) return a.date - b.date;
+        if (!a.reden) return -1;
+        if (!b.reden) return 1;
+        return a.label.localeCompare(b.label);
+      });
+  }
+
+  /** Alleen de bakken die nog opgehaald worden. */
+  komend_(items) {
+    return items.filter((i) => !i.reden);
+  }
+
+  /** Staat deze kaart over de breedte? */
+  breed_() {
+    return this.config.layout === "breed";
   }
 
   template() {
     const c = this.config;
     if (c.bare) this.setAttribute("bare", "");
+    this.setAttribute("vorm", this.breed_() ? "breed" : "lijst");
     return `
       <div class="card surface">
         ${c.title ? `<div class="head"><b>${c.title}</b></div>` : ""}
@@ -165,22 +271,31 @@ class WasteCard extends DacCard {
           <span class="when"><span class="n tnum"></span><span class="eyebrow u"></span></span>
         </div>`}
         ${c.show_list === false ? "" : `<div class="list"></div>`}
+        <div class="breed"></div>
         <div class="empty" hidden>Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>
       </div>`;
   }
 
   paint() {
     const items = this.read_();
+    // De uitgelichte bak is de eerstvolgende die ECHT nog komt. Een bak zonder
+    // datum hoort daar niet te staan, ook al staat hij vooraan in de lijst.
+    const komend = this.komend_(items);
     const hero = this.$(".hero");
     const list = this.$(".list");
     const empty = this.$(".empty");
 
     empty.hidden = items.length > 0;
 
+    if (this.breed_()) {
+      this.paintBreed_(items, komend[0]);
+      return;
+    }
+
     if (hero) {
-      hero.hidden = items.length === 0;
-      if (items.length) {
-        const next = items[0];
+      hero.hidden = komend.length === 0;
+      if (komend.length) {
+        const next = komend[0];
         hero.style.setProperty("--tone", next.tone);
         this.setAttribute(
           "urgency",
@@ -205,25 +320,73 @@ class WasteCard extends DacCard {
     if (list) {
       // Skipping the hero's own fraction would leave a gap in the calendar, so
       // the list stays complete and simply starts where the hero left off.
-      const rest = this.config.show_hero === false ? items : items.slice(1);
-      const wanted = rest.map((i) => `${i.label}${+i.date}`).join("|");
+      // De uitgelichte bak staat al bovenaan; die niet nog eens in de lijst.
+      const eersteKomend = komend[0];
+      const rest =
+        this.config.show_hero === false ? items : items.filter((i) => i !== eersteKomend);
+      const wanted = rest.map((i) => `${i.label}${+i.date}${i.reden ?? ""}`).join("|");
       if (list.dataset.sig === wanted) return;
       list.dataset.sig = wanted;
 
       list.innerHTML = rest
         .map((i) => {
+          // Een bak zonder bruikbare datum verdwijnt niet meer, maar krijgt de
+          // reden achter zijn naam. Gedempt, want het is geen ophaaldag.
+          if (i.reden) {
+            return `
+        <div class="r" data-stil="true" style="--tone:${i.tone}">
+          <i></i><span>${escapeHtml(i.label)}</span>
+          <span class="d">${REDEN[i.reden] ?? i.reden}</span>
+        </div>`;
+          }
           // Beyond a week `relativeDay` already falls back to a date, so
           // appending the short date again just prints it twice.
           const when = relativeDay(i.date);
           const extra = i.days <= 6 ? `<small>${shortDate(i.date)}</small>` : "";
           return `
         <div class="r" style="--tone:${i.tone}">
-          <i></i><span>${i.label}</span>
+          <i></i><span>${escapeHtml(i.label)}</span>
           <span class="d">${when}${extra}</span>
         </div>`;
         })
         .join("");
     }
+  }
+
+  /**
+   * Alle bakken naast elkaar, op één rasterrij.
+   *
+   * Wat hier anders is dan in de lijst: er is geen uitgelichte regel bovenaan,
+   * maar de eerstvolgende bak licht op tussen de andere. Dat scheelt de hele
+   * kop -- en dat is precies waar de ruimtewinst zit.
+   */
+  paintBreed_(items, eerste) {
+    const vak = this.$(".breed");
+    if (!vak) return;
+    const sig = items.map((i) => `${i.label}|${+i.date}|${i.reden ?? ""}`).join(",");
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+
+    vak.innerHTML = items
+      .map((i) => {
+        const wanneer = i.reden
+          ? REDEN[i.reden] ?? i.reden
+          : i.days === 0
+            ? "vandaag"
+            : i.days === 1
+              ? "morgen"
+              : relativeDay(i.date);
+        return `
+          <div class="b" style="--tone:${i.tone}" data-eerst="${i === eerste}"
+               data-stil="${Boolean(i.reden)}" title="${escapeHtml(i.label)}">
+            <i></i>
+            <span class="t">
+              <span class="n">${escapeHtml(i.label)}</span>
+              <span class="w">${escapeHtml(wanneer)}</span>
+            </span>
+          </div>`;
+      })
+      .join("");
   }
 
   /**
@@ -236,6 +399,10 @@ class WasteCard extends DacCard {
    */
   rows_() {
     const n = this.config?.sensors?.length ?? 1;
+    // De brede vorm is één rasterrij, hoeveel bakken er ook staan -- ze staan
+    // naast elkaar. Bij meer dan vier breekt het raster af naar een tweede rij;
+    // vandaar de deling.
+    if (this.breed_()) return Math.max(1, Math.ceil(n / 4));
     if (this.config?.show_list === false) return 1;
     if (this.config?.show_hero === false) return Math.max(1, rowsFor(20 + n * 33));
     return Math.max(2, n);
@@ -312,23 +479,40 @@ class WasteEditor extends DacEditor {
    * kleur per sensor kiezen als je de sensoren hebt aangewezen.
    */
   pickers() {
-    return this.ids_().map((id) => ({
+    const ids = this.ids_();
+    // Dezelfde inkorting als op de kaart. Anders staat er in de editor "Kleur
+    // voor Circulus Circulus Restafval" boven een staal dat op de kaart bij
+    // "Restafval" hoort, en ben je aan het zoeken welke bij welke is.
+    const namen = korteNamen(
+      ids.map((id) => cleanLabel(this.hass?.states?.[id]?.attributes?.friendly_name ?? id) || id)
+    );
+    return ids.map((id, i) => ({
       key: `kleur:${id}`,
       kind: "tone",
-      label: `Kleur voor ${cleanLabel(this.hass?.states?.[id]?.attributes?.friendly_name ?? id) || id}`,
+      label: `Kleur voor ${namen[i] || id}`,
       compact: true,
       after: true,
     }));
   }
 
   schema() {
-    return [{ name: "sensors", selector: { entity: { domain: "sensor", multiple: true } } }];
+    return [
+      { name: "sensors", selector: { entity: { domain: "sensor", multiple: true } } },
+      {
+        name: "layout",
+        selector: sel.select([
+          { value: "lijst", label: "Lijst (eerstvolgende uitgelicht)" },
+          { value: "breed", label: "Over de breedte (veel lager)" },
+        ]),
+      },
+    ];
   }
 
   label(s) {
     return (
       {
         sensors: "Afvalsensoren",
+        layout: "Vorm",
         show_hero: "Eerstvolgende uitlichten",
         show_list: "Overige data tonen",
       }[s.name] ?? super.label(s)
@@ -336,6 +520,8 @@ class WasteEditor extends DacEditor {
   }
 
   helper(s) {
+    if (s.name === "layout")
+      return "Over de breedte zet alle bakken naast elkaar in plaats van onder elkaar. Vier bakken passen dan op één rasterrij in plaats van vier — dat scheelt bijna tweehonderd pixels. De eerstvolgende licht op.";
     if (s.name === "sensors")
       return "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen.";
     return undefined;
