@@ -227,6 +227,84 @@ steekt buiten de kaartrand uit.
 
 ---
 
+---
+
+## 8. De camerakaart: alles eraf, behalve wat er hoort
+
+Vijf meldingen achter elkaar, allemaal over dezelfde kaart. Ze horen bij elkaar
+en zijn samen uitgevoerd.
+
+> *"Wat doet de camera rechtsonder in de camerakaart?"*
+
+Precies de goede vraag. Er stonden vier knoppen — uitzoomen, inzoomen, live, en
+groot bekijken — en die laatste deed hetzelfde als een tik op het beeld erboven.
+Twee camera-achtige iconen naast elkaar waarvan er één niets toevoegde.
+
+> *"Ook het plusje en minnetje wil ik weg hebben, ik wil gewoon inzoomen met mijn
+> vingers. Ook de camera kan weg want als je erop tikt dan vergroot hij toch wel.
+> Ik wil alle icons weg hebben dus."*
+
+Alle vier eruit. Wat ervoor in de plaats komt, was er al:
+
+- **zoomen** met twee vingers, met het wiel, of met een dubbeltik;
+- **groot bekijken** met een gewone tik op het beeld;
+- **live** in de editor — dat is een keuze per kaart, geen knop die je per keer
+  omzet.
+
+> *"Nu komt die keuzelijst eronder te staan maar hij moet in het beeld komen."*
+
+De presets liggen nu over de onderrand van het beeld, met een verloop erachter
+zodat ze op elk beeld leesbaar blijven.
+
+> *"En de kaart mag auto grootte worden, nu zie je dat er een deel mist."*
+
+Met een schermafdruk van zijn oprit erbij, en dat was raak. Het beeldvlak stond
+op `aspect-ratio: 16/9` met `object-fit: cover` — een camera die iets anders
+levert werd dus bijgesneden, boven en onder eraf. Nu bepaalt het beeld de hoogte
+van de kaart en gaat er niets meer af.
+
+> *"Ik wil ook meerdere bewegingsmelder-entiteiten kunnen selecteren en een naam
+> erbij die dan tevoorschijn komt. Ik heb bijvoorbeeld een beweging voor persoon,
+> auto etc."*
+
+Er is nu een **lijst** bewegingsmelders in plaats van één veld, met per melder
+een eigen naamveld. Zolang een melder aanstaat komt zijn naam als merkje op het
+beeld; staan er meer tegelijk aan, dan staan ze naast elkaar. Dat is precies wat
+een Reolink levert — `_person`, `_vehicle`, `_pet` naast `_motion` — en het
+verschil tussen een auto op de oprit en iemand aan de deur is nu juist waar zo'n
+camera voor hangt. Het oude enkele veld blijft werken.
+
+> *"Nog meer camera's op de kaart moet een aangepaste naam kunnen krijgen, nu
+> staat er camera.oprit bijvoorbeeld, en hij moet gehighlight worden als die
+> actief staat."*
+
+Twee dingen, en het eerste was een echte fout van mij:
+
+**`nameOf(hass, id, configured)` neemt zijn derde parameter als OVERRIDE, niet
+als terugval.** Er stond `nameOf(this.hass, id, id)` — dus won het entity_id
+altijd, en kwam er nooit een leesbare naam op de knop. Nu wint wat je zelf
+invult, daarna de naam uit Home Assistant, en pas als laatste het id. Er is
+bovendien per camera een eigen naamveld bijgekomen.
+
+**En de actieve camera valt nu op**: accentkleur, vet, met een gekleurde rand.
+Dat stond op een grijstint die naast de andere knoppen nauwelijks verschilde.
+
+### Gemeten in een echte browser
+
+Kaart met twee camera's, twee bewegingsmelders en een presetlijst:
+
+```
+ICONEN_OP_HET_BEELD:  0
+presets_IN_het_beeld: true
+presetknoppen:        Thuis, Weg, Nacht, Vakantie
+melders:              Persoon            (alleen wat aanstaat)
+cameranamen:          Oprit (actief: true), Voordeur (actief: false)
+beeld_vult_vak:       true               (280px beeld in een vak van 280px)
+```
+
+Dat laatste is het bewijs dat er niets meer wordt afgesneden: het beeld en het
+vak zijn even hoog.
+
 ## Wat niet lukte
 
 - **De shake is niet in zijn eigen pop-up gemeten.** Bubble Card staat niet in de
