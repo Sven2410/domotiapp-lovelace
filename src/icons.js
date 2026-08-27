@@ -436,6 +436,15 @@ export const icons = {
     <rect x="3.6" y="9" width="16.8" height="7.2" rx="1.8"/>
     <path d="M7 15.4h10v4a.6.6 0 0 1-.6.6H7.6a.6.6 0 0 1-.6-.6z"/>`),
 
+  // Een 3D-printer: het frame, het bed, de portaalbrug en de nozzle eronder.
+  // Gevraagd op 27 augustus 2026 -- `printer` is een papierprinter, en op een
+  // kaart voor een Bambu Lab leest dat verkeerd.
+  printer3d: draw(`<path d="M4 3.6h16a.6.6 0 0 1 .6.6v15.2a.6.6 0 0 1-.6.6H4a.6.6 0 0 1-.6-.6V4.2a.6.6 0 0 1 .6-.6z"/>
+    <path d="M3.4 8.4h17.2"/>
+    <path d="M12 8.4v2.6"/>
+    <path d="M10.4 11h3.2l-1.6 2.4z"/>
+    <path d="M7.2 17.2h9.6"/>`),
+
   key: draw(`<circle cx="7.8" cy="12" r="3.8"/>
     <path d="M11.6 12h8.6M17.4 12v3M20.2 12v2.2"/>`),
 

@@ -49,6 +49,7 @@ import { resolve } from "../icons.js";
 import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
+import { hoortBij } from "./camera-logica.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
@@ -65,7 +66,7 @@ class CameraCard extends DacCard {
     *, *::before, *::after { box-sizing: border-box; }
 
     .card {
-      min-height: var(--dac-raster, 184px); padding: 0; overflow: hidden;
+      padding: 0; overflow: hidden;
       display: flex; flex-direction: column;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
@@ -200,7 +201,10 @@ class CameraCard extends DacCard {
     @media (hover: hover) { .presets button:hover { border-color: var(--dac-border-hi); } }
 
     /* ---- meerdere camera's ---- */
-    .cams { display: flex; gap: 6px; padding: 0 10px 9px; overflow-x: auto; scrollbar-width: none; }
+    /* Lucht tussen het beeld en de knoppen. Ze plakten tegen de onderrand aan
+       -- gemeld op 27 augustus 2026: "de geselecteerde mogelijkheden staan veel
+       te dicht op de camera". */
+    .cams { display: flex; gap: 6px; padding: 11px 10px; overflow-x: auto; scrollbar-width: none; }
     .cams::-webkit-scrollbar { display: none; }
     .cams[hidden] { display: none; }
     .cams button {
@@ -265,7 +269,9 @@ class CameraCard extends DacCard {
     return [...new Set(ids)].map((entity) => ({
       entity,
       // De naam uit de editor; anders die van Home Assistant zelf.
-      naam: c[`melder:${entity}`] || nameOf(this.hass, entity, "Beweging"),
+      naam: c[`melder:${entity}`] || nameOf(this.hass, entity) || "Beweging",
+      // Bij welke camera hij hoort, als je dat zelf hebt gekozen.
+      bijCamera: c[`melderbij:${entity}`],
     }));
   }
 
@@ -527,9 +533,15 @@ class CameraCard extends DacCard {
    */
   paintMelders_() {
     const vak = this.$(".melders");
-    const aan = this.melders_().filter((m) => isOn(stateOf(this.hass, m.entity)));
+    const camera = this.huidig_();
+    const alle = this.cameras_();
+    const aan = this.melders_().filter(
+      (m) =>
+        isOn(stateOf(this.hass, m.entity)) &&
+        hoortBij(this.hass, m.entity, alle, m.bijCamera, camera)
+    );
 
-    const sig = aan.map((m) => m.entity + "|" + m.naam).join(",");
+    const sig = camera + "::" + aan.map((m) => m.entity + "|" + m.naam).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = aan
@@ -632,6 +644,28 @@ class CameraCard extends DacCard {
     return 5;
   }
 
+  /**
+   * Deze kaart duwt zijn inhoud NIET op naar een rasterhoogte.
+   *
+   * Elke andere kaart doet dat wel: `--dac-raster` zet een `min-height` op 56,
+   * 120, 184 of 248, zodat een DomotiApp-kaart naast een Mushroom-kaart in
+   * dezelfde kolom blijft uitlijnen (zie rasterhoogte.js).
+   *
+   * Hier kan dat niet, en het hoeft ook niet:
+   *
+   * - **Het kan niet.** Sinds de vaste 16:9 eraf is (er ging beeld verloren)
+   *   bepaalt de camera de hoogte. Die is willekeurig, dus uitlijnen op een
+   *   raster zou betekenen dat er altijd een strook leeg bijkomt.
+   * - **Het hoeft niet.** Gemeld op 27 augustus 2026 met een schermafdruk uit
+   *   zijn beveiligingspop-up: *"nog steeds veel ruimte aan de onderkant."* In
+   *   een pop-up is er helemaal geen raster om op uit te lijnen -- die strook
+   *   was puur verlies.
+   *
+   * `meetRaster` blijft wél draaien, want `min_rows` heeft die meting nodig:
+   * zonder eerlijke ondergrens mag het formaatgreepje het vak kleiner slepen dan
+   * de inhoud, en dan schildert de kaart over zijn buurman heen (valkuil 12).
+   * Alleen de `min-height` is eraf.
+   */
   getGridOptions() {
     return {
       columns: 12,
@@ -665,10 +699,25 @@ class CameraEditor extends DacEditor {
       name: `cam:${id}`,
       selector: sel.text(),
     }));
-    const extraMelders = lijst(c.motion_sensors).map((id) => ({
-      name: `melder:${id}`,
-      selector: sel.text(),
-    }));
+    // Per melder een naam, en -- als er meer dan één camera op de kaart staat --
+    // bij welke camera hij hoort.
+    const alleCams = [c.camera, ...lijst(c.cameras)].filter(Boolean);
+    const extraMelders = lijst(c.motion_sensors).flatMap((id) => {
+      const velden = [{ name: `melder:${id}`, selector: sel.text() }];
+      if (alleCams.length > 1) {
+        velden.push({
+          name: `melderbij:${id}`,
+          selector: sel.select([
+            { value: "", label: "Bij alle camera's" },
+            ...alleCams.map((cam) => ({
+              value: cam,
+              label: this.hass?.states?.[cam]?.attributes?.friendly_name ?? cam,
+            })),
+          ]),
+        });
+      }
+      return velden;
+    });
 
     return [
       { name: "camera", selector: sel.entity("camera") },
@@ -703,6 +752,9 @@ class CameraEditor extends DacEditor {
     if (s.name.startsWith("melder:")) {
       return `Naam voor ${nameOf(this.hass, s.name.slice(7)) || s.name.slice(7)}`;
     }
+    if (s.name.startsWith("melderbij:")) {
+      return `↳ hoort bij welke camera`;
+    }
     return (
       {
         camera: "Camera",
@@ -717,12 +769,16 @@ class CameraEditor extends DacEditor {
         ptz_left: "Draaien: links",
         ptz_right: "Draaien: rechts",
         cameras: "Nog meer camera's op deze kaart",
-        tap_zoom: "Tikken opent het beeld groot",
+        // Alleen zichtbaar zodra er meer dan één camera op de kaart staat.
+      tap_zoom: "Tikken opent het beeld groot",
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
+    if (s.name.startsWith("melderbij:")) {
+      return "Laat dit op 'alle camera's' staan als je het niet weet. De kaart koppelt een melder vanzelf aan de camera waar hij op hetzelfde apparaat zit — bij een Reolink hoeft je dus niets in te vullen.";
+    }
     const uitleg = {
       camera:
         "Op de kaart staat een beeld dat zichzelf ververst. Inzoomen doe je met twee vingers, met het scrollwiel of met een dubbeltik; een gewone tik opent hem groot. Er staan geen knoppen op het beeld.",
