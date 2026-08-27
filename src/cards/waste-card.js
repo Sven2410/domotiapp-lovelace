@@ -85,38 +85,63 @@ class WasteCard extends DacCard {
     :host([vorm="breed"]) .hero,
     :host([vorm="breed"]) .list { display: none; }
 
+    /* De titel NAAST de bakken, niet erboven.
+       Gemeten op 27 augustus 2026: met de titel erboven wilde de inhoud 71px in
+       een kaart van 56 -- hij liep er 16 pixels uit. Dat is precies valkuil 12,
+       en de kaart schildert dan over zijn buurman.
+
+       Naast elkaar past het wél, en het is bovendien wat hij vroeg: zo min
+       mogelijk hoogte. */
+    :host([vorm="breed"]) .card {
+      flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px;
+    }
+    :host([vorm="breed"]) .head { flex: 0 0 auto; }
+    :host([vorm="breed"]) .head b { font-size: 12.5px; }
+
     .breed { display: none; }
     :host([vorm="breed"]) .breed {
       display: grid; gap: 6px; flex: 1 1 auto;
       grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
       align-content: center;
     }
+    /* GEEN vlak en GEEN rand per bak.
+       Die stonden er eerst -- elk bakje een gekleurde achtergrond in zijn eigen
+       fractiekleur -- en met vier bakken naast elkaar werd dat een lappendeken.
+       Zijn oordeel op 27 augustus 2026 was kort: "ziet er niet uit."
+
+       Het botste ook met de vormregel van deze familie: alleen het ICOON draagt
+       de toestand, niet het hele vlak (zie CLAUDE.md). Op een kaart met acht
+       lampen is dat het verschil tussen een rij en een muur; hier tussen een
+       kalender en een kleurenkaart.
+
+       Dus: de stip draagt de kleur, de tekst is neutraal, en de eerstvolgende
+       valt op doordat hij als enige in VOLLE inkt staat. */
     .breed .b {
-      display: flex; align-items: center; gap: 7px; min-width: 0;
-      padding: 5px 8px; border-radius: var(--dac-radius-sm);
-      border: 1px solid var(--dac-border);
-      background: color-mix(in srgb, var(--tone) 9%, transparent);
+      display: flex; align-items: center; gap: 8px; min-width: 0;
+      padding: 2px 0;
     }
-    /* De eerstvolgende: dezelfde kleur, maar duidelijk aanwezig. */
-    .breed .b[data-eerst="true"] {
-      background: color-mix(in srgb, var(--tone) 24%, transparent);
-      border-color: color-mix(in srgb, var(--tone) 55%, transparent);
-    }
-    .breed .b[data-stil="true"] { opacity: .5; }
+    .breed .b[data-stil="true"] { opacity: .45; }
     .breed .b i {
-      width: 9px; height: 9px; flex: 0 0 auto; border-radius: 3px;
+      width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px;
       background: var(--tone);
     }
-    .breed .t { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+    /* De eerstvolgende krijgt een ring om zijn stip: hetzelfde teken dat de
+       lampkaart gebruikt, en het kost geen vlak. */
+    .breed .b[data-eerst="true"] i {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 28%, transparent);
+    }
+    .breed .t { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
     .breed .n {
-      font-size: 11.5px; font-weight: 600; color: var(--dac-ink);
+      font-size: 12px; font-weight: 500; color: var(--dac-ink-2);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .breed .w {
-      font-size: 10px; color: var(--dac-ink-3);
+      font-size: 10.5px; color: var(--dac-ink-3);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums;
     }
-    .breed .b[data-eerst="true"] .w { color: var(--tone); font-weight: 600; }
+    .breed .b[data-eerst="true"] .n { color: var(--dac-ink); font-weight: 600; }
+    .breed .b[data-eerst="true"] .w { color: var(--dac-ink-2); }
 
     /* ---- hero ---- */
     .hero {
