@@ -80,7 +80,7 @@ class PrinterCard extends DacCard {
     .kop { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .ico {
       width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center;
-      border-radius: var(--dac-radius-s); cursor: pointer;
+      border-radius: var(--dac-radius-sm); cursor: pointer;
       background: color-mix(in srgb, var(--tone) 16%, transparent);
       border: 1px solid color-mix(in srgb, var(--tone) 34%, transparent);
       color: var(--tone);
@@ -129,7 +129,7 @@ class PrinterCard extends DacCard {
     /* ---- beeld ---- */
     .beeldvak {
       position: relative; width: 100%; overflow: hidden;
-      border-radius: var(--dac-radius-s); background: var(--dac-surface);
+      border-radius: var(--dac-radius-sm); background: var(--dac-surface);
       border: 1px solid var(--dac-border);
       aspect-ratio: 16 / 9;
     }
@@ -187,7 +187,7 @@ class PrinterCard extends DacCard {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 5px; min-width: 0;
       background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-s);
+      border-radius: var(--dac-radius-sm);
     }
     .tegel .w {
       font-size: 14px; font-weight: 500; letter-spacing: -.01em;
@@ -210,7 +210,7 @@ class PrinterCard extends DacCard {
     .ams .rij { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex: 1 1 auto; }
     .tray {
       display: flex; align-items: center; gap: 6px; min-width: 0;
-      padding: 5px 7px; border-radius: var(--dac-radius-s);
+      padding: 5px 7px; border-radius: var(--dac-radius-sm);
       background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
     }
     .tray .vlak {

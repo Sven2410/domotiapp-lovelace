@@ -54,7 +54,7 @@ const css = /* css */ `
   .vak {
     width: min(360px, 100%); padding: 20px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
-    border-radius: var(--dac-radius); box-shadow: var(--dac-shadow-float);
+    border-radius: var(--dac-radius); box-shadow: 0 24px 60px -20px rgba(0,0,0,.7);
     display: flex; flex-direction: column; gap: 14px;
   }
 
@@ -90,7 +90,7 @@ const css = /* css */ `
   .snel button {
     padding: 10px 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
     background: var(--dac-surface); border: 1px solid var(--dac-border);
-    border-radius: var(--dac-radius-s); color: var(--dac-ink);
+    border-radius: var(--dac-radius-sm); color: var(--dac-ink);
     font-variant-numeric: tabular-nums;
   }
   .snel button[aria-pressed="true"] {
@@ -105,7 +105,7 @@ const css = /* css */ `
     flex: 1 1 auto; min-width: 0; padding: 11px 12px;
     font: inherit; font-size: 15px; font-variant-numeric: tabular-nums;
     background: var(--dac-surface); border: 1px solid var(--dac-border);
-    border-radius: var(--dac-radius-s); color: var(--dac-ink);
+    border-radius: var(--dac-radius-sm); color: var(--dac-ink);
   }
   input:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   .eenheid { font-size: 12.5px; color: var(--dac-ink-3); flex: 0 0 auto; }
@@ -116,7 +116,7 @@ const css = /* css */ `
   .knoppen { display: flex; gap: 8px; }
   .knoppen button {
     flex: 1 1 0; padding: 12px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 500;
-    border-radius: var(--dac-radius-s); border: 1px solid var(--dac-border-hi);
+    border-radius: var(--dac-radius-sm); border: 1px solid var(--dac-border-hi);
     background: transparent; color: var(--dac-ink);
   }
   .knoppen button.doe {

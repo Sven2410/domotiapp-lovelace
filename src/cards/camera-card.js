@@ -147,7 +147,7 @@ class CameraCard extends DacCard {
       color: var(--dac-ink);
       background: color-mix(in srgb, var(--dac-bg) 68%, transparent);
       backdrop-filter: blur(8px);
-      border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-s);
+      border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm);
     }
     .ptz button .icon { width: 14px; height: 14px; }
     .ptz [data-r="up"] { grid-area: 1 / 2; }

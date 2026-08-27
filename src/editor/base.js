@@ -153,7 +153,7 @@ export class DacEditor extends HTMLElement {
   /**
    * Fields this card wants drawn with our own pickers, in order.
    *
-   * Each is `{ key, kind: "icon" | "tone", label, fallback }`. They land above
+   * Each is `{ key, kind: "icon" | "tone" | "foto", label, fallback }`. They land above
    * the form, which is right for the icon and colour of the card itself -- those
    * are the first thing you set. A picker that only makes sense *after* a choice
    * in the form -- a colour per chosen sensor, say -- sets `after: true` and
@@ -204,7 +204,7 @@ export class DacEditor extends HTMLElement {
 
     for (const def of pickerDefs) {
       const el = document.createElement(
-        def.kind === "tone" ? "dac-tone-picker" : "dac-icon-picker"
+        { tone: "dac-tone-picker", foto: "dac-foto-picker" }[def.kind] ?? "dac-icon-picker"
       );
       el.label = def.label;
       el.fallback = def.fallback;

@@ -160,7 +160,7 @@ class ClimateCard extends DacCard {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 6px;
       background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-s);
+      border-radius: var(--dac-radius-sm);
     }
     .tegel .w {
       font-size: 15px; font-weight: 500; letter-spacing: -.01em;
