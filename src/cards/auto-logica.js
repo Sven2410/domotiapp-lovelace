@@ -317,3 +317,88 @@ export function locatie(st, hass, straal = THUIS_STRAAL_M) {
   // De hoofdletter erop, want een zone heet "werk" en niet "Werk".
   return { thuis: false, tekst: ruw.charAt(0).toUpperCase() + ruw.slice(1), meters: null };
 }
+
+/* ------------------------------------------------- deuren, ramen en het slot
+ *
+ * Gemeld op 27 augustus 2026: *"bij ramen filter je alleen op binaire sensor,
+ * maar mijn bus geeft een normale sensor, een status LOCKED bijvoorbeeld."*
+ *
+ * Read-only nagemeten op zijn installatie, en het was alle drie raak. Zijn Ford
+ * Transit Connect levert:
+ *
+ *     sensor..._doorstatus       = "Closed"
+ *     sensor..._windowposition   = "Closed"
+ *     sensor..._doorlock         = "LOCKED"
+ *
+ * Geen `binary_sensor`, geen `lock` -- gewone sensoren met een Engels woord
+ * erin. De kaart keek naar `isOn()`, en dat is voor geen van drieën waar. Dus
+ * meldde hij nooit iets, ook niet als er wél iets openstond.
+ */
+
+const OPEN_WOORDEN = ["open", "opened", "ajar", "unlatched", "on", "true", "unlocked"];
+const DICHT_WOORDEN = [
+  "closed",
+  "close",
+  "shut",
+  "secured",
+  "locked",
+  "off",
+  "false",
+  "not_open",
+];
+
+/**
+ * Staat dit open?
+ *
+ * @returns {boolean|null} null betekent: we weten het niet. Dat is iets anders
+ *   dan dicht, en de kaart hoort er dan ook niets over te zeggen.
+ */
+export function staatOpen(st) {
+  const ruw = String(st?.state ?? "").trim().toLowerCase();
+  if (!ruw || ruw === "unavailable" || ruw === "unknown") return null;
+  if (OPEN_WOORDEN.includes(ruw)) return true;
+  if (DICHT_WOORDEN.includes(ruw)) return false;
+  // Een Ford meldt bij een open deur welke deur het is ("Driver Door Ajar").
+  // Zo'n zin hoort als OPEN te tellen, niet als onbekend.
+  if (/(^|[^a-z])(ajar|open)([^a-z]|$)/.test(ruw)) return true;
+  return null;
+}
+
+/**
+ * Zit hij op slot?
+ *
+ * @returns {boolean|null}
+ */
+export function opSlot(st) {
+  const ruw = String(st?.state ?? "").trim().toLowerCase();
+  if (!ruw || ruw === "unavailable" || ruw === "unknown") return null;
+
+  const domein = String(st?.entity_id ?? "").split(".")[0];
+  if (domein === "lock") {
+    if (ruw === "locked") return true;
+    if (ruw === "unlocked" || ruw === "open" || ruw === "opening") return false;
+    return null; // jammed, locking, unlocking -- daar valt niets zinnigs over te zeggen
+  }
+
+  // Een `binary_sensor` met device_class `lock` volgt de afspraak van Home
+  // Assistant: ON betekent ONTGRENDELD. Dat is precies andersom dan je zou
+  // gokken, en het is de reden dat dit hier apart staat.
+  if (st?.attributes?.device_class === "lock") {
+    if (ruw === "on") return false;
+    if (ruw === "off") return true;
+  }
+
+  if (["locked", "lock", "secured", "closed", "off", "false"].includes(ruw)) return true;
+  if (["unlocked", "unlock", "open", "unsecured", "on", "true"].includes(ruw)) return false;
+  return null;
+}
+
+/**
+ * Kan deze entiteit ook echt op slot gezet worden, of is het alleen een melding?
+ *
+ * Zijn `sensor..._doorlock` vertelt de stand maar neemt geen opdrachten aan. Een
+ * knop die niets doet is erger dan geen knop -- dan wordt het een tegel.
+ */
+export function slotIsBedienbaar(entityId) {
+  return String(entityId ?? "").split(".")[0] === "lock";
+}

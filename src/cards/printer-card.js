@@ -264,7 +264,7 @@ class PrinterCard extends DacCard {
   `;
 
   validate(config) {
-    const c = { name: "", icon: "printer", ...config };
+    const c = { name: "", icon: "printer3d", ...config };
     const iets =
       c.status || c.progress || c.camera || c.image || c.nozzle_temp || c.bed_temp || c.power;
     if (!iets) {
@@ -410,7 +410,7 @@ class PrinterCard extends DacCard {
     this.toggleAttribute("loopt", loopt && !dood);
     this.$(".card").style.setProperty("--tone", TOON[info.toon] ?? TONES.accent);
 
-    this.$(".ico").innerHTML = resolve(c.icon || "printer");
+    this.$(".ico").innerHTML = resolve(c.icon || "printer3d");
     this.text(".nm", c.name || nameOf(this.hass, c.status || c.power || c.camera, "3D-printer"));
 
     // Het woord van de kaart, en als de sensor iets anders zegt dan wat wij
@@ -640,11 +640,11 @@ class PrinterCard extends DacCard {
 
 class PrinterEditor extends DacEditor {
   defaults() {
-    return { icon: "printer" };
+    return { icon: "printer3d" };
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "printer", auto: false }];
+    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "printer3d", auto: false }];
   }
 
   schema() {

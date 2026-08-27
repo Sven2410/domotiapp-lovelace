@@ -155,7 +155,21 @@ class FotoPicker extends HTMLElement {
   teken_() {
     this.$(".kop").textContent = this.label_ ?? "Afbeelding";
     const tekst = this.$('input[type="text"]');
-    if (document.activeElement !== this && tekst.value !== this.value) tekst.value = this.value;
+
+    // NIET `document.activeElement`. Die geeft nooit dit element terug: bij
+    // focus binnen geneste shadow roots wijst hij het BUITENSTE host-element
+    // aan, en dat is `home-assistant`. De toets sloeg dus nooit aan.
+    //
+    // Wat dat kostte, gemeld op 27 augustus 2026: *"hij springt steeds weg als
+    // ik type."* De editor geeft de picker bij ELKE nieuwe `hass` zijn waarde
+    // uit de config opnieuw, en dan overschreef dit wat er stond. Op een kale
+    // testinstance valt dat niet op; op een installatie met 479 componenten
+    // komt er meerdere keren per seconde een update binnen, en dan is het veld
+    // onbruikbaar.
+    //
+    // `shadowRoot.activeElement` kijkt wél binnen deze root.
+    const inGebruik = this.shadowRoot.activeElement === tekst;
+    if (!inGebruik && tekst.value !== this.value) tekst.value = this.value;
 
     const vak = this.$(".voorbeeld");
     if (this.value) {

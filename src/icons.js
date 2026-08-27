@@ -411,6 +411,15 @@ export const icons = {
     <path d="M3.8 15.4v-3.2l2-4.6a1.3 1.3 0 0 1 1.2-.8h10a1.3 1.3 0 0 1 1.2.8l2 4.6v3.2z"/>
     <circle cx="7.4" cy="12.5" r=".95"/><circle cx="16.6" cy="12.5" r=".95"/>`),
 
+  // Een bestelbus: hoge neus, lange laadbak, schuifdeur. Gevraagd op 27
+  // augustus 2026 -- hij rijdt een Ford Transit Connect, en `car` leest als een
+  // personenauto.
+  van: draw(`<path d="M2.6 16.2h18.8"/>
+    <path d="M6 16.2v1.9a.9.9 0 0 1-.9.9h-.8a.9.9 0 0 1-.9-.9v-1.9M20.6 16.2v1.9a.9.9 0 0 1-.9.9h-.8a.9.9 0 0 1-.9-.9v-1.9"/>
+    <path d="M2.6 16.2V7.4a1 1 0 0 1 1-1h9.6a1.2 1.2 0 0 1 1 .55l3.4 4.85h2.4a1 1 0 0 1 1 1v3.4z"/>
+    <path d="M13.4 6.4v5.4h4.2"/>
+    <circle cx="6.6" cy="13.4" r=".95"/><circle cx="17.4" cy="13.4" r=".95"/>`),
+
   plug: draw(`<path d="M9 3.4v5.2M15 3.4v5.2"/>
     <path d="M6.4 8.6h11.2v2.2a5.6 5.6 0 0 1-11.2 0z"/>
     <path d="M12 16.4v4.2"/>`),
@@ -435,6 +444,15 @@ export const icons = {
   printer: draw(`<path d="M7 9V4.6a.6.6 0 0 1 .6-.6h8.8a.6.6 0 0 1 .6.6V9"/>
     <rect x="3.6" y="9" width="16.8" height="7.2" rx="1.8"/>
     <path d="M7 15.4h10v4a.6.6 0 0 1-.6.6H7.6a.6.6 0 0 1-.6-.6z"/>`),
+
+  // Een 3D-printer: het frame, het bed, de portaalbrug en de nozzle eronder.
+  // Gevraagd op 27 augustus 2026 -- `printer` is een papierprinter, en op een
+  // kaart voor een Bambu Lab leest dat verkeerd.
+  printer3d: draw(`<path d="M4 3.6h16a.6.6 0 0 1 .6.6v15.2a.6.6 0 0 1-.6.6H4a.6.6 0 0 1-.6-.6V4.2a.6.6 0 0 1 .6-.6z"/>
+    <path d="M3.4 8.4h17.2"/>
+    <path d="M12 8.4v2.6"/>
+    <path d="M10.4 11h3.2l-1.6 2.4z"/>
+    <path d="M7.2 17.2h9.6"/>`),
 
   key: draw(`<circle cx="7.8" cy="12" r="3.8"/>
     <path d="M11.6 12h8.6M17.4 12v3M20.2 12v2.2"/>`),
