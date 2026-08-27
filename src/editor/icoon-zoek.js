@@ -27,7 +27,7 @@
  * lezen; een icoon mag in twee groepen staan als het in allebei hoort.
  */
 export const GROEPEN = [
-  ["Woning", ["house", "homeStatus", "homeThermo", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
+  ["Woning", ["house", "homeLeave", "homeStatus", "homeThermo", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
   ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "kitchen", "shower", "toilet", "desk", "garage", "storage"]],
   ["Buiten", ["tree", "parasol", "fence", "sun", "awning", "car", "beach"]],
   ["Rolluiken", ["shutter", "shutterOpen", "awning", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
@@ -129,6 +129,7 @@ export const TERMEN = {
   person: ["persoon", "iemand", "gebruiker", "person", "wie", "profiel", "aanwezig"],
   people: ["personen", "mensen", "gezin", "iedereen", "familie", "people", "gasten"],
   away: ["weg", "afwezig", "niet thuis", "away", "vertrokken", "uit huis"],
+  homeLeave: ["woning verlaten", "verlaten", "weggaan", "vertrekken", "huis uit", "afsluiten", "de deur uit", "leave", "exit", "weg", "huis"],
 
   /* Apparaten */
   tv: ["televisie", "tv", "scherm", "kijken", "netflix", "mediaspeler", "chromecast"],
