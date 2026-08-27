@@ -122,6 +122,55 @@ export const icons = {
   shutterOpen: draw(`<path d="M3.6 4.2h16.8M5.2 4.2v15.6M18.8 4.2v15.6"/>
     <path d="M5.2 6.6h13.6M5.2 8.6h13.6"/>`),
 
+  /* De eettafel: een blad met vier poten en twee stoelen ertegenaan.
+     `desk` is het bureau -- dat heeft een la en staat tegen de muur. */
+  eettafel: draw(`<path d="M3 9.6h18"/>
+    <path d="M5.4 9.6v6.2M18.6 9.6v6.2"/>
+    <path d="M7.4 12.4h9.2"/>
+    <path d="M4.2 20.4v-3.2a1.4 1.4 0 0 1 1.4-1.4h1.2a1.4 1.4 0 0 1 1.4 1.4v3.2"/>
+    <path d="M15.8 20.4v-3.2a1.4 1.4 0 0 1 1.4-1.4h1.2a1.4 1.4 0 0 1 1.4 1.4v3.2"/>`),
+
+  /* De veranda: een overkapping op twee staanders, met een vloer eronder.
+     `awning` is het zonnescherm aan de gevel -- dat golft en heeft geen poten. */
+  veranda: draw(`<path d="M2.2 9.4 12 4.2l9.8 5.2"/>
+    <path d="M4.6 9.4v10.4M19.4 9.4v10.4"/>
+    <path d="M2.2 19.8h19.6"/>
+    <path d="M4.6 12.2h14.8"/>`),
+
+  /* De pollenradar: de ringen van een radar met een stuifmeelkorrel in het
+     midden. Niet een bloem -- dat is het weer, dit is de verwachting. */
+  pollenradar: draw(`<circle cx="12" cy="12" r="2.2"/>
+    <path d="M12 9.8V7.4M12 14.2v2.4M9.8 12H7.4M14.2 12h2.4"/>
+    <path d="M6.4 6.4a7.9 7.9 0 0 0 0 11.2M17.6 17.6a7.9 7.9 0 0 0 0-11.2"/>
+    <path d="M3.6 3.6a11.9 11.9 0 0 0 0 16.8M20.4 20.4a11.9 11.9 0 0 0 0-16.8"/>`),
+
+  /* Graspollen: sprieten die uit de grond omhoogkomen, met een aar aan de
+     middelste. Eerst waren het twee blaadjes aan een steel, en op twintig pixels
+     las dat als een sterretje -- op ware grootte bekeken en opnieuw getekend. */
+  gras: draw(`<path d="M3 20.4h18"/>
+    <path d="M12 20.4V8.6"/>
+    <path d="M12 12.4c-1.4-.8-2.2-2.2-2.2-4 1.5.2 2.2 1.6 2.2 4Z"/>
+    <path d="M12 9.6c1.4-.8 2.2-2.2 2.2-4-1.5.2-2.2 1.6-2.2 4Z"/>
+    <path d="M7 20.4c0-4 .8-6.6 2.4-8M17 20.4c0-4-.8-6.6-2.4-8"/>`),
+
+  /* Kruidpollen: een takje met drie brede blaadjes -- een kruidenplant.
+     De eerste versie had vier smalle blaadjes aan een lange steel, en die las op
+     twintig pixels als een schroef. Bewust anders dan `gras`, want op een
+     pollenkaart staan ze naast elkaar: gras is recht en dun, dit is rond en vol. */
+  kruiden: draw(`<path d="M12 20.8v-6.4"/>
+    <path d="M12 14.4c0-3.4 1.8-5.6 5.4-6.6.4 3.8-1.6 6.4-5.4 6.6Z"/>
+    <path d="M12 14.4c0-2.8-1.5-4.6-4.4-5.4-.3 3.1 1.3 5.2 4.4 5.4Z"/>
+    <path d="M12 10.6c0-2.2 1-3.8 3-4.6"/>`),
+
+  /* De circulatiepomp: het pomphuis met de motor erop en de pijl die zegt dat
+     er iets ROND gaat. `heatPump` is de warmtepomp buiten -- een heel ander
+     apparaat. */
+  circulatiepomp: draw(`<circle cx="12" cy="13.6" r="5.4"/>
+    <path d="M12 10.4a3.2 3.2 0 0 1 3.2 3.2"/>
+    <path d="M9.4 8.2V5.2a.8.8 0 0 1 .8-.8h3.6a.8.8 0 0 1 .8.8v3"/>
+    <path d="M2.6 13.6h4M17.4 13.6h4"/>
+    <path d="M12 13.6h.02"/>`),
+
   awning: draw(`<path d="M2.8 11.4 6.2 5h11.6l3.4 6.4z"/>
     <path d="M2.8 11.4c1.5 1.7 3 1.7 4.5 0s3-1.7 4.5 0 3 1.7 4.5 0 3-1.7 4.5 0"/>
     <path d="M12 14.6v4.8"/>`),
@@ -453,6 +502,32 @@ export const icons = {
     <path d="M12 8.4v2.6"/>
     <path d="M10.4 11h3.2l-1.6 2.4z"/>
     <path d="M7.2 17.2h9.6"/>`),
+
+  /* De koelkast: twee deuren onder elkaar met hun grepen. Het streepje in het
+     midden is de scheiding tussen koel en vries -- zonder dat is het een kast. */
+  /* Handmatig: een hand met de wijsvinger omhoog, die op het punt staat te
+     tikken. Dat is het tegenovergestelde van "de automatisering doet het" --
+     iemand doet het zelf. */
+  handmatig: draw(`<path d="M11 12.2V5.6a1.6 1.6 0 0 1 3.2 0v6.4"/>
+    <path d="M14.2 11.6v-1.4a1.5 1.5 0 0 1 3 0v1.6"/>
+    <path d="M17.2 11.8v-.8a1.5 1.5 0 0 1 3 0v4.6a5.4 5.4 0 0 1-5.4 5.4h-2a4.6 4.6 0 0 1-3.7-1.9L5.4 15a1.6 1.6 0 0 1 2.4-2.1L11 15.8"/>`),
+
+  koelkast: draw(`<rect x="5.6" y="2.8" width="12.8" height="18.4" rx="1.8"/>
+    <path d="M5.6 10.2h12.8"/>
+    <path d="M8.2 6.2v2.2M8.2 12.4v2.4"/>`),
+
+  /* De oven: een kast met een deurvenster en een knoppenrij erboven. */
+  oven: draw(`<rect x="3.4" y="3.6" width="17.2" height="16.8" rx="1.8"/>
+    <path d="M3.4 8.6h17.2"/>
+    <circle cx="7" cy="6.1" r=".9"/><circle cx="10.4" cy="6.1" r=".9"/>
+    <rect x="6.4" y="11.4" width="11.2" height="6.4" rx="1.2"/>`),
+
+  /* De magnetron: breder dan hoog, met het venster links en de knoppen rechts.
+     Dat onderscheid met `oven` moet er zijn -- ze staan vaak naast elkaar. */
+  magnetron: draw(`<rect x="2.4" y="5.6" width="19.2" height="12.8" rx="1.8"/>
+    <rect x="4.8" y="8.2" width="10.4" height="7.6" rx="1.2"/>
+    <path d="M17.8 8.6v2.4"/>
+    <circle cx="17.8" cy="14.6" r="1.1"/>`),
 
   key: draw(`<circle cx="7.8" cy="12" r="3.8"/>
     <path d="M11.6 12h8.6M17.4 12v3M20.2 12v2.2"/>`),

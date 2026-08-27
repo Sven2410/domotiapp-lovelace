@@ -24,6 +24,7 @@ import {
   mediaIcoon,
   volumePct,
   volumeVoor,
+  heeftVolume,
   watSpeeltEr,
 } from "../../src/cards/media-logica.js";
 
@@ -187,5 +188,48 @@ describe("toestand en icoon", () => {
     assert.equal(mediaIcoon(speler("playing", { device_class: "tv" })), "tv");
     assert.equal(mediaIcoon(speler("playing", { device_class: "receiver" })), "radio");
     assert.equal(mediaIcoon(speler("playing")), "speaker");
+  });
+});
+
+describe("heeftVolume — de tv-ontvanger zonder eigen geluid — NIEUW GEDRAG", () => {
+  /**
+   * Gemeld op 27 augustus 2026 met een schermafdruk van zijn tv-ontvanger:
+   * *"als ik een mediabox heb en geen speaker heb geselecteerd, staat het geluid
+   * op nul, maar dan speelt het tv-geluid -- dus dan moet dat weg."*
+   *
+   * Zijn kastje meldt geen `volume_level`. `volumePct` maakt van een ontbrekende
+   * waarde een 0, en dus stond er "0%" op de kaart terwijl de televisie gewoon
+   * geluid gaf.
+   */
+  it("een speler zonder volume_level heeft geen volume", () => {
+    // Zijn mediabox: hij speelt, hij kent zenders, maar geen geluid.
+    const box = {
+      state: "playing",
+      attributes: {
+        supported_features: KENMERK.SELECT_SOURCE | KENMERK.PAUSE,
+        source: "RTL 4",
+        media_title: "RTL Nieuws - 18:00 uur",
+      },
+    };
+    assert.equal(heeftVolume(box), false);
+    // En dit is waar het misging: het percentage werd 0.
+    assert.equal(volumePct(box), 0);
+  });
+
+  it("een speaker die WEL een volume meldt houdt zijn percentage", () => {
+    assert.equal(heeftVolume({ state: "playing", attributes: { volume_level: 0.42 } }), true);
+    assert.equal(volumePct({ state: "playing", attributes: { volume_level: 0.42 } }), 42);
+  });
+
+  it("een volume van nul is iets anders dan geen volume", () => {
+    // Een speaker die je zelf op nul hebt gezet MOET 0% tonen -- dat is waar.
+    const stil = { state: "playing", attributes: { volume_level: 0 } };
+    assert.equal(heeftVolume(stil), true);
+    assert.equal(volumePct(stil), 0);
+  });
+
+  it("null telt als geen volume", () => {
+    assert.equal(heeftVolume({ state: "playing", attributes: { volume_level: null } }), false);
+    assert.equal(heeftVolume(null), false);
   });
 });
