@@ -1,7 +1,8 @@
 # De brede afvalkaart, opnieuw
 
-Ronde van 27 augustus 2026 — uitgave **0.26.0**. Eén melding, met een
-schermafdruk erbij en drie woorden: *"ziet er niet uit."*
+Ronde van 27 augustus 2026 — uitgave **0.26.0**. Twee meldingen: *"ziet er niet
+uit"* over de brede afvalkaart, en een camerakaart die de ingevulde naam van zijn
+hoofdcamera negeerde.
 
 Dat ging over de brede vorm die een halfuur eerder in 0.25.0 was uitgebracht. Hij
 had gelijk, en er zaten twee dingen fout — waarvan één een echte fout en één een
@@ -71,6 +72,38 @@ gelegd.
 
 Een gemeten getal is geen bewijs dat iets goed is. `LOOPT_OVER` had die avond ook
 gemeten kunnen worden, en die had de fout meteen laten zien.
+
+---
+
+## 3. En op de camerakaart: de hoofdcamera negeerde zijn naam
+
+Met een schermafdruk erbij: hij vult *"Naam: Oprit"* in, de kaart zet dat
+linksboven op het beeld, en in de kiezerrij eronder staat alsnog **"Oprit
+Vloeiend"** — de naam van de entiteit.
+
+> *"De andere namen pakt hij wel als ik ze invul."*
+
+Precies, en dat was het verschil. In 0.23.0 kreeg elke EXTRA camera een eigen
+naamveld (`cam:<entity>`). De hoofdcamera staat niet in die lijst — die staat in
+het veld `camera` — en kreeg dus geen naamveld. `camNaam_` viel voor hem terug op
+de entiteitnaam, terwijl er een ingevuld veld "Naam" vlak boven stond.
+
+Er is geen tweede veld bijgekomen; dat zou dubbelop zijn. Het veld **Naam** ís nu
+de naam van de hoofdcamera, ook in de kiezerrij. Dat is wat je verwacht als je
+het invult.
+
+### Gemeten
+
+Zijn opzet nagebouwd: hoofdcamera met een naam, één extra mét eigen naam, één
+extra zonder.
+
+| camera | entiteit heet | op de kaart |
+|---|---|---|
+| hoofd | "Demo camera" | **"Oprit"** |
+| extra, eigen naam | "Demo camera png" | "Achtertuin" |
+| extra, geen naam | "Demo camera without stream" | die naam |
+
+De naam linksboven op het beeld en de naam in de kiezerrij zijn nu dezelfde.
 
 ## Wat niet lukte
 
