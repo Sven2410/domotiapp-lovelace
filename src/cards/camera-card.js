@@ -612,7 +612,17 @@ class CameraCard extends DacCard {
    * en pas als laatste het entity_id.
    */
   camNaam_(id) {
-    return this.config[`cam:${id}`] || nameOf(this.hass, id) || id;
+    const c = this.config;
+    // Het veld "Naam" bovenaan de editor is de naam van de HOOFDCAMERA. Dat
+    // stond nergens: de extra camera's kregen elk een eigen naamveld, de
+    // hoofdcamera niet, en die viel dus terug op de entiteitnaam.
+    //
+    // Gemeld op 27 augustus 2026 met een schermafdruk: hij vulde "Oprit" in als
+    // naam, de kaart zette dat linksboven op het beeld, en in de kiezerrij
+    // eronder stond alsnog "Oprit Vloeiend". *"De andere namen pakt hij wel als
+    // ik ze invul."* Precies -- die hadden een veld.
+    if (id === c.camera && c.name) return c.name;
+    return c[`cam:${id}`] || nameOf(this.hass, id) || id;
   }
 
   paintCams_(huidig) {
@@ -782,6 +792,8 @@ class CameraEditor extends DacEditor {
     const uitleg = {
       camera:
         "Op de kaart staat een beeld dat zichzelf ververst. Inzoomen doe je met twee vingers, met het scrollwiel of met een dubbeltik; een gewone tik opent hem groot. Er staan geen knoppen op het beeld.",
+      name:
+        "De naam van de camera zelf. Hij staat linksboven op het beeld, en ook in de rij eronder als je meer camera's op deze kaart hebt staan.",
       live_view:
         "De stream staat dan altijd open. Mooier, maar op een dashboard met zes camera's zijn dat zes streams die de hele dag doorlopen.",
       presets:
