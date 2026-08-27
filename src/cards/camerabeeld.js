@@ -55,12 +55,25 @@ export function camerabeeld(bestaand, hass, entityId, { live = false, fit = "cov
   }
 
   if (kanHui) {
+    // ALLEEN zetten wat werkelijk verandert.
+    //
+    // `cameraImage` en `cameraView` zijn de twee eigenschappen waar `hui-image`
+    // zijn stream op herstart. Ze elke ronde opnieuw toekennen -- ook met
+    // dezelfde waarde -- is vragen om een verbinding die opnieuw begint terwijl
+    // de vorige nog aan het onderhandelen is. Dat is precies de fout die hij op
+    // 27 augustus 2026 opstuurde:
+    //
+    //     Failed to set remote answer sdp: Called in wrong state: stable
+    //
+    // Die komt uit HA's eigen WebRTC-speler en betekent: er kwam een antwoord
+    // binnen op een onderhandeling die al rond was. Twee starts over elkaar heen.
+    const nieuweView = live ? "live" : "auto";
+    if (el.cameraImage !== entityId) el.cameraImage = entityId;
+    if (el.cameraView !== nieuweView) el.cameraView = nieuweView;
+    if (el.fitMode !== fit) el.fitMode = fit;
+    // `hass` moet wél elke keer mee: daar zitten de tokens in waarmee het beeld
+    // opgehaald wordt, en die verlopen.
     el.hass = hass;
-    el.cameraImage = entityId;
-    // "auto" is een plaatje dat zichzelf ververst, "live" is de echte stream.
-    // Live kost bandbreedte en een verbinding, dus het staat niet standaard aan.
-    el.cameraView = live ? "live" : "auto";
-    el.fitMode = fit;
   } else {
     const st = hass?.states?.[entityId];
     const bron = st?.attributes?.entity_picture;
