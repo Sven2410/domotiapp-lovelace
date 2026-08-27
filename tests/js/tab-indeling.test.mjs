@@ -8,7 +8,12 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
-import { KOLOMMEN, indelingVoorKaart, pasIndelingToe } from "../../src/cards/tab-indeling.js";
+import {
+  KOLOMMEN,
+  grenzenVan,
+  indelingVoorKaart,
+  pasIndelingToe,
+} from "../../src/cards/tab-indeling.js";
 
 describe("indelingVoorKaart — NIEUW GEDRAG", () => {
   it("zonder keuze staat een kaart op de hele breedte, net als eerst", () => {
@@ -74,5 +79,76 @@ describe("pasIndelingToe — NIEUW GEDRAG", () => {
   it("valt niet over een element dat er niet is", () => {
     assert.doesNotThrow(() => pasIndelingToe(null, { columns: 3 }));
     assert.doesNotThrow(() => pasIndelingToe({}, { columns: 3 }));
+  });
+});
+
+/**
+ * De klem tegen de grenzen van de kaart zelf — NIEUW GEDRAG.
+ *
+ * Gemeld op 27 augustus 2026 met een schermafdruk waarop zes thermostaten door
+ * elkaar heen liepen. Nagemeten op de installatie van de eigenaar: twaalf
+ * klimaatkaarten in een tabblad met `{columns: 6, rows: 1}` in hun config, en
+ * `layout: "gestapeld"` erbij. Die vorm tekent drie rasterrijen.
+ */
+describe("indelingVoorKaart — de klem tegen de kaart zelf — NIEUW GEDRAG", () => {
+  it("klemt een te laag rijaantal op tot de ondergrens van de kaart", () => {
+    // Dit is letterlijk de config van zijn dashboard.
+    const uit = indelingVoorKaart({ columns: 6, rows: 1 }, { min_rows: 3, rows: "auto" });
+    assert.equal(uit.height, "184px"); // 3 rijen: 3*64-8
+    assert.equal(uit.gridColumn, "span 6");
+  });
+
+  it("klemt een te hoog rijaantal terug naar de bovengrens", () => {
+    const uit = indelingVoorKaart({ rows: 5 }, { max_rows: 1 });
+    assert.equal(uit.height, "56px");
+  });
+
+  it("laat een rijaantal dat binnen de grenzen valt met rust", () => {
+    assert.equal(indelingVoorKaart({ rows: 2 }, { min_rows: 1, max_rows: 4 }).height, "120px");
+  });
+
+  it("klemt ook de breedte, want die grenzen bestaan net zo goed", () => {
+    assert.equal(indelingVoorKaart({ columns: 2 }, { min_columns: 4 }).gridColumn, "span 4");
+    assert.equal(indelingVoorKaart({ columns: 12 }, { max_columns: 6 }).gridColumn, "span 6");
+  });
+
+  it("zonder grenzen blijft alles precies zoals het was", () => {
+    assert.deepEqual(indelingVoorKaart({ columns: 6, rows: 1 }, null), {
+      gridColumn: "span 6",
+      height: "56px",
+    });
+  });
+
+  it("trekt zich niets aan van onzin als grens", () => {
+    assert.equal(indelingVoorKaart({ rows: 2 }, { min_rows: "veel", max_rows: null }).height, "120px");
+  });
+
+  it("geeft de klem door via pasIndelingToe", () => {
+    const el = { style: {} };
+    pasIndelingToe(el, { columns: 6, rows: 1 }, { min_rows: 3 });
+    assert.equal(el.style.height, "184px");
+  });
+});
+
+describe("grenzenVan — NIEUW GEDRAG", () => {
+  it("leest getGridOptions van het kaartelement in de hui-card", () => {
+    const hui = { _element: { getGridOptions: () => ({ min_rows: 3 }) } };
+    assert.deepEqual(grenzenVan(hui), { min_rows: 3 });
+  });
+
+  it("valt terug op de shadow root als _element er niet is", () => {
+    const hui = { shadowRoot: { firstElementChild: { getGridOptions: () => ({ max_rows: 1 }) } } };
+    assert.deepEqual(grenzenVan(hui), { max_rows: 1 });
+  });
+
+  it("geeft null als het element er nog niet is, zodat de aanroeper wacht", () => {
+    assert.equal(grenzenVan(null), null);
+    assert.equal(grenzenVan({}), null);
+    assert.equal(grenzenVan({ _element: {} }), null);
+  });
+
+  it("laat een kaart van iemand anders die gooit de tab niet slopen", () => {
+    const hui = { _element: { getGridOptions: () => { throw new Error("boem"); } } };
+    assert.equal(grenzenVan(hui), null);
   });
 });

@@ -37,6 +37,7 @@ from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
 from .alarm import voorbeeld as alarm_voorbeeld
 from .alarm import websocket as alarm_websocket
+from .media import sleeptimer as media_sleeptimer
 from .media import websocket as media_websocket
 from .alarm.const import DATA_PLANNER as ALARM_DATA_PLANNER
 from .alarm.const import DATA_STORE as ALARM_DATA_STORE
@@ -279,6 +280,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("%d afgaande wekker(s) gestopt bij unload", gestopt)
 
         await alarm_voorbeeld.async_stop_alles(hass)
+
+        # En de sleeptimers van de mediakant, om precies dezelfde reden: een
+        # timer die blijft tikken op een losgelaten hass.data zet straks het
+        # volume van een speler die niemand meer beheert.
+        if (sleeptimers := data.pop(media_sleeptimer.DATA_SLEEPTIMER, None)) is not None:
+            sleeptimers.stop_alles()
+            _LOGGER.debug("Sleeptimers gestopt bij unload")
 
         if data.pop(ALARM_DATA_STORE, None) is not None:
             _LOGGER.debug("Wekkeropslag losgelaten")

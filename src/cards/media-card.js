@@ -85,6 +85,7 @@ import { actieveSpeler, schrijfSpeler, spelersVan } from "./media-logica.js";
 import { toonZoekscherm } from "../media/zoekscherm.js";
 import { toonBronkiezer } from "../media/bronkiezer.js";
 import { toonSpelerKiezer } from "../media/spelerkiezer.js";
+import { toonSleepTimer } from "../media/sleeptimer.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Het icoon en het voorleeslabel per knop. */
@@ -97,6 +98,7 @@ const KNOPPEN = {
   shuffle: { icon: "shuffle", label: "Willekeurig afspelen" },
   repeat: { icon: "repeat", label: "Herhalen" },
   search: { icon: "search", label: "Zoeken in Music Assistant" },
+  sleep: { icon: "sleep", label: "Sleeptimer" },
 };
 
 class MediaCard extends DacCard {
@@ -541,6 +543,11 @@ class MediaCard extends DacCard {
         const lijst = this.spelers_();
         return toonSpelerKiezer(this.hass, lijst, id, (keuze) => this.kiesSpeler_(keuze));
       }
+      case "sleep":
+        // De timer loopt op de speler die je HOORT. Bij een groep is dat de
+        // hoofdspeler, en dat is dezelfde entiteit waar de rest van deze kaart
+        // ook op werkt.
+        return toonSleepTimer(this.hass, id, nameOf(this.hass, id, this.config.name));
       case "search":
         // Eén knop, één scherm: zoeken bovenaan, de speakers onderin.
         return toonZoekscherm(this.hass, id, nameOf(this.hass, id, this.config.name), {
@@ -727,7 +734,10 @@ class MediaCard extends DacCard {
     const soorten =
       dood || this.config.show_controls === false
         ? []
-        : extraVoor(st, { zoeken: this.config.show_search !== false });
+        : extraVoor(st, {
+            zoeken: this.config.show_search !== false,
+            sleep: this.config.sleep_timer === true,
+          });
     box.hidden = !soorten.length;
     const sig = soorten.join(",");
     if (box.dataset.sig !== sig) {
@@ -866,6 +876,7 @@ class MediaEditor extends DacEditor {
         },
       },
       { name: "show_search", selector: sel.bool() },
+      { name: "sleep_timer", selector: sel.bool() },
       { name: "icon_tap_action", selector: sel.action("toggle") },
       { name: "icon_hold_action", selector: sel.action("more-info") },
       { name: "tap_action", selector: sel.action("more-info") },
@@ -889,6 +900,7 @@ class MediaEditor extends DacEditor {
         radio_mode: "Doorspelen na een nummer",
         speakers: "Speakers om mee te groeperen",
         show_search: "Zoeken en groeperen tonen",
+        sleep_timer: "Sleeptimer tonen",
         icon_tap_action: "Tikken op het icoon",
         icon_hold_action: "Vasthouden op het icoon",
         tap_action: "Tikken op de kaart",
@@ -912,6 +924,8 @@ class MediaEditor extends DacEditor {
       return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
     if (s.name === "show_volume")
       return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+    if (s.name === "sleep_timer")
+      return "Zet er een knop bij waarmee je instelt hoe lang de muziek nog mag doorspelen. De laatste seconden zakt het volume weg, daarna pauzeert de speler en gaat het volume terug naar waar het stond. De timer loopt in Home Assistant zelf, dus hij telt gewoon door als je je telefoon weglegt.";
     if (s.name === "speakers")
       return "De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg op een algemene mediaspeler, dan zijn dat dezelfde speakers als in de keuzelijst; op een gewone kaart valt hij terug op het label \"Music Assistant Media\" in Home Assistant.";
     if (s.name === "radio_mode")

@@ -35,6 +35,7 @@ import { bindActions, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { zetScrollSlot } from "../scrollslot.js";
 import { Herkansing, nogNietGereed } from "../herkansing.js";
+import { vraagBevestiging } from "../vraag.js";
 import { KENMERK, isGedempt, kan, volumePct } from "../cards/media-logica.js";
 import {
   BIB_SOORTEN,
@@ -454,6 +455,14 @@ const css = /* css */ `
     background: none; border: 0; border-radius: 8px; color: var(--dac-ink);
   }
   @media (hover: hover) { .menu button:hover { background: var(--dac-surface-hi); } }
+  /* Verwijderen staat als enige in de kritieke kleur, met een streep erboven.
+     Zonder dat verschil staat "Afspeellijst verwijderen" precies zo in de rij
+     als "Nu afspelen", en dat is de plek waar een duim per ongeluk landt. */
+  .menu button.kritiek { color: var(--dac-bad); margin-top: 4px; }
+  .menu button.kritiek::before {
+    content: ""; display: block; height: 1px; margin: -4px -6px 8px;
+    background: var(--dac-border);
+  }
   .menu .titel {
     padding: 6px 12px 8px; font-size: 11.5px; color: var(--dac-ink-3);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;
@@ -944,31 +953,47 @@ class MediaBrowser extends HTMLElement {
     }
   }
 
-  async lijstWeg_() {
-    const lijst = this.lijst_;
+  /**
+   * Een afspeellijst weggooien, met een echte vraag ervoor.
+   *
+   * WAT HIER STOND EN WAAROM HET WEG IS
+   *
+   * Twee keer tikken op de prullenbak, met de knop vier seconden rood. De
+   * redenering was dat een dialoog op een tablet in kioskmodus achter het
+   * scherm zou kunnen vallen. Maar de eigenaar vroeg er op 27 augustus 2026
+   * letterlijk om -- *"als ik op verwijderen klik wil ik wel een confirmation
+   * message hebben"* -- en hij heeft gelijk: twee keer tikken is geen vraag,
+   * het is dezelfde handeling nog een keer. Wie de eerste tik per ongeluk deed,
+   * doet de tweede net zo makkelijk.
+   *
+   * `vraagBevestiging` is ons eigen scherm en hangt aan `document.body`, dus
+   * het valt nergens achter. Zie valkuil 26 voor waarom het HA's `dialog-box`
+   * niet is.
+   *
+   * @param {object} [welke] de lijst uit het driepuntjesmenu; zonder deze
+   *   parameter is het de lijst die openstaat (de prullenbak in de kop).
+   */
+  async lijstWeg_(welke) {
+    const lijst = welke ?? this.lijst_;
     if (!lijst) return;
-    // Twee keer tikken om te bevestigen. Geen dialoog: die staat op een tablet
-    // in kioskmodus achter het scherm, en dit is niet onomkeerbaar genoeg voor
-    // een heel scherm -- de nummers blijven gewoon in de bibliotheek staan.
-    const knop = this.$(".weglijst");
-    if (knop.dataset.zeker !== "ja") {
-      knop.dataset.zeker = "ja";
-      knop.title = "Nog een keer tikken om te verwijderen";
-      knop.style.color = "var(--dac-bad)";
-      setTimeout(() => {
-        knop.dataset.zeker = "";
-        knop.style.color = "";
-      }, 4000);
-      return;
-    }
-    knop.dataset.zeker = "";
-    knop.style.color = "";
+
+    const ja = await vraagBevestiging({
+      title: "Afspeellijst verwijderen?",
+      text: `"${lijst.name}" wordt uit Music Assistant gehaald. De nummers zelf blijven gewoon in je bibliotheek staan.`,
+      confirmText: "Verwijderen",
+      dismissText: "Annuleren",
+    });
+    if (!ja) return;
+
     try {
       await verwijderLijst(this.hass, lijst);
-      this.lijst_ = null;
+      // Alleen terug naar het overzicht als DEZE lijst openstond. Verwijder je
+      // er een vanuit de zoekresultaten, dan hoor je te blijven waar je bent.
+      if (this.lijst_ && this.lijst_.uri === lijst.uri) this.lijst_ = null;
+      this.melding_(`"${lijst.name}" verwijderd`);
       this.naarTab_("lijsten");
     } catch (fout) {
-      this.leegMelding_("Verwijderen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.melding_(fout?.message ?? "Verwijderen lukte niet", true);
     }
   }
 
@@ -1259,6 +1284,18 @@ class MediaBrowser extends HTMLElement {
       // ook niet -- MA neemt losse nummers en albums aan.
       (treffer.uri && !inLijst && treffer.media_type !== "playlist"
         ? `<button type="button" data-toe>Aan afspeellijst toevoegen</button>`
+        : "") +
+      // Gevraagd op 27 augustus 2026: *"Ook kan ik geen afspeellijst
+      // verwijderen, ik klik op de drie puntjes en dan staat er geen
+      // verwijderen tussen."* Dat klopte: verwijderen zat alleen achter de
+      // prullenbak in de KOP van een geopende lijst, en dus alleen als je de
+      // lijst eerst had geopend. Nu staat hij waar hij gezocht werd.
+      //
+      // Alleen bij een bewerkbare afspeellijst. Een lijst van Spotify zelf is
+      // niet van jou; MA weigert dat, en een knop die altijd een foutmelding
+      // geeft is erger dan geen knop.
+      (treffer.media_type === "playlist" && treffer.is_editable
+        ? `<button type="button" class="kritiek" data-lijstweg>Afspeellijst verwijderen</button>`
         : "");
     menu.hidden = false;
 
@@ -1281,6 +1318,10 @@ class MediaBrowser extends HTMLElement {
         ));
       }
       if (e.target.closest("[data-toe]")) return this.kiesLijstVoor_(treffer);
+      if (e.target.closest("[data-lijstweg]")) {
+        this.menuDicht_();
+        return this.lijstWeg_(treffer);
+      }
       return undefined;
     };
   }
