@@ -264,6 +264,73 @@ async def test_alleen_afwezig_meldt_wel_als_er_niemand_thuis_is(
     stuur_melding.assert_awaited_once()
 
 
+async def test_een_melder_bij_twee_cameras_levert_van_allebei_een_beeld(
+    hass: HomeAssistant, bewaking_op, index
+) -> None:
+    """Een melder die nergens aan te koppelen is, hoort bij ALLE camera's.
+
+    Dat is wat `camera-logica.js` doet, en dan hoort er ook van elke camera een
+    beeld te komen: je weet niet welke hem gezien heeft, en dat is precies de
+    reden dat hij bij allemaal hoort.
+
+    Eerder werd de eerste de beste regel gepakt -- willekeurig, want dat hing
+    aan de volgorde in de opslag.
+    """
+    from custom_components.domotiapp_lovelace.bewaking.const import (
+        DATA_MOTOR,
+        DATA_REGELS,
+    )
+    from custom_components.domotiapp_lovelace.bewaking.store import valideer_regel
+    from custom_components.domotiapp_lovelace.const import DOMAIN
+
+    for camera in ("camera.oprit", "camera.achterdeur"):
+        await hass.data[DOMAIN][DATA_REGELS].async_zet(
+            valideer_regel(
+                {"camera": camera, "aan": True, "melders": [MELDER_PERSOON]}
+            )
+        )
+    hass.data[DOMAIN][DATA_MOTOR].async_herzie()
+
+    await detecteer(hass, MELDER_PERSOON)
+
+    beelden = index().alle()
+    assert sorted(b["camera"] for b in beelden) == [
+        "camera.achterdeur",
+        "camera.oprit",
+    ]
+
+
+async def test_een_melder_bij_twee_cameras_heeft_toch_een_klok(
+    hass: HomeAssistant, bewaking_op, index
+) -> None:
+    """Eén gebeurtenis, door twee lenzen gezien -- dus één rustperiode."""
+    from custom_components.domotiapp_lovelace.bewaking.const import (
+        DATA_MOTOR,
+        DATA_REGELS,
+    )
+    from custom_components.domotiapp_lovelace.bewaking.store import valideer_regel
+    from custom_components.domotiapp_lovelace.const import DOMAIN
+
+    for camera in ("camera.oprit", "camera.achterdeur"):
+        await hass.data[DOMAIN][DATA_REGELS].async_zet(
+            valideer_regel(
+                {
+                    "camera": camera,
+                    "aan": True,
+                    "melders": [MELDER_PERSOON],
+                    "rustperiode": 60,
+                }
+            )
+        )
+    hass.data[DOMAIN][DATA_MOTOR].async_herzie()
+
+    await detecteer(hass, MELDER_PERSOON)
+    await herstel(hass, MELDER_PERSOON)
+    await detecteer(hass, MELDER_PERSOON)
+
+    assert len(index().alle()) == 2  # één ronde van twee camera's, niet twee
+
+
 async def test_de_oudste_gaat_eruit_voordat_de_nieuwe_erin_gaat(
     hass: HomeAssistant, bewaking_op, zet_regel, index, beeldmap, monkeypatch
 ) -> None:

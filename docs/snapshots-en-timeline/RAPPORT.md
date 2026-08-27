@@ -38,7 +38,7 @@ En één correctie, die de vorm van de motor bepaalt:
 | Timeline onder de kaart, alle camera's gemengd | `src/cards/camera-card.js` |
 | Opruimen: een week én 500 per camera | `bewaking/opruimen.py` |
 
-**591 Python-tests groen, 851 JS-tests groen, alle vier de checks groen.**
+**593 Python-tests groen, 851 JS-tests groen, alle vier de CI-checks groen.**
 
 ## Waarom dit in de integratie zit en niet in de kaart
 
@@ -144,9 +144,10 @@ dus een wandtablet met een open kaart blijft bij zonder te pollen.
 - Twee camera's op één kaart: `["Oprit / Persoon · 23:01", "Achterdeur /
   Voertuig · 23:01", "Oprit / Persoon · 22:58", ...]`.
 
-## Vier dingen die de proef in de browser aan het licht bracht
+## Vijf dingen die de proef aan het licht bracht
 
-Alle vier gerepareerd in dezelfde ronde.
+Alle vijf gerepareerd in dezelfde ronde. De eerste vier kwamen uit de browser,
+de vijfde uit het nalezen erna.
 
 ### 1. Het voorbeeld in de editor schreef naar de server
 
@@ -192,7 +193,20 @@ De kiezerrij zei "Achterdeur", de miniatuur eronder `127_0_0_1_2`. Kwam doordat
 de timeline `nameOf` gebruikte in plaats van `camNaam_`, die ook het "Naam"-veld
 en de `cam:`-velden uit de editor meeneemt.
 
-### 4. De datum stond in het Engels
+### 4. Een melder bij meerdere camera's leverde één willekeurig beeld
+
+Niet uit de browserproef maar uit het nalezen erna. `camera-logica.js` koppelt
+een melder die nergens aan te koppelen is aan **alle** camera's van de kaart --
+dat is bestaand en bewust gedrag, want een melder die je hebt ingesteld en die
+nergens verschijnt is erger dan eentje die een keer te vaak verschijnt.
+
+De motor pakte dan de eerste de beste regel. Eén beeld dus, van een camera die
+door de volgorde in de opslag werd aangewezen. Nu komt er van elke camera een
+beeld -- je weet immers niet welke hem gezien heeft, en dát is precies waarom
+hij bij allemaal hoort. De rustperiode blijft één klok: het is één gebeurtenis
+die door meerdere lenzen gezien wordt.
+
+### 5. De datum stond in het Engels
 
 `"Thu 27 Aug"` op een Nederlandstalig dashboard: `toLocaleDateString` viel terug
 op de taal van het besturingssysteem. Nu `hass.locale.language`, zoals `ha.js`

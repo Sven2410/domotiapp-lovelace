@@ -150,37 +150,59 @@ class Motor:
             return
 
         melder = event.data["entity_id"]
-        regel = self._regel_voor_melder(melder)
-        if regel is None:
+        regels = self._regels_voor_melder(melder)
+        if not regels:
             return
 
+        # De langste rustperiode wint als deze melder aan meer dan één camera
+        # hangt. Anders zou de kortste bepalen hoe vaak de andere camera een
+        # beeld maakt, en dat is niet wat daar is ingevuld.
+        rustperiode = max(regel.rustperiode for regel in regels)
+
         nu = dt_util.utcnow()
-        if not self._mag_nu(melder, regel.rustperiode, nu):
+        if not self._mag_nu(melder, rustperiode, nu):
             _LOGGER.debug(
                 "%s viel binnen de rustperiode van %ss en is overgeslagen",
                 melder,
-                regel.rustperiode,
+                rustperiode,
             )
             return
 
-        # De klok gaat NU om, niet na afloop. Zie de kop van dit bestand.
+        # De klok gaat NU om, niet na afloop. Zie de kop van dit bestand. Eén
+        # klok voor deze melder, ook als er meerdere camera's aan hangen: het is
+        # één gebeurtenis die door meerdere lenzen gezien wordt.
         self._laatste[melder] = nu
 
-        # De naam uit de editor gaat voor die van Home Assistant: de eigenaar
-        # heeft in de camerakaart al per melder ingevuld hoe die heet, en dat is
-        # de naam die op de kaart staat. Twee namen voor dezelfde melder zou
-        # betekenen dat de melding iets anders zegt dan de timeline.
-        naam = regel.namen.get(melder) or nieuw.attributes.get("friendly_name")
-        taak = self._hass.async_create_task(self._async_leg_vast(regel, melder, naam))
-        self._taken.add(taak)
-        taak.add_done_callback(self._taken.discard)
+        for regel in regels:
+            # De naam uit de editor gaat voor die van Home Assistant: de eigenaar
+            # heeft in de camerakaart al per melder ingevuld hoe die heet, en dat
+            # is de naam die op de kaart staat. Twee namen voor dezelfde melder
+            # zou betekenen dat de melding iets anders zegt dan de timeline.
+            naam = regel.namen.get(melder) or nieuw.attributes.get("friendly_name")
+            taak = self._hass.async_create_task(
+                self._async_leg_vast(regel, melder, naam)
+            )
+            self._taken.add(taak)
+            taak.add_done_callback(self._taken.discard)
 
     @callback
-    def _regel_voor_melder(self, melder: str):
-        for regel in self._regels.actieve():
-            if melder in regel.melders:
-                return regel
-        return None
+    def _regels_voor_melder(self, melder: str) -> list:
+        """Alle camera's waar deze melder aan hangt.
+
+        Meestal precies één: `camera-logica.js` koppelt een melder aan de camera
+        waar hij op hetzelfde apparaat zit, en bij een Reolink is dat een feit.
+
+        Maar een melder die NERGENS aan te koppelen is -- een sjabloonsensor
+        bijvoorbeeld -- hoort volgens diezelfde logica bij álle camera's van de
+        kaart, en dan staat hij ook in alle regels. Dan hoort er ook van elke
+        camera een beeld te komen: je weet immers niet welke het gezien heeft,
+        en dát is precies waarom hij bij allemaal hoort.
+
+        Eerder werd hier de eerste de beste regel gepakt. Dat leverde één beeld
+        op van een willekeurige camera -- willekeurig, want het hing aan de
+        volgorde in de opslag.
+        """
+        return [regel for regel in self._regels.actieve() if melder in regel.melders]
 
     def _mag_nu(self, melder: str, rustperiode: int, nu: datetime) -> bool:
         if rustperiode <= 0:
