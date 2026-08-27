@@ -12,6 +12,24 @@
  * Welke speelt er al iets? Welke staat uit? Dat wil je zien voordat je kiest,
  * niet erna. Vandaar een lijst met per regel de naam en wat er speelt.
  *
+ * ## Kiezen en koppelen op ÉÉN scherm
+ *
+ * Sinds 0.21.0 zit het koppelen hier ook. Tot dan kon je op een algemene
+ * mediakaart wel groeperen, maar alleen via de zoekknop -- een scherm verder dan
+ * de speakerkiezer, en dus precies niet waar je het zoekt. Een echte Sonos-kaart
+ * doet kiezen én koppelen naast elkaar, en dat was de openstaande wens.
+ *
+ * De twee handelingen zijn met opzet UIT ELKAAR getrokken en niet samengevoegd:
+ *
+ * - **op de regel tikken** kiest waar de kaart over gaat. De rest van de kaart
+ *   bedient daarna die speler.
+ * - **op het schakelaartje rechts tikken** laat die speaker meespelen met wat er
+ *   nu speelt, of haalt hem eruit. Het scherm blijft dan open, want koppelen doe
+ *   je zelden één voor één -- je zet de keuken erbij, en dan de tuin.
+ *
+ * Ze samenvoegen tot "tikken = ook koppelen" zou betekenen dat je niet meer naar
+ * een andere speaker kunt overstappen zonder de eerste mee te slepen.
+ *
  * ## Waarom dit in `document.body` hangt
  *
  * Zelfde reden als bij het zoekscherm en de bronkiezer: een `position: fixed`
@@ -24,6 +42,7 @@ import { sheet, tokens } from "../theme.js";
 import { resolve } from "../icons.js";
 import { localizeState, nameOf, stateOf } from "../ha.js";
 import { isSpelend, isUit, mediaIcoon, watSpeeltEr } from "../cards/media-logica.js";
+import { koppelOproep, koppelStand } from "./koppelen.js";
 
 const css = /* css */ `
   :host {
@@ -116,6 +135,32 @@ const css = /* css */ `
     color: var(--dac-accent-hi);
   }
 
+  /* ---- meespelen ----
+     Een eigen knop naast de regel en niet erin: een knop in een knop bestaat
+     niet in HTML, en een tik hierop moet iets ánders doen dan een tik op de
+     regel. Dezelfde afspraak als bij het hartje in het zoekscherm. */
+  .rij { display: flex; align-items: stretch; gap: 8px; }
+  .rij .sp { flex: 1 1 auto; min-width: 0; }
+  .mee {
+    flex: 0 0 auto; width: 52px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    cursor: pointer; padding: 0; font: inherit;
+    border-radius: var(--dac-radius-sm);
+    border: 1px solid var(--dac-border); background: var(--dac-surface);
+    color: var(--dac-ink-3);
+    transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+  }
+  .mee .icon { width: 17px; height: 17px; }
+  .mee span { font-size: 9px; letter-spacing: .04em; }
+  .mee[aria-pressed="true"] {
+    color: var(--dac-accent-hi);
+    border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
+    background: color-mix(in srgb, var(--dac-accent) 16%, transparent);
+  }
+  .mee:disabled { opacity: .3; cursor: default; }
+  .mee[hidden] { display: none; }
+  @media (hover: hover) { .mee:not(:disabled):hover { border-color: var(--dac-border-hi); } }
+
   .leeg { padding: 28px 16px; text-align: center; color: var(--dac-ink-3); font-size: 13px; }
 
   :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
@@ -192,6 +237,13 @@ class SpelerKiezer extends HTMLElement {
       if (e.key === "Escape" && this.hasAttribute("open")) this.sluit();
     });
     aan(this.$(".lijst"), "click", (e) => {
+      // Eerst de koppelknop: die ligt naast de regel, dus zonder deze toets
+      // wint straks alsnog de regel als er ooit iets aan de opmaak verandert.
+      const mee = e.target.closest(".mee");
+      if (mee) {
+        e.stopPropagation();
+        return this.koppel_(mee.dataset.id);
+      }
       const knop = e.target.closest(".sp");
       if (!knop) return;
       this.kies_(knop.dataset.id);
@@ -202,8 +254,25 @@ class SpelerKiezer extends HTMLElement {
     return this.shadowRoot.querySelector(sel);
   }
 
+  /**
+   * Elke nieuwe `hass` tekent het scherm opnieuw, zolang het openstaat.
+   *
+   * Dat is nodig sinds hier gekoppeld kan worden: `group_members` verandert pas
+   * als de speakers het bevestigd hebben, en zonder deze setter zou de knop op
+   * "ERBIJ" blijven staan terwijl de speaker allang meespeelt. De mediakaart
+   * geeft zijn `hass` door in `paint()`, net als bij het zoekscherm.
+   */
+  set hass(hass) {
+    this.hass_ = hass;
+    if (this.hasAttribute("open") && this.gebouwd_) this.teken_();
+  }
+
+  get hass() {
+    return this.hass_;
+  }
+
   open(hass, lijst, huidig, opKeuze) {
-    this.hass = hass;
+    this.hass_ = hass;
     this.lijst_ = Array.isArray(lijst) ? lijst : [];
     this.huidig_ = huidig;
     this.opKeuze_ = opKeuze;
@@ -243,18 +312,52 @@ class SpelerKiezer extends HTMLElement {
         const st = stateOf(this.hass, id);
         const huidig = id === this.huidig_;
         const wat = isUit(st) ? "Uit" : watSpeeltEr(st, (x) => localizeState(this.hass, x));
-        return `<button class="sp" type="button" role="option" data-id="${veilig(id)}"
-                  data-speelt="${isSpelend(st)}" data-uit="${isUit(st)}"
-                  aria-current="${huidig}" aria-selected="${huidig}">
-                  <span class="ico">${resolve(mediaIcoon(st), "speaker")}</span>
-                  <span class="tekst">
-                    <b>${veilig(nameOf(this.hass, id))}</b>
-                    <span>${veilig(wat)}</span>
-                  </span>
-                  ${huidig ? `<span class="nu">NU</span>` : ""}
-                </button>`;
+        const stand = koppelStand(this.hass, id, this.huidig_);
+        const mee = stand === "mee";
+        return `<div class="rij">
+                  <button class="sp" type="button" role="option" data-id="${veilig(id)}"
+                    data-speelt="${isSpelend(st)}" data-uit="${isUit(st)}"
+                    aria-current="${huidig}" aria-selected="${huidig}">
+                    <span class="ico">${resolve(mediaIcoon(st), "speaker")}</span>
+                    <span class="tekst">
+                      <b>${veilig(nameOf(this.hass, id))}</b>
+                      <span>${veilig(mee ? `${wat} · speelt mee` : wat)}</span>
+                    </span>
+                    ${huidig ? `<span class="nu">NU</span>` : ""}
+                  </button>
+                  <button class="mee" type="button" data-id="${veilig(id)}"
+                    aria-pressed="${mee}" ${stand === "zelf" || stand === "kan-niet" ? "disabled" : ""}
+                    ${stand === "zelf" ? "hidden" : ""}
+                    aria-label="${mee ? "Laat deze speaker niet meer meespelen" : "Laat deze speaker meespelen"}"
+                    title="${
+                      stand === "kan-niet"
+                        ? "Deze speaker laat zich niet koppelen"
+                        : mee
+                          ? "Speelt mee — tik om los te koppelen"
+                          : "Laat meespelen met wat er nu speelt"
+                    }">
+                    ${resolve(mee ? "volume" : "speakers")}<span>${mee ? "MEE" : "ERBIJ"}</span>
+                  </button>
+                </div>`;
       })
       .join("");
+  }
+
+  /**
+   * Laat deze speaker meespelen, of haal hem eruit.
+   *
+   * Het scherm blijft OPEN, anders dan bij het kiezen. Koppelen doe je zelden
+   * één voor één: je zet de keuken erbij, en dan de tuin. Elke keer opnieuw het
+   * scherm moeten openen is precies waarom dit eerst achter de zoekknop zat en
+   * niemand het vond.
+   */
+  koppel_(id) {
+    const oproep = koppelOproep(this.hass, id, this.huidig_);
+    if (!oproep) return;
+    this.hass.callService(oproep.domein, oproep.service, oproep.data, oproep.doel);
+    // Home Assistant meldt de nieuwe groep pas als de speakers het bevestigd
+    // hebben. Tot die tijd blijft de knop staan zoals hij stond; de volgende
+    // `hass` tekent het scherm opnieuw.
   }
 
   kies_(id) {

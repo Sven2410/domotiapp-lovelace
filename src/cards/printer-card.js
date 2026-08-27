@@ -232,6 +232,25 @@ class PrinterCard extends DacCard {
       font-size: 11px; color: var(--dac-ink-2); line-height: 1.2;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* Hoeveel er nog op de rol zit, als een streepje onder het kleurvlakje.
+       Een getal erbij zou vier keer op een rij staan en de rij onleesbaar
+       maken; een streepje lees je in één blik. Bambu meldt dit alleen als de
+       rol een chip heeft (remain_enabled), dus het staat er niet altijd. */
+    .tray .vlak { position: relative; }
+    .tray .vlak i {
+      position: absolute; left: 0; right: 0; bottom: -4px; height: 2px;
+      border-radius: 1px; background: var(--dac-border-hi);
+    }
+    .tray .vlak i::after {
+      content: ""; display: block; height: 100%; width: var(--rest, 0%);
+      border-radius: 1px; background: var(--dac-ink-2);
+    }
+    /* De tray die de printer op dit moment gebruikt. Eén rand, geen kleur:
+       kleur is hier het filament en niet de toestand. */
+    .tray[data-actief="true"] {
+      border-color: var(--dac-accent-hi);
+      background: color-mix(in srgb, var(--dac-accent) 14%, transparent);
+    }
 
     :host([dead]) .card { opacity: .45; }
 
@@ -550,19 +569,29 @@ class PrinterCard extends DacCard {
       })
     );
 
-    const sig = gegevens.map((t) => `${t.kleur}|${t.soort}|${t.leeg}`).join(",");
+    const sig = gegevens
+      .map((t) => `${t.kleur}|${t.soort}|${t.leeg}|${t.actief}|${t.rest}`)
+      .join(",");
     if (rij.dataset.sig === sig) return;
     rij.dataset.sig = sig;
     rij.innerHTML = gegevens
-      .map(
-        (t, i) =>
-          `<div class="tray" data-leeg="${t.leeg}" style="--kleur:${t.kleur ?? "transparent"}"` +
-          ` title="Tray ${i + 1}${t.soort ? `: ${this.veilig_(t.soort)}` : ""}">` +
-          `<span class="vlak"></span>` +
+      .map((t, i) => {
+        const titel =
+          `Tray ${i + 1}` +
+          (t.leeg ? ": leeg" : t.soort ? `: ${t.soort}` : "") +
+          (t.rest === null ? "" : ` — nog ${t.rest}%`) +
+          (t.actief ? " (in gebruik)" : "");
+        return (
+          `<div class="tray" data-leeg="${t.leeg}" data-actief="${t.actief}"` +
+          ` style="--kleur:${t.kleur ?? "transparent"}" title="${this.veilig_(titel)}">` +
+          `<span class="vlak">${
+            t.rest === null ? "" : `<i style="--rest:${t.rest}%"></i>`
+          }</span>` +
           `<span class="txt"><span class="nr">Tray ${i + 1}</span>` +
           `<span class="so">${this.veilig_(t.leeg ? "leeg" : t.soort || "gevuld")}</span></span>` +
           `</div>`
-      )
+        );
+      })
       .join("");
   }
 

@@ -174,9 +174,19 @@ describe("trayKleur — NIEUW GEDRAG", () => {
     assert.equal(trayKleur("00000000"), null);
   });
 
-  it("laat een naam en een rgb() gewoon door", () => {
-    assert.equal(trayKleur("red"), "red");
+  it("laat een rgb() altijd door -- dat is ondubbelzinnig een kleur", () => {
     assert.equal(trayKleur("rgb(12, 34, 56)"), "rgb(12, 34, 56)");
+  });
+
+  it("neemt een NAAM alleen aan als er expliciet om gevraagd wordt", () => {
+    // Wie in de editor "red" typt bedoelt rood. Maar een attribuut dat "PLA"
+    // bevat is geen kleur -- en dat is precies wat er misging: het SOORT
+    // filament gold als kleur, en de tray werd daarna als leeg gezien.
+    assert.equal(trayKleur("red"), null);
+    assert.equal(trayKleur("red", { namen: true }), "red");
+    assert.equal(trayKleur("PLA"), null);
+    assert.equal(trayKleur("PLA", { namen: true }), "PLA");
+    assert.equal(trayKleur("unknown", { namen: true }), null);
   });
 
   it("geeft null bij onzin", () => {
@@ -187,10 +197,87 @@ describe("trayKleur — NIEUW GEDRAG", () => {
   });
 });
 
+/**
+ * De echte attributen van zijn AMS 2 Pro, opgestuurd op 27 augustus 2026.
+ * Letterlijk overgenomen: dit is de vorm waar de kaart het bij hém mee moet doen.
+ */
+const AMS_TRAY_1 = {
+  slot: 1,
+  active: false,
+  bed_temp: 0,
+  color: "#FFFFFFFF",
+  cols: "#FFFFFFFF",
+  ctype: 2,
+  dry_temp: 0,
+  dry_time: 0,
+  empty: false,
+  unknown: false,
+  state: 11,
+  filament_id: "GFA01",
+  tray_weight: 1000,
+  name: "Bambu PLA Matte",
+  nozzle_temp_min: 190,
+  nozzle_temp_max: 230,
+  remain: 97,
+  remain_enabled: true,
+  tag_uid: "E2C5476D00000100",
+  tray_uuid: "05F284CA42C44B029957FD9605ECB7FD",
+  type: "PLA",
+  icon: "mdi:printer-3d-nozzle",
+  friendly_name: "X2D_20P8BJ5A1500227_AMS_1 Tray 1",
+};
+
+describe("tray — de echte AMS van de eigenaar — NIEUW GEDRAG", () => {
+  it("leest kleur, naam en restpercentage uit zijn eigen attributen", () => {
+    const t = tray(s("PLA", AMS_TRAY_1));
+    // `#FFFFFFFF` is RRGGBBAA. Het alfakanaal moet eraf.
+    assert.equal(t.kleur, "#FFFFFF");
+    // `name` gaat vóór `type`: met vier trays PLA is "PLA" vier keer hetzelfde
+    // woord, en "Bambu PLA Matte" zegt welke rol erin zit.
+    assert.equal(t.soort, "Bambu PLA Matte");
+    assert.equal(t.rest, 97);
+    assert.equal(t.leeg, false);
+    assert.equal(t.actief, false);
+  });
+
+  it("gelooft `empty` van de printer boven zijn eigen gok", () => {
+    // Een lege tray die nog een kleur in zijn geheugen heeft zou anders als
+    // gevuld op de kaart komen.
+    const t = tray(s("PLA", { ...AMS_TRAY_1, empty: true }));
+    assert.equal(t.leeg, true);
+    assert.equal(t.kleur, null);
+    assert.equal(t.rest, null);
+  });
+
+  it("laat het restpercentage weg als de rol geen chip heeft", () => {
+    const t = tray(s("PLA", { ...AMS_TRAY_1, remain_enabled: false }));
+    assert.equal(t.rest, null);
+    assert.equal(t.soort, "Bambu PLA Matte");
+  });
+
+  it("markeert de tray die de printer op dit moment gebruikt", () => {
+    assert.equal(tray(s("PLA", { ...AMS_TRAY_1, active: true })).actief, true);
+  });
+
+  it("leest `cols` als er geen `color` is", () => {
+    const zonder = { ...AMS_TRAY_1 };
+    delete zonder.color;
+    assert.equal(tray(s("PLA", zonder)).kleur, "#FFFFFF");
+    // En bij tweekleurig filament is de eerste de kleur die je ziet.
+    assert.equal(tray(s("PLA", { cols: ["#FF6A13FF", "#000000FF"] })).kleur, "#FF6A13");
+  });
+});
+
 describe("tray — NIEUW GEDRAG", () => {
   it("haalt kleur en soort uit de attributen", () => {
     const t = tray(s("PLA", { color: "FF6A13FF", type: "PLA Basic", remain: 62 }));
-    assert.deepEqual(t, { kleur: "#FF6A13", soort: "PLA Basic", leeg: false, rest: 62 });
+    assert.deepEqual(t, {
+      kleur: "#FF6A13",
+      soort: "PLA Basic",
+      leeg: false,
+      actief: false,
+      rest: 62,
+    });
   });
 
   it("kent de andere namen die integraties gebruiken", () => {
