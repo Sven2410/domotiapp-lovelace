@@ -71,6 +71,7 @@ import {
   herhaalStand,
   isActief,
   isGedempt,
+  heeftVolume,
   isSpelend,
   isUit,
   knoppenVoor,
@@ -665,7 +666,8 @@ class MediaCard extends DacCard {
       return;
     }
 
-    const sig = [...delen, bron ? "bron" : ""].join(",");
+    const toonPct = heeftVolume(gst) && (delen.includes("slider") || delen.includes("steps"));
+    const sig = [...delen, bron ? "bron" : "", toonPct ? "pct" : ""].join(",");
     if (box.dataset.sig !== sig) {
       box.dataset.sig = sig;
       box.innerHTML =
@@ -677,7 +679,10 @@ class MediaCard extends DacCard {
           ? `<button class="k" type="button" data-k="vol-" aria-label="Zachter">${resolve("minus")}</button>` +
             `<button class="k" type="button" data-k="vol+" aria-label="Harder">${resolve("plus")}</button>`
           : "") +
-        `<span class="pct tnum"></span>` +
+        // Het percentage alleen als de speler zijn volume ook echt kent. Een
+        // tv-ontvanger zonder eigen geluid meldde anders "0%" terwijl de
+        // televisie gewoon geluid gaf. Zie `heeftVolume` in media-logica.js.
+        (toonPct ? `<span class="pct tnum"></span>` : "") +
         (bron
           ? `<button class="bronknop" type="button" data-k="bron">${resolve("tv")}<b></b></button>`
           : "");
@@ -726,7 +731,7 @@ class MediaCard extends DacCard {
     }
     // Gedempt is geen volume van 0: de schuif blijft staan waar hij stond, en
     // de tekst zegt wat er aan de hand is.
-    this.text(".pct", gedempt ? "Gedempt" : `${pct}%`);
+    if (toonPct) this.text(".pct", gedempt ? "Gedempt" : `${pct}%`);
   }
 
   paintExtra_(st, dood) {

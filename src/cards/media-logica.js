@@ -106,6 +106,24 @@ export function volumeVoor(st) {
 export const volumePct = (st) =>
   Math.round(Math.min(1, Math.max(0, Number(st?.attributes?.volume_level ?? 0))) * 100);
 
+/**
+ * Heeft deze speler een volume dat iets BETEKENT?
+ *
+ * Gemeld op 27 augustus 2026, met een schermafdruk van zijn tv-ontvanger:
+ * *"als ik een mediabox heb en geen speaker heb geselecteerd, staat het geluid
+ * op nul, maar dan speelt het tv-geluid -- dus dan moet dat weg."*
+ *
+ * Zijn kastje meldt geen `volume_level` en kan er ook niets mee. `volumePct`
+ * maakt van een ontbrekende waarde een 0, en dus stond er "0%" op de kaart
+ * terwijl de tv gewoon geluid gaf. Dat is niet alleen lelijk maar ook onwaar --
+ * het geluid komt van de televisie, en die staat niet op nul.
+ *
+ * Een percentage hoort er dus alleen te staan als de speler het getal ook
+ * werkelijk kent.
+ */
+export const heeftVolume = (st) =>
+  st?.attributes?.volume_level !== undefined && st?.attributes?.volume_level !== null;
+
 export const isGedempt = (st) => Boolean(st?.attributes?.is_volume_muted);
 
 /**
