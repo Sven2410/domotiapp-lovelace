@@ -50,6 +50,7 @@ import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
 import { hoortBij } from "./camera-logica.js";
+import { teVersturen } from "./bewaking-logica.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
@@ -222,6 +223,68 @@ class CameraCard extends DacCard {
       border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
     }
 
+    /* ---- de timeline ----
+       Gevraagd op 27 augustus 2026: *"Ik wil ook een timeline hebben. (...) dan
+       komt er een timeline onder de kaart met de snapshots."*
+
+       Een strook miniaturen, meer niet. Geen knoppen, geen kopjes, geen
+       datumscheidingen: een kaart is beeld. Wélke camera het was staat als
+       klein label in de miniatuur, want de eigenaar koos ervoor de camera's
+       door elkaar te tonen op tijd. */
+    .tijdlijn {
+      display: flex; gap: 6px; padding: 0 10px 11px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .tijdlijn::-webkit-scrollbar { display: none; }
+    .tijdlijn[hidden] { display: none; }
+    /* 104x60 en niet kleiner. Op 27 augustus 2026 in een echte browser gemeten:
+       bij 76x44 was het label 30,7 van de 44 pixels hoog -- dan is de miniatuur
+       een tekstvakje met een randje beeld eromheen, en een kaart hoort beeld te
+       zijn. Bij deze maat is één regel 15px van de 60. */
+    .tijdlijn .mini {
+      flex: 0 0 auto; position: relative; padding: 0; cursor: pointer;
+      width: 104px; height: 60px; overflow: hidden;
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-sm);
+      background: #000;
+    }
+    .tijdlijn .mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* Twee regels over de onderrand: de melder en het tijdstip. Ze staan op het
+       beeld en niet eronder, anders wordt de strook twee keer zo hoog voor twee
+       woorden. */
+    /* Eén regel: "Persoon · 22:58". Staan er meerdere camera's op de kaart, dan
+       komt de camera daar als tweede regel bóven -- want dan zijn de camera's
+       door elkaar gemengd en zegt de tijd alleen niet genoeg. */
+    .tijdlijn .bij {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 10px 5px 3px; font-size: 9.5px; line-height: 1.25; color: #fff;
+      background: linear-gradient(to top, rgba(0,0,0,.8), transparent);
+      text-align: left; text-shadow: 0 1px 2px rgba(0,0,0,.85);
+    }
+    .tijdlijn .bij span {
+      display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tijdlijn .bij .cam { font-size: 8.5px; color: rgba(255,255,255,.72); }
+    .tijdlijn .bij b { font-weight: 600; }
+    @media (hover: hover) { .tijdlijn .mini:hover { border-color: var(--dac-border-hi); } }
+    .tijdlijn .leeg {
+      font-size: 11.5px; color: var(--dac-ink-3); padding: 2px 0 6px;
+    }
+
+    /* Groot bekijken. Eén laag over de kaart heen, tikken sluit hem.
+       Bewust geen dialoog van Home Assistant: die verwacht een eigen element en
+       een eigen levensduur, en dit is één plaatje. */
+    .groot {
+      position: fixed; inset: 0; z-index: 9; display: grid; place-items: center;
+      background: rgba(0,0,0,.86); padding: 16px; cursor: zoom-out;
+    }
+    .groot[hidden] { display: none; }
+    .groot img { max-width: 100%; max-height: 84vh; border-radius: var(--dac-radius-sm); }
+    .groot .onder {
+      position: absolute; left: 0; right: 0; bottom: 14px;
+      text-align: center; color: #fff; font-size: 12.5px;
+      text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    }
+
     :host([dead]) .card { opacity: .5; }
   `;
 
@@ -314,7 +377,9 @@ class CameraCard extends DacCard {
           <div class="presets" hidden></div>
         </div>
         <div class="cams" hidden></div>
-      </div>`;
+        <div class="tijdlijn" hidden></div>
+      </div>
+      <div class="groot" hidden><img alt=""><div class="onder"></div></div>`;
   }
 
   wire() {
@@ -344,6 +409,7 @@ class CameraCard extends DacCard {
 
     this.zoomLuisteraars_();
     this.bewaakStream_();
+    this.bewakingWire_();
   }
 
   /**
@@ -539,6 +605,7 @@ class CameraCard extends DacCard {
     this.paintPtz_();
     this.paintPresets_();
     this.paintCams_(cam);
+    this.paintTijdlijn_();
 
     meetRaster(this.$(".card"));
   }
@@ -879,6 +946,261 @@ class CameraCard extends DacCard {
     };
   }
 
+  /* ------------------------------------------------ snapshots en timeline */
+
+  /**
+   * Zet de timeline aan: regels doorgeven, ophalen wat er ligt, en meeluisteren.
+   *
+   * Draait bij elke aankoppeling, dus ook na elke toetsaanslag in de editor --
+   * `setConfig` gooit de DOM weg en bouwt opnieuw. Vandaar de vertraging op het
+   * doorgeven: tikt iemand "120" in het rustperiodeveld, dan is dat anders drie
+   * schrijfrondes op de server.
+   *
+   * ## Waarom de KAART de regels doorgeeft en niet de editor
+   *
+   * Omdat een dashboard ook met de hand bewerkt wordt, en omdat het gekopieerd
+   * wordt naar een tweede installatie. De config van de kaart is de bron; de
+   * serverkant volgt. Een kaart die getoond wordt, zet de server recht.
+   *
+   * ## En waarom het VOORBEELD in de editor dat juist NIET doet
+   *
+   * Dit stond er eerst wel, met de redenering dat het zichzelf zou herstellen:
+   * annuleer je de dialoog, dan zou de echte kaart zijn eigen config er weer
+   * overheen zetten. **Op 27 augustus 2026 in de browser nagemeten, en dat
+   * gebeurt niet.** Het voorbeeld had `wachttijd: 12` opgestuurd, er is op
+   * Annuleren gedrukt, en vier seconden later stond er nog steeds 12 op de
+   * server terwijl in het dashboard 0 stond.
+   *
+   * De reden: de echte kaart wordt bij het sluiten van de dialoog niet opnieuw
+   * opgebouwd. `wire()` draait bij een aankoppeling en na `setConfig`, en geen
+   * van beide gebeurt als je annuleert. Een instelling die je hebt ingetypt en
+   * daarna weggeklikt, blijft dan draaien.
+   *
+   * Daarom schrijft het voorbeeld niets. Hij toont de timeline wel -- dat is
+   * juist nuttig terwijl je de kaart instelt -- maar de regels gaan pas naar de
+   * server als je Opslaan hebt gedrukt, want dan wordt de echte kaart met de
+   * nieuwe config opnieuw opgebouwd en doet híj het.
+   */
+  bewakingWire_() {
+    const strook = this.$(".tijdlijn");
+    if (!strook) return;
+
+    if (!this.config.snapshots) {
+      strook.hidden = true;
+      this.beelden_ = [];
+      return;
+    }
+
+    this.on(strook, "click", (e) => {
+      const knop = e.target.closest?.("[data-beeld]");
+      if (!knop) return;
+      e.stopPropagation();
+      this.toonGroot_(knop.dataset.beeld);
+    });
+
+    const groot = this.$(".groot");
+    this.on(groot, "click", (e) => {
+      e.stopPropagation();
+      groot.hidden = true;
+    });
+
+    const verbinding = this.hass?.connection;
+    if (!verbinding?.sendMessagePromise) return;
+
+    // Ophalen wat er al ligt, en daarna bijblijven.
+    this.bewakingHaal_();
+    this.bewakingLuister_();
+
+    // En de regels doorgeven, ná de rust. Zie de kop hierboven. De controle op
+    // "sta ik in een dialoog" gebeurt pas in `bewakingRegels_`, niet hier: op
+    // dit moment hangt het voorbeeld nog niet in de dialoog, en dan wijst de
+    // keten omhoog nog nergens heen.
+    clearTimeout(this.regelTimer_);
+    this.regelTimer_ = setTimeout(() => this.bewakingRegels_(), 1500);
+    this.teardown_.push(() => clearTimeout(this.regelTimer_));
+  }
+
+  /**
+   * Staat deze kaart in een dialoog in plaats van op een dashboard?
+   *
+   * Gemeten op 27 augustus 2026, met de kaarteditor open:
+   *
+   *     echt:      hui-grid-section > hui-sections-view > hui-root >
+   *                ha-panel-lovelace > home-assistant-main > home-assistant
+   *     voorbeeld: hui-grid-section > hui-dialog-edit-card > home-assistant
+   *
+   * **Niet op `this.preview` sturen.** Dat lijkt de aangewezen vlag, maar in
+   * dezelfde meting stond hij op ALLEBEI op `true`: zodra het dashboard in
+   * bewerkmodus staat, zet Home Assistant hem ook op de echte kaart.
+   *
+   * De keten omhoog loopt via `getRootNode().host`, want elke stap zit in een
+   * eigen shadow root; `parentElement` houdt bij de eerste op.
+   */
+  inDialoog_() {
+    let node = this;
+    for (let i = 0; i < 40; i++) {
+      const host = node.getRootNode?.()?.host;
+      if (!host) return false;
+      const tag = host.localName ?? "";
+      // `hui-dialog-edit-card` is de kaarteditor; `hui-card-preview` is het
+      // voorbeeld in de kaartkiezer. Beide zijn dialogen en geen dashboard.
+      if (tag.startsWith("hui-dialog") || tag === "hui-card-preview") return true;
+      node = host;
+    }
+    return false;
+  }
+
+  /** De camera's van deze kaart, als filter voor de timeline. */
+  bewakingCameras_() {
+    return this.cameras_();
+  }
+
+  async bewakingHaal_() {
+    try {
+      const antwoord = await this.hass.connection.sendMessagePromise({
+        type: "domotiapp_lovelace/bewaking/timeline",
+        cameras: this.bewakingCameras_(),
+      });
+      this.beelden_ = antwoord?.beelden ?? [];
+    } catch (fout) {
+      // Een integratie die nog aan het opstarten is antwoordt `Unknown
+      // command.` Dat is geen fout van de kaart; de strook blijft dan leeg tot
+      // de volgende keer.
+      this.beelden_ = [];
+    }
+    this.paintTijdlijn_();
+  }
+
+  async bewakingLuister_() {
+    try {
+      const afmelden = await this.hass.connection.subscribeMessage(
+        (bericht) => this.bewakingBericht_(bericht),
+        {
+          type: "domotiapp_lovelace/bewaking/subscribe",
+          cameras: this.bewakingCameras_(),
+        }
+      );
+      // Kan de kaart in de tussentijd al losgekoppeld zijn -- dan meteen weer af.
+      if (!this.isConnected) afmelden();
+      else this.teardown_.push(afmelden);
+    } catch (fout) {
+      /* zie bewakingHaal_ */
+    }
+  }
+
+  bewakingBericht_(bericht) {
+    const beelden = this.beelden_ ?? [];
+    if (bericht?.soort === "nieuw" && bericht.beeld) {
+      this.beelden_ = [bericht.beeld, ...beelden];
+    } else if (bericht?.soort === "opgeruimd" && Array.isArray(bericht.ids)) {
+      const weg = new Set(bericht.ids);
+      this.beelden_ = beelden.filter((b) => !weg.has(b.id));
+    } else {
+      return;
+    }
+    this.paintTijdlijn_();
+  }
+
+  async bewakingRegels_() {
+    // Het voorbeeld in de kaarteditor schrijft niets. Zie `bewakingWire_` voor
+    // de meting waar dat uit voortkomt.
+    if (this.inDialoog_()) return;
+
+    const verbinding = this.hass?.connection;
+    if (!verbinding?.sendMessagePromise) return;
+
+    let bestaand = {};
+    try {
+      const antwoord = await verbinding.sendMessagePromise({
+        type: "domotiapp_lovelace/bewaking/get",
+      });
+      bestaand = antwoord?.regels ?? {};
+    } catch (fout) {
+      return;
+    }
+
+    for (const regel of teVersturen(this.hass, this.config, bestaand)) {
+      try {
+        await verbinding.sendMessagePromise({
+          type: "domotiapp_lovelace/bewaking/save",
+          regel,
+        });
+      } catch (fout) {
+        // Een regel die de server weigert houdt de volgende niet tegen. De
+        // reden staat in de console van wie hem opzoekt; de kaart zelf gaat er
+        // niet over klagen op het dashboard.
+        console.warn("DomotiApp: bewakingsregel geweigerd", regel.camera, fout);
+      }
+    }
+  }
+
+  paintTijdlijn_() {
+    const strook = this.$(".tijdlijn");
+    if (!strook) return;
+    if (!this.config.snapshots) {
+      strook.hidden = true;
+      return;
+    }
+    strook.hidden = false;
+
+    const beelden = this.beelden_ ?? [];
+
+    // Meer camera's op de kaart? Dan zegt de miniatuur er welke het was. Bij één
+    // camera is dat dezelfde tekst onder elk plaatje en dus ruis.
+    const meerdere = this.cameras_().length > 1;
+
+    // ALLEEN opnieuw tekenen als er werkelijk iets veranderd is.
+    //
+    // `paint()` draait bij elke relevante `hass`, en bij de eigenaar komt die
+    // meerdere keren per seconde binnen (479 componenten). Zonder deze
+    // vergelijking wordt de hele strook dan meermalen per seconde opnieuw
+    // opgebouwd -- met nieuwe <img>-elementen, dus zichtbaar geknipper, en dat
+    // is precies de valkuil die de camerastream in 0.27.0 ook had.
+    // De namen horen in de vergelijking: hernoemt de klant een camera in de
+    // editor, dan verandert de lijst met ID's niet en zou de strook de oude
+    // naam blijven tonen.
+    const teken = `${meerdere}|${this.cameras_().map((c) => this.camNaam_(c)).join("|")}|${beelden
+      .map((b) => b.id)
+      .join(",")}`;
+    if (this.tijdlijnTeken_ === teken) return;
+    this.tijdlijnTeken_ = teken;
+
+    if (!beelden.length) {
+      strook.innerHTML = `<span class="leeg">Nog geen beelden.</span>`;
+      return;
+    }
+
+    strook.innerHTML = beelden
+      .map((beeld) => {
+        // `camNaam_` en niet `nameOf`: dat is dezelfde naam als in de
+        // kiezerrij erboven, inclusief het "Naam"-veld en de `cam:`-velden uit
+        // de editor. Op 27 augustus 2026 in de browser gezien: de kiezer zei
+        // "Achterdeur" en de miniatuur eronder "127_0_0_1_2".
+        const cam = escape_(this.camNaam_(beeld.camera));
+        const naam = escape_(beeld.naam ?? "");
+        const klok = escape_(tijdVan(this.hass, beeld.tijd));
+        const camRegel = meerdere ? `<span class="cam">${cam}</span>` : "";
+        return (
+          `<button type="button" class="mini" data-beeld="${escape_(beeld.id)}" ` +
+          `aria-label="${meerdere ? cam + ", " : ""}${naam} om ${klok}">` +
+          `<img src="${escape_(beeld.url)}" alt="" loading="lazy">` +
+          `<span class="bij">${camRegel}<span><b>${naam}</b> · ${klok}</span></span>` +
+          `</button>`
+        );
+      })
+      .join("");
+  }
+
+  toonGroot_(beeldId) {
+    const beeld = (this.beelden_ ?? []).find((b) => b.id === beeldId);
+    if (!beeld) return;
+    const laag = this.$(".groot");
+    laag.querySelector("img").src = beeld.url;
+    laag.querySelector(".onder").textContent =
+      `${this.camNaam_(beeld.camera)} · ${beeld.naam ?? ""} · ${tijdVan(this.hass, beeld.tijd, true)}`;
+    laag.hidden = false;
+  }
+
   static getConfigElement() {
     return document.createElement("domotiapp-camera-card-editor");
   }
@@ -887,6 +1209,47 @@ class CameraCard extends DacCard {
     const cam = entities?.find((e) => e.startsWith("camera."));
     return cam ? { camera: cam } : {};
   }
+}
+
+/**
+ * Alleen het tijdstip; bij een ouder beeld de dag ervoor.
+ *
+ * De taal komt van Home Assistant en niet van de browser. Zonder die parameter
+ * viel de weekdag terug op de taal van het besturingssysteem -- in de proef van
+ * 27 augustus 2026 stond er "Thu 27 Aug" op een Nederlandstalig dashboard. De
+ * rest van de familie doet het al zo (`ha.js`, `header-card.js`).
+ */
+function tijdVan(hass, iso, volledig = false) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const taal = hass?.locale?.language ?? "nl";
+  const klok = d.toLocaleTimeString(taal, { hour: "2-digit", minute: "2-digit" });
+  const vandaag = new Date();
+  const zelfdeDag =
+    d.getDate() === vandaag.getDate() &&
+    d.getMonth() === vandaag.getMonth() &&
+    d.getFullYear() === vandaag.getFullYear();
+  if (zelfdeDag && !volledig) return klok;
+  const dag = d.toLocaleDateString(taal, { weekday: "short", day: "numeric", month: "short" });
+  return `${dag} ${klok}`;
+}
+
+/**
+ * Tekst die in HTML terechtkomt.
+ *
+ * De namen komen uit de config van de klant en uit Home Assistant, en de URL
+ * komt van de server -- geen van drieen is een reden om er zonder te werken.
+ *
+ * Dit is niet hetzelfde als `veilig_` hierboven, en dat is met opzet: die zet
+ * tekst om via `textContent` en laat aanhalingstekens staan. Dat mag daar,
+ * want daar gaan alleen entity-ID's doorheen. Hier gaat een NAAM in een
+ * `aria-label`-attribuut, en die mag de klant zelf intypen.
+ */
+function escape_(waarde) {
+  return String(waarde ?? "").replace(/[&<>"']/g, (teken) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[teken])
+  );
 }
 
 class CameraEditor extends DacEditor {
@@ -923,6 +1286,23 @@ class CameraEditor extends DacEditor {
       return velden;
     });
 
+    // Alles van de snapshots zit achter één vinkje. Gevraagd op 27 augustus
+    // 2026: *"Als ik in de algemene camera kaart het vinkje timeline en
+    // snapshot aan zet dan pas alles kunnen invullen."* Staat het uit, dan
+    // staat er ook niets aan de serverkant en ligt er geen enkel beeld op
+    // schijf.
+    const snapshotVelden = c.snapshots
+      ? [
+          { name: "snapshot_rustperiode", selector: sel.number(0, 3600) },
+          { name: "snapshot_wachttijd", selector: sel.number(0, 60) },
+          {
+            name: "snapshot_ontvangers",
+            selector: { entity: { domain: "person", multiple: true } },
+          },
+          { name: "snapshot_alleen_afwezig", selector: sel.bool() },
+        ]
+      : [];
+
     return [
       { name: "camera", selector: sel.entity("camera") },
       { name: "name", selector: sel.text() },
@@ -937,6 +1317,8 @@ class CameraEditor extends DacEditor {
         selector: { entity: { domain: "binary_sensor", multiple: true } },
       },
       ...extraMelders,
+      { name: "snapshots", selector: sel.bool() },
+      ...snapshotVelden,
       { name: "ptz_up", selector: sel.entity(["button", "switch"]) },
       { name: "ptz_down", selector: sel.entity(["button", "switch"]) },
       { name: "ptz_left", selector: sel.entity(["button", "switch"]) },
@@ -973,6 +1355,11 @@ class CameraEditor extends DacEditor {
         ptz_left: "Draaien: links",
         ptz_right: "Draaien: rechts",
         cameras: "Nog meer camera's op deze kaart",
+        snapshots: "Snapshots en timeline",
+        snapshot_rustperiode: "Rustperiode per melder (seconden)",
+        snapshot_wachttijd: "Wachten voor het beeld (seconden)",
+        snapshot_ontvangers: "Wie krijgt een melding",
+        snapshot_alleen_afwezig: "Alleen melden als er niemand thuis is",
         // Alleen zichtbaar zodra er meer dan één camera op de kaart staat.
       tap_zoom: "Tikken opent het beeld groot",
       }[s.name] ?? super.label(s)
@@ -1002,6 +1389,16 @@ class CameraEditor extends DacEditor {
         "De vier richtingsknoppen van je integratie. Vul je er geen in, dan komt het draaikruis er niet.",
       cameras:
         "Onder het beeld komt dan een rij met namen om tussen te wisselen; de camera waar je naar kijkt licht op. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin. Per camera kun je hieronder een eigen naam invullen.",
+      snapshots:
+        "Bij elke detectie legt Home Assistant een beeld vast en zet dat onder de kaart in een strook — ook als er nergens een scherm aanstaat. Beelden blijven een week staan; daarboven wijkt vanzelf de oudste. Staat dit uit, dan wordt er niets vastgelegd en niets bewaard.",
+      snapshot_rustperiode:
+        "Hoe lang dezelfde melder daarna met rust wordt gelaten. Dit is het antwoord op tien meldingen achter elkaar. De klok loopt PER MELDER: meldt je camera persoon, voertuig en huisdier apart, dan houden die elkaar niet tegen — een auto die de oprit op rijdt en de bestuurder die uitstapt leveren allebei een beeld op. Nul betekent: alles vastleggen.",
+      snapshot_wachttijd:
+        "Wacht zoveel seconden na de detectie voordat het beeld genomen wordt. Op nul krijg je het moment zelf; op een of twee seconden staat degene meestal beter in beeld dan met zijn rug ernaartoe. Deze wachttijd verandert niets aan de rustperiode.",
+      snapshot_ontvangers:
+        "De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje.",
+      snapshot_alleen_afwezig:
+        "Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode.",
       tap_zoom:
         "Staat dit aan, dan opent een tik op het beeld de camera groot. Zet je het uit, dan gebeurt er niets bij een tik — handig op een tablet aan de muur waar per ongeluk aanraken makkelijk gaat.",
     };

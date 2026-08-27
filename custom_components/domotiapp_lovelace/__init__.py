@@ -32,6 +32,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import loader, migratie, resource, websocket
+from . import bewaking
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -115,6 +116,11 @@ async def _async_zet_commandos_klaar(hass: HomeAssistant, data: dict) -> None:
     websocket.async_register(hass)
     alarm_websocket.async_register(hass)
     media_websocket.async_register(hass)
+
+    # De bewaking heeft eigen opslag en een eigen motor. Hij staat hier en niet
+    # verderop om dezelfde reden als de rest: een camerakaart die net na een
+    # herstart verbindt, hoort geen `Unknown command.` te krijgen.
+    await bewaking.async_zet_op(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -287,6 +293,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if (sleeptimers := data.pop(media_sleeptimer.DATA_SLEEPTIMER, None)) is not None:
             sleeptimers.stop_alles()
             _LOGGER.debug("Sleeptimers gestopt bij unload")
+
+        # En de bewakingsmotor, om precies dezelfde reden: een luisteraar op een
+        # bewegingsmelder die blijft staan, schrijft straks beelden weg naar een
+        # opslag die niemand meer beheert.
+        bewaking.async_stop(hass)
 
         if data.pop(ALARM_DATA_STORE, None) is not None:
             _LOGGER.debug("Wekkeropslag losgelaten")
