@@ -568,6 +568,10 @@ class PrinterCard extends DacCard {
         label: c[`tray_${n}_label`],
       })
     );
+    // De uitgebreide naam van de rol, alleen voor de tooltip.
+    const gegevens_naam = TRAYS.map(
+      (n) => stateOf(this.hass, c[`tray_${n}`])?.attributes?.name ?? ""
+    );
 
     const sig = gegevens
       .map((t) => `${t.kleur}|${t.soort}|${t.leeg}|${t.actief}|${t.rest}`)
@@ -576,9 +580,13 @@ class PrinterCard extends DacCard {
     rij.dataset.sig = sig;
     rij.innerHTML = gegevens
       .map((t, i) => {
+        // De VOLLEDIGE naam in de tooltip. Op de kaart staat het materiaal --
+        // kort en het past altijd -- maar wie wil weten welke rol erin zit,
+        // leest hier "Bambu PLA Matte".
+        const vol = gegevens_naam[i];
         const titel =
           `Tray ${i + 1}` +
-          (t.leeg ? ": leeg" : t.soort ? `: ${t.soort}` : "") +
+          (t.leeg ? ": leeg" : vol || t.soort ? `: ${vol || t.soort}` : "") +
           (t.rest === null ? "" : ` — nog ${t.rest}%`) +
           (t.actief ? " (in gebruik)" : "");
         return (

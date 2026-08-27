@@ -231,17 +231,19 @@ export function tray(st, instel = {}) {
     (/^#?[0-9a-f]{3,8}$/i.test(String(st?.state ?? "")) ? trayKleur(st.state) : null) ??
     null;
 
-  // `name` gaat vóór `type`, en dat is geen willekeur: de eigenaar stuurde de
-  // attributen van zijn eigen AMS op 27 augustus 2026, en daar staat
-  // `name: "Bambu PLA Matte"` naast `type: "PLA"`. Het eerste zegt welke rol
-  // erin zit, het tweede alleen welk materiaal -- en met vier trays PLA is dat
-  // laatste vier keer hetzelfde woord.
+  // `type` gaat vóór `name`, en dat is zijn keuze -- op 27 augustus 2026
+  // gevraagd en beantwoord met "liever alleen het materiaal".
+  //
+  // Zijn AMS levert allebei: `type: "PLA"` naast `name: "Bambu PLA Matte"`. Het
+  // eerste is kort en past altijd; het tweede zegt welke rol erin zit maar wordt
+  // op een smalle kaart afgekapt. Wie de volledige naam wil, ziet hem in de
+  // tooltip, en kan hem per tray met de hand invullen.
   const soort =
     instel.label ||
-    attr.name ||
     attr.type ||
     attr.filament_type ||
     attr.tray_type ||
+    attr.name ||
     (st && !trayKleur(st.state) ? st.state : "") ||
     "";
 

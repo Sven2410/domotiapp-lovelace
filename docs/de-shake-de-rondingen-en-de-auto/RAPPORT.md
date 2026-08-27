@@ -240,6 +240,16 @@ steekt buiten de kaartrand uit.
 - **Het restpercentage en de actieve tray van de AMS** zijn nog steeds niet
   visueel geverifieerd — daar is een entiteit mét attributen voor nodig.
 
+## 7. De traynaam: materiaal in plaats van naam
+
+Tijdens deze ronde gevraagd en beantwoord. Zijn AMS levert allebei — `type:
+"PLA"` naast `name: "Bambu PLA Matte"` — en 0.21.0 toonde de naam. Zijn keuze:
+**liever alleen het materiaal.**
+
+Dat is nu de volgorde. Kort, en het past ook op een smalle kaart; de volledige
+naam staat in de tooltip, en wie hem toch op de kaart wil zet hem per tray met
+de hand in de editor.
+
 ## Aannames
 
 - **Zijn pop-up gedraagt zich als het nagebouwde vak**: vaste breedte, en een

@@ -232,9 +232,9 @@ describe("tray — de echte AMS van de eigenaar — NIEUW GEDRAG", () => {
     const t = tray(s("PLA", AMS_TRAY_1));
     // `#FFFFFFFF` is RRGGBBAA. Het alfakanaal moet eraf.
     assert.equal(t.kleur, "#FFFFFF");
-    // `name` gaat vóór `type`: met vier trays PLA is "PLA" vier keer hetzelfde
-    // woord, en "Bambu PLA Matte" zegt welke rol erin zit.
-    assert.equal(t.soort, "Bambu PLA Matte");
+    // `type` gaat vóór `name`, en dat is zijn keuze: "liever alleen het
+    // materiaal" -- kort, en het past op een smalle kaart.
+    assert.equal(t.soort, "PLA");
     assert.equal(t.rest, 97);
     assert.equal(t.leeg, false);
     assert.equal(t.actief, false);
@@ -252,7 +252,13 @@ describe("tray — de echte AMS van de eigenaar — NIEUW GEDRAG", () => {
   it("laat het restpercentage weg als de rol geen chip heeft", () => {
     const t = tray(s("PLA", { ...AMS_TRAY_1, remain_enabled: false }));
     assert.equal(t.rest, null);
-    assert.equal(t.soort, "Bambu PLA Matte");
+    assert.equal(t.soort, "PLA");
+  });
+
+  it("valt terug op de naam als er geen materiaal bij staat", () => {
+    const zonder = { ...AMS_TRAY_1 };
+    delete zonder.type;
+    assert.equal(tray(s("x", zonder)).soort, "Bambu PLA Matte");
   });
 
   it("markeert de tray die de printer op dit moment gebruikt", () => {
