@@ -343,6 +343,7 @@ class CameraCard extends DacCard {
     });
 
     this.zoomLuisteraars_();
+    this.bewaakStream_();
   }
 
   /**
@@ -496,10 +497,27 @@ class CameraCard extends DacCard {
 
     this.text(".nm", c.name || nameOf(this.hass, cam, "Camera"));
 
-    const live = this.live_ === true || c.live_view === true;
+    // Zolang de stream omgevallen is: stilstaand beeld. Zie bewaakStream_.
+    //
+    // En de EERSTE seconden ook. Gemeld op 27 augustus 2026: *"het duurt ook
+    // best lang voordat de stream laadt, is daar wat aan te doen?"*
+    //
+    // Ja: een WebRTC-verbinding opzetten kost een paar seconden, en zolang die
+    // bezig is staat er niets. Het stilstaande beeld is er wél meteen -- dat is
+    // één plaatje via de camera-proxy. Dus begint de kaart daarmee en gaat hij
+    // daarna pas live. Je ziet je oprit meteen, en een tel later beweegt hij.
+    const live =
+      (this.live_ === true || c.live_view === true) && !this.streamStuk_ && this.magLive_();
     const vak = this.$(".schuif");
     if (dood) {
-      vak.querySelector(".beeld")?.remove();
+      // Het beeld blijft STAAN. Het werd hier weggegooid, en dat is precies
+      // verkeerd bij een camera die af en toe een seconde wegvalt -- een
+      // Reolink doet dat -- want dan wordt er bij elke terugkeer een nieuwe
+      // WebRTC-verbinding opgezet. Twee van die starts over elkaar heen geven
+      // de fout die hij opstuurde ("Called in wrong state: stable").
+      //
+      // Alleen de melding komt erover. Verdwijnt de entiteit helemaal, dan
+      // ruimt `zetCamerabeeld` hem alsnog op.
       if (!this.$(".vak .leeg")) {
         const leeg = document.createElement("span");
         leeg.className = "leeg";
@@ -523,6 +541,182 @@ class CameraCard extends DacCard {
     this.paintCams_(cam);
 
     meetRaster(this.$(".card"));
+  }
+
+  /**
+   * Houd de livestream in de gaten, en val terug als hij omvalt.
+   *
+   * WAAROM DIT ER IS
+   *
+   * Opgestuurd op 27 augustus 2026, met een schermafdruk van een rode balk over
+   * zijn oprit heen:
+   *
+   *     Failed to connect WebRTC stream: Failed to execute
+   *     'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote
+   *     answer sdp: Called in wrong state: stable
+   *
+   * *"Dit krijg ik ook vaak bij de camerakaart."*
+   *
+   * Die melding komt uit Home Assistants eigen speler en betekent dat er twee
+   * onderhandelingen over elkaar heen liepen. De twee oorzaken die AAN ONZE KANT
+   * lagen zijn hierboven weg (de stream werd herstart bij elke hass, en het
+   * beeld werd weggegooid zodra de camera een seconde wegviel).
+   *
+   * Maar een stream kan ook omvallen door het netwerk, door de camera, of door
+   * een TURN-server die niet antwoordt. Daar kunnen wij niets aan doen -- wél
+   * aan wat je dan ziet. En dat hoort geen rode balk over je oprit te zijn.
+   *
+   * Dus: valt de stream om, dan schakelt de kaart terug naar het stilstaande
+   * beeld dat zichzelf ververst. Je ziet je oprit, alleen niet bewegend. Na een
+   * halve minuut probeert hij het opnieuw; lukt het dan wel, dan merk je er
+   * niets van.
+   *
+   * HOE DE FOUT HERKEND WORDT
+   *
+   * `ha-camera-stream` zet er een `ha-alert` neer. Er is geen event dat wij
+   * kunnen opvangen -- dat is nagekeken -- dus wordt er gekeken of dat element
+   * verschijnt. Broos? Ja. Maar het alternatief is de gebruiker met een rode
+   * balk laten zitten, en het faalt netjes: verandert HA zijn opmaak, dan doet
+   * deze bewaker gewoon niets meer.
+   */
+  bewaakStream_() {
+    const kijk = () => {
+      if (!this.isConnected) return;
+      const beeld = this.$(".schuif")?.querySelector(".beeld");
+      if (!beeld?.shadowRoot) return;
+
+      // 1. Een foutmelding: hui-image -> ha-camera-stream -> de melding.
+      if (this.zoekAlert_(beeld.shadowRoot, 4) && !this.streamStuk_) {
+        this.valTerug_();
+        return;
+      }
+
+      // 2. Een BEVROREN stream. Die geeft geen foutmelding -- het beeld blijft
+      // gewoon op het laatste plaatje staan, en dat is precies wat hij op zijn
+      // wandtablet ziet: *"op een wall tablet gaat hij soms stilstaan en moet ik
+      // heel het dashboard vernieuwen."*
+      //
+      // Een videostream die loopt telt zijn `currentTime` op. Staat die stil
+      // terwijl het element wel speelt, dan is de verbinding dood zonder dat
+      // iemand dat gemeld heeft.
+      const video = this.zoekVideo_(beeld.shadowRoot, 4);
+      if (video && !video.paused) {
+        const nu = video.currentTime;
+        if (this.laatsteTijd_ === nu) {
+          this.stilTellen_ = (this.stilTellen_ ?? 0) + 1;
+          // Vijf rondes van twee seconden: tien seconden zonder één frame. Een
+          // hik is dan voorbij, een dode stream niet.
+          if (this.stilTellen_ >= 5) this.herstart_();
+        } else {
+          this.stilTellen_ = 0;
+          this.laatsteTijd_ = nu;
+        }
+      }
+    };
+
+    const timer = setInterval(kijk, 2000);
+    this.teardown_.push(() => {
+      clearInterval(timer);
+      clearTimeout(this.streamHerkansing_);
+    });
+
+    // 3. Terug uit de achtergrond. Een tablet dat zijn scherm uitzet bevriest de
+    // pagina; komt hij terug, dan is de stream vrijwel altijd dood. Dit is
+    // dezelfde les als valkuil 30 -- een toestel dat dagen open blijft staan
+    // gedraagt zich anders dan een tabblad dat je net opende.
+    const wakker = () => {
+      if (document.visibilityState === "visible") this.herstart_();
+    };
+    document.addEventListener("visibilitychange", wakker);
+    this.teardown_.push(() => document.removeEventListener("visibilitychange", wakker));
+  }
+
+  /**
+   * Mag de stream al starten?
+   *
+   * De eerste anderhalve seconde niet: dan staat er een gewoon plaatje, dat er
+   * direct is. Daarna schakelt de kaart zelf om.
+   *
+   * Anderhalve seconde en niet meteen, want een plaatje dat één keer verschijnt
+   * en meteen weer plaatsmaakt voor een zwart vlak is erger dan even wachten.
+   */
+  magLive_() {
+    if (this.liveVrij_) return true;
+    if (!this.liveTimer_) {
+      this.liveTimer_ = setTimeout(() => {
+        this.liveVrij_ = true;
+        if (this.isConnected) this.paint();
+      }, 1500);
+      this.teardown_.push(() => {
+        clearTimeout(this.liveTimer_);
+        this.liveTimer_ = null;
+        this.liveVrij_ = false;
+      });
+    }
+    return false;
+  }
+
+  /** Val terug op stilstaand beeld, en probeer het over een halve minuut weer. */
+  valTerug_() {
+    this.streamStuk_ = true;
+    this.paint();
+    clearTimeout(this.streamHerkansing_);
+    this.streamHerkansing_ = setTimeout(() => {
+      this.streamStuk_ = false;
+      this.paint();
+    }, 30000);
+  }
+
+  /**
+   * Zet de stream opnieuw op, zonder het dashboard te verversen.
+   *
+   * `cameraView` even op "auto" en dan terug op "live" is genoeg: `hui-image`
+   * gooit zijn verbinding weg en begint opnieuw. Dat is precies wat hij nu met
+   * de hand doet door de pagina te herladen.
+   */
+  herstart_() {
+    const beeld = this.$(".schuif")?.querySelector(".beeld");
+    if (!beeld || beeld.localName !== "hui-image") return;
+    if (beeld.cameraView !== "live") return;
+    this.stilTellen_ = 0;
+    this.laatsteTijd_ = null;
+    beeld.cameraView = "auto";
+    // Een tel later terug naar live: anders ziet `hui-image` geen verandering en
+    // blijft de dode verbinding staan.
+    clearTimeout(this.herstartTimer_);
+    this.herstartTimer_ = setTimeout(() => {
+      const nu = this.$(".schuif")?.querySelector(".beeld");
+      if (nu && nu.localName === "hui-image" && !this.streamStuk_) nu.cameraView = "live";
+    }, 600);
+    this.teardown_.push(() => clearTimeout(this.herstartTimer_));
+  }
+
+  /** Zoek het video-element binnen deze shadow roots. */
+  zoekVideo_(root, diepte) {
+    if (!root || diepte <= 0) return null;
+    const eigen = root.querySelector?.("video");
+    if (eigen) return eigen;
+    for (const kind of root.querySelectorAll?.("*") ?? []) {
+      if (kind.shadowRoot) {
+        const gevonden = this.zoekVideo_(kind.shadowRoot, diepte - 1);
+        if (gevonden) return gevonden;
+      }
+    }
+    return null;
+  }
+
+  /** Zoek een `ha-alert` binnen deze shadow roots, tot een paar lagen diep. */
+  zoekAlert_(root, diepte) {
+    if (!root || diepte <= 0) return null;
+    const eigen = root.querySelector?.("ha-alert");
+    if (eigen) return eigen;
+    for (const kind of root.querySelectorAll?.("*") ?? []) {
+      if (kind.shadowRoot) {
+        const gevonden = this.zoekAlert_(kind.shadowRoot, diepte - 1);
+        if (gevonden) return gevonden;
+      }
+    }
+    return null;
   }
 
   /**
