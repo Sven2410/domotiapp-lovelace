@@ -653,6 +653,16 @@ export const icons = {
     <path d="M5.4 12.9V20a.9.9 0 0 0 .9.9h11.4a.9.9 0 0 0 .9-.9v-7.1"/>
     <path d="m9.2 16.9 1.9 1.9 3.7-3.9"/>`),
 
+  /* Woning verlaten: het huis met een pijl die eruit wijst.
+     Gevraagd op 27 augustus 2026. `away` is een PERSOON die weggaat -- goed voor
+     een bewoner die niet thuis is. Dit gaat over het huis zelf: de knop of scene
+     waarmee je vertrekt. Het huis staat daarom links en compleet, en de pijl
+     gaat er aan de rechterkant uit. */
+  homeLeave: draw(`<path d="M2.4 10.8 8.9 5.2l6.5 5.6"/>
+    <path d="M4.4 12.2v7.3a.9.9 0 0 0 .9.9h7.2a.9.9 0 0 0 .9-.9v-2.1"/>
+    <path d="M13.4 12.2v1.4"/>
+    <path d="M14.6 15.6h6.6M18.6 12.9l2.8 2.7-2.8 2.7"/>`),
+
   /* De lounge: een fauteuil. `sofa` is de brede bank; dit is de losse stoel,
      zodat een lounge en een woonkamer niet hetzelfde plaatje krijgen. */
   lounge: draw(`<path d="M6.4 10.8V7.6a2.4 2.4 0 0 1 2.4-2.4h6.4a2.4 2.4 0 0 1 2.4 2.4v3.2"/>
