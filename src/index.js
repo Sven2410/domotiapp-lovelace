@@ -52,6 +52,7 @@ import "./alarm/alarm-card.js";
 // Het bevestigingsscherm. Geen kaart, maar wel altijd nodig: `runAction` vraagt
 // het aan zodra een actie `confirmation` draagt. Zie de kop van vraag.js.
 import "./vraag.js";
+import "./editor/foto-picker.js";
 
 import { startRegistratie } from "./registratie.js";
 import { startVerversing } from "./verouderd.js";

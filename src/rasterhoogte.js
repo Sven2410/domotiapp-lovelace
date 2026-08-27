@@ -97,9 +97,100 @@ export function meetRaster(vak, pogingen = 4) {
     if (pogingen > 0) requestAnimationFrame(() => meetRaster(vak, pogingen - 1));
     return;
   }
-  const doel = `${opRaster(px)}px`;
+  const doel = `${stabielDoel(vak, opRaster(px))}px`;
   if (vak.style.getPropertyValue("--dac-raster") === doel) return;
   vak.style.setProperty("--dac-raster", doel);
+}
+
+/**
+ * De laatste paar uitkomsten per vak, om een pendel te herkennen.
+ *
+ * Een `WeakMap`: gaat de kaart weg, dan gaat zijn geschiedenis mee.
+ */
+const geschiedenis = new WeakMap();
+
+/**
+ * Zoveel metingen kijken we terug.
+ *
+ * Ruim, en dat is gemeten: tussen twee omslagpunten meet `meetRaster` een paar
+ * keer dezelfde waarde. Een terugblik van zes zag daardoor [568, 568, 568, 504]
+ * en herkende dat niet als pendel. Twaalf is genoeg voor drie wisselingen met
+ * herhalingen ertussen.
+ */
+const TERUGBLIK = 12;
+
+/** Zoveel keer moet hij omgeslagen zijn voordat we het een pendel noemen. */
+const WISSELS_NODIG = 3;
+
+/**
+ * Dezelfde rasterhoogte, maar dan eentje die niet gaat pendelen.
+ *
+ * ## HET PROBLEEM, gemeld op 27 augustus 2026
+ *
+ * *"In mijn 3D-printerpopup shaked de 3D-printerkaart de hele tijd, dat lijkt me
+ * niet goed."* Terecht.
+ *
+ * De kop van dit bestand beweert dat de lus niet weg kan lopen: het opduwen van
+ * `min-height` verandert de hoogte van het vak, de waarnemer vuurt nog één keer,
+ * en de gemeten INHOUDShoogte is dan ongewijzigd. Dat klopt zolang de hoogte het
+ * enige is dat verandert.
+ *
+ * Het klopt NIET als de breedte meebeweegt. En dat gebeurt: een kaart die hoger
+ * wordt dan zijn pop-up krijgt een scrollbar, die neemt breedte weg, en een
+ * `aspect-ratio` -- het camerabeeld op de printerkaart en de camerakaart -- zet
+ * die smallere breedte om in een kleinere hoogte. Dan past hij weer, verdwijnt
+ * de scrollbar, en begint het opnieuw.
+ *
+ * Wat die lus zo zichtbaar maakt is juist dit bestand: een verschil van één
+ * pixel rond een rastergrens wordt hier een sprong van 64. De kaart springt dan
+ * niet een haartje maar een hele rasterrij op en neer -- en dat is precies wat
+ * "shaken" is.
+ *
+ * ## DE OPLOSSING
+ *
+ * Herken de pendel en kies de GROOTSTE van de twee. Groot en niet klein, want
+ * een kaart die te klein staat schildert over zijn buurman heen (valkuil 12);
+ * een kaart die een rasterrij te hoog staat kost hoogstens wat lege ruimte.
+ *
+ * De vergrendeling gaat er vanzelf weer af zodra de inhoud écht iets anders
+ * wordt -- een waarde buiten de twee die pendelden. Anders zou een kaart die
+ * ooit gependeld heeft nooit meer kunnen krimpen.
+ */
+export function stabielDoel(vak, doel) {
+  const eerder = geschiedenis.get(vak) ?? { rij: [], vast: null };
+
+  // Zit er een vergrendeling op en past dit voorstel daar nog binnen, dan
+  // blijft hij staan.
+  if (eerder.vast !== null) {
+    if (eerder.vast.paar.includes(doel)) return eerder.vast.waarde;
+    // Iets anders: de inhoud is echt veranderd, dus de vergrendeling eraf.
+    eerder.vast = null;
+    eerder.rij = [];
+  }
+
+  const rij = [...eerder.rij, doel].slice(-TERUGBLIK);
+  const uniek = [...new Set(rij)];
+
+  // Een pendel: precies twee waarden, en hij is er minstens drie keer tussen
+  // heen en weer gegaan.
+  //
+  // Op de WISSELINGEN tellen en niet op "elke meting verschilt van de vorige".
+  // Dat laatste stond er eerst, en het werkte niet: in de gemeten lus stond de
+  // kaart een paar metingen op 568 voordat hij naar 504 sprong, dus er zat
+  // altijd wel een herhaling in en de pendel werd nooit herkend. Nagemeten in
+  // een echte browser op 27 augustus 2026 -- de reeks bleef 568/504/568/504
+  // heen en weer gaan terwijl de demping ernaast stond te kijken.
+  const wissels = rij.reduce((n, w, i) => (i > 0 && w !== rij[i - 1] ? n + 1 : n), 0);
+  const pendelt = uniek.length === 2 && wissels >= WISSELS_NODIG;
+
+  if (pendelt) {
+    const waarde = Math.max(...uniek);
+    geschiedenis.set(vak, { rij, vast: { paar: uniek, waarde } });
+    return waarde;
+  }
+
+  geschiedenis.set(vak, { rij, vast: null });
+  return doel;
 }
 
 /**

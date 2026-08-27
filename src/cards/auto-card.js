@@ -43,7 +43,9 @@ import {
   heeftAccu,
   heeftTank,
   laadStand,
+  laadTekst,
   ladenTot,
+  locatie,
   niveau,
   pct,
   statusregel,
@@ -65,13 +67,20 @@ class AutoCard extends DacCard {
     .card {
       min-height: var(--dac-raster, 120px); padding: 10px 12px;
       display: flex; flex-direction: column; gap: 10px;
+      /* De kaart mag langer worden, nooit breder. Gemeld op 27 augustus 2026:
+         de knoppenrij rechtsboven kromp niet mee en duwde zichzelf buiten de
+         kaart. Dit is het vangnet; de regels hieronder zorgen dat het niet
+         nodig is. */
+      overflow: hidden;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
 
     /* ---- kop ---- */
-    .kop { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    /* flex-wrap: past de knoppenrij niet naast de naam, dan gaat hij eronder
+       staan in plaats van eruit. Langer mag, breder niet. */
+    .kop { display: flex; align-items: center; gap: 11px; min-width: 0; flex-wrap: wrap; }
     .foto {
-      flex: 0 0 auto; width: 76px; height: 46px; border-radius: var(--dac-radius-s);
+      flex: 0 0 auto; width: 76px; height: 46px; border-radius: var(--dac-radius-sm);
       overflow: hidden; background: var(--dac-surface); cursor: pointer;
       display: grid; place-items: center;
       border: 1px solid var(--dac-border);
@@ -103,7 +112,7 @@ class AutoCard extends DacCard {
 
     /* De knoppen rechtsboven: slot en klimaat. Klein, want het zijn dingen die
        je zelden doet en nooit per ongeluk wilt doen. */
-    .acties { display: flex; gap: 6px; flex: 0 0 auto; }
+    .acties { display: flex; gap: 6px; flex: 0 1 auto; margin-left: auto; }
     .acties button {
       width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer;
       padding: 0; font: inherit; color: var(--dac-ink-3);
@@ -157,28 +166,41 @@ class AutoCard extends DacCard {
     @media (prefers-reduced-motion: reduce) { .lijn[data-laadt="true"] i { animation: none; } }
 
     /* ---- tegels ---- */
-    .tegels { display: grid; grid-template-columns: repeat(var(--kolommen, 3), minmax(0, 1fr)); gap: 7px; }
+    /* auto-fit met een ondergrens: de tegels vullen de breedte die er IS, en
+       vallen op een smalle kaart vanzelf op een tweede rij. Een vast aantal
+       kolommen perst ze samen tot de tekst eruit loopt. */
+    .tegels {
+      display: grid; gap: 7px;
+      grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    }
     .tegels[hidden] { display: none; }
     .tegel {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 5px; min-width: 0;
       background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-s); cursor: pointer;
+      border-radius: var(--dac-radius-sm); cursor: pointer;
     }
     .tegel .w {
       font-size: 13.5px; font-weight: 500; color: var(--dac-ink);
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+      font-variant-numeric: tabular-nums; max-width: 100%;
+      /* Afbreken en niet afknippen. "Niet aan de lader" werd anders "Niet aan
+         de lad...", en dan staat er een tegel die je niet kunt lezen. In een
+         raster worden de tegels toch al even hoog, dus een tweede regel kost
+         niets. */
+      text-align: center; line-height: 1.15;
+      overflow-wrap: anywhere;
     }
     .tegel .l {
       font-size: 10px; line-height: 1.2; color: var(--dac-ink-3);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
     }
+    /* Alleen waar de STAND iets zegt -- thuis, of aan het laden. De rest blijft
+       in neutrale inkt; zie theme.js, het getal draagt nooit de kleur. */
+    .tegel[style*="--tegeltoon"] .w { color: var(--tegeltoon); }
 
     :host([dead]) .card { opacity: .45; }
 
     @container (max-width: 340px) {
-      .tegels { --kolommen: 2 !important; }
       :host(:not([foto="groot"])) .foto { display: none; }
     }
   `;
@@ -294,6 +316,10 @@ class AutoCard extends DacCard {
     const laadMin = ladenTot(stateOf(this.hass, c.charging_ready));
     const slotSt = stateOf(this.hass, c.lock);
     const open = isOn(stateOf(this.hass, c.doors)) || isOn(stateOf(this.hass, c.windows));
+    // Waar hij staat, als thuis of afwezig. Zie `locatie` in auto-logica.js:
+    // een coordinaat wordt tegen de locatie van Home Assistant gelegd, en een
+    // tracker die zelf "home" zegt wordt gewoon geloofd.
+    const waar = locatie(stateOf(this.hass, c.location), this.hass, Number(c.home_radius) || undefined);
 
     const dood =
       c.battery && !stateOf(this.hass, c.battery) && c.range && !stateOf(this.hass, c.range);
@@ -315,7 +341,7 @@ class AutoCard extends DacCard {
     this.paintFoto_();
     this.paintActies_(slotSt, open);
     this.paintBalken_({ accu, tank, radius, laden, soort });
-    this.paintTegels_();
+    this.paintTegels_(waar, laden);
 
     meetRaster(this.$(".card"));
   }
@@ -364,9 +390,9 @@ class AutoCard extends DacCard {
       const aan = isOn(stateOf(this.hass, c.climate));
       knoppen.push({ k: "climate", icon: "airco", label: "Klimaat", aan });
     }
-    if (c.location) {
-      knoppen.push({ k: "location", icon: "away", label: "Waar staat hij", let: open });
-    }
+    // De locatie stond hier ook als knop. Die is eruit: waar de auto staat is
+    // iets om te lezen, en de rij duwde zichzelf buiten de kaart. Hij staat nu
+    // als tegel onderaan -- zie paintTegels_.
 
     const sig = knoppen.map((k) => `${k.k}|${k.icon}|${k.aan}|${k.let}`).join(",");
     if (vak.dataset.sig === sig) return;
@@ -460,7 +486,25 @@ class AutoCard extends DacCard {
       .join("");
   }
 
-  paintTegels_() {
+  /**
+   * De tegels onderaan.
+   *
+   * Hier staan sinds 27 augustus 2026 ook de LOCATIE en de LAADSTATUS in, en
+   * daar is een reden voor die uit zijn eigen melding komt.
+   *
+   * De locatie zat als knop in de rij rechtsboven. Die rij kromp niet mee en
+   * duwde zichzelf buiten de kaart -- *"die voertuigtracker wordt buiten de
+   * kaart rechts gezet, dat is niet de bedoeling"*. Maar los daarvan was het ook
+   * de verkeerde vorm: waar de auto staat is iets om te LEZEN, geen knop om in
+   * te drukken. Als tegel staat het er gewoon, en tikken opent nog steeds de
+   * kaart van Home Assistant.
+   *
+   * De laadstatus stond helemaal nergens zolang er niet geladen werd -- *"wat
+   * doet laadstatus? want als ik daar mijn sensor in vul die op NOT_PLUGGED_IN
+   * staat, dan zie ik niks"*. Terecht: een veld dat je invult hoort iets te
+   * laten zien.
+   */
+  paintTegels_(waar, laden) {
     const c = this.config;
     const vak = this.$(".tegels");
     const uit = [];
@@ -476,21 +520,52 @@ class AutoCard extends DacCard {
       uit.push({ id, w: waarde, l: label ?? nameOf(this.hass, id, id) });
     };
 
+    // Waar hij staat. De afstand komt erbij als hij NIET thuis is en we hem
+    // hebben uitgerekend -- "Afwezig" alleen zegt weinig, "Afwezig · 12 km" wel.
+    if (c.location && waar?.tekst) {
+      const ver =
+        waar.thuis === false && waar.meters !== null
+          ? waar.meters >= 1000
+            ? ` · ${Math.round(waar.meters / 100) / 10} km`
+            : ` · ${waar.meters} m`
+          : "";
+      uit.push({
+        id: c.location,
+        w: waar.tekst + ver,
+        l: "Waar hij staat",
+        toon: waar.thuis === true ? "good" : null,
+      });
+    }
+
+    // De laadstatus, ook als er niet geladen wordt.
+    if (c.charging) {
+      const st = stateOf(this.hass, c.charging);
+      const tekst = laadTekst(laden, st);
+      if (tekst) {
+        uit.push({
+          id: c.charging,
+          w: tekst,
+          l: "Laadstatus",
+          toon: laden === "charging" ? "accent" : laden === "complete" ? "good" : null,
+        });
+      }
+    }
+
     if (c.odometer) voegToe(c.odometer, "Kilometerstand");
     if (c.charging_power) voegToe(c.charging_power, "Laadvermogen");
     for (const id of Array.isArray(c.sensors) ? c.sensors : []) voegToe(id, null);
 
     vak.hidden = !uit.length;
     if (!uit.length) return;
-    vak.style.setProperty("--kolommen", String(Math.min(3, uit.length)));
 
-    const sig = uit.map((t) => `${t.id}|${t.w}`).join(",");
+    const sig = uit.map((t) => `${t.id}|${t.w}|${t.toon ?? ""}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = uit
       .map(
         (t) =>
-          `<div class="tegel" data-id="${this.veilig_(t.id)}" role="button" tabindex="0">` +
+          `<div class="tegel" data-id="${this.veilig_(t.id)}" role="button" tabindex="0"` +
+          `${t.toon ? ` style="--tegeltoon:${TOON[t.toon] ?? TONES.neutral}"` : ""}>` +
           `<span class="w">${this.veilig_(t.w)}</span>` +
           `<span class="l">${this.veilig_(t.l)}</span></div>`
       )
@@ -532,7 +607,14 @@ class AutoEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "car" }];
+    return [
+      // Onze eigen fotokiezer en niet `{ image: {} }` in het schema. Die
+      // selector van Home Assistant wordt lui geladen en komt in onze editor
+      // nooit: het veld blijft een leeg vak van nul pixels hoog. Gemeten op
+      // 27 augustus 2026; zie de kop van foto-picker.js.
+      { key: "image", kind: "foto", label: "Foto van de auto" },
+      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "car" },
+    ];
   }
 
   /**
@@ -553,7 +635,6 @@ class AutoEditor extends DacEditor {
           Object.entries(AANDRIJVING).map(([value, { label }]) => ({ value, label }))
         ),
       },
-      { name: "image", selector: { image: {} } },
       {
         name: "photo_size",
         selector: sel.select([
@@ -585,7 +666,8 @@ class AutoEditor extends DacEditor {
       { name: "doors", selector: sel.entity(["binary_sensor"]) },
       { name: "windows", selector: sel.entity(["binary_sensor"]) },
       { name: "climate", selector: sel.entity(["switch", "climate", "button"]) },
-      { name: "location", selector: sel.entity(["device_tracker", "sensor"]) },
+      { name: "location", selector: sel.entity(["device_tracker", "sensor", "person"]) },
+      { name: "home_radius", selector: sel.number(10, 2000, 10) },
       { name: "odometer", selector: sel.entity(["sensor"]) },
       { name: "sensors", selector: { entity: { multiple: true } } }
     );
@@ -612,6 +694,7 @@ class AutoEditor extends DacEditor {
         windows: "Ramen open",
         climate: "Voorverwarmen of koelen",
         location: "Waar hij staat",
+        home_radius: "Hoe dichtbij is thuis (meter)",
         odometer: "Kilometerstand",
         sensors: "Extra sensoren als tegel",
       }[s.name] ?? super.label(s)
@@ -632,6 +715,10 @@ class AutoEditor extends DacEditor {
       charging_ready:
         "Een aantal minuten, een klok of het tijdstip waarop hij vol is — alle drie worden gelezen.",
       doors: "Staat er iets open, dan zegt de kaart dat en gaat al het andere even opzij.",
+      location:
+        "Een device_tracker die home of not_home meldt, of een sensor met een coordinaat — beide worden gelezen. Bij een coordinaat rekent de kaart de afstand tot de locatie van je Home Assistant uit en maakt daar Thuis of Afwezig van.",
+      home_radius:
+        "Alleen van belang bij een sensor met een coordinaat. Binnen deze afstand van je huis heet de auto thuis. Leeg laten is 100 meter — ruim genoeg voor een oprit of een parkeerplaats om de hoek.",
       sensors:
         "Alles wat je verder nog kwijt wilt: bandenspanning, buitentemperatuur, de volgende beurt. Ze komen als tegels onderaan te staan, met de naam uit Home Assistant.",
     };

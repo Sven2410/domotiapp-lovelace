@@ -17,17 +17,25 @@
  * mee als je in de camera-app een preset toevoegt. Kies je losse knoppen, dan
  * zijn dat de knoppen. Beide tegelijk mag ook.
  *
- * ## Waarom er twee soorten "live" zijn
+ * ## Op het beeld staat niets
  *
- * `hui-image` met `cameraView: "live"` opent een echte stream. Dat is wat je
- * wilt zodra je kíjkt, en niet wat je wilt op een dashboard met zes camera's
- * dat de hele dag openstaat -- dat zijn zes streams. Vandaar: op de kaart een
- * plaatje dat zichzelf ververst, en live zodra je hem aanzet of het beeld groot
- * maakt. Wie het anders wil, zet "Altijd live" aan.
+ * Gevraagd op 27 augustus 2026: *"ik wil alle icons weg hebben."* Er stonden er
+ * vier -- uitzoomen, inzoomen, live, en groot bekijken -- en alle vier hadden ze
+ * een weg eromheen die je toch al gebruikt:
+ *
+ * - zoomen doe je met twee vingers, met het wiel of met een dubbeltik;
+ * - groot bekijken doe je door op het beeld te tikken;
+ * - live zet je in de editor, want dat is een keuze per kaart en niet iets wat
+ *   je per keer aan- en uitzet.
+ *
+ * Wat er wél op het beeld staat, staat er omdat het nergens anders kan: de naam,
+ * het merkje "Beweging", "LIVE", het draaikruis -- en de presets, die daar op
+ * zijn verzoek zijn beland: *"nu komt die keuzelijst eronder te staan maar hij
+ * moet in het beeld komen."*
  *
  * ## Inzoomen
  *
- * Met het wiel, met twee vingers, of met de knoppen. Het rekenwerk (klemmen,
+ * Met het wiel, met twee vingers, of met een dubbeltik. Het rekenwerk (klemmen,
  * zoomen rondom de vinger) staat in `zoom-logica.js` met tests eronder; hier
  * staat alleen het luisteren naar vingers.
  *
@@ -41,7 +49,7 @@ import { resolve } from "../icons.js";
 import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
-import { MAX_ZOOM, MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
+import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
 const RICHTINGEN = [
@@ -62,24 +70,36 @@ class CameraCard extends DacCard {
     }
     :host([bare]) .card { background: none; box-shadow: none; }
 
-    /* ---- het beeld ---- */
+    /* ---- het beeld ----
+       GEEN vaste beeldverhouding. Die stond op 16:9 met cover, en dan wordt
+       een camera die iets anders levert bijgesneden -- gemeld op 27 augustus
+       2026 met een schermafdruk: "de kaart mag auto grootte worden, nu zie je
+       dat er een deel mist". Klopte: bij zijn oprit viel de boven- en onderkant
+       weg.
+
+       Nu volgt de kaart het beeld. De minimumhoogte is er alleen voor het moment
+       dat er nog niets geladen is; zodra het beeld er staat, bepaalt dat de
+       hoogte. */
     .vak {
-      position: relative; width: 100%; aspect-ratio: 16 / 9;
+      position: relative; width: 100%; min-height: 120px;
       overflow: hidden; background: #000;
       touch-action: none; cursor: default;
+      display: flex;
     }
     :host([zoom]) .vak { cursor: grab; }
     :host([sleept]) .vak { cursor: grabbing; }
 
     .schuif {
-      position: absolute; inset: 0;
       transform: var(--tf, none); transform-origin: center center;
       transition: transform 160ms ease-out;
       will-change: transform;
     }
     :host([sleept]) .schuif { transition: none; }
+    /* height:auto en contain: het beeld houdt zijn eigen verhouding en er
+       gaat niets af. */
+    .schuif { width: 100%; }
     .schuif .beeld, .schuif img, .schuif hui-image {
-      display: block; width: 100%; height: 100%; object-fit: cover;
+      display: block; width: 100%; height: auto; object-fit: contain;
     }
     .vak .leeg {
       position: absolute; inset: 0; display: grid; place-items: center;
@@ -109,6 +129,9 @@ class CameraCard extends DacCard {
     }
     .merk .icon { width: 11px; height: 11px; }
     .merk[hidden] { display: none; }
+    /* Meerdere melders naast elkaar. Ze mogen afbreken: bij een camera die
+       persoon, auto én dier los meldt kunnen er drie tegelijk aanstaan. */
+    .melders { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
     .merk[data-soort="live"] { color: var(--dac-bad); border-color: color-mix(in srgb, var(--dac-bad) 55%, transparent); }
     .merk[data-soort="live"] .stip {
       width: 6px; height: 6px; border-radius: 50%; background: var(--dac-bad);
@@ -118,22 +141,15 @@ class CameraCard extends DacCard {
     @media (prefers-reduced-motion: reduce) { .merk[data-soort="live"] .stip { animation: none; } }
     .merk[data-soort="beweging"] { color: var(--dac-warn); border-color: color-mix(in srgb, var(--dac-warn) 55%, transparent); }
 
-    /* De knoppen rechtsonder in het beeld. */
-    .knoppen {
-      position: absolute; right: 8px; bottom: 8px; z-index: 3;
-      display: flex; gap: 5px;
-    }
-    .knoppen button {
-      width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer;
-      padding: 0; font: inherit; color: var(--dac-ink);
-      background: color-mix(in srgb, var(--dac-bg) 68%, transparent);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-pill);
-    }
-    .knoppen button[aria-pressed="true"] { color: var(--dac-accent-hi); }
-    .knoppen button:disabled { opacity: .32; cursor: default; }
-    .knoppen button .icon { width: 15px; height: 15px; }
-    @media (hover: hover) { .knoppen button:hover:not(:disabled) { border-color: var(--dac-accent-hi); } }
+    /* Er staan GEEN knoppen meer op het beeld.
+       Gevraagd op 27 augustus 2026: "ook het plusje en minnetje wil ik weg
+       hebben, ik wil gewoon inzoomen met mijn vingers. Ook de camera kan weg
+       want als je erop tikt dan vergroot hij toch wel. Ik wil alle icons weg
+       hebben dus."
+
+       Zoomen gaat met twee vingers, met het wiel of met een dubbeltik; groot
+       bekijken met een gewone tik. Live staat in de editor. Wat overblijft is
+       het beeld -- en de presets, als je die hebt. */
 
     /* De richtingsknoppen, links onderin. Alleen als ze zijn ingesteld. */
     .ptz {
@@ -147,7 +163,7 @@ class CameraCard extends DacCard {
       color: var(--dac-ink);
       background: color-mix(in srgb, var(--dac-bg) 68%, transparent);
       backdrop-filter: blur(8px);
-      border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-s);
+      border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm);
     }
     .ptz button .icon { width: 14px; height: 14px; }
     .ptz [data-r="up"] { grid-area: 1 / 2; }
@@ -155,18 +171,25 @@ class CameraCard extends DacCard {
     .ptz [data-r="down"] { grid-area: 2 / 2; }
     .ptz [data-r="right"] { grid-area: 2 / 3; }
 
-    /* ---- de presets ---- */
+    /* ---- de presets, IN het beeld ----
+       "Nu komt die keuzelijst eronder te staan maar hij moet in het beeld
+       komen." Dus liggen ze over de onderrand, met een verloop erachter zodat
+       ze leesbaar blijven op elk beeld. */
     .presets {
-      display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto;
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+      display: flex; gap: 6px; padding: 22px 10px 9px; overflow-x: auto;
       scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      background: linear-gradient(to top, rgba(0,0,0,.66), transparent);
     }
     .presets::-webkit-scrollbar { display: none; }
     .presets[hidden] { display: none; }
     .presets button {
       flex: 0 0 auto; padding: 7px 12px; cursor: pointer; font: inherit;
       font-size: 12px; font-weight: 500; white-space: nowrap;
-      color: var(--dac-ink-2); background: var(--dac-surface);
-      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      color: var(--dac-ink); border-radius: var(--dac-radius-pill);
+      background: color-mix(in srgb, var(--dac-bg) 68%, transparent);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--dac-border-hi);
       transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
     }
     .presets button[aria-pressed="true"] {
@@ -186,9 +209,13 @@ class CameraCard extends DacCard {
       color: var(--dac-ink-3); background: transparent;
       border: 1px solid transparent; border-radius: var(--dac-radius-pill);
     }
+    /* De camera waar je naar KIJKT valt op, in het accent. Dat stond eerst op
+       een grijstint die naast de andere knoppen nauwelijks verschilde -- en dan
+       weet je niet welke je ziet. Gemeld op 27 augustus 2026. */
     .cams button[aria-pressed="true"] {
-      color: var(--dac-ink); background: var(--dac-surface);
-      border-color: var(--dac-border);
+      color: var(--dac-accent-hi); font-weight: 600;
+      background: color-mix(in srgb, var(--dac-accent) 18%, transparent);
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
     }
 
     :host([dead]) .card { opacity: .5; }
@@ -207,9 +234,39 @@ class CameraCard extends DacCard {
     return [
       ...this.cameras_(),
       c.presets,
-      c.motion,
+      ...this.melders_().map((m) => m.entity),
       ...(Array.isArray(c.preset_buttons) ? c.preset_buttons : []),
     ].filter(Boolean);
+  }
+
+  /**
+   * De bewegingsmelders van deze kaart, met hun naam.
+   *
+   * Gevraagd op 27 augustus 2026: *"ik wil ook meerdere
+   * bewegingsmelder-entiteiten kunnen selecteren en een naam erbij die dan
+   * tevoorschijn komt. Ik heb bijvoorbeeld een beweging voor persoon, auto, etc.
+   * en dan kan ik bij de persoon-entiteit de naam erbij zetten."*
+   *
+   * Dat is precies wat een Reolink levert: naast `_motion` ook `_person`,
+   * `_vehicle` en `_pet`. Eén merkje "Beweging" gooit die informatie weg -- het
+   * verschil tussen een auto op de oprit en iemand aan de deur is nu juist het
+   * hele punt van zo'n camera.
+   *
+   * Het oude enkele veld `motion` blijft werken; een kaart die dat gebruikt
+   * verandert niet.
+   */
+  melders_() {
+    const c = this.config;
+    const ids = [
+      ...(Array.isArray(c.motion_sensors) ? c.motion_sensors : []),
+      ...(c.motion ? [c.motion] : []),
+    ].filter((x) => typeof x === "string");
+
+    return [...new Set(ids)].map((entity) => ({
+      entity,
+      // De naam uit de editor; anders die van Home Assistant zelf.
+      naam: c[`melder:${entity}`] || nameOf(this.hass, entity, "Beweging"),
+    }));
   }
 
   /** Alle camera's van deze kaart, met de hoofdcamera vooraan. */
@@ -237,7 +294,7 @@ class CameraCard extends DacCard {
           <div class="over">
             <span class="nm"></span>
             <span class="rek"></span>
-            <span class="merk" data-soort="beweging" hidden>${resolve("person")}<span>Beweging</span></span>
+            <span class="melders"></span>
             <span class="merk" data-soort="live" hidden><span class="stip"></span><span>LIVE</span></span>
           </div>
           <div class="ptz" hidden>
@@ -248,26 +305,14 @@ class CameraCard extends DacCard {
                 `${resolve(r.icoon)}</button>`
             ).join("")}
           </div>
-          <div class="knoppen">
-            <button type="button" data-k="uit" aria-label="Uitzoomen">${resolve("minus")}</button>
-            <button type="button" data-k="in" aria-label="Inzoomen">${resolve("plus")}</button>
-            <button type="button" data-k="live" aria-pressed="false" aria-label="Live kijken">${resolve("cctv")}</button>
-            <button type="button" data-k="groot" aria-label="Groot bekijken">${resolve("camera")}</button>
-          </div>
+          <div class="presets" hidden></div>
         </div>
-        <div class="presets" hidden></div>
         <div class="cams" hidden></div>
       </div>`;
   }
 
   wire() {
     this.teardown_.push(volgRaster(this.$(".card")));
-    this.on(this.$(".knoppen"), "click", (e) => {
-      const knop = e.target.closest?.("[data-k]");
-      if (!knop) return;
-      e.stopPropagation();
-      this.knop_(knop.dataset.k);
-    });
     this.on(this.$(".ptz"), "click", (e) => {
       const knop = e.target.closest?.("[data-r]");
       if (!knop) return;
@@ -382,7 +427,7 @@ class CameraCard extends DacCard {
 
     // Dubbeltikken: heen en weer tussen 1x en 2,5x, op de plek waar je tikt.
     this.on(vak, "dblclick", (e) => {
-      if (e.target.closest(".knoppen, .ptz")) return;
+      if (e.target.closest(".presets, .ptz")) return;
       e.preventDefault();
       this.zet_(
         this.stand_.zoom > MIN_ZOOM
@@ -395,7 +440,7 @@ class CameraCard extends DacCard {
     // is. Zonder deze toets opent er een pop-up elke keer dat je de uitsnede
     // verschuift.
     this.on(vak, "click", (e) => {
-      if (e.target.closest(".knoppen, .ptz")) return;
+      if (e.target.closest(".presets, .ptz")) return;
       if (bewogen > 6) return;
       if (this.config.tap_zoom === false) return;
       moreInfo(this, this.huidig_());
@@ -407,21 +452,6 @@ class CameraCard extends DacCard {
     this.stand_ = stand;
     this.toggleAttribute("zoom", stand.zoom > MIN_ZOOM);
     this.$(".schuif").style.setProperty("--tf", alsTransform(stand));
-    const uit = this.$('[data-k="uit"]');
-    const in_ = this.$('[data-k="in"]');
-    if (uit) uit.disabled = stand.zoom <= MIN_ZOOM;
-    if (in_) in_.disabled = stand.zoom >= MAX_ZOOM;
-  }
-
-  knop_(wat) {
-    if (wat === "in") return this.zet_(zoomRondom(this.stand_, 1.5));
-    if (wat === "uit") return this.zet_(zoomRondom(this.stand_, 1 / 1.5));
-    if (wat === "live") {
-      this.live_ = !this.live_;
-      return this.paint();
-    }
-    if (wat === "groot") return moreInfo(this, this.huidig_());
-    return undefined;
   }
 
   /**
@@ -477,13 +507,9 @@ class CameraCard extends DacCard {
 
     const liveMerk = this.$('.merk[data-soort="live"]');
     liveMerk.hidden = !live || dood;
-    const knopLive = this.$('[data-k="live"]');
-    knopLive.setAttribute("aria-pressed", String(live));
-    // Staat "altijd live" aan, dan valt er niets te schakelen.
-    knopLive.disabled = c.live_view === true;
 
-    const beweging = this.$('.merk[data-soort="beweging"]');
-    beweging.hidden = !(c.motion && isOn(stateOf(this.hass, c.motion)));
+    this.paintMelders_();
+
 
     this.zet_(this.stand_);
     this.paintPtz_();
@@ -491,6 +517,28 @@ class CameraCard extends DacCard {
     this.paintCams_(cam);
 
     meetRaster(this.$(".card"));
+  }
+
+  /**
+   * Een merkje per melder die AANSTAAT, met zijn eigen naam.
+   *
+   * Alleen wat aanstaat: een rij grijze merkjes voor alles wat er niet is, is
+   * geen informatie maar behang.
+   */
+  paintMelders_() {
+    const vak = this.$(".melders");
+    const aan = this.melders_().filter((m) => isOn(stateOf(this.hass, m.entity)));
+
+    const sig = aan.map((m) => m.entity + "|" + m.naam).join(",");
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+    vak.innerHTML = aan
+      .map(
+        (m) =>
+          `<span class="merk" data-soort="beweging">${resolve("person")}` +
+          `<span>${this.veilig_(m.naam)}</span></span>`
+      )
+      .join("");
   }
 
   paintPtz_() {
@@ -540,20 +588,36 @@ class CameraCard extends DacCard {
       .join("");
   }
 
+  /**
+   * De naam van een camera in de kiezerrij.
+   *
+   * `nameOf(hass, id, configured)` neemt zijn derde parameter als OVERRIDE, niet
+   * als terugval -- staat er iets, dan wint dat altijd. Hier stond `id`, en dus
+   * kwam er altijd `camera.oprit` op de knop te staan in plaats van "Oprit".
+   * Gemeld op 27 augustus 2026, en het was precies dat.
+   *
+   * Nu: wat je zelf in de editor invult wint, daarna de naam uit Home Assistant,
+   * en pas als laatste het entity_id.
+   */
+  camNaam_(id) {
+    return this.config[`cam:${id}`] || nameOf(this.hass, id) || id;
+  }
+
   paintCams_(huidig) {
     const lijst = this.cameras_();
     const vak = this.$(".cams");
     vak.hidden = lijst.length < 2;
     if (lijst.length < 2) return;
 
-    const sig = `${lijst.join(",")}|${huidig}`;
+    const namen = lijst.map((id) => this.camNaam_(id));
+    const sig = `${lijst.join(",")}|${namen.join(",")}|${huidig}`;
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = lijst
       .map(
-        (id) =>
+        (id, i) =>
           `<button type="button" data-cam="${this.veilig_(id)}"` +
-          ` aria-pressed="${id === huidig}">${this.veilig_(nameOf(this.hass, id, id))}</button>`
+          ` aria-pressed="${id === huidig}">${this.veilig_(namen[i])}</button>`
       )
       .join("");
   }
@@ -593,6 +657,19 @@ class CameraEditor extends DacEditor {
   }
 
   schema() {
+    const c = this.config_ ?? {};
+    const lijst = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+    // Een naamveld per gekozen camera en per gekozen melder, precies zoals de
+    // rolluikkaart dat doet met zijn `naam:`-velden.
+    const extraCams = lijst(c.cameras).map((id) => ({
+      name: `cam:${id}`,
+      selector: sel.text(),
+    }));
+    const extraMelders = lijst(c.motion_sensors).map((id) => ({
+      name: `melder:${id}`,
+      selector: sel.text(),
+    }));
+
     return [
       { name: "camera", selector: sel.entity("camera") },
       { name: "name", selector: sel.text() },
@@ -602,17 +679,30 @@ class CameraEditor extends DacEditor {
         name: "preset_buttons",
         selector: { entity: { domain: ["button", "scene", "script"], multiple: true } },
       },
-      { name: "motion", selector: sel.entity(["binary_sensor"]) },
+      {
+        name: "motion_sensors",
+        selector: { entity: { domain: "binary_sensor", multiple: true } },
+      },
+      ...extraMelders,
       { name: "ptz_up", selector: sel.entity(["button", "switch"]) },
       { name: "ptz_down", selector: sel.entity(["button", "switch"]) },
       { name: "ptz_left", selector: sel.entity(["button", "switch"]) },
       { name: "ptz_right", selector: sel.entity(["button", "switch"]) },
       { name: "cameras", selector: { entity: { domain: "camera", multiple: true } } },
+      ...extraCams,
       { name: "tap_zoom", selector: sel.bool() },
     ];
   }
 
   label(s) {
+    // De naamvelden dragen het entity_id in hun naam; het label is de naam van
+    // die entiteit, zodat de editor leesbaar blijft.
+    if (s.name.startsWith("cam:")) {
+      return `Naam voor ${nameOf(this.hass, s.name.slice(4)) || s.name.slice(4)}`;
+    }
+    if (s.name.startsWith("melder:")) {
+      return `Naam voor ${nameOf(this.hass, s.name.slice(7)) || s.name.slice(7)}`;
+    }
     return (
       {
         camera: "Camera",
@@ -621,6 +711,7 @@ class CameraEditor extends DacEditor {
         presets: "Presets (keuzelijst)",
         preset_buttons: "Presets als losse knoppen",
         motion: "Bewegingsmelder",
+        motion_sensors: "Bewegingsmelders",
         ptz_up: "Draaien: omhoog",
         ptz_down: "Draaien: omlaag",
         ptz_left: "Draaien: links",
@@ -634,19 +725,23 @@ class CameraEditor extends DacEditor {
   helper(s) {
     const uitleg = {
       camera:
-        "Op de kaart staat een beeld dat zichzelf ververst; met de knop rechtsonder gaat hij echt live. Inzoomen kan met het wiel, met twee vingers of met + en −.",
+        "Op de kaart staat een beeld dat zichzelf ververst. Inzoomen doe je met twee vingers, met het scrollwiel of met een dubbeltik; een gewone tik opent hem groot. Er staan geen knoppen op het beeld.",
       live_view:
         "De stream staat dan altijd open. Mooier, maar op een dashboard met zes camera's zijn dat zes streams die de hele dag doorlopen.",
       presets:
-        "De `select` van je camera-integratie — Reolink en ONVIF leveren die. De kaart maakt van elke optie een knop, dus een preset die je in de camera-app toevoegt verschijnt er vanzelf bij.",
+        "De `select` van je camera-integratie — Reolink en ONVIF leveren die. De kaart maakt van elke optie een knop, onderin het beeld, dus een preset die je in de camera-app toevoegt verschijnt er vanzelf bij.",
       preset_buttons:
         "Voor integraties die geen keuzelijst maar losse knoppen leveren, zoals Amcrest en Dahua. Ze mogen naast de keuzelijst staan.",
       motion:
-        "Zolang deze aanstaat komt er een merkje 'Beweging' op het beeld te staan.",
+        "Het oude enkele veld. Gebruik liever Bewegingsmelders hierboven; deze blijft werken voor kaarten die hem al hebben.",
+      motion_sensors:
+        "Zolang er een aanstaat komt er een merkje op het beeld. Kies er gerust meerdere: een Reolink meldt persoon, voertuig en huisdier los van elkaar, en dan zie je wélke het is. Per melder kun je hieronder een eigen naam invullen.",
       ptz_up:
         "De vier richtingsknoppen van je integratie. Vul je er geen in, dan komt het draaikruis er niet.",
       cameras:
-        "Onder het beeld komt dan een rij met namen om tussen te wisselen. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin.",
+        "Onder het beeld komt dan een rij met namen om tussen te wisselen; de camera waar je naar kijkt licht op. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin. Per camera kun je hieronder een eigen naam invullen.",
+      tap_zoom:
+        "Staat dit aan, dan opent een tik op het beeld de camera groot. Zet je het uit, dan gebeurt er niets bij een tik — handig op een tablet aan de muur waar per ongeluk aanraken makkelijk gaat.",
     };
     return uitleg[s.name];
   }

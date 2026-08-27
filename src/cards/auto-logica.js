@@ -38,6 +38,24 @@ export const heeftTank = (soort) => soort === "fuel" || soort === "hybrid";
 const LAADT = ["charging", "charge", "fast_charging", "dc_charging", "on", "true", "laden"];
 const KLAAR = ["complete", "completed", "fully_charged", "full", "done", "finished"];
 const AAN_LADER = ["connected", "plugged", "plugged_in", "cable_connected", "ready_to_charge"];
+// De stekker zit er niet in. Zijn Ford meldt dat als `NOT_PLUGGED_IN`, gemeten
+// op zijn eigen installatie op 27 augustus 2026 -- en zonder dat woord viel het
+// door naar "iets dat we niet kennen", waarna er niets op de kaart stond. Dat
+// was precies zijn melding: *"als ik daar de laadstatus in vul, die staat nu op
+// NOT_PLUGGED_IN, dan zie ik niks."*
+const LOS = [
+  "not_plugged_in",
+  "not_plugged",
+  "notpluggedin",
+  "unplugged",
+  "disconnected",
+  "not_charging",
+  "notcharging",
+  "off",
+  "false",
+  "idle",
+  "no",
+];
 
 /**
  * Wat de auto met laden aan het doen is.
@@ -50,12 +68,27 @@ export function laadStand(st) {
   if (LAADT.includes(ruw)) return "charging";
   if (KLAAR.includes(ruw)) return "complete";
   if (AAN_LADER.includes(ruw)) return "connected";
-  if (ruw === "off" || ruw === "false" || ruw === "disconnected" || ruw === "not_charging") {
-    return "idle";
-  }
-  // Iets dat we niet kennen, maar de auto meldt wel iets. De kaart toont dat
-  // woord dan zelf; een gok zou een laadicoon geven bij een auto die stilstaat.
-  return "idle";
+  if (LOS.includes(ruw)) return "idle";
+  // Iets dat we niet kennen, maar de auto meldt wel íéts. Dat is nadrukkelijk
+  // niet hetzelfde als "niet aan de lader": het woord komt dan zelf op de kaart,
+  // want een veld dat je invult hoort iets te laten zien.
+  return "onbekend";
+}
+
+/**
+ * Het woord dat bij deze laadstand op de kaart komt.
+ *
+ * Kennen we de stand niet, dan is dat het woord van de sensor zelf, leesbaar
+ * gemaakt: `NOT_PLUGGED_IN` wordt "Not plugged in". Zo staat er altijd iets, ook
+ * bij een integratie met woorden die wij niet kennen -- en dan is meteen te zien
+ * wélk woord er ontbreekt, in plaats van dat de kaart leeg blijft.
+ */
+export function laadTekst(stand, st) {
+  if (stand && stand !== "onbekend") return LAADWOORD[stand] ?? "";
+  const ruw = String(st?.state ?? "").trim();
+  if (!ruw || ruw === "unavailable" || ruw === "unknown") return "";
+  const woorden = ruw.replace(/[_-]+/g, " ").toLowerCase();
+  return woorden.charAt(0).toUpperCase() + woorden.slice(1);
 }
 
 export const LAADWOORD = {
@@ -172,4 +205,115 @@ export function statusregel({ open, slot, laden, laadMinuten, radius, aandrijvin
 
   if (radius) return { tekst: `Nog ${radius.waarde} ${radius.eenheid}`, toon: "neutral" };
   return { tekst: AANDRIJVING[aandrijving]?.label ?? "", toon: "neutral" };
+}
+
+/* ------------------------------------------------------------------ locatie
+ *
+ * Gevraagd op 27 augustus 2026: *"mijn 'waar staat de auto'-sensor is een
+ * coordinaat: {lat: 51.92909, lon: 6.07115, alt: 15.0}. Kan je dat converteren
+ * naar thuis of afwezig? Bepaal dat met de ingestelde locatie van Home
+ * Assistant. Maak hem universeel dat hij ook kan uitlezen als een sensor wel
+ * thuis of afwezig toont."*
+ *
+ * Drie vormen komen dus binnen, en alle drie worden ze gelezen:
+ *
+ * 1. een `device_tracker` of sensor die gewoon `home` / `not_home` zegt;
+ * 2. dezelfde in woorden -- `Thuis`, `Away`, of de naam van een zone;
+ * 3. een coordinaat, als state of in de attributen.
+ *
+ * Bij een coordinaat rekenen we de afstand tot de locatie van Home Assistant
+ * uit. Dat is precies wat hij vroeg, en het is ook de enige bron die altijd
+ * klopt: een zone kan verplaatst zijn, `hass.config` is waar het huis staat.
+ */
+
+/** Hoe dicht je bij huis moet staan om "thuis" te heten, in meters. */
+export const THUIS_STRAAL_M = 100;
+
+const THUIS_WOORDEN = ["home", "thuis", "at_home", "athome"];
+const WEG_WOORDEN = ["not_home", "away", "afwezig", "weg", "not home", "nothome"];
+
+/**
+ * De afstand tussen twee punten op aarde, in meters.
+ *
+ * Haversine. Op deze afstanden zou een platte benadering ook voldoen, maar dit
+ * is even kort en het klopt overal.
+ */
+export function afstandM(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLon = rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * Haal een coordinaat uit een entiteit, of null.
+ *
+ * Twee plekken: de attributen (zoals een `device_tracker` het doet) en de state
+ * zelf. Dat laatste is wat zijn sensor doet -- er staat letterlijk een dict in,
+ * en afhankelijk van de integratie met dubbele of enkele aanhalingstekens. Dus
+ * niet `JSON.parse`, maar de getallen eruit lezen.
+ */
+export function coordinaatVan(st) {
+  const a = st?.attributes ?? {};
+  const lat = Number(a.latitude ?? a.lat);
+  const lon = Number(a.longitude ?? a.lon ?? a.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+
+  const ruw = String(st?.state ?? "");
+  // De aanhalingstekens moeten mee. Zijn sensor levert letterlijk
+  // {'lat': 51.92909, 'lon': 6.07115, 'alt': 15.0} -- met een apostrof TUSSEN
+  // de naam en de dubbele punt. Zonder die toevoeging matcht er niets en valt
+  // de kaart terug op "we weten het niet", precies zoals bij de eerste meting.
+  const mLat = ruw.match(/(?:lat|latitude)["']?\s*[:=]\s*(-?\d+(?:\.\d+)?)/i);
+  const mLon = ruw.match(/(?:lon|lng|longitude)["']?\s*[:=]\s*(-?\d+(?:\.\d+)?)/i);
+  if (mLat && mLon) return { lat: Number(mLat[1]), lon: Number(mLon[1]) };
+  return null;
+}
+
+/**
+ * Staat de auto thuis?
+ *
+ * @param {object|null} st de locatie-entiteit
+ * @param {object} hass om `hass.config.latitude/longitude` te kunnen lezen
+ * @param {number} straal hoe ruim "thuis" is, in meters
+ * @returns {{thuis: boolean|null, tekst: string, meters: number|null}}
+ *   `thuis: null` betekent: we weten het niet. Dat is iets anders dan afwezig.
+ */
+export function locatie(st, hass, straal = THUIS_STRAAL_M) {
+  if (!st) return { thuis: null, tekst: "", meters: null };
+
+  const ruw = String(st.state ?? "").trim();
+  const klein = ruw.toLowerCase();
+  if (klein === "unavailable" || klein === "unknown" || !ruw) {
+    return { thuis: null, tekst: "", meters: null };
+  }
+
+  // 1 en 2: een woord. Dit gaat vóór het coordinaat, want een tracker die
+  // "home" zegt weet dat beter dan wij met een straal eromheen -- die kent de
+  // zone zoals de gebruiker hem heeft ingesteld.
+  if (THUIS_WOORDEN.includes(klein)) return { thuis: true, tekst: "Thuis", meters: null };
+  if (WEG_WOORDEN.includes(klein)) return { thuis: false, tekst: "Afwezig", meters: null };
+
+  // 3: een coordinaat.
+  const punt = coordinaatVan(st);
+  const thuisLat = Number(hass?.config?.latitude);
+  const thuisLon = Number(hass?.config?.longitude);
+  if (punt && Number.isFinite(thuisLat) && Number.isFinite(thuisLon)) {
+    const m = afstandM(punt.lat, punt.lon, thuisLat, thuisLon);
+    const thuis = m <= straal;
+    return {
+      thuis,
+      tekst: thuis ? "Thuis" : "Afwezig",
+      meters: Math.round(m),
+    };
+  }
+
+  // Een zonenaam, of iets anders dat de integratie zegt. Dat is geen "thuis",
+  // maar het is wel informatie -- en die hoort op de kaart in plaats van niets.
+  // De hoofdletter erop, want een zone heet "werk" en niet "Werk".
+  return { thuis: false, tekst: ruw.charAt(0).toUpperCase() + ruw.slice(1), meters: null };
 }
