@@ -25,7 +25,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .. import ma
-from . import entiteiten
+from . import entiteiten, sleeptimer
 from .const import (
     DATA_WS_REGISTERED,
     DOMAIN,
@@ -110,6 +110,9 @@ TYPE_PLAYLIST_REMOVE = f"{DOMAIN}/media/playlist/remove"
 TYPE_PLAYLIST_TRACKS = f"{DOMAIN}/media/playlist/tracks"
 TYPE_PLAYLIST_ADD = f"{DOMAIN}/media/playlist/add_tracks"
 TYPE_PLAYLIST_DEL = f"{DOMAIN}/media/playlist/remove_tracks"
+TYPE_SLEEP_SET = f"{DOMAIN}/media/sleeptimer/set"
+TYPE_SLEEP_CANCEL = f"{DOMAIN}/media/sleeptimer/cancel"
+TYPE_SLEEP_LIST = f"{DOMAIN}/media/sleeptimer/list"
 
 SOORTEN = vol.In(tuple(ma.BIBLIOTHEEK_METHODE))
 
@@ -287,6 +290,62 @@ async def _handle_playlist_del(hass: HomeAssistant, connection, msg: dict[str, A
     connection.send_result(msg["id"], {"removed": len(msg["positions"])})
 
 
+# ------------------------------------------------------------- de sleeptimer
+#
+# Deze drie zijn de enige commando's van de mediakant die NIETS met Music
+# Assistant te maken hebben: ze werken op elke `media_player`. De sleeptimer
+# loopt in Home Assistant en niet in de kaart, want een timer die stopt zodra je
+# je telefoon weglegt is geen sleeptimer. Zie sleeptimer.py.
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): TYPE_SLEEP_SET,
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("minutes"): vol.All(
+            vol.Coerce(int), vol.Range(min=sleeptimer.MIN_MINUTEN, max=sleeptimer.MAX_MINUTEN)
+        ),
+        vol.Optional("fade", default=sleeptimer.FADE_STANDAARD): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=sleeptimer.FADE_MAX)
+        ),
+    }
+)
+@callback
+def _handle_sleep_set(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Zet een sleeptimer op deze speler."""
+    if hass.states.get(msg["entity_id"]) is None:
+        connection.send_error(
+            msg["id"],
+            websocket_api.ERR_NOT_FOUND,
+            f"{msg['entity_id']} bestaat niet.",
+        )
+        return
+    connection.send_result(
+        msg["id"], sleeptimer.timers(hass).zet(msg["entity_id"], msg["minutes"], msg["fade"])
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): TYPE_SLEEP_CANCEL,
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+@callback
+def _handle_sleep_cancel(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Haal de sleeptimer van deze speler weg."""
+    connection.send_result(
+        msg["id"], {"cancelled": sleeptimer.timers(hass).stop(msg["entity_id"])}
+    )
+
+
+@websocket_api.websocket_command({vol.Required("type"): TYPE_SLEEP_LIST})
+@callback
+def _handle_sleep_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Alle lopende sleeptimers. De kaart vraagt dit bij het openen."""
+    connection.send_result(msg["id"], {"timers": sleeptimer.timers(hass).lijst()})
+
+
 _COMMANDOS = (
     _handle_search,
     _handle_speakers,
@@ -297,6 +356,9 @@ _COMMANDOS = (
     _handle_playlist_tracks,
     _handle_playlist_add,
     _handle_playlist_del,
+    _handle_sleep_set,
+    _handle_sleep_cancel,
+    _handle_sleep_list,
 )
 
 

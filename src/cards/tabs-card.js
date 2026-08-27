@@ -38,7 +38,7 @@ import { resolve } from "../icons.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { heeftHaGereedschap, kaartenLijst } from "../editor/kaartenlijst.js";
 import { openTab, schrijfKeuze, sleutelVoor, tabsVan } from "./tabs-logica.js";
-import { KOLOMMEN, pasIndelingToe } from "./tab-indeling.js";
+import { KOLOMMEN, grenzenVan, pasIndelingToe } from "./tab-indeling.js";
 
 /** Eén stap omhoog, dwars door shadow roots heen. */
 const omhoog = (knoop) =>
@@ -259,6 +259,11 @@ class TabsCard extends DacCard {
       if (!kaarten) continue;
       for (const el of kaarten) if (el) el.hass = hass;
     }
+    // Home Assistant vraagt `getGridOptions()` opnieuw bij elke nieuwe `hass`
+    // (valkuil 8), en dit raster hoort dat ook te doen: een kaart die van vorm
+    // verandert -- een lamp die uitgaat, een thermostaat die "Onder elkaar"
+    // wordt gezet -- geeft dan een andere ondergrens op.
+    this.herijkIndeling_();
   }
 
   get hass() {
@@ -423,12 +428,54 @@ class TabsCard extends DacCard {
       // De kaarten zijn er, hun opmaak nog niet -- meetRaster heeft daar zijn
       // eigen herkansing voor.
       meetRaster(this.$(".card"));
+      // En hun GRENZEN zijn er ook nog niet: `hui-card` maakt het echte
+      // kaartelement pas als hij zijn config krijgt, en een gemeten ondergrens
+      // komt daar nog een opmaakronde na. Zie herijkIndeling_.
+      this.herijkIndeling_();
     } catch (e) {
       this.kinderen_.delete(i);
       vak.innerHTML = `<div class="leeg">Deze kaart kon niet geladen worden: ${escapeHtml(
         e?.message ?? e
       )}</div>`;
       meetRaster(this.$(".card"));
+    }
+  }
+
+  /**
+   * Geef elke kaart in een tab de hoogte die hij MAG hebben.
+   *
+   * WAAROM DIT ER IS -- gemeld op 27 augustus 2026 met een schermafdruk waarop
+   * zes thermostaten dwars door elkaar heen liepen.
+   *
+   * Een `grid_options` in een dashboard is een getal dat er ooit is ingezet.
+   * Op zijn installatie stond bij twaalf klimaatkaarten `{columns: 6, rows: 1}`
+   * -- terecht, want die kaart WAS één rasterrij. Daarna kreeg hij de vorm
+   * "Onder elkaar" en werden het er drie. Home Assistant zou dat getal in een
+   * sectie tegen `min_rows` aan klemmen (valkuil 12); dit raster nam het rauw
+   * over, gaf een vak van 56px aan een kaart die 120px tekent, en dus liep elke
+   * kaart 64px over zijn buurman.
+   *
+   * De grenzen worden ELKE keer opnieuw uitgelezen en niet onthouden. Ze zijn
+   * gemeten (`gemetenRijen`), dus ze veranderen: bij het opbouwen is er nog
+   * niets te meten en geeft de kaart zijn schatting, een opmaakronde later de
+   * echte maat, en bij een toestandswijziging weer een andere.
+   */
+  herijkIndeling_(pogingen = 3) {
+    let ietsGevonden = false;
+    for (const [i, elementen] of this.kinderen_.entries()) {
+      if (!elementen) continue;
+      const kaarten = this.config?.tabs?.[i]?.cards ?? [];
+      elementen.forEach((el, n) => {
+        const grenzen = grenzenVan(el);
+        if (grenzen) ietsGevonden = true;
+        pasIndelingToe(el, kaarten[n]?.grid_options, grenzen);
+      });
+    }
+    // Nog geen enkele kaart die zijn grenzen kent: dan staat het echte element
+    // er nog niet. Een `isConnected`-toets zou hier niet helpen (valkuil 25),
+    // dus gewoon nog een opmaakronde wachten.
+    if (!ietsGevonden && pogingen > 0) {
+      requestAnimationFrame(() => this.herijkIndeling_(pogingen - 1));
     }
   }
 

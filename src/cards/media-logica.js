@@ -144,11 +144,16 @@ const herhaalStandNaam = (stand) => (["off", "all", "one"].includes(stand) ? sta
  * iets nieuws te kiezen. Zeven knoppen op één regel van 56 pixels is geen kaart
  * meer maar een afstandsbediening.
  */
-export function extraVoor(st, { zoeken = true } = {}) {
+export function extraVoor(st, { zoeken = true, sleep = false } = {}) {
   if (!staatAan(st)) return [];
   const uit = [];
   if (kan(st, KENMERK.SHUFFLE_SET)) uit.push("shuffle");
   if (kan(st, KENMERK.REPEAT_SET)) uit.push("repeat");
+  // De sleeptimer staat er alleen als hij aangezet is in de editor. Hij hoort
+  // bij een speaker naast een bed en niet bij de tv in de woonkamer, en een
+  // knoppenrij die voor iedereen even lang is leest rustiger. Standaard uit,
+  // dus een bestaande kaart verandert niet.
+  if (sleep) uit.push("sleep");
   // Eén knop voor Music Assistant, niet twee. Het groeperen zat achter een
   // eigen icoon naast de zoekknop, en dat bleek dubbelop: het zoekscherm toont
   // de speakers onderin, dus wie op zoeken tikt komt ze vanzelf tegen.
