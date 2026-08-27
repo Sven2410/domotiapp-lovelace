@@ -6,3 +6,12 @@ pytest-homeassistant-custom-component==0.13.355
 # component frontend echt opzet. Versie gelijk aan die in de container
 # (importlib.metadata.version("home-assistant-frontend") in ha-scene).
 home-assistant-frontend==20260729.6
+
+# De camerakant van de bewaking roept `camera.async_get_image` aan, en de
+# component `camera` importeert PyTurboJPEG op modulescope. Home Assistant
+# installeert dat zelf mee bij de klant (het staat in de manifest van `camera`);
+# de testharnas doet dat niet. Versie gelijk aan die van HA 2026.8.1.
+#
+# De NATIVE libturbojpeg hoeft er niet bij te staan: HA vangt het ontbreken
+# ervan af met "Camera snapshot performance will be sub-optimal" en werkt door.
+PyTurboJPEG==1.8.3
