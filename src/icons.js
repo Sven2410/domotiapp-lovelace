@@ -411,6 +411,15 @@ export const icons = {
     <path d="M3.8 15.4v-3.2l2-4.6a1.3 1.3 0 0 1 1.2-.8h10a1.3 1.3 0 0 1 1.2.8l2 4.6v3.2z"/>
     <circle cx="7.4" cy="12.5" r=".95"/><circle cx="16.6" cy="12.5" r=".95"/>`),
 
+  // Een bestelbus: hoge neus, lange laadbak, schuifdeur. Gevraagd op 27
+  // augustus 2026 -- hij rijdt een Ford Transit Connect, en `car` leest als een
+  // personenauto.
+  van: draw(`<path d="M2.6 16.2h18.8"/>
+    <path d="M6 16.2v1.9a.9.9 0 0 1-.9.9h-.8a.9.9 0 0 1-.9-.9v-1.9M20.6 16.2v1.9a.9.9 0 0 1-.9.9h-.8a.9.9 0 0 1-.9-.9v-1.9"/>
+    <path d="M2.6 16.2V7.4a1 1 0 0 1 1-1h9.6a1.2 1.2 0 0 1 1 .55l3.4 4.85h2.4a1 1 0 0 1 1 1v3.4z"/>
+    <path d="M13.4 6.4v5.4h4.2"/>
+    <circle cx="6.6" cy="13.4" r=".95"/><circle cx="17.4" cy="13.4" r=".95"/>`),
+
   plug: draw(`<path d="M9 3.4v5.2M15 3.4v5.2"/>
     <path d="M6.4 8.6h11.2v2.2a5.6 5.6 0 0 1-11.2 0z"/>
     <path d="M12 16.4v4.2"/>`),

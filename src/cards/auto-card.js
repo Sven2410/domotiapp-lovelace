@@ -93,11 +93,17 @@ class AutoCard extends DacCard {
     :host([foto="groot"]) .card { gap: 0; padding: 0; }
     :host([foto="groot"]) .kop { padding: 10px 12px; }
     :host([foto="groot"]) .binnen { padding: 0 12px 11px; display: flex; flex-direction: column; gap: 10px; }
+    /* GEEN vaste beeldverhouding bij de grote foto. Die stond op 16:7 met
+       bijsnijden, en dan gaat er van een foto met een andere verhouding een
+       stuk af -- gemeld op 27 augustus 2026 met een schermafdruk waarop het dak
+       van zijn bedrijfsbus was afgesneden. Dezelfde fout als op de camerakaart.
+       Nu bepaalt de foto zijn eigen hoogte. */
     :host([foto="groot"]) .foto {
-      width: 100%; height: auto; aspect-ratio: 16 / 7; border-radius: 0;
+      width: 100%; height: auto; border-radius: 0;
       border: 0; border-bottom: 1px solid var(--dac-border);
       order: -1;
     }
+    :host([foto="groot"]) .foto img { height: auto; object-fit: contain; }
     :host(:not([foto="groot"])) .binnen { display: contents; }
 
     .tekst { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }

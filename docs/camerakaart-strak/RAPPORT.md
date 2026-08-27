@@ -109,6 +109,86 @@ raster en zonder zoekwoorden is een fout.
 
 ---
 
+---
+
+## 5. "Hij springt steeds weg als ik type"
+
+Over het fotoveld van de autokaart. Gereproduceerd en gerepareerd, en de oorzaak
+is er eentje om te onthouden.
+
+### `document.activeElement` wijst nooit naar een genest element
+
+De fotokiezer overschrijft zijn tekstveld niet zolang je erin bezig bent — dat
+stond er, met deze toets:
+
+```js
+if (document.activeElement !== this && tekst.value !== this.value) ...
+```
+
+Die toets slaat **nooit** aan. Bij focus binnen geneste shadow roots wijst
+`document.activeElement` het BUITENSTE host-element aan; gemeten in de dialoog
+gaf hij `home-assistant`, nooit de picker. Dus was de voorwaarde altijd waar en
+werd het veld altijd overschreven.
+
+### Waarom het hier wél leek te werken
+
+De editor geeft de picker bij **elke nieuwe `hass`** zijn waarde uit de config
+opnieuw. Op de kale testinstance komt er zelden een update binnen, dus twintig
+echte toetsaanslagen — spatie erbij, `isTrusted: true` — gingen hier gewoon goed.
+
+Op zijn installatie met 479 componenten komt er meerdere keren per seconde een
+update. Dan is het veld onbruikbaar.
+
+**Dat verschil is de les**: een editorveld dat op een lege testinstance werkt,
+zegt niets. De juiste toets is het aantal `hass`-updates opvoeren.
+
+### Gereproduceerd, en daarna gerepareerd
+
+Dezelfde proef, met de bundel ervoor en erna:
+
+```
+VOOR:  wat ik typte      "ik ben aan het typen"
+       wat er daarna stond  "/local/mijn auto.png"     <- overschreven
+       MIJN_TEKST_WEG: true
+
+NA:    na twintig updates   "ik ben aan het typen"
+       TEKST_BLIJFT_STAAN: true
+       focus nog in het veld: true
+```
+
+`shadowRoot.activeElement` kijkt wél binnen de eigen root, en dat is de toets die
+er nu staat.
+
+---
+
+## 6. De foto van de auto werd afgesneden
+
+Met een schermafdruk waarop het dak van zijn Ford Transit Connect eraf was.
+
+Precies dezelfde fout als op de camerakaart, en één die ik daar al had
+gerepareerd: de grote foto stond op `aspect-ratio: 16/7` met `object-fit: cover`.
+Een foto met een andere verhouding verliest dan zijn boven- en onderkant.
+
+Nu bepaalt de foto zijn eigen hoogte. Gemeten met een testafbeelding van 400x300:
+
+```
+breedte 474, hoogte 357  ->  verhouding 1.330
+verwacht bij 4:3         ->            1.333
+VOLLEDIG_ZICHTBAAR: true
+```
+
+Vóór de reparatie was dat 2,29 geweest — de 16:7 die eroverheen stond.
+
+---
+
+## 7. Een bedrijfsbus-icoon
+
+> *"Ook wil ik een icoon hebben voor bedrijfsbus."*
+
+`van`: hoge neus, lange laadbak, schuifdeur. Te vinden op "bus", "bedrijfsbus",
+"bestelbus", "bestelwagen", "busje", "transit", "camper" en "werkbus". Hij rijdt
+een Ford Transit Connect, en `car` leest als een personenauto.
+
 ## Wat niet lukte
 
 - **De automatische koppeling op apparaat is niet met een echte Reolink
