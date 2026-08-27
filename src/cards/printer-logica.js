@@ -171,7 +171,7 @@ const GEEN_KLEUR = new Set([
   "unloaded",
 ]);
 
-export function trayKleur(ruw) {
+export function trayKleur(ruw, { namen = false } = {}) {
   if (typeof ruw !== "string") return null;
   const tekst = ruw.trim();
   if (!tekst) return null;
@@ -186,15 +186,21 @@ export function trayKleur(ruw) {
   }
   if (/^[0-9a-f]{6}$/i.test(hex)) return `#${hex.toUpperCase()}`;
   if (/^[0-9a-f]{3}$/i.test(hex)) return `#${hex.toUpperCase()}`;
-  // Een naam of een rgb()-notatie geven we door zoals hij is; de browser weet
-  // er raad mee en wij hoeven geen kleurenwoordenboek te onderhouden.
+  // `rgb()` mag altijd: dat is ondubbelzinnig een kleur.
+  if (/^rgba?\(/i.test(tekst)) return tekst;
+
+  // EEN NAAM ALLEEN ALS ERUIT GEVRAAGD. Wie in de editor "red" typt, bedoelt
+  // rood. Maar een attribuut dat "PLA" of "unknown" bevat is geen kleur, en de
+  // browser maakt daar stil `transparent` van -- of erger: hij blijft staan en
+  // de tray krijgt de kleur van wat eronder ligt.
   //
-  // Maar NIET de woorden waarmee een entiteit zegt dat hij niets weet. Die zijn
-  // geen kleur, en de browser maakt er stil `transparent` van -- of erger,
-  // `unknown` blijft staan en de tray krijgt de kleur van wat eronder ligt.
-  // Zonder deze lijst werd een tray met `state: "unknown"` een gekleurde tray.
+  // Dat onderscheid is er niet altijd geweest, en het kostte precies wat je
+  // verwacht: `trayKleur("PLA")` gaf "PLA" terug, waarmee het SOORT filament
+  // als kleur gold en de tray daarna als leeg werd gezien. Gevonden door de
+  // test met zijn eigen AMS-attributen erin.
+  if (!namen) return null;
   if (GEEN_KLEUR.has(tekst.toLowerCase())) return null;
-  if (/^[a-z]+$/i.test(tekst) || /^rgba?\(/i.test(tekst)) return tekst;
+  if (/^[a-z]+$/i.test(tekst)) return tekst;
   return null;
 }
 
@@ -212,8 +218,11 @@ export function trayKleur(ruw) {
 export function tray(st, instel = {}) {
   const attr = st?.attributes ?? {};
   const kleur =
-    trayKleur(instel.color) ??
+    trayKleur(instel.color, { namen: true }) ??
     trayKleur(attr.color) ??
+    // `cols` is de meervoudsvorm van Bambu: bij tweekleurig filament staan er
+    // meerdere in. De eerste is de kleur die je ziet.
+    trayKleur(Array.isArray(attr.cols) ? attr.cols[0] : attr.cols) ??
     trayKleur(attr.filament_color) ??
     trayKleur(attr.tray_color) ??
     // De state alleen als hij ECHT een kleur is. Bij de meeste integraties staat
@@ -222,23 +231,40 @@ export function tray(st, instel = {}) {
     (/^#?[0-9a-f]{3,8}$/i.test(String(st?.state ?? "")) ? trayKleur(st.state) : null) ??
     null;
 
+  // `name` gaat vóór `type`, en dat is geen willekeur: de eigenaar stuurde de
+  // attributen van zijn eigen AMS op 27 augustus 2026, en daar staat
+  // `name: "Bambu PLA Matte"` naast `type: "PLA"`. Het eerste zegt welke rol
+  // erin zit, het tweede alleen welk materiaal -- en met vier trays PLA is dat
+  // laatste vier keer hetzelfde woord.
   const soort =
     instel.label ||
+    attr.name ||
     attr.type ||
     attr.filament_type ||
     attr.tray_type ||
     (st && !trayKleur(st.state) ? st.state : "") ||
     "";
 
-  // Een tray die leeg is meldt dat op allerlei manieren; alles wat geen kleur
-  // én geen soort heeft telt als leeg.
-  const leeg = !kleur && !String(soort).trim();
+  // Bambu zegt het gewoon. Dat is beter dan onze gok, want een lege tray die
+  // toevallig nog een kleur in zijn geheugen heeft staan zou anders als gevuld
+  // op de kaart komen.
+  const leeg =
+    attr.empty === true || attr.empty === "true"
+      ? true
+      : !kleur && !String(soort).trim();
+
+  // `remain_enabled: false` betekent dat de rol geen chip heeft en het
+  // percentage dus niets voorstelt. Dan is niets tonen eerlijker dan een getal.
   const rest = Number(attr.remain ?? attr.remaining);
+  const restTelt = attr.remain_enabled !== false && !leeg;
 
   return {
-    kleur,
+    kleur: leeg ? null : kleur,
     soort: String(soort).trim(),
     leeg,
-    rest: Number.isFinite(rest) && rest >= 0 && rest <= 100 ? Math.round(rest) : null,
+    // Welke tray de printer op dit moment gebruikt. Bambu meldt dat per tray.
+    actief: attr.active === true || attr.active === "true",
+    rest:
+      restTelt && Number.isFinite(rest) && rest >= 0 && rest <= 100 ? Math.round(rest) : null,
   };
 }

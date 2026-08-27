@@ -776,6 +776,12 @@ class MediaCard extends DacCard {
     // anders weet het niet wie er meespeelt in de groep.
     const scherm = document.querySelector("domotiapp-media-browser");
     if (scherm?.hasAttribute("open")) scherm.hass = this.hass;
+
+    // En de speakerkiezer, om dezelfde reden: daar kan sinds 0.21.0 ook
+    // gekoppeld worden, en `group_members` verandert pas als de speakers het
+    // bevestigd hebben.
+    const kiezer = document.querySelector("domotiapp-speler-kiezer");
+    if (kiezer?.hasAttribute("open")) kiezer.hass = this.hass;
   }
 
   /** Hang een schuif aan zodra hij bestaat, en niet twee keer. */
