@@ -47,7 +47,9 @@ import {
   ladenTot,
   locatie,
   niveau,
+  opSlot,
   pct,
+  staatOpen,
   statusregel,
 } from "./auto-logica.js";
 
@@ -116,24 +118,15 @@ class AutoCard extends DacCard {
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* De knoppen rechtsboven: slot en klimaat. Klein, want het zijn dingen die
-       je zelden doet en nooit per ongeluk wilt doen. */
-    .acties { display: flex; gap: 6px; flex: 0 1 auto; margin-left: auto; }
-    .acties button {
-      width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer;
-      padding: 0; font: inherit; color: var(--dac-ink-3);
-      background: var(--dac-surface); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-pill);
-      transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
-    }
-    .acties button[aria-pressed="true"] {
-      color: var(--dac-accent-hi);
-      border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
-      background: color-mix(in srgb, var(--dac-accent) 16%, transparent);
-    }
-    .acties button[data-let="true"] { color: var(--dac-warn); border-color: color-mix(in srgb, var(--dac-warn) 45%, transparent); }
-    .acties button .icon { width: 16px; height: 16px; }
-    @media (hover: hover) { .acties button:hover { border-color: var(--dac-border-hi); } }
+    /* Er staan GEEN bedieningsknoppen op deze kaart.
+       Gevraagd op 27 augustus 2026: "in de kaart wil ik sowieso dat je niks
+       kan bedienen, alleen sensor uitlezen". Er zaten knoppen voor het slot en
+       het voorverwarmen; die zijn eruit. Alles wat de auto meldt staat er als
+       tegel, en een tik erop opent de kaart van Home Assistant.
+
+       Dat past ook bij wat zijn auto levert: sensor..._doorlock vertelt de
+       stand maar neemt geen opdrachten aan. Een knop die niets doet is erger
+       dan geen knop. */
 
     /* ---- balken ---- */
     .balken { display: flex; flex-direction: column; gap: 8px; }
@@ -261,7 +254,6 @@ class AutoCard extends DacCard {
             <span class="nm"></span>
             <span class="st"></span>
           </span>
-          <span class="acties"></span>
         </div>
         <div class="binnen">
           <div class="balken" hidden></div>
@@ -278,37 +270,10 @@ class AutoCard extends DacCard {
       moreInfo(this, c.battery || c.range || c.fuel || c.lock);
     });
 
-    // Eén luisteraar voor alle knoppen samen: wélke er staan verandert met de
-    // toestand van de auto (zie de kop van base.js).
-    this.on(this.$(".acties"), "click", (e) => {
-      const knop = e.target.closest?.("[data-k]");
-      if (!knop) return;
-      e.stopPropagation();
-      this.doe_(knop.dataset.k);
-    });
-
     this.on(this.$(".tegels"), "click", (e) => {
       const tegel = e.target.closest?.("[data-id]");
       if (tegel) moreInfo(this, tegel.dataset.id);
     });
-  }
-
-  doe_(wat) {
-    const c = this.config;
-    if (wat === "lock") {
-      const st = stateOf(this.hass, c.lock);
-      const opSlot = String(st?.state) === "locked";
-      return this.hass.callService("lock", opSlot ? "unlock" : "lock", { entity_id: c.lock });
-    }
-    if (wat === "climate") {
-      const st = stateOf(this.hass, c.climate);
-      const domein = String(c.climate).split(".")[0];
-      return this.hass.callService(domein, isOn(st) ? "turn_off" : "turn_on", {
-        entity_id: c.climate,
-      });
-    }
-    if (wat === "location") return moreInfo(this, c.location);
-    return undefined;
   }
 
   paint() {
@@ -321,7 +286,13 @@ class AutoCard extends DacCard {
     const laden = laadStand(stateOf(this.hass, c.charging));
     const laadMin = ladenTot(stateOf(this.hass, c.charging_ready));
     const slotSt = stateOf(this.hass, c.lock);
-    const open = isOn(stateOf(this.hass, c.doors)) || isOn(stateOf(this.hass, c.windows));
+    // Niet `isOn`: zijn Ford meldt "Closed" en "LOCKED" als gewone sensor, en
+    // dan is `isOn` voor alle drie onwaar -- ook als er wél iets openstaat. Zie
+    // `staatOpen` en `opSlot` in auto-logica.js.
+    const deurOpen = staatOpen(stateOf(this.hass, c.doors));
+    const raamOpen = staatOpen(stateOf(this.hass, c.windows));
+    const open = deurOpen === true || raamOpen === true;
+    const slot = opSlot(slotSt);
     // Waar hij staat, als thuis of afwezig. Zie `locatie` in auto-logica.js:
     // een coordinaat wordt tegen de locatie van Home Assistant gelegd, en een
     // tracker die zelf "home" zegt wordt gewoon geloofd.
@@ -335,7 +306,7 @@ class AutoCard extends DacCard {
 
     const regel = statusregel({
       open,
-      slot: slotSt ? String(slotSt.state) : null,
+      slot: slot === false ? "unlocked" : slot === true ? "locked" : null,
       laden,
       laadMinuten: laadMin,
       radius,
@@ -345,9 +316,8 @@ class AutoCard extends DacCard {
     this.$(".st").style.setProperty("--melding", TOON[regel.toon] ?? TONES.neutral);
 
     this.paintFoto_();
-    this.paintActies_(slotSt, open);
     this.paintBalken_({ accu, tank, radius, laden, soort });
-    this.paintTegels_(waar, laden);
+    this.paintTegels_(waar, laden, { slot, deurOpen, raamOpen });
 
     meetRaster(this.$(".card"));
   }
@@ -375,41 +345,6 @@ class AutoCard extends DacCard {
       vak.innerHTML = resolve(this.config.icon || "car");
     };
     vak.replaceChildren(img);
-  }
-
-  paintActies_(slotSt, open) {
-    const c = this.config;
-    const vak = this.$(".acties");
-    const knoppen = [];
-
-    if (c.lock && slotSt) {
-      const opSlot = String(slotSt.state) === "locked";
-      knoppen.push({
-        k: "lock",
-        icon: opSlot ? "lock" : "lockOpen",
-        label: opSlot ? "Openen" : "Op slot zetten",
-        aan: opSlot,
-        let: !opSlot,
-      });
-    }
-    if (c.climate) {
-      const aan = isOn(stateOf(this.hass, c.climate));
-      knoppen.push({ k: "climate", icon: "airco", label: "Klimaat", aan });
-    }
-    // De locatie stond hier ook als knop. Die is eruit: waar de auto staat is
-    // iets om te lezen, en de rij duwde zichzelf buiten de kaart. Hij staat nu
-    // als tegel onderaan -- zie paintTegels_.
-
-    const sig = knoppen.map((k) => `${k.k}|${k.icon}|${k.aan}|${k.let}`).join(",");
-    if (vak.dataset.sig === sig) return;
-    vak.dataset.sig = sig;
-    vak.innerHTML = knoppen
-      .map(
-        (k) =>
-          `<button type="button" data-k="${k.k}" aria-pressed="${Boolean(k.aan)}"` +
-          ` data-let="${Boolean(k.let)}" aria-label="${k.label}">${resolve(k.icon)}</button>`
-      )
-      .join("");
   }
 
   paintBalken_({ accu, tank, radius, laden, soort }) {
@@ -510,7 +445,7 @@ class AutoCard extends DacCard {
    * staat, dan zie ik niks"*. Terecht: een veld dat je invult hoort iets te
    * laten zien.
    */
-  paintTegels_(waar, laden) {
+  paintTegels_(waar, laden, stand = {}) {
     const c = this.config;
     const vak = this.$(".tegels");
     const uit = [];
@@ -556,6 +491,35 @@ class AutoCard extends DacCard {
         });
       }
     }
+
+    // Het slot, de deuren en de ramen. Geen knoppen -- deze kaart leest alleen
+    // uit -- maar wel zichtbaar, want dat is waar je naar kijkt als je 's avonds
+    // even wilt weten of alles dicht is.
+    if (c.lock && stand.slot !== null && stand.slot !== undefined) {
+      uit.push({
+        id: c.lock,
+        w: stand.slot ? "Op slot" : "Niet op slot",
+        l: "Portierslot",
+        toon: stand.slot ? "good" : "warn",
+      });
+    }
+    if (c.doors && stand.deurOpen !== null && stand.deurOpen !== undefined) {
+      uit.push({
+        id: c.doors,
+        w: stand.deurOpen ? "Open" : "Dicht",
+        l: "Deuren",
+        toon: stand.deurOpen ? "warn" : null,
+      });
+    }
+    if (c.windows && stand.raamOpen !== null && stand.raamOpen !== undefined) {
+      uit.push({
+        id: c.windows,
+        w: stand.raamOpen ? "Open" : "Dicht",
+        l: "Ramen",
+        toon: stand.raamOpen ? "warn" : null,
+      });
+    }
+    if (c.climate) voegToe(c.climate, "Voorverwarmen");
 
     if (c.odometer) voegToe(c.odometer, "Kilometerstand");
     if (c.charging_power) voegToe(c.charging_power, "Laadvermogen");
@@ -668,10 +632,10 @@ class AutoEditor extends DacEditor {
     }
 
     velden.push(
-      { name: "lock", selector: sel.entity("lock") },
-      { name: "doors", selector: sel.entity(["binary_sensor"]) },
-      { name: "windows", selector: sel.entity(["binary_sensor"]) },
-      { name: "climate", selector: sel.entity(["switch", "climate", "button"]) },
+      { name: "lock", selector: sel.entity(["lock", "sensor", "binary_sensor"]) },
+      { name: "doors", selector: sel.entity(["binary_sensor", "sensor", "cover"]) },
+      { name: "windows", selector: sel.entity(["binary_sensor", "sensor", "cover"]) },
+      { name: "climate", selector: sel.entity(["sensor", "binary_sensor", "switch", "climate"]) },
       { name: "location", selector: sel.entity(["device_tracker", "sensor", "person"]) },
       { name: "home_radius", selector: sel.number(10, 2000, 10) },
       { name: "odometer", selector: sel.entity(["sensor"]) },
@@ -698,7 +662,7 @@ class AutoEditor extends DacEditor {
         lock: "Portierslot",
         doors: "Deuren open",
         windows: "Ramen open",
-        climate: "Voorverwarmen of koelen",
+        climate: "Voorverwarmen (alleen uitlezen)",
         location: "Waar hij staat",
         home_radius: "Hoe dichtbij is thuis (meter)",
         odometer: "Kilometerstand",
@@ -720,7 +684,8 @@ class AutoEditor extends DacEditor {
       fuel_max: "Alleen nodig als je tanksensor in liters meldt in plaats van in procenten.",
       charging_ready:
         "Een aantal minuten, een klok of het tijdstip waarop hij vol is — alle drie worden gelezen.",
-      doors: "Staat er iets open, dan zegt de kaart dat en gaat al het andere even opzij.",
+      doors: "Staat er iets open, dan zegt de kaart dat en gaat al het andere even opzij. Een binary_sensor mag, maar een gewone sensor met een woord erin ook — Closed, Open, Ajar en LOCKED worden allemaal gelezen.",
+      lock: "Alleen uitlezen: deze kaart bedient niets. Een lock-entiteit mag, maar ook een sensor die LOCKED of UNLOCKED meldt.",
       location:
         "Een device_tracker die home of not_home meldt, of een sensor met een coordinaat — beide worden gelezen. Bij een coordinaat rekent de kaart de afstand tot de locatie van je Home Assistant uit en maakt daar Thuis of Afwezig van.",
       home_radius:

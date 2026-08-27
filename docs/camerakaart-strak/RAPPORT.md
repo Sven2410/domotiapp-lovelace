@@ -189,6 +189,65 @@ Vóór de reparatie was dat 2,29 geweest — de 16:7 die eroverheen stond.
 "bestelbus", "bestelwagen", "busje", "transit", "camper" en "werkbus". Hij rijdt
 een Ford Transit Connect, en `car` leest als een personenauto.
 
+---
+
+## 8. Deuren, ramen en het slot: gewone sensoren
+
+> *"Bij ramen filter je alleen op binaire sensor, maar mijn bus geeft een normale
+> sensor, een status LOCKED bijvoorbeeld."*
+
+Read-only nagemeten op zijn installatie, en het was **alle drie** raak:
+
+```
+sensor..._doorstatus      = "Closed"
+sensor..._windowposition  = "Closed"
+sensor..._doorlock        = "LOCKED"
+```
+
+Geen `binary_sensor`, geen `lock` — gewone sensoren met een Engels woord erin.
+De kaart keek naar `isOn()`, en dat is voor geen van drieën waar. Ze meldde dus
+nooit iets, ook niet als er wél iets openstond.
+
+De keuzevelden nemen nu `sensor` en `cover` mee, en er zijn twee functies bij die
+de woorden lezen. Twee dingen daaruit zijn het vermelden waard:
+
+**Een Ford meldt een hele zin.** Niet "on", maar "Driver Door Ajar" of "Tailgate
+Open". Dat telt als open. Maar niet elk woord met "open" erin: "Openbaar" is geen
+open deur, dus er wordt op woordgrenzen gekeken.
+
+**Een `binary_sensor` met `device_class: lock` is ANDERSOM.** De afspraak van
+Home Assistant is dat `on` daar ONTGRENDELD betekent. Dat is precies andersom dan
+je zou gokken, en daarom staat het apart in de code met die uitleg erbij.
+
+## 9. De kaart bedient niets meer
+
+> *"In de kaart wil ik sowieso dat je niks kan bedienen, alleen sensor uitlezen."*
+
+De knoppen voor het slot en het voorverwarmen zijn eruit. Alles staat nu als
+tegel, en een tik erop opent de kaart van Home Assistant.
+
+Dat past ook bij wat zijn auto levert: `sensor..._doorlock` vertelt de stand maar
+neemt geen opdrachten aan. Een knop die niets doet is erger dan geen knop.
+
+### Gemeten in een echte browser
+
+Met zijn eigen waarden als gewone sensoren nagebootst:
+
+```
+BEDIENINGSKNOPPEN: 0
+
+alles dicht:
+  statusregel:  "Nog 54 km"
+  Portierslot: Op slot | Deuren: Dicht | Ramen: Dicht | Waar hij staat: Thuis
+
+deur open ("Driver Door Ajar") en slot op UNLOCKED:
+  statusregel:  "Er staat iets open"
+  Portierslot: Niet op slot | Deuren: Open | Ramen: Dicht
+
+en weer dicht:
+  statusregel:  "Nog 54 km"
+```
+
 ## Wat niet lukte
 
 - **De automatische koppeling op apparaat is niet met een echte Reolink
