@@ -51,9 +51,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
 import { hoortBij } from "./camera-logica.js";
 import {
-  ALGEMEEN,
   ALLE_SOORTEN,
-  SOORTEN,
   alsDatumveld,
   dagLabel,
   dagOm,
@@ -62,6 +60,7 @@ import {
   raadSoort,
   soortVan,
   soortVanBeeld,
+  soortenVoorFilter,
   telPerSoort,
   uitDatumveld,
   verschuifDag,
@@ -293,13 +292,15 @@ class CameraCard extends DacCard {
     .filters .datumveld {
       position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
     }
-    .filters .rek { flex: 1 1 auto; }
-    .filters .totaal { flex: 0 0 auto; font-size: 11.5px; color: var(--dac-ink-3); }
+    /* Er staat GEEN teller "13 van 13" naast de dagkiezer. Die stond er wel;
+       weggehaald op verzoek, 28 augustus 2026: "dat 25 van de 31 mag wel weg, is
+       niet relevant." Je ziet de beelden zelf al staan. */
 
     /* De vijf filterknoppen. Hij vroeg om vijf iconen; ze staan er alle vijf,
        ook als er van die soort niets is -- dan gedempt, zodat de rij niet van
        vorm verandert zodra er een kraai voorbijkomt. */
     .filters .soorten { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filters .soorten[hidden] { display: none; }
     .filters .soorten button {
       flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
       padding: 5px 9px; cursor: pointer; font: inherit; font-size: 11.5px;
@@ -450,6 +451,8 @@ class CameraCard extends DacCard {
         // Mens, dier, voertuig, aanbellen of ontgrendeling. Wat je zelf koos
         // wint; anders wordt het geraden uit het entity_id en de naam, zodat een
         // Reolink meteen klopt zonder dat er iets ingevuld hoeft te worden.
+        // `null` als er niets gekozen is en er ook niets te raden valt. Dan
+        // krijgt hij geen filterknop -- zie `soortenVoorFilter`.
         soort: c[`meldersoort:${entity}`] || raadSoort(entity, naam),
       };
     });
@@ -504,8 +507,6 @@ class CameraCard extends DacCard {
             <button type="button" class="pijl" data-dag="1" aria-label="Dag verder">
               ${resolve("chevronRight")}
             </button>
-            <span class="rek"></span>
-            <span class="totaal"></span>
           </div>
           <div class="rij soorten"></div>
           <div class="rij camkeuze" hidden></div>
@@ -645,33 +646,35 @@ class CameraCard extends DacCard {
     if (blok.hidden) return;
 
     const alle = this.beelden_ ?? [];
-    const zichtbaar = this.zichtbareBeelden_();
 
     this.text(".datum", dagLabel(this.dag_ ?? null));
     this.$('.pijl[data-dag="1"]').disabled =
       this.dag_ !== null && this.dag_ !== undefined && this.dag_ >= dagOm(Date.now()).vanaf;
-    this.text(".totaal", alle.length ? `${zichtbaar.length} van ${alle.length}` : "");
 
     this.paintSoorten_(alle);
     this.paintCamFilter_();
   }
 
   /**
-   * De vijf filterknoppen -- en de zesde, als er een gewone bewegingsmelder is.
+   * De filterknoppen: precies de soorten die in de editor aan een melder hangen.
    *
-   * *"Ik wil 5 icons hebben. Mens dier voertuig aanbellen en ontgrendeling
-   * waarop ik kan filteren."* Die vijf staan er altijd, ook op een dag waarop er
-   * van die soort niets was; anders springt de rij van breedte.
+   * Hier stond eerst een vaste rij van vijf, waarvan de lege gedempt waren, plus
+   * een zesde die verscheen zodra een melder op geen enkel woord matchte.
+   * Gemeld op 28 augustus 2026: *"Je hebt Voorkant erbij gezet als filter maar
+   * die heb ik helemaal niet gedefinieerd als beweging. Ik wil alleen dat je de
+   * filters laat zien die ook gedefinieerd zijn in de GUI."*
+   *
+   * Dat is de regel geworden. Een knop is een belofte dat er iets te filteren
+   * valt; een knop voor een soort die nergens is ingesteld belooft iets wat
+   * niemand heeft gemaakt. Staat er niets ingesteld, dan is er ook geen rij.
    */
   paintSoorten_(alle) {
     const vak = this.$(".soorten");
     const tellen = telPerSoort(alle, this.config);
-    const heeftAlgemeen =
-      (tellen[ALGEMEEN.sleutel] ?? 0) > 0 ||
-      this.melders_().some((m) => m.soort === ALGEMEEN.sleutel);
-    const rij = [...SOORTEN, ...(heeftAlgemeen ? [ALGEMEEN] : [])];
+    const rij = soortenVoorFilter(this.melders_());
     const gekozen = this.soorten_ instanceof Set ? this.soorten_ : new Set();
 
+    vak.hidden = !rij.length;
     const sig = rij
       .map((s) => `${s.sleutel}:${tellen[s.sleutel] ?? 0}:${gekozen.has(s.sleutel)}`)
       .join(",");
@@ -1603,7 +1606,11 @@ class CameraEditor extends DacEditor {
     // een gekozen, dus een leeg keuzevak liegt erover.
     for (const id of melders) {
       const naam = c[`melder:${id}`] || this.hass_?.states?.[id]?.attributes?.friendly_name;
-      zaad[`meldersoort:${id}`] = raadSoort(id, naam);
+      const geraden = raadSoort(id, naam);
+      // Alleen zaaien wat er WERKELIJK uit de naam volgt. Vindt hij niets, dan
+      // blijft het vakje leeg -- dat is eerlijker dan er "Beweging" in zetten en
+      // daar een filterknop op baseren die niemand heeft gekozen.
+      if (geraden) zaad[`meldersoort:${id}`] = geraden;
     }
     super.setConfig({ ...zaad, ...c });
   }

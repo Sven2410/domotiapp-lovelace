@@ -73,14 +73,18 @@ export const SOORTEN = [
 ];
 
 /**
- * De zesde, en waarom hij er is.
+ * De zesde soort: gewone beweging.
  *
- * Hij vroeg om vijf iconen en die krijgt hij. Maar een gewone
- * `binary_sensor.oprit_motion` is geen van die vijf, en die hangt bij hem wél op
- * de kaart. Zo'n melder onder één van de vijf schuiven zou het filter laten
- * liegen; hem weglaten zou beelden opleveren die je nergens kunt aanvinken. Dus
- * krijgt hij een eigen knop -- en die verschijnt ALLEEN als er werkelijk zo'n
- * melder is.
+ * Een `binary_sensor.oprit_motion` is geen van de vijf die hij noemde, en die
+ * hangt bij hem wél op de kaart. Daarom bestaat deze soort -- maar je moet hem
+ * ZELF kiezen in de editor.
+ *
+ * **Hij is met opzet geen terugval meer.** Tot 0.30.0 kreeg elke melder die op
+ * geen enkel woord matchte deze soort erbij geraden, en dan verscheen er een
+ * filterknop voor iets dat niemand had ingesteld. Gemeld op 28 augustus 2026:
+ * *"Je hebt Voorkant erbij gezet als filter maar die heb ik helemaal niet
+ * gedefinieerd als beweging."* Terecht: raden mag om je werk uit handen te
+ * nemen, niet om een knop te verzinnen.
  */
 export const ALGEMEEN = { sleutel: "beweging", label: "Beweging", icoon: "cctv", woorden: [] };
 
@@ -109,6 +113,10 @@ function woordenIn(tekst) {
  *
  * Het domein telt mee waar dat een feit is: een `lock` die van slot gaat is een
  * ontgrendeling, hoe hij ook heet.
+ *
+ * **Matcht er niets, dan is het antwoord `null` en niet "beweging".** Zie
+ * `ALGEMEEN` voor waarom. Een melder zonder soort is geen fout: hij hoort
+ * gewoon bij geen enkele knop tot je er zelf een kiest.
  */
 export function raadSoort(entityId, naam) {
   const domein = String(entityId ?? "").split(".")[0];
@@ -118,11 +126,11 @@ export function raadSoort(entityId, naam) {
   for (const soort of SOORTEN) {
     if (soort.woorden.some((w) => woorden.has(w))) return soort.sleutel;
   }
-  return ALGEMEEN.sleutel;
+  return null;
 }
 
 /**
- * Onder welke soort valt dit beeld?
+ * Onder welke soort valt dit beeld? `null` als er geen soort bekend is.
  *
  * Wat er in de editor bij die melder is gekozen wint; anders wordt het geraden.
  * Het beeld draagt zijn melder mee (`beeld.melder`), dus dit werkt ook voor een
@@ -156,7 +164,12 @@ export function filterBeelden(beelden, { soorten, camera, dag, config } = {}) {
   const kies = soorten instanceof Set ? soorten : new Set(soorten ?? []);
   const grens = dag === undefined || dag === null ? null : dagOm(dag);
   return (Array.isArray(beelden) ? beelden : []).filter((beeld) => {
-    if (kies.size && !kies.has(soortVanBeeld(beeld, config))) return false;
+    if (kies.size) {
+      // Een beeld zonder soort hoort bij geen enkele knop, en valt dus buiten
+      // elk soortfilter. Zonder filter staat hij er gewoon bij.
+      const soort = soortVanBeeld(beeld, config);
+      if (!soort || !kies.has(soort)) return false;
+    }
     if (camera && beeld.camera !== camera) return false;
     if (grens) {
       const ms = tijdVanBeeld(beeld);
@@ -171,9 +184,28 @@ export function telPerSoort(beelden, config = {}) {
   const uit = {};
   for (const beeld of Array.isArray(beelden) ? beelden : []) {
     const s = soortVanBeeld(beeld, config);
-    uit[s] = (uit[s] ?? 0) + 1;
+    if (s) uit[s] = (uit[s] ?? 0) + 1;
   }
   return uit;
+}
+
+/**
+ * Welke filterknoppen horen er op deze kaart te staan?
+ *
+ * Gevraagd op 28 augustus 2026: *"Ik wil alleen dat je de filters laat zien die
+ * ook gedefinieerd zijn in de GUI."* Dus geen vaste rij van vijf meer waarvan er
+ * drie gedempt staan, maar precies de soorten die aan zijn melders hangen -- in
+ * de volgorde van `ALLE_SOORTEN`, zodat de knoppen niet van plek wisselen als er
+ * eentje bijkomt.
+ *
+ * @param {Array<{soort: string|null}>} melders de melders van de kaart
+ * @returns {Array<object>} de soorten, in vaste volgorde
+ */
+export function soortenVoorFilter(melders) {
+  const aanwezig = new Set(
+    (Array.isArray(melders) ? melders : []).map((m) => m?.soort).filter(Boolean)
+  );
+  return ALLE_SOORTEN.filter((s) => aanwezig.has(s.sleutel));
 }
 
 /** De dagen waarop er beelden zijn, nieuwste eerst. */
