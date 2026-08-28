@@ -169,6 +169,11 @@ def beeld_url(hass: HomeAssistant, beeld_id: str) -> str | None:
     return f"{basis}{pad}"
 
 
+def tag_voor(camera: str, melder: str | None) -> str:
+    """De tag waarop Android meldingen samenvoegt."""
+    return f"domotiapp-{camera}-{melder}" if melder else f"domotiapp-{camera}"
+
+
 async def async_stuur(
     hass: HomeAssistant,
     *,
@@ -178,6 +183,7 @@ async def async_stuur(
     tekst: str,
     beeld_id: str | None,
     camera: str,
+    melder: str | None = None,
 ) -> list[str]:
     """Stuur de melding. Geeft terug naar welke diensten hij is gegaan.
 
@@ -192,9 +198,19 @@ async def async_stuur(
         # meesturen kost niets en scheelt een tabel met welk toestel wat kan.
         data["image"] = url
         data["attachment"] = {"url": url, "content-type": "jpeg"}
-    # Zo blijft een reeks meldingen van dezelfde camera één regel op het scherm
-    # in plaats van een stapel.
-    data["tag"] = f"domotiapp-{camera}"
+    # Eén regel op het scherm per CAMERA ÉN MELDER, in plaats van per camera.
+    #
+    # Android vervangt een melding met dezelfde `tag`. Dat is precies wat je wilt
+    # bij twintig bewegingen op dezelfde oprit -- één regel in plaats van een
+    # stapel. Maar op één camera kunnen verschillende dingen gebeuren: bij zijn
+    # voordeur hangen `event.voordeur_deurbel_drukken` en
+    # `event.voordeur_toegang` aan dezelfde `camera.voordeur`. Met een tag per
+    # camera overschrijft "er is ontgrendeld" dus de melding "er is aangebeld",
+    # en dan is die eerste weg voordat je gekeken hebt.
+    #
+    # Per melder blijft het gedrag dat hij wilde -- herhaalde bewegingen van
+    # dezelfde melder vervangen elkaar nog steeds -- en verdwijnt het verlies.
+    data["tag"] = tag_voor(camera, melder)
     data["group"] = "domotiapp-bewaking"
 
     gelukt: list[str] = []

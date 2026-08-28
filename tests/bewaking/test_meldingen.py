@@ -128,7 +128,7 @@ async def test_de_melding_draagt_het_beeld_voor_android_en_ios(
     # scheelt een tabel met welk toestel wat kan.
     assert data["image"].startswith("https://svenkool.ui.nabu.casa/")
     assert data["attachment"]["url"] == data["image"]
-    # Eén regel op het scherm per camera in plaats van een stapel.
+    # Eén regel op het scherm per camera EN melder in plaats van een stapel.
     assert data["tag"] == "domotiapp-camera.oprit"
 
 
@@ -175,3 +175,49 @@ async def test_het_overzicht_toont_wie_er_een_telefoon_heeft(
             "thuis": False,
         },
     ]
+
+
+def test_de_tag_hangt_aan_camera_en_melder() -> None:
+    """Twee gebeurtenissen op één camera horen twee regels te zijn."""
+    from custom_components.domotiapp_lovelace.bewaking.meldingen import tag_voor
+
+    assert tag_voor("camera.voordeur", "event.deurbel") != tag_voor(
+        "camera.voordeur", "event.toegang"
+    )
+    # Dezelfde melder blijft wél samenvallen: twintig bewegingen op de oprit
+    # horen één regel te zijn.
+    assert tag_voor("camera.oprit", "binary_sensor.persoon") == tag_voor(
+        "camera.oprit", "binary_sensor.persoon"
+    )
+    # En zonder melder valt hij terug op de camera.
+    assert tag_voor("camera.oprit", None) == "domotiapp-camera.oprit"
+
+
+async def test_twee_melders_op_een_camera_overschrijven_elkaars_melding_niet(
+    hass: HomeAssistant, bewaking_op, telefoon
+) -> None:
+    """NIEUW GEDRAG, 28 augustus 2026.
+
+    Aan zijn `camera.voordeur` hangen `event.voordeur_deurbel_drukken` en
+    `event.voordeur_toegang`. Android vervangt een melding met dezelfde tag, dus
+    met één tag per camera duwt "ontgrendeld" de melding "aangebeld" van het
+    scherm -- weg voordat hij gekeken heeft.
+    """
+    gebeld = []
+    hass.services.async_register(
+        "notify", "mobile_app_iphone_van_sven", lambda call: gebeld.append(call.data)
+    )
+
+    await meldingen.async_stuur(
+        hass, ontvangers=[PERSOON], diensten={}, titel="Voordeur", tekst="Aanbellen",
+        beeld_id=None, camera="camera.voordeur", melder="event.voordeur_deurbel_drukken",
+    )
+    await meldingen.async_stuur(
+        hass, ontvangers=[PERSOON], diensten={}, titel="Voordeur", tekst="Ontgrendelen",
+        beeld_id=None, camera="camera.voordeur", melder="event.voordeur_toegang",
+    )
+
+    assert len(gebeld) == 2
+    assert gebeld[0]["data"]["tag"] != gebeld[1]["data"]["tag"]
+    # En ze blijven wél bij elkaar staan in dezelfde groep.
+    assert gebeld[0]["data"]["group"] == gebeld[1]["data"]["group"]

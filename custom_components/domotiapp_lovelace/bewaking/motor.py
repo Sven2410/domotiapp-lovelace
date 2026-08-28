@@ -373,6 +373,7 @@ class Motor:
             tekst=beeld["naam"],
             beeld_id=beeld["id"],
             camera=regel.camera,
+            melder=beeld.get("melder"),
         )
 
     @callback
