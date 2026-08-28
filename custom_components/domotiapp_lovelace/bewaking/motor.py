@@ -72,6 +72,57 @@ _LOGGER = logging.getLogger(__name__)
 CAMERA_TIMEOUT = 10
 
 
+def is_detectie(entity_id: str, nieuw: str, oud: str) -> bool:
+    """Is dit een detectie, of alleen een toestand die toevallig veranderde?
+
+    **Niet elke melder wordt `on`.** Dat stond hier wel, en het was fout. Op
+    28 augustus 2026 meldde de eigenaar dat er bij het ontgrendelen van zijn
+    voordeur geen snapshot kwam. In zijn Home Assistant nagekeken -- met zijn
+    toestemming, alleen gelezen -- en het stond er allemaal keurig in:
+
+        12:26:03  event.voordeur_toegang        -> 2026-08-28T12:26:03.818+00:00
+        12:26:20  lock.voordeur                 -> unlocked
+        12:26:21  event.voordeur_toegang        -> 2026-08-28T12:26:21.448+00:00
+        12:26:25  lock.voordeur                 -> locked
+
+    Geen van die regels is ooit `on`. UniFi Access levert het ontgrendelen als
+    een **gebeurtenis** (`event`-entiteit, waarvan de toestand het TIJDSTIP van
+    de laatste gebeurtenis is) en daarnaast als een `lock` die van slot gaat.
+    Zijn deurbel (`event.voordeur_deurbel_drukken`) is net zo'n gebeurtenis, en
+    de slimme detecties van UniFi Protect trouwens ook
+    (`event.fietsenhok_voertuig`).
+
+    Vandaar per domein:
+
+    - **`event`**: elke NIEUWE geldige waarde is een gebeurtenis. Er valt niets
+      om te slaan -- het tijdstip is de gebeurtenis.
+    - **`lock`**: van slot gaan telt, op slot gaan niet.
+    - **`cover`**: opengaan telt. Een poort die opengaat is hetzelfde soort
+      moment als een deur die ontgrendelt.
+    - **al het andere** (`binary_sensor`, `input_boolean`, `switch`): `on`, en
+      alleen het omslaan. Een attribuutwijziging is geen detectie.
+    """
+    domein = entity_id.split(".")[0]
+
+    if domein == "event":
+        # `unknown` is "nog nooit gebeurd" en `unavailable` is een storing.
+        if nieuw in ("unknown", "unavailable", ""):
+            return False
+        return nieuw != oud
+
+    if domein == "lock":
+        return nieuw in ("unlocked", "open", "opening") and oud not in (
+            "unlocked",
+            "open",
+            "opening",
+        )
+
+    if domein == "cover":
+        return nieuw in ("open", "opening") and oud not in ("open", "opening")
+
+    return nieuw == STATE_ON and oud != STATE_ON
+
+
 class Motor:
     """Luistert naar de melders van alle actieve regels."""
 
@@ -140,13 +191,12 @@ class Motor:
         nieuw = event.data.get("new_state")
         oud = event.data.get("old_state")
 
-        if nieuw is None or nieuw.state != STATE_ON:
+        if nieuw is None:
             return
         if oud is None:
             # Het opstarten van Home Assistant, niet een detectie.
             return
-        if oud.state == STATE_ON:
-            # Alleen het omslaan telt; een attribuutwijziging is geen detectie.
+        if not is_detectie(event.data["entity_id"], nieuw.state, oud.state):
             return
 
         melder = event.data["entity_id"]

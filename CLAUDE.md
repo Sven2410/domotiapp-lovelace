@@ -898,6 +898,36 @@ die daar niet staan:
    om in een pop-up. Zit de kaart in de weg met `overflow: hidden`, haal dat dan
    daar weg in plaats van naar `fixed` te grijpen.
 
+35. **Niet elke melder wordt `on`.** Een `event`-entiteit draagt het TIJDSTIP van
+   de laatste gebeurtenis als toestand -- er valt niets om te slaan -- en een
+   `lock` gaat naar `unlocked`. Wie op `state == "on"` filtert, mist ze allebei
+   zonder een spoor in het logboek. Gemeld op 28 augustus 2026: het ontgrendelen
+   van zijn voordeur leverde geen snapshot op terwijl het in zijn Home Assistant
+   keurig binnenkwam:
+
+   ```
+   12:26:03   event.voordeur_toegang   -> 2026-08-28T12:26:03.818+00:00
+   12:26:20   lock.voordeur            -> unlocked
+   ```
+
+   **UniFi doet dit overal:** Access levert ontgrendelen en aanbellen als
+   `event`, en Protect levert zijn slimme detecties óók als `event`
+   (`event.fietsenhok_voertuig`) naast de `binary_sensor`. Zie `is_detectie()` in
+   `bewaking/motor.py` voor de regel per domein.
+
+   **En `device_class` is een feit waar een naam een gok is.** `doorbell` maakt
+   van een entiteit een deurbel, hoe hij ook heet. Dat gaat vóór het raden op
+   woorden -- zie `raadSoort` in `cards/camera-filters.js`.
+
+36. **Twee integraties kunnen hetzelfde apparaat ANDERS noemen dan hetzelfde
+   apparaat.** In zijn huis heten het UniFi Access-slot en de UniFi
+   Protect-camera allebei "Voordeur", maar het zijn twee apparaten met twee
+   ID's. `camera-logica.js` koppelt een melder aan een camera op het APPARAAT en
+   met opzet niet op de naam (zie de kop daar). Bij UniFi valt die koppeling dus
+   weg, en dan hoort de melder bij ALLE camera's van de kaart -- één
+   ontgrendeling zou vijf snapshots opleveren. Daar is het veld *"↳ hoort bij
+   welke camera"* voor, en bij UniFi is het invullen ervan geen luxe.
+
 ---
 
 ## Projectstand
@@ -951,8 +981,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.32.0):** 898 JS-tests en 597 Python-tests,
-alle groen; bundel 625.348 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.33.0):** 900 JS-tests en 602 Python-tests,
+alle groen; bundel 625.497 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat

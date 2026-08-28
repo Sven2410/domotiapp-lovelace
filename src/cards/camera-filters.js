@@ -68,7 +68,13 @@ export const SOORTEN = [
     sleutel: "ontgrendeling",
     label: "Ontgrendeling",
     icoon: "lockOpen",
-    woorden: ["unlock", "unlocked", "ontgrendeld", "ontgrendeling", "slot", "lock", "opener", "deuropener", "buzzer"],
+    woorden: [
+      "unlock", "unlocked", "ontgrendeld", "ontgrendeling", "slot", "lock",
+      "opener", "deuropener", "buzzer",
+      // UniFi Access noemt het "toegang" / "access" / "entry". Uit zijn eigen
+      // installatie: `event.voordeur_toegang`, "Voordeur Deur Gebeurtenis".
+      "toegang", "access", "entry", "keypad", "badge", "pas",
+    ],
   },
 ];
 
@@ -111,16 +117,23 @@ function woordenIn(tekst) {
  * mensmelding, geen aanbelmelding. Wat een melder werkelijk detecteert is
  * specifieker dan waar hij op zit.
  *
- * Het domein telt mee waar dat een feit is: een `lock` die van slot gaat is een
- * ontgrendeling, hoe hij ook heet.
+ * Het domein en de `device_class` tellen mee waar dat een FEIT is en geen gok:
+ * een `lock` die van slot gaat is een ontgrendeling hoe hij ook heet, en een
+ * entiteit met `device_class: doorbell` is een deurbel. Die twee gaan daarom
+ * vóór het raden op woorden.
+ *
+ * Beide komen uit zijn eigen installatie: `lock.voordeur` van UniFi Access, en
+ * `event.voordeur_deurbel_drukken` met `device_class: doorbell`.
  *
  * **Matcht er niets, dan is het antwoord `null` en niet "beweging".** Zie
  * `ALGEMEEN` voor waarom. Een melder zonder soort is geen fout: hij hoort
  * gewoon bij geen enkele knop tot je er zelf een kiest.
  */
-export function raadSoort(entityId, naam) {
+export function raadSoort(entityId, naam, deviceClass) {
   const domein = String(entityId ?? "").split(".")[0];
+  // Twee dingen die FEITEN zijn en geen gok, dus ze gaan voor:
   if (domein === "lock") return "ontgrendeling";
+  if (deviceClass === "doorbell") return "aanbellen";
 
   const woorden = new Set([...woordenIn(entityId), ...woordenIn(naam)]);
   for (const soort of SOORTEN) {
