@@ -961,7 +961,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **zestien kaarttypes**:
+met **twintig kaarttypes**:
 
 | | |
 |---|---|
@@ -969,6 +969,12 @@ met **zestien kaarttypes**:
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, rolluiken |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
+| Apparatuur | **3D-printer**, **auto**, **camera** |
+
+De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
+met inzoomen, presets en een draaikruis, een timeline met snapshots die de
+SERVERKANT maakt (`bewaking/`), filters op dag, soort en camera, een opslagscherm
+met verwijderen, en meldingen naar de telefoon.
 
 Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
@@ -1014,7 +1020,9 @@ is met opzet: de lopende stand hoort in
 `docs/<naam>/RAPPORT.md`. Wat hier staat is het soort kennis dat blijft gelden,
 niet wat er het laatst uitgebracht is.
 
-**Wat er open staat:**
+**Wat er open staat.** De lopende lijst hoort in
+`C:\dev\notities\domotiapp-lovelace\waar-gebleven.md` en niet hier; wat
+hieronder staat is wat al langer meegaat.
 
 - **Groeperen op één scherm.** Sinds 0.16.1 kun je op een algemene mediakaart
   groeperen, maar dat gaat via de zoekknop -- een scherm verder dan de
@@ -1024,6 +1032,10 @@ niet wat er het laatst uitgebracht is.
 - **De kleurkiezer op de afvalkaart.** Die is als enige blijven staan, met een
   reden (zie *Vormregels*). Zegt de eigenaar dat hij ook daar weg moet, dan is
   dat één regel.
+- **Filteren binnen een dag.** De timeline filtert per dag; hij vroeg op
+  28 augustus 2026 om "filters zoals tijd", en dat is nu de dag. Wil hij binnen
+  een dag schuiven (ochtend/avond, of een uurbalk), dan is dat een volgende
+  ronde.
 
 Twee dingen die HIER STONDEN en niet meer open staan: het logo van DomotiTech is
 op 26 augustus 2026 geleverd als `dev/domotitech.png` en zit als data-URI in de
