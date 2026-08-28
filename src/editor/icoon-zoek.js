@@ -32,7 +32,7 @@ export const GROEPEN = [
   ["Buiten", ["tree", "parasol", "veranda", "fence", "sun", "awning", "gras", "kruiden", "car", "beach"]],
   ["Rolluiken", ["shutter", "shutterOpen", "awning", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
-  ["Personen", ["person", "people", "away"]],
+  ["Personen", ["person", "people", "away", "dier"]],
   ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "van", "washer", "dishwasher", "koelkast", "oven", "magnetron", "printer", "printer3d", "fan", "airco", "radio", "boiler"]],
   ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
@@ -129,6 +129,7 @@ export const TERMEN = {
   person: ["persoon", "iemand", "gebruiker", "person", "wie", "profiel", "aanwezig"],
   people: ["personen", "mensen", "gezin", "iedereen", "familie", "people", "gasten"],
   away: ["weg", "afwezig", "niet thuis", "away", "vertrokken", "uit huis"],
+  dier: ["dier", "huisdier", "hond", "kat", "poot", "pootafdruk", "pet", "animal", "beest"],
   homeLeave: ["woning verlaten", "verlaten", "weggaan", "vertrekken", "huis uit", "afsluiten", "de deur uit", "leave", "exit", "weg", "huis"],
 
   /* Apparaten */

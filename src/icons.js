@@ -204,6 +204,26 @@ export const icons = {
     <path d="M3.6 20.4v-1.2a4.8 4.8 0 0 1 4.8-4.8h2.6"/>
     <path d="M14.6 17.4h6M18 14.8l2.6 2.6-2.6 2.6"/>`),
 
+  /**
+   * Een pootafdruk, voor de dierdetectie van een beveiligingscamera.
+   *
+   * Vier tenen en een kussen; geen hond en geen kat, want een Reolink meldt
+   * "pet" en dat is allebei. Op 20 pixels moet het verschil met `person` in één
+   * oogopslag te zien zijn -- vandaar vier losse rondjes bovenin en één breed
+   * vlak eronder, in plaats van een silhouet.
+   *
+   * De tenen zijn met opzet GROOT (r 2,3 in plaats van 1,75). Naast elkaar
+   * gezet op 14, 20 en 32 pixels waren de kleine tenen op de filterknop van de
+   * camerakaart een streepje stippen; deze houden hun vorm. Dezelfde les als
+   * bij `gras` en `kruiden` in 0.28.0: een tekening die op ware grootte klopt
+   * is iets anders dan een tekening die uitvergroot klopt.
+   */
+  dier: draw(`<circle cx="6.6" cy="10.2" r="2.3"/>
+    <circle cx="11" cy="6.4" r="2.4"/>
+    <circle cx="15.6" cy="6.4" r="2.4"/>
+    <circle cx="18.6" cy="10.4" r="2.3"/>
+    <path d="M12.6 14.4c2.9 0 5 2 5 4.1 0 1.6-1.3 2.6-2.8 2.6-1 0-1.5-.4-2.2-.4s-1.2.4-2.2.4c-1.5 0-2.8-1-2.8-2.6 0-2.1 2.1-4.1 5-4.1Z"/>`),
+
   /* ---- waste ---- */
   bin: draw(`<path d="M3.6 6.8h16.8"/>
     <path d="M9.4 6.8V4.6a.9.9 0 0 1 .9-.9h3.4a.9.9 0 0 1 .9.9v2.2"/>

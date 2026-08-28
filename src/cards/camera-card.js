@@ -44,12 +44,31 @@
  */
 
 import { DacCard, INCOMPLETE, TONES, registerCard, registerEditor } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacEditor, sel, section } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
-import { hoortBij } from "./camera-logica.js";
+import { cameraVanMelder, hoortBij } from "./camera-logica.js";
+import {
+  ALGEMEEN,
+  ALLE_SOORTEN,
+  SOORTEN,
+  alsDatumveld,
+  dagLabel,
+  dagOm,
+  dun,
+  filterGebeurtenissen,
+  gebeurtenissenUit,
+  positie,
+  raadSoort,
+  soortVan,
+  telPerSoort,
+  tijdLabel,
+  uitDatumveld,
+  uurMerken,
+  verschuifDag,
+} from "./camera-tijdlijn.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
@@ -59,6 +78,23 @@ const RICHTINGEN = [
   { k: "right", icoon: "chevronRight", label: "Rechts" },
   { k: "down", icoon: "arrowDown", label: "Omlaag" },
 ];
+
+/**
+ * Staat er iets ingevuld dat met presets of draaien te maken heeft?
+ *
+ * Nodig voor de terugval van het nieuwe vinkje: een kaart die al presets had
+ * voordat dat vinkje bestond, hoort ze te houden. Zonder deze toets zouden zijn
+ * bestaande camerakaarten hun presets kwijtraken op het moment van bijwerken --
+ * dat is precies het soort stille achteruitgang waar je pas een dag later
+ * achterkomt.
+ */
+function heeftPtzVelden(c) {
+  return Boolean(
+    c.presets ||
+      (Array.isArray(c.preset_buttons) && c.preset_buttons.length) ||
+      RICHTINGEN.some((r) => c[`ptz_${r.k}`])
+  );
+}
 
 class CameraCard extends DacCard {
   static css = /* css */ `
@@ -222,6 +258,123 @@ class CameraCard extends DacCard {
       border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
     }
 
+    /* ---- de tijdlijn ----
+       Gevraagd op 28 augustus 2026: "ik wil gewoon op de meldingen een time
+       line met filters zoals tijd welke camera etc."
+
+       Onder het beeld, want dat was zijn keuze toen ik hem drie plekken
+       voorlegde. Alles hierin is dus zichtbaar zodra het vinkje aanstaat -- er
+       zit geen tweede klik tussen. */
+    .tijdlijn { position: relative; padding: 0 10px 11px; display: flex; flex-direction: column; gap: 8px; }
+    .tijdlijn[hidden] { display: none; }
+    .tijdlijn .rij { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+    /* De dagkiezer. De pijlen zijn 30px breed: kleiner is op een telefoon
+       mikken, en dit is een knop die je vaak achter elkaar indrukt. */
+    .tijdlijn .pijl {
+      flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center;
+      padding: 0; font: inherit; cursor: pointer; color: var(--dac-ink-2);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-sm);
+    }
+    .tijdlijn .pijl .icon { width: 15px; height: 15px; }
+    .tijdlijn .pijl[data-dag="-1"] .icon { transform: rotate(180deg); }
+    .tijdlijn .pijl[disabled] { opacity: .35; cursor: default; }
+    .tijdlijn .datum {
+      flex: 0 0 auto; padding: 6px 12px; cursor: pointer; font: inherit;
+      font-size: 12px; font-weight: 600; color: var(--dac-ink);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-pill);
+    }
+    /* Het echte datumveld ligt eronder en is onzichtbaar: de knop opent zijn
+       kiezer. Op display:none zetten mag niet -- dan weigert Chrome
+       showPicker(). */
+    .tijdlijn .datumveld {
+      position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+    }
+    .tijdlijn .rek { flex: 1 1 auto; }
+    .tijdlijn .totaal { flex: 0 0 auto; font-size: 11.5px; color: var(--dac-ink-3); }
+
+    /* De vijf filterknoppen. Hij vroeg om vijf iconen; ze staan er alle vijf,
+       ook als er geen melder van die soort is -- dan gedempt, zodat de rij niet
+       van vorm verandert zodra je een melder toevoegt. */
+    .tijdlijn .soorten { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tijdlijn .soorten button {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 9px; cursor: pointer; font: inherit; font-size: 11.5px;
+      color: var(--dac-ink-3); background: var(--dac-surface);
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+    .tijdlijn .soorten button .icon { width: 14px; height: 14px; }
+    .tijdlijn .soorten button[aria-pressed="true"] {
+      color: var(--dac-accent-hi);
+      background: color-mix(in srgb, var(--dac-accent) 18%, transparent);
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
+    }
+    .tijdlijn .soorten button[data-leeg] { opacity: .38; }
+
+    /* De camerakeuze, alleen bij meer dan één camera op de kaart. */
+    .tijdlijn .cameras { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .tijdlijn .cameras::-webkit-scrollbar { display: none; }
+    .tijdlijn .cameras[hidden] { display: none; }
+    .tijdlijn .cameras button {
+      flex: 0 0 auto; padding: 4px 10px; cursor: pointer; font: inherit;
+      font-size: 11px; white-space: nowrap; color: var(--dac-ink-3);
+      background: transparent; border: 1px solid transparent;
+      border-radius: var(--dac-radius-pill);
+    }
+    .tijdlijn .cameras button[aria-pressed="true"] {
+      color: var(--dac-accent-hi); font-weight: 600;
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
+    }
+
+    /* De balk: één etmaal van links naar rechts, met een streepje op 0, 6, 12
+       en 18 uur zodat je ziet of iets 's nachts of 's middags gebeurde. */
+    .balk {
+      position: relative; height: 30px; border-radius: var(--dac-radius-sm);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      overflow: hidden;
+    }
+    .balk .uur {
+      position: absolute; top: 0; bottom: 0; width: 1px;
+      background: var(--dac-border-hi);
+    }
+    .balk .uurtekst {
+      position: absolute; bottom: 1px; font-size: 8.5px; color: var(--dac-ink-3);
+      transform: translateX(2px);
+    }
+    .balk .merk-g {
+      position: absolute; top: 4px; width: 4px; height: 15px; margin-left: -2px;
+      border-radius: 2px; background: var(--dac-accent-hi); cursor: pointer;
+      border: none; padding: 0;
+    }
+    .balk .merk-g[data-aan] { background: var(--dac-ink); height: 21px; top: 3px; }
+    .balk .leeg {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 11px; color: var(--dac-ink-3);
+    }
+
+    /* De lijst. Maximaal een kaarthoogte hoog en dan scrollen: een dag met
+       veertig gebeurtenissen mag de kaart niet tot onder de vouw duwen. */
+    .lijst {
+      display: flex; flex-direction: column; gap: 2px;
+      max-height: 168px; overflow-y: auto; overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    .lijst button {
+      display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+      padding: 6px 8px; cursor: pointer; font: inherit; font-size: 12px;
+      color: var(--dac-ink-2); background: transparent; border: none;
+      border-radius: var(--dac-radius-sm);
+    }
+    .lijst button[data-aan] { background: var(--dac-surface-hi); color: var(--dac-ink); }
+    .lijst .tijd { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .lijst .icon { width: 15px; height: 15px; flex: 0 0 auto; }
+    .lijst .wat { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lijst .bij { flex: 0 0 auto; font-size: 10.5px; color: var(--dac-ink-3); }
+    .lijst .niets { padding: 10px 8px; font-size: 12px; color: var(--dac-ink-3); }
+
     :host([dead]) .card { opacity: .5; }
   `;
 
@@ -230,6 +383,15 @@ class CameraCard extends DacCard {
     if (!c.camera && !(Array.isArray(c.cameras) && c.cameras.length)) {
       c[INCOMPLETE] = "Kies een camera. Presets, richtingsknoppen en een bewegingsmelder mogen daarna.";
     }
+    // Het vinkje "Presets en draaien" is er pas sinds 28 augustus 2026. Een
+    // kaart die zijn presets al had, houdt ze.
+    if (c.presets_aan === undefined) c.presets_aan = heeftPtzVelden(c);
+
+    // De kaart cachet gebeurtenissen per dag en per melderlijst. Verandert de
+    // config, dan klopt die voorraad niet meer -- valkuil 24: een cache die
+    // blijft staan terwijl alles eronder vervangen is.
+    this.gebeurtenissen_ = null;
+    this.opgehaald_ = null;
     return c;
   }
 
@@ -266,12 +428,30 @@ class CameraCard extends DacCard {
       ...(c.motion ? [c.motion] : []),
     ].filter((x) => typeof x === "string");
 
-    return [...new Set(ids)].map((entity) => ({
-      entity,
-      // De naam uit de editor; anders die van Home Assistant zelf.
-      naam: c[`melder:${entity}`] || nameOf(this.hass, entity) || "Beweging",
-      // Bij welke camera hij hoort, als je dat zelf hebt gekozen.
-      bijCamera: c[`melderbij:${entity}`],
+    return [...new Set(ids)].map((entity) => {
+      const naam = c[`melder:${entity}`] || nameOf(this.hass, entity) || "Beweging";
+      return {
+        entity,
+        // De naam uit de editor; anders die van Home Assistant zelf.
+        naam,
+        // Bij welke camera hij hoort, als je dat zelf hebt gekozen.
+        bijCamera: c[`melderbij:${entity}`],
+        // Mens, dier, voertuig, aanbellen of ontgrendeling. Wat je zelf koos
+        // wint; anders wordt het geraden uit het entity_id en de naam, zodat een
+        // Reolink meteen klopt zonder dat er iets ingevuld hoeft te worden.
+        soort: c[`meldersoort:${entity}`] || raadSoort(entity, naam),
+      };
+    });
+  }
+
+  /** De melders zoals de tijdlijn ze nodig heeft: mét de camera waar ze bij horen. */
+  meldersVoorTijdlijn_() {
+    const alle = this.cameras_();
+    return this.melders_().map((m) => ({
+      entity: m.entity,
+      naam: m.naam,
+      soort: m.soort,
+      camera: cameraVanMelder(this.hass, m.entity, alle, m.bijCamera),
     }));
   }
 
@@ -314,6 +494,24 @@ class CameraCard extends DacCard {
           <div class="presets" hidden></div>
         </div>
         <div class="cams" hidden></div>
+        <div class="tijdlijn" hidden>
+          <div class="rij dagrij">
+            <button type="button" class="pijl" data-dag="-1" aria-label="Dag terug">
+              ${resolve("chevronRight")}
+            </button>
+            <button type="button" class="datum">Vandaag</button>
+            <input class="datumveld" type="date" aria-label="Kies een datum">
+            <button type="button" class="pijl" data-dag="1" aria-label="Dag verder">
+              ${resolve("chevronRight")}
+            </button>
+            <span class="rek"></span>
+            <span class="totaal"></span>
+          </div>
+          <div class="rij soorten"></div>
+          <div class="rij cameras" hidden></div>
+          <div class="balk"></div>
+          <div class="lijst"></div>
+        </div>
       </div>`;
   }
 
@@ -342,8 +540,103 @@ class CameraCard extends DacCard {
       this.paint();
     });
 
+    this.tijdlijnLuisteraars_();
     this.zoomLuisteraars_();
     this.bewaakStream_();
+  }
+
+  /**
+   * De knoppen van de tijdlijn.
+   *
+   * Allemaal met `stopPropagation`: de kaart eronder opent bij een tik het beeld
+   * groot, en een datumkiezer die dat óók doet is onbruikbaar.
+   */
+  tijdlijnLuisteraars_() {
+    const blok = this.$(".tijdlijn");
+
+    this.on(blok, "click", (e) => {
+      const pijl = e.target.closest?.(".pijl");
+      if (pijl && !pijl.disabled) {
+        e.stopPropagation();
+        this.zetDag_(verschuifDag(this.dag_ ?? Date.now(), Number(pijl.dataset.dag)));
+        return;
+      }
+      if (e.target.closest?.(".datum")) {
+        e.stopPropagation();
+        const veld = this.$(".datumveld");
+        veld.value = alsDatumveld(this.dag_ ?? Date.now());
+        // `showPicker` is een NATIEVE kalender: die staat buiten de pagina en is
+        // dus niet met de browsertool te bedienen. Vandaar de terugval op focus
+        // -- dan verschijnt hij alsnog bij een tik.
+        try {
+          veld.showPicker?.();
+        } catch {
+          veld.focus();
+        }
+        return;
+      }
+      const soort = e.target.closest?.("[data-soort-filter]");
+      if (soort) {
+        e.stopPropagation();
+        this.wisselSoort_(soort.dataset.soortFilter);
+        return;
+      }
+      const cam = e.target.closest?.("[data-camfilter]");
+      if (cam) {
+        e.stopPropagation();
+        this.camFilter_ = cam.dataset.camfilter || null;
+        this.paintTijdlijn_();
+        return;
+      }
+      const item = e.target.closest?.("[data-tijd]");
+      if (item) {
+        e.stopPropagation();
+        this.licht_(item.dataset.tijd === this.gekozen_ ? null : item.dataset.tijd);
+      }
+    });
+
+    this.on(this.$(".datumveld"), "change", (e) => {
+      e.stopPropagation();
+      const gekozen = uitDatumveld(e.target.value);
+      if (gekozen !== null) this.zetDag_(gekozen);
+    });
+  }
+
+  /** Een andere dag: de voorraad van de vorige klopt dan niet meer. */
+  zetDag_(dag) {
+    // Nooit de toekomst in. Daar staat per definitie niets, en een lege dag
+    // waar je zelf naartoe kon lopen leest als een kaart die stuk is.
+    const vandaag = dagOm(Date.now()).vanaf;
+    this.dag_ = Math.min(dagOm(dag).vanaf, vandaag);
+    this.gebeurtenissen_ = null;
+    this.gekozen_ = null;
+    this.paintTijdlijn_();
+    this.haalGebeurtenissen_();
+  }
+
+  /** Een soort aan- of uitzetten. Alles uit betekent alles tonen. */
+  wisselSoort_(sleutel) {
+    this.soorten_ = this.soorten_ instanceof Set ? this.soorten_ : new Set();
+    if (this.soorten_.has(sleutel)) this.soorten_.delete(sleutel);
+    else this.soorten_.add(sleutel);
+    this.gekozen_ = null;
+    this.paintTijdlijn_();
+  }
+
+  /**
+   * Eén gebeurtenis oplichten -- in de lijst én op de balk tegelijk.
+   *
+   * Dat is wat hij koos toen ik vroeg wat een tik moest doen: "alleen de
+   * gebeurtenis oplichten". Er wordt dus niets geopend en niets afgespeeld; de
+   * balk en de lijst wijzen naar hetzelfde moment.
+   */
+  licht_(sleutel) {
+    this.gekozen_ = sleutel;
+    for (const el of this.$$(".lijst [data-tijd], .balk [data-tijd]")) {
+      el.toggleAttribute("data-aan", Boolean(sleutel) && el.dataset.tijd === sleutel);
+    }
+    if (!sleutel) return;
+    this.$(`.lijst [data-tijd="${sleutel}"]`)?.scrollIntoView({ block: "nearest" });
   }
 
   /**
@@ -539,8 +832,256 @@ class CameraCard extends DacCard {
     this.paintPtz_();
     this.paintPresets_();
     this.paintCams_(cam);
+    this.paintTijdlijn_();
+    this.volgMelders_();
 
     meetRaster(this.$(".card"));
+  }
+
+  /* ------------------------------------------------------------- tijdlijn */
+
+  /**
+   * Haal de dag op uit de geschiedenis van Home Assistant.
+   *
+   * `history/history_during_period` is een kerncommando en staat er dus altijd
+   * -- anders dan onze eigen WS-commando's, die pas bestaan zodra de config
+   * entry is opgezet (valkuil 28). Toch met een `try`: een gebruiker zonder
+   * recorder krijgt hier een fout, en dan hoort er "geen gebeurtenissen" te
+   * staan en geen kapotte kaart.
+   */
+  async haalGebeurtenissen_() {
+    if (!this.config.tijdlijn || !this.hass) return;
+    const melders = this.meldersVoorTijdlijn_();
+    if (!melders.length) return;
+
+    const dag = this.dag_ ?? dagOm(Date.now()).vanaf;
+    const { vanaf, tot } = dagOm(dag);
+    const sleutel = `${vanaf}|${melders.map((m) => m.entity).join(",")}`;
+    if (this.bezig_ === sleutel) return;
+    this.bezig_ = sleutel;
+
+    try {
+      const ruw = await this.hass.callWS({
+        type: "history/history_during_period",
+        start_time: new Date(vanaf).toISOString(),
+        // Nooit in de toekomst vragen: bij vandaag is dat "nu".
+        end_time: new Date(Math.min(tot, Date.now())).toISOString(),
+        entity_ids: melders.map((m) => m.entity),
+        minimal_response: true,
+        no_attributes: true,
+        significant_changes_only: false,
+      });
+      if (!this.isConnected || this.bezig_ !== sleutel) return;
+      this.gebeurtenissen_ = dun(gebeurtenissenUit(ruw, melders, { vanaf }));
+      this.opgehaald_ = sleutel;
+    } catch (fout) {
+      // Niets in de console gooien: dit draait op elk dashboard met een
+      // camerakaart, en een rode regel per kaart is geen informatie.
+      this.gebeurtenissen_ = [];
+      this.opgehaald_ = sleutel;
+      this.foutTijdlijn_ = String(fout?.message ?? fout ?? "");
+    } finally {
+      if (this.bezig_ === sleutel) this.bezig_ = null;
+    }
+    this.paintTijdlijn_();
+  }
+
+  /**
+   * Ververs de tijdlijn zodra een melder aangaat.
+   *
+   * Anders zie je de gebeurtenis waar je zelf naar staat te kijken pas na een
+   * herlading.
+   *
+   * **Vijf seconden, en dat is gemeten.** Het stond eerst op twee, en dat is te
+   * kort: de recorder van Home Assistant schrijft zijn regels met een pauze weg,
+   * en `history_during_period` leest alleen wat er al staat. Op 28 augustus 2026
+   * in de testinstance:
+   *
+   *     melder gaat aan   10:55:41
+   *     opgehaald         10:55:43  ->  11 gebeurtenissen (de nieuwe ontbrak)
+   *     opgehaald         10:55:59  ->  12 gebeurtenissen
+   *
+   * Met twee seconden vraag je dus net te vroeg en blijft de tijdlijn staan tot
+   * de volgende melder afgaat. Dat de melder zelf meteen als merkje op het beeld
+   * verschijnt maakt het erger, niet beter: je ziet dat er iets is en de lijst
+   * eronder zwijgt.
+   *
+   * Drie melders die tegelijk afgaan geven nog steeds één ronde in plaats van
+   * drie.
+   */
+  volgMelders_() {
+    if (!this.config.tijdlijn) return;
+    const sig = this.melders_()
+      .map((m) => `${m.entity}=${stateOf(this.hass, m.entity)?.state ?? ""}`)
+      .join(",");
+    if (this.melderSig_ === sig) return;
+    const eerste = this.melderSig_ === undefined;
+    this.melderSig_ = sig;
+    if (eerste) return;
+    // Alleen vandaag: kijk je terug naar dinsdag, dan hoort die dag niet te
+    // verspringen omdat er nu iemand langsloopt.
+    if ((this.dag_ ?? dagOm(Date.now()).vanaf) !== dagOm(Date.now()).vanaf) return;
+
+    clearTimeout(this.verversTimer_);
+    this.verversTimer_ = setTimeout(() => {
+      this.opgehaald_ = null;
+      this.haalGebeurtenissen_();
+    }, 5000);
+    this.teardown_.push(() => clearTimeout(this.verversTimer_));
+  }
+
+  /** Wat er na de filters overblijft, met de dag erbij. */
+  zichtbaar_() {
+    return filterGebeurtenissen(this.gebeurtenissen_ ?? [], {
+      soorten: this.soorten_,
+      camera: this.camFilter_,
+    });
+  }
+
+  paintTijdlijn_() {
+    const blok = this.$(".tijdlijn");
+    if (!blok) return;
+    const aan = this.config.tijdlijn === true && this.melders_().length > 0;
+    blok.hidden = !aan;
+    if (!aan) return;
+
+    this.dag_ = this.dag_ ?? dagOm(Date.now()).vanaf;
+    if (this.opgehaald_ === null || this.opgehaald_ === undefined) this.haalGebeurtenissen_();
+
+    const vandaag = dagOm(Date.now()).vanaf;
+    this.text(".datum", dagLabel(this.dag_));
+    this.$('.pijl[data-dag="1"]').disabled = this.dag_ >= vandaag;
+
+    const alles = this.gebeurtenissen_ ?? [];
+    const lijst = this.zichtbaar_();
+    this.text(".totaal", alles.length ? `${lijst.length} van ${alles.length}` : "");
+
+    this.paintSoorten_(alles);
+    this.paintCameraFilter_();
+    this.paintBalk_(lijst);
+    this.paintLijst_(lijst);
+    this.herstelLicht_();
+  }
+
+  /**
+   * Zet de oplichtende gebeurtenis terug na een hertekening.
+   *
+   * Zonder dit verdwijnt hij zodra er een `hass` binnenkomt -- en bij hem komen
+   * die meerdere keren per seconde. Anders dan `licht_` scrollt deze niet: dan
+   * zou de lijst onder je vinger vandaan springen terwijl je aan het lezen bent.
+   */
+  herstelLicht_() {
+    if (!this.gekozen_) return;
+    for (const el of this.$$(".lijst [data-tijd], .balk [data-tijd]")) {
+      el.toggleAttribute("data-aan", el.dataset.tijd === this.gekozen_);
+    }
+  }
+
+  /**
+   * De vijf filterknoppen -- en de zesde, als er een gewone bewegingsmelder is.
+   *
+   * "Ik wil 5 icons hebben. Mens dier voertuig aanbellen en ontgrendeling
+   * waarop ik kan filteren." Die vijf staan er altijd, ook op een dag waarop er
+   * niets van die soort was; anders springt de rij van breedte zodra er een
+   * kraai voorbijkomt.
+   */
+  paintSoorten_(alles) {
+    const vak = this.$(".soorten");
+    const tellen = telPerSoort(alles);
+    const heeftAlgemeen = this.melders_().some((m) => m.soort === ALGEMEEN.sleutel);
+    const rij = [...SOORTEN, ...(heeftAlgemeen ? [ALGEMEEN] : [])];
+    const gekozen = this.soorten_ instanceof Set ? this.soorten_ : new Set();
+
+    const sig = rij.map((s) => `${s.sleutel}:${tellen[s.sleutel] ?? 0}:${gekozen.has(s.sleutel)}`).join(",");
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+    vak.innerHTML = rij
+      .map((s) => {
+        const aantal = tellen[s.sleutel] ?? 0;
+        return (
+          `<button type="button" data-soort-filter="${s.sleutel}"` +
+          ` aria-pressed="${gekozen.has(s.sleutel)}" aria-label="${s.label}"` +
+          `${aantal ? "" : " data-leeg"}>${resolve(s.icoon)}` +
+          `<span>${aantal}</span></button>`
+        );
+      })
+      .join("");
+  }
+
+  /** Filteren op camera; alleen als er meer dan één op de kaart staat. */
+  paintCameraFilter_() {
+    const vak = this.$(".tijdlijn .cameras");
+    const lijst = this.cameras_();
+    vak.hidden = lijst.length < 2;
+    if (lijst.length < 2) return;
+
+    const namen = lijst.map((id) => this.camNaam_(id));
+    const sig = `${lijst.join(",")}|${namen.join(",")}|${this.camFilter_ ?? ""}`;
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+    vak.innerHTML =
+      `<button type="button" data-camfilter="" aria-pressed="${!this.camFilter_}">Alle</button>` +
+      lijst
+        .map(
+          (id, i) =>
+            `<button type="button" data-camfilter="${this.veilig_(id)}"` +
+            ` aria-pressed="${this.camFilter_ === id}">${this.veilig_(namen[i])}</button>`
+        )
+        .join("");
+  }
+
+  paintBalk_(lijst) {
+    const balk = this.$(".balk");
+    const { vanaf, tot } = dagOm(this.dag_);
+    const sig = `${vanaf}|${lijst.map((g) => g.tijd).join(",")}`;
+    if (balk.dataset.sig === sig) return;
+    balk.dataset.sig = sig;
+
+    const uren = uurMerken()
+      .map(
+        (u) =>
+          `<span class="uur" style="left:${(u.plek * 100).toFixed(3)}%"></span>` +
+          `<span class="uurtekst" style="left:${(u.plek * 100).toFixed(3)}%">${u.uur}u</span>`
+      )
+      .join("");
+    const merken = lijst
+      .map((g) => {
+        const links = positie(g.tijd, vanaf, tot) * 100;
+        return (
+          `<button type="button" class="merk-g" data-tijd="${g.tijd}"` +
+          ` style="left:${links.toFixed(3)}%"` +
+          ` aria-label="${this.veilig_(`${tijdLabel(g.tijd)} ${g.naam}`)}"></button>`
+        );
+      })
+      .join("");
+    balk.innerHTML = uren + merken + (lijst.length ? "" : `<span class="leeg">Niets gezien</span>`);
+  }
+
+  paintLijst_(lijst) {
+    const vak = this.$(".lijst");
+    const meer = this.cameras_().length > 1;
+    const sig = lijst.map((g) => `${g.tijd}:${g.entity}:${g.aantal ?? 1}`).join(",");
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+
+    if (!lijst.length) {
+      vak.innerHTML = `<div class="niets">Geen gebeurtenissen op deze dag.</div>`;
+      return;
+    }
+    vak.innerHTML = lijst
+      .map((g) => {
+        const soort = soortVan(g.soort);
+        const bij = meer && g.camera ? this.camNaam_(g.camera) : "";
+        const hoevaak = (g.aantal ?? 1) > 1 ? ` ${g.aantal}×` : "";
+        return (
+          `<button type="button" data-tijd="${g.tijd}">` +
+          `<span class="tijd">${tijdLabel(g.tijd)}</span>` +
+          `${resolve(soort.icoon)}` +
+          `<span class="wat">${this.veilig_(g.naam)}${hoevaak}</span>` +
+          `<span class="bij">${this.veilig_(bij)}</span></button>`
+        );
+      })
+      .join("");
   }
 
   /**
@@ -735,13 +1276,17 @@ class CameraCard extends DacCard {
         hoortBij(this.hass, m.entity, alle, m.bijCamera, camera)
     );
 
-    const sig = camera + "::" + aan.map((m) => m.entity + "|" + m.naam).join(",");
+    const sig = camera + "::" + aan.map((m) => `${m.entity}|${m.naam}|${m.soort}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
+    // Het icoon volgt de SOORT. Hier stond `person` vast, en dan draagt een
+    // merkje "Auto oprit" een poppetje -- gezien op 28 augustus 2026 in de
+    // testinstance, nadat de soorten er waren. Dezelfde instelling die het
+    // filter in de tijdlijn stuurt, stuurt nu ook dit.
     vak.innerHTML = aan
       .map(
         (m) =>
-          `<span class="merk" data-soort="beweging">${resolve("person")}` +
+          `<span class="merk" data-soort="beweging">${resolve(soortVan(m.soort).icoon)}` +
           `<span>${this.veilig_(m.naam)}</span></span>`
       )
       .join("");
@@ -750,7 +1295,7 @@ class CameraCard extends DacCard {
   paintPtz_() {
     const c = this.config;
     const vak = this.$(".ptz");
-    const heeft = RICHTINGEN.some((r) => c[`ptz_${r.k}`]);
+    const heeft = c.presets_aan !== false && RICHTINGEN.some((r) => c[`ptz_${r.k}`]);
     vak.hidden = !heeft;
     if (!heeft) return;
     for (const r of RICHTINGEN) {
@@ -766,14 +1311,19 @@ class CameraCard extends DacCard {
     // Twee bronnen, en ze mogen naast elkaar bestaan: een select met opties, en
     // losse knoppen. Zie de kop voor waarom dat nodig is.
     const uit = [];
-    const keuze = stateOf(this.hass, c.presets);
+    // Eén vinkje zet de hele boel uit -- zijn verzoek van 28 augustus 2026. De
+    // gekozen entiteiten blijven gewoon in de config staan, dus aanvinken zet
+    // alles terug zoals het was.
+    const keuze = c.presets_aan === false ? null : stateOf(this.hass, c.presets);
     const opties = keuze?.attributes?.options;
     if (Array.isArray(opties)) {
       for (const optie of opties) {
         uit.push({ waarde: optie, naam: optie, soort: "keuze", aan: keuze.state === optie });
       }
     }
-    for (const id of Array.isArray(c.preset_buttons) ? c.preset_buttons : []) {
+    const knoppen =
+      c.presets_aan !== false && Array.isArray(c.preset_buttons) ? c.preset_buttons : [];
+    for (const id of knoppen) {
       const knop = stateOf(this.hass, id);
       if (!knop) continue;
       uit.push({ waarde: id, naam: nameOf(this.hass, id, id), soort: "knop", aan: false });
@@ -894,6 +1444,36 @@ class CameraEditor extends DacEditor {
     return [];
   }
 
+  /**
+   * Zaai wat de KAART als standaard hanteert, zodat het formulier hetzelfde
+   * zegt als wat er gebeurt.
+   *
+   * `defaults()` kan dit niet: die kent de config nog niet, en of "Presets en
+   * draaien" aan hoort te staan hangt ervan af of er al presets ingevuld zijn.
+   *
+   * Dit is precies de fout die hij op 28 augustus 2026 meldde bij het andere
+   * vakje: *"tikken op het beeld groot werkt ook al als het uit staat."* Dat
+   * vakje stond op uit omdat de sleutel ontbrak, terwijl de kaart een
+   * ontbrekende sleutel als AAN behandelt. Een vinkje dat het tegenovergestelde
+   * beweert van wat de kaart doet is erger dan geen vinkje.
+   */
+  setConfig(config) {
+    const c = config ?? {};
+    const melders = [
+      ...(Array.isArray(c.motion_sensors) ? c.motion_sensors : []),
+      ...(c.motion ? [c.motion] : []),
+    ].filter((x) => typeof x === "string");
+
+    const zaad = { presets_aan: heeftPtzVelden(c) };
+    // En de GERADEN soort per melder, om dezelfde reden: de kaart heeft er al
+    // een gekozen, dus een leeg keuzevak liegt erover.
+    for (const id of melders) {
+      const naam = c[`melder:${id}`] || this.hass_?.states?.[id]?.attributes?.friendly_name;
+      zaad[`meldersoort:${id}`] = raadSoort(id, naam);
+    }
+    super.setConfig({ ...zaad, ...c });
+  }
+
   schema() {
     const c = this.config_ ?? {};
     const lijst = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
@@ -907,7 +1487,15 @@ class CameraEditor extends DacEditor {
     // bij welke camera hij hoort.
     const alleCams = [c.camera, ...lijst(c.cameras)].filter(Boolean);
     const extraMelders = lijst(c.motion_sensors).flatMap((id) => {
-      const velden = [{ name: `melder:${id}`, selector: sel.text() }];
+      const velden = [
+        { name: `melder:${id}`, selector: sel.text() },
+        {
+          name: `meldersoort:${id}`,
+          selector: sel.select(
+            ALLE_SOORTEN.map((soort) => ({ value: soort.sleutel, label: soort.label }))
+          ),
+        },
+      ];
       if (alleCams.length > 1) {
         velden.push({
           name: `melderbij:${id}`,
@@ -927,23 +1515,47 @@ class CameraEditor extends DacEditor {
       { name: "camera", selector: sel.entity("camera") },
       { name: "name", selector: sel.text() },
       { name: "live_view", selector: sel.bool() },
-      { name: "presets", selector: sel.entity(["select", "input_select"]) },
-      {
-        name: "preset_buttons",
-        selector: { entity: { domain: ["button", "scene", "script"], multiple: true } },
-      },
-      {
-        name: "motion_sensors",
-        selector: { entity: { domain: "binary_sensor", multiple: true } },
-      },
-      ...extraMelders,
-      { name: "ptz_up", selector: sel.entity(["button", "switch"]) },
-      { name: "ptz_down", selector: sel.entity(["button", "switch"]) },
-      { name: "ptz_left", selector: sel.entity(["button", "switch"]) },
-      { name: "ptz_right", selector: sel.entity(["button", "switch"]) },
       { name: "cameras", selector: { entity: { domain: "camera", multiple: true } } },
       ...extraCams,
-      { name: "tap_zoom", selector: sel.bool() },
+
+      // Presets en draaien: één vinkje, en daaronder het uitklapblok met de
+      // entiteiten. Gevraagd op 28 augustus 2026: "ik wil dat de presets onder
+      // een uitklapmenu vallen, dat ik ze kan aanzetten met 1 vinkje (...) zo
+      // houd je overzicht op de GUI. Draaien links rechts etc hoort daar ook
+      // onder."
+      //
+      // Het vinkje staat ERBOVEN en niet erin: ha-form kan geen schakelaar in
+      // de kop van een uitklapblok zetten, en die er met de hand in prikken zou
+      // betekenen dat we in de shadow-DOM van Home Assistant gaan zitten
+      // knutselen. Zo zie je in één regel of het aanstaat, en klap je alleen
+      // open als je iets wilt kiezen.
+      { name: "presets_aan", selector: sel.bool() },
+      ...(c.presets_aan
+        ? [
+            section("Presets en draaien", "mdi:arrow-all", [
+              { name: "presets", selector: sel.entity(["select", "input_select"]) },
+              {
+                name: "preset_buttons",
+                selector: { entity: { domain: ["button", "scene", "script"], multiple: true } },
+              },
+              { name: "ptz_up", selector: sel.entity(["button", "switch"]) },
+              { name: "ptz_down", selector: sel.entity(["button", "switch"]) },
+              { name: "ptz_left", selector: sel.entity(["button", "switch"]) },
+              { name: "ptz_right", selector: sel.entity(["button", "switch"]) },
+            ]),
+          ]
+        : []),
+
+      {
+        name: "motion_sensors",
+        selector: {
+          entity: { domain: ["binary_sensor", "event", "lock"], multiple: true },
+        },
+      },
+      ...extraMelders,
+
+      // En dezelfde vorm voor de tijdlijn.
+      { name: "tijdlijn", selector: sel.bool() },
     ];
   }
 
@@ -959,6 +1571,9 @@ class CameraEditor extends DacEditor {
     if (s.name.startsWith("melderbij:")) {
       return `↳ hoort bij welke camera`;
     }
+    if (s.name.startsWith("meldersoort:")) {
+      return `↳ wat ziet hij`;
+    }
     return (
       {
         camera: "Camera",
@@ -973,13 +1588,16 @@ class CameraEditor extends DacEditor {
         ptz_left: "Draaien: links",
         ptz_right: "Draaien: rechts",
         cameras: "Nog meer camera's op deze kaart",
-        // Alleen zichtbaar zodra er meer dan één camera op de kaart staat.
-      tap_zoom: "Tikken opent het beeld groot",
+        presets_aan: "Presets en draaien",
+        tijdlijn: "Tijdlijn met gebeurtenissen",
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
+    if (s.name.startsWith("meldersoort:")) {
+      return "Bepaalt onder welk icoon hij in de tijdlijn valt, en welk icoon er op het beeld staat als hij afgaat. Hij wordt geraden uit de naam — een Reolink klopt vanzelf.";
+    }
     if (s.name.startsWith("melderbij:")) {
       return "Laat dit op 'alle camera's' staan als je het niet weet. De kaart koppelt een melder vanzelf aan de camera waar hij op hetzelfde apparaat zit — bij een Reolink hoeft je dus niets in te vullen.";
     }
@@ -990,20 +1608,22 @@ class CameraEditor extends DacEditor {
         "De naam van de camera zelf. Hij staat linksboven op het beeld, en ook in de rij eronder als je meer camera's op deze kaart hebt staan.",
       live_view:
         "De stream staat dan altijd open. Mooier, maar op een dashboard met zes camera's zijn dat zes streams die de hele dag doorlopen.",
+      presets_aan:
+        "Eén vinkje voor de hele bediening: de presetknoppen in het beeld en het draaikruis linksonder. Zet je het uit, dan blijft alles wat je gekozen hebt gewoon staan — het is alleen weg van het beeld.",
+      tijdlijn:
+        "Onder het beeld komt dan een balk met alles wat je melders vandaag gezien hebben, met knoppen om op mens, dier, voertuig, aanbellen en ontgrendeling te filteren. Hij leest de geschiedenis van Home Assistant, dus hij gaat zo ver terug als je recorder bewaart — standaard tien dagen.",
+      motion:
+        "Het oude enkele veld. Gebruik liever Bewegingsmelders hierboven; deze blijft werken voor kaarten die hem al hebben.",
       presets:
         "De `select` van je camera-integratie — Reolink en ONVIF leveren die. De kaart maakt van elke optie een knop, onderin het beeld, dus een preset die je in de camera-app toevoegt verschijnt er vanzelf bij.",
       preset_buttons:
         "Voor integraties die geen keuzelijst maar losse knoppen leveren, zoals Amcrest en Dahua. Ze mogen naast de keuzelijst staan.",
-      motion:
-        "Het oude enkele veld. Gebruik liever Bewegingsmelders hierboven; deze blijft werken voor kaarten die hem al hebben.",
       motion_sensors:
-        "Zolang er een aanstaat komt er een merkje op het beeld. Kies er gerust meerdere: een Reolink meldt persoon, voertuig en huisdier los van elkaar, en dan zie je wélke het is. Per melder kun je hieronder een eigen naam invullen.",
+        "Zolang er een aanstaat komt er een merkje op het beeld, en elke keer dat hij aangaat is een regel in de tijdlijn. Kies er gerust meerdere: een Reolink meldt persoon, voertuig en huisdier los van elkaar, en dan zie je wélke het is. Een deurbel (`event`) en een slot (`lock`) mogen er ook bij. Per melder kun je hieronder een naam en een soort invullen.",
       ptz_up:
         "De vier richtingsknoppen van je integratie. Vul je er geen in, dan komt het draaikruis er niet.",
       cameras:
         "Onder het beeld komt dan een rij met namen om tussen te wisselen; de camera waar je naar kijkt licht op. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin. Per camera kun je hieronder een eigen naam invullen.",
-      tap_zoom:
-        "Staat dit aan, dan opent een tik op het beeld de camera groot. Zet je het uit, dan gebeurt er niets bij een tik — handig op een tablet aan de muur waar per ongeluk aanraken makkelijk gaat.",
     };
     return uitleg[s.name];
   }
