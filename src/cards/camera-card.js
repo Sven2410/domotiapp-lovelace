@@ -74,6 +74,21 @@ import { zetScrollSlot } from "../scrollslot.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /**
+ * De beeldverhoudingen waar je uit kunt kiezen.
+ *
+ * `auto` is de standaard en verandert niets: de kaart volgt zijn camera, zoals
+ * sinds 0.26.0. De rest is er voor een stack, waar camera's naast elkaar even
+ * hoog horen te zijn.
+ */
+const VERHOUDINGEN = [
+  { sleutel: "auto", label: "Volgt de camera", css: null },
+  { sleutel: "16:9", label: "16:9 (breed)", css: "16 / 9" },
+  { sleutel: "4:3", label: "4:3", css: "4 / 3" },
+  { sleutel: "3:2", label: "3:2", css: "3 / 2" },
+  { sleutel: "1:1", label: "Vierkant", css: "1 / 1" },
+];
+
+/**
  * Hoeveel dagen de dagenlijst laat zien.
  *
  * Gelijk aan wat de bewakingsmotor bewaart (`MAX_LEEFTIJD`, zeven dagen). Zet je
@@ -138,6 +153,34 @@ class CameraCard extends DacCard {
       border-radius: var(--dac-radius) var(--dac-radius) 0 0;
       touch-action: none; cursor: default;
       display: flex;
+    }
+    /* Staat er NIETS onder het beeld -- geen kiezerrij, geen filters, geen
+       strook -- dan is het beeld de hele kaart en horen ook de onderhoeken rond
+       te zijn. Dat ging mis in 0.31.2: daar is overflow:hidden van de kaart af
+       gegaan (dat knipte de dagenlijst af), en sindsdien rondde het beeld alleen
+       nog bovenlangs af. Gemeld met een schermafdruk uit een vertical stack:
+       *"dan heb ik geen ronding onderin."* De kaart zet dit kenmerk zelf in
+       paint(), want alleen daar is bekend wat er zichtbaar is. */
+    :host([alleenbeeld]) .vak { border-radius: var(--dac-radius); }
+
+    /* ---- een vaste beeldverhouding ----
+       Standaard volgt de kaart zijn camera; dat is met opzet, want een vaste
+       16:9 sneed er bij hem beeld af. Maar in een vertical stack met een
+       horizontal stack erin staan vier camera's naast elkaar die elk hun eigen
+       verhouding volgen, en dan is er eentje hoger dan de rest. Gemeld op
+       28 augustus 2026: *"de linker onderste camera is groter, zie je dat? In
+       een bubble pop-up is het goed dat hij zijn grootte aanpast, maar in zo'n
+       vertical stack wil ik alles hetzelfde hebben."*
+
+       Dus: per kaart in te stellen. Staat er een verhouding, dan vult het beeld
+       dat vak en wordt er bijgesneden -- dat is dan zijn eigen keuze, en niet
+       onze aanname. */
+    :host([verhouding]) .vak { aspect-ratio: var(--dac-verhouding); min-height: 0; }
+    :host([verhouding]) .schuif { height: 100%; }
+    :host([verhouding]) .schuif .beeld,
+    :host([verhouding]) .schuif img,
+    :host([verhouding]) .schuif hui-image {
+      height: 100%; object-fit: cover;
     }
     :host([zoom]) .vak { cursor: grab; }
     :host([sleept]) .vak { cursor: grabbing; }
@@ -1111,6 +1154,7 @@ class CameraCard extends DacCard {
     this.paintCams_(cam);
     this.paintFilters_();
     this.paintTijdlijn_();
+    this.paintVorm_();
 
     meetRaster(this.$(".card"));
   }
@@ -1454,6 +1498,33 @@ class CameraCard extends DacCard {
       min_columns: 6,
       min_rows: this.minRijen_(".card", 3),
     };
+  }
+
+  /**
+   * De vorm van de kaart: ronde onderhoeken, en een vaste beeldverhouding.
+   *
+   * Allebei dingen die alleen HIER te bepalen zijn: of er onder het beeld nog
+   * iets staat hangt af van de config en van wat er op dit moment zichtbaar is,
+   * en die twee kenmerken zetten CSS aan die anders niets zou vinden om op te
+   * mikken.
+   */
+  paintVorm_() {
+    // Staat er niets onder het beeld, dan is het beeld de kaart -- en dan horen
+    // de onderhoeken rond te zijn.
+    const eronder = [".cams", ".filters", ".tijdlijn"].some(
+      (sel) => this.$(sel) && !this.$(sel).hidden
+    );
+    this.toggleAttribute("alleenbeeld", !eronder);
+
+    // Een vaste beeldverhouding, als de kaart daarom vraagt.
+    const gekozen = VERHOUDINGEN.find((v) => v.sleutel === this.config.verhouding);
+    if (gekozen?.css) {
+      this.setAttribute("verhouding", gekozen.sleutel);
+      this.style.setProperty("--dac-verhouding", gekozen.css);
+    } else {
+      this.removeAttribute("verhouding");
+      this.style.removeProperty("--dac-verhouding");
+    }
   }
 
   /* ------------------------------------------------ snapshots en timeline */
@@ -1936,6 +2007,10 @@ class CameraEditor extends DacEditor {
       { name: "camera", selector: sel.entity("camera") },
       { name: "name", selector: sel.text() },
       { name: "live_view", selector: sel.bool() },
+      {
+        name: "verhouding",
+        selector: sel.select(VERHOUDINGEN.map((v) => ({ value: v.sleutel, label: v.label }))),
+      },
       { name: "cameras", selector: { entity: { domain: "camera", multiple: true } } },
       ...extraCams,
 
@@ -2003,6 +2078,7 @@ class CameraEditor extends DacEditor {
         camera: "Camera",
         name: "Naam",
         live_view: "Altijd live",
+        verhouding: "Beeldverhouding",
         presets: "Presets (keuzelijst)",
         preset_buttons: "Presets als losse knoppen",
         motion: "Bewegingsmelder",
@@ -2058,6 +2134,8 @@ class CameraEditor extends DacEditor {
         "De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje.",
       snapshot_alleen_afwezig:
         "Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode.",
+      verhouding:
+        "Standaard volgt de kaart zijn camera, zodat er geen beeld af gaat. Staan er meerdere camerakaarten naast elkaar in een stack, kies dan overal dezelfde verhouding — dan zijn ze even hoog. Er wordt dan wel bijgesneden.",
       presets_aan:
         "Eén vinkje voor de hele bediening: de presetknoppen in het beeld en het draaikruis linksonder. Zet je het uit, dan blijft alles wat je gekozen hebt gewoon staan — het is alleen weg van het beeld.",
     };
