@@ -333,6 +333,34 @@ class Motor:
 
     # --- opruimen --------------------------------------------------------
 
+    async def async_verwijder(self, beeld_ids: list[str]) -> int:
+        """Verwijder beelden op verzoek van de gebruiker.
+
+        Gevraagd op 28 augustus 2026: *"dan een verwijder snapshots knop of iets
+        dat ik handmatig ook kan verwijderen."*
+
+        Dezelfde weg als het automatische opruimen -- index, schijf, en de open
+        kaarten op de hoogte stellen -- want een beeld dat met de hand weggaat
+        hoort net zo goed te verdwijnen als een beeld dat over zijn week heen is.
+        Er is met opzet GEEN "verwijder alles"-opdracht aan de serverkant: wie
+        wist, stuurt de ID's die hij bedoelt. Zo kan een verdwaald commando nooit
+        meer weghalen dan er op het scherm stond.
+
+        Geeft terug hoeveel er werkelijk uit de index gingen.
+        """
+        eruit = self._index.haal_weg(beeld_ids)
+        if not eruit:
+            return 0
+        await self._hass.async_add_executor_job(
+            beeldopslag.verwijder, self._hass, [b["id"] for b in eruit]
+        )
+        # Meteen wegschrijven en niet vertraagd: dit is een handeling van een
+        # mens, en die verwacht dat het weg is. Valt Home Assistant er een
+        # seconde later uit, dan is het nog steeds weg.
+        await self._index.async_bewaar_nu()
+        self._meld(EVENT_OPGERUIMD, {"ids": [b["id"] for b in eruit]})
+        return len(eruit)
+
     async def _async_ruim(self, beeld_ids: list[str]) -> None:
         """Haal beelden uit de index én van schijf."""
         eruit = self._index.haal_weg(beeld_ids)

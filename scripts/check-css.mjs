@@ -6,6 +6,14 @@
  * 3. Elke `var(--dac-...)` die gebruikt wordt, bestaat ook echt in theme.js.
  * 4. Er staan geen stuurtekens in de bron (een heredoc die backslashes at).
  *
+ * **Bewaker 2 draait sinds 28 augustus 2026 bij ELKE `npm run build`.** Hij
+ * bestond al en had de fout van die dag gevangen -- maar hij was niet gedraaid,
+ * want bouwen en controleren waren twee opdrachten en alleen de eerste hoort bij
+ * het meten. Een backtick in een CSS-commentaar levert geldige JavaScript op die
+ * bouwt, laadt en dan de hele bundel omgooit met `X(...).groot is not a
+ * function`; dat mag niet afhangen van of iemand eraan denkt de bewaker te
+ * draaien.
+ *
  * De tweede staat onderaan dit bestand en heeft daar zijn eigen uitleg. Hier
  * eerst de hover.
  *

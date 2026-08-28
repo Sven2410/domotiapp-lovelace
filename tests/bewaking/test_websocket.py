@@ -216,3 +216,97 @@ async def test_opzeggen_laat_geen_abonnee_achter(
     await client.receive_json()
 
     assert hass.data[DOMAIN][DATA_ABONNEES] == []
+
+
+async def test_verwijderen_haalt_het_beeld_uit_de_index_en_van_schijf(
+    hass: HomeAssistant, bewaking_op, zet_regel, hass_ws_client, beeldmap
+) -> None:
+    """NIEUW GEDRAG, gevraagd op 28 augustus 2026: met de hand kunnen wissen."""
+    await zet_regel(rustperiode=0)
+    await detecteer(hass, MELDER_PERSOON)
+    await detecteer(hass, MELDER_VOERTUIG)
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/timeline"})
+    beelden = (await client.receive_json())["result"]["beelden"]
+    assert len(beelden) == 2
+    weg = beelden[0]["id"]
+    blijft = beelden[1]["id"]
+
+    map_pad = beeldmap / "domotiapp_lovelace" / "beelden"
+    assert (map_pad / f"{weg}.jpg").exists()
+
+    await client.send_json_auto_id(
+        {"type": "domotiapp_lovelace/bewaking/verwijder", "ids": [weg]}
+    )
+    antwoord = await client.receive_json()
+    assert antwoord["success"] is True
+    assert antwoord["result"] == {"verwijderd": 1}
+
+    # Uit de index...
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/timeline"})
+    over = (await client.receive_json())["result"]["beelden"]
+    assert [b["id"] for b in over] == [blijft]
+
+    # ...en van schijf.
+    assert not (map_pad / f"{weg}.jpg").exists()
+    assert (map_pad / f"{blijft}.jpg").exists()
+
+
+async def test_verwijderen_van_iets_dat_er_niet_is_is_geen_fout(
+    hass: HomeAssistant, bewaking_op, hass_ws_client
+) -> None:
+    """Twee tabbladen die hetzelfde beeld wissen mogen elkaar niet omvergooien."""
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {
+            "type": "domotiapp_lovelace/bewaking/verwijder",
+            "ids": ["01AAAAAAAAAAAAAAAAAAAAAAAA"],
+        }
+    )
+    antwoord = await client.receive_json()
+    assert antwoord["success"] is True
+    assert antwoord["result"] == {"verwijderd": 0}
+
+
+async def test_een_abonnee_hoort_het_als_er_met_de_hand_gewist_wordt(
+    hass: HomeAssistant, bewaking_op, zet_regel, hass_ws_client
+) -> None:
+    """Anders blijft de miniatuur staan op het tabblad dat niet wiste."""
+    await zet_regel(rustperiode=0)
+    await detecteer(hass, MELDER_PERSOON)
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/subscribe"})
+    assert (await client.receive_json())["success"] is True
+
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/timeline"})
+    beelden = (await client.receive_json())["result"]["beelden"]
+    beeld_id = beelden[0]["id"]
+
+    await client.send_json_auto_id(
+        {"type": "domotiapp_lovelace/bewaking/verwijder", "ids": [beeld_id]}
+    )
+    bericht = await client.receive_json()
+    while bericht.get("type") != "event":
+        bericht = await client.receive_json()
+
+    assert bericht["event"]["soort"] == "opgeruimd"
+    assert bericht["event"]["ids"] == [beeld_id]
+
+
+async def test_de_timeline_geeft_op_limiet_nul_alles(
+    hass: HomeAssistant, bewaking_op, zet_regel, hass_ws_client
+) -> None:
+    """Het opslagscherm wil de hele voorraad, de strook op de kaart niet."""
+    await zet_regel(rustperiode=0)
+    await detecteer(hass, MELDER_PERSOON)
+    await detecteer(hass, MELDER_VOERTUIG)
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "domotiapp_lovelace/bewaking/timeline", "limiet": 0}
+    )
+    antwoord = await client.receive_json()
+    assert antwoord["success"] is True
+    assert len(antwoord["result"]["beelden"]) == 2

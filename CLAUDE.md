@@ -633,7 +633,14 @@ die daar niet staan:
    ```
    Daarna pas meten, en de sha256 vergelijken met het bestand op schijf.
 
-16. **Geen backticks in een CSS-commentaar.** Alle CSS staat in een
+16. **Geen backticks in een CSS-commentaar.** Sinds 28 augustus 2026 draait
+   `check:css` bij ELKE `npm run build`, want die dag ging het opnieuw mis en de
+   bewaker was simpelweg niet gedraaid -- bouwen en controleren waren twee
+   opdrachten en alleen de eerste hoort bij het meten. Een `` `.groot` `` in een
+   commentaar gaf `TypeError: "...".groot is not a function`, geen enkele
+   geregistreerde kaart en een leeg dashboard. De bewaker had het gevangen.
+   Een fout die een bewaker kan vangen hoort niet af te hangen van of iemand
+   eraan denkt hem te draaien. Alle CSS staat in een
    sjabloonliteral, dus een backtick in een commentaar sluit die string af. Vaak
    is dat een bouwfout binnen een minuut — maar niet altijd: `` `.surface` ``
    werd `` ` + .surface + ` ``, en dat is geldige JavaScript. Het bouwde, het
@@ -911,8 +918,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.30.2):** 889 JS-tests en 593 Python-tests,
-alle groen; bundel 608.988 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.31.0):** 899 JS-tests en 597 Python-tests,
+alle groen; bundel 619.582 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat

@@ -53,13 +53,16 @@ import { cameraVanMelder, hoortBij } from "./camera-logica.js";
 import {
   ALLE_SOORTEN,
   alsDatumveld,
+  alsGrootte,
+  camerasVoorFilter,
   dagLabel,
   dagOm,
+  dagStap,
   dagenMetBeelden,
   filterBeelden,
+  perDag,
   raadSoort,
   soortVan,
-  camerasVoorFilter,
   soortVanBeeld,
   soortenVoorFilter,
   telPerSoort,
@@ -67,6 +70,8 @@ import {
   verschuifDag,
 } from "./camera-filters.js";
 import { teVersturen } from "./bewaking-logica.js";
+import { vraagBevestiging } from "../vraag.js";
+import { zetScrollSlot } from "../scrollslot.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
@@ -281,18 +286,48 @@ class CameraCard extends DacCard {
     .filters .pijl .icon { width: 15px; height: 15px; }
     .filters .pijl[data-dag="-1"] .icon { transform: rotate(180deg); }
     .filters .pijl[disabled] { opacity: .35; cursor: default; }
+    /* Het vak dat zegt WELKE dag je ziet. Geen knop meer.
+       Gemeld op 28 augustus 2026: *"eerst staat hij op pc op alles, daarna op
+       vandaag en dan pas kan ik er nog een keer op klikken om de datum te
+       selecteren."* Drie tikken voor één datum. Nu zegt dit vak alleen wat je
+       ziet, en zit het kiezen in het kalendericoon ernaast. */
     .filters .datum {
-      flex: 0 0 auto; padding: 6px 12px; cursor: pointer; font: inherit;
+      flex: 0 0 auto; padding: 6px 12px; font: inherit;
       font-size: 12px; font-weight: 600; color: var(--dac-ink);
       background: var(--dac-surface); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-pill);
+      border-radius: var(--dac-radius-pill); white-space: nowrap;
     }
-    /* Het echte datumveld ligt eronder en is onzichtbaar: de knop opent zijn
-       kiezer. Op display:none zetten mag niet -- dan weigert Chrome
-       showPicker(). */
+
+    /* Het kalendericoon, en daar bovenop het ECHTE datumveld, onzichtbaar.
+       Zo opent een tik de kiezer van het toestel zelf -- ook op een telefoon,
+       waar showPicker() niet overal mag. Gemeld op 28 augustus 2026: *"op
+       telefoon klapt er geen kalender uit."* Een onzichtbaar veld dat de tik
+       zelf opvangt heeft die toestemming niet nodig. */
+    .filters .kalender {
+      position: relative; flex: 0 0 auto; width: 30px; height: 30px;
+      display: grid; place-items: center; cursor: pointer; color: var(--dac-ink-2);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-sm);
+    }
+    .filters .kalender .icon { width: 15px; height: 15px; }
     .filters .datumveld {
-      position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer; border: 0; padding: 0; background: none;
     }
+    /* De rand van Chrome om zijn eigen kalenderknopje weghalen. */
+    .filters .datumveld::-webkit-calendar-picker-indicator {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer;
+    }
+
+    .filters .opslag {
+      flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center;
+      padding: 0; font: inherit; cursor: pointer; color: var(--dac-ink-2);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-sm);
+    }
+    .filters .opslag .icon { width: 15px; height: 15px; }
+    .filters .rek { flex: 1 1 auto; }
     /* Er staat GEEN teller "13 van 13" naast de dagkiezer. Die stond er wel;
        weggehaald op verzoek, 28 augustus 2026: "dat 25 van de 31 mag wel weg, is
        niet relevant." Je ziet de beelden zelf al staan. */
@@ -393,6 +428,90 @@ class CameraCard extends DacCard {
       text-align: center; color: #fff; font-size: 12.5px;
       text-shadow: 0 1px 3px rgba(0,0,0,.8);
     }
+
+    /* ---- het opslagscherm ----
+       Gevraagd op 28 augustus 2026: *"een soort opslag icoontje waar we alle
+       snapshots kunnen zien met de datum (...) en dan een verwijder snapshots
+       knop of iets dat ik handmatig ook kan verwijderen."*
+
+       Eén laag over het scherm, net als de laag om groot te bekijken. Bewust
+       geen dialoog van Home Assistant: die verwacht een eigen element en een
+       eigen levensduur, en dit hangt aan één kaart. */
+    .archief {
+      position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+      background: var(--dac-bg); color: var(--dac-ink);
+    }
+    .archief[hidden] { display: none; }
+    .archief .akop {
+      display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+      padding: 14px 16px; border-bottom: 1px solid var(--dac-border);
+    }
+    .archief .atitel { font-size: 15px; font-weight: 600; }
+    .archief .astat { font-size: 11.5px; color: var(--dac-ink-3); }
+    .archief .rek { flex: 1 1 auto; }
+    .archief .awis, .archief .adicht {
+      flex: 0 0 auto; cursor: pointer; font: inherit; color: var(--dac-ink-2);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-pill);
+    }
+    .archief .awis { padding: 6px 12px; font-size: 12px; }
+    .archief .awis[disabled] { opacity: .4; cursor: default; }
+    .archief .adicht {
+      width: 32px; height: 32px; display: grid; place-items: center;
+      border-radius: var(--dac-radius-sm); padding: 0;
+    }
+    .archief .adicht .icon { width: 16px; height: 16px; }
+
+    .archief .alijst {
+      flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+      padding: 12px 16px 20px;
+    }
+    .archief .dagkop {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 0 8px; font-size: 12.5px; font-weight: 600;
+    }
+    .archief .dagkop .bij { font-weight: 400; font-size: 11px; color: var(--dac-ink-3); }
+    .archief .dagkop button {
+      margin-left: auto; padding: 4px 10px; cursor: pointer; font: inherit;
+      font-size: 11px; color: var(--dac-ink-3); background: transparent;
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+    }
+    /* Een raster dat meegroeit: op een telefoon twee op een rij, op een scherm
+       zoveel als er passen. */
+    .archief .dagraster {
+      display: grid; gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    }
+    .archief .kiek {
+      position: relative; padding: 0; cursor: pointer; overflow: hidden;
+      aspect-ratio: 16 / 9; background: #000;
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-sm);
+    }
+    .archief .kiek img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .archief .kiek .bij {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 12px 6px 4px; font-size: 10px; line-height: 1.3; color: #fff;
+      text-align: left; text-shadow: 0 1px 2px rgba(0,0,0,.85);
+      background: linear-gradient(to top, rgba(0,0,0,.82), transparent);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .archief .kiek .weg {
+      position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
+      display: grid; place-items: center; padding: 0; cursor: pointer;
+      color: #fff; background: rgba(0,0,0,.55); border: none;
+      border-radius: 50%;
+    }
+    .archief .kiek .weg .icon { width: 13px; height: 13px; }
+    .archief .aleeg { padding: 30px 0; text-align: center; color: var(--dac-ink-3); font-size: 12.5px; }
+
+    /* Waar het staat en hoe groot het is. Hij vroeg er zelf naar, en het
+       verandert elke dag -- dus hoort het op het scherm en niet alleen in een
+       rapport. */
+    .archief .awaar {
+      flex: 0 0 auto; padding: 10px 16px 14px; font-size: 10.5px; line-height: 1.5;
+      color: var(--dac-ink-3); border-top: 1px solid var(--dac-border);
+    }
+    .archief .awaar code { font-size: 10.5px; color: var(--dac-ink-2); }
 
     :host([dead]) .card { opacity: .5; }
   `;
@@ -503,10 +622,17 @@ class CameraCard extends DacCard {
             <button type="button" class="pijl" data-dag="-1" aria-label="Dag terug">
               ${resolve("chevronRight")}
             </button>
-            <button type="button" class="datum">Alles</button>
-            <input class="datumveld" type="date" aria-label="Kies een datum">
+            <span class="datum">Vandaag</span>
             <button type="button" class="pijl" data-dag="1" aria-label="Dag verder">
               ${resolve("chevronRight")}
+            </button>
+            <span class="rek"></span>
+            <span class="kalender" aria-label="Kies een datum">
+              ${resolve("calendar")}
+              <input class="datumveld" type="date" aria-label="Kies een datum">
+            </span>
+            <button type="button" class="opslag" aria-label="Alle snapshots">
+              ${resolve("storage")}
             </button>
           </div>
           <div class="rij soorten"></div>
@@ -514,7 +640,18 @@ class CameraCard extends DacCard {
         </div>
         <div class="tijdlijn" hidden></div>
       </div>
-      <div class="groot" hidden><img alt=""><div class="onder"></div></div>`;
+      <div class="groot" hidden><img alt=""><div class="onder"></div></div>
+      <div class="archief" hidden>
+        <div class="akop">
+          <span class="atitel">Snapshots</span>
+          <span class="astat"></span>
+          <span class="rek"></span>
+          <button type="button" class="awis">Alles wissen</button>
+          <button type="button" class="adicht" aria-label="Sluiten">${resolve("close")}</button>
+        </div>
+        <div class="alijst"></div>
+        <div class="awaar"></div>
+      </div>`;
   }
 
   wire() {
@@ -543,6 +680,7 @@ class CameraCard extends DacCard {
     });
 
     this.filterLuisteraars_();
+    this.wielScroll_();
     this.zoomLuisteraars_();
     this.bewaakStream_();
     this.bewakingWire_();
@@ -561,27 +699,29 @@ class CameraCard extends DacCard {
       const pijl = e.target.closest?.(".pijl");
       if (pijl && !pijl.disabled) {
         e.stopPropagation();
-        this.zetDag_(verschuifDag(this.dag_ ?? Date.now(), Number(pijl.dataset.dag)));
+        const stap = Number(pijl.dataset.dag);
+        const nu = this.dag_ ?? dagOm(Date.now()).vanaf;
+        // Spring naar de eerstvolgende dag waar iets STAAT. Per dag stappen
+        // betekent op een rustige week vier keer klikken voor niets.
+        const doel = dagStap(dagenMetBeelden(this.beelden_ ?? []), nu, stap);
+        this.zetDag_(doel ?? verschuifDag(nu, stap));
         return;
       }
-      if (e.target.closest?.(".datum")) {
+      if (e.target.closest?.(".opslag")) {
         e.stopPropagation();
-        // Staat hij op "Alles", dan gaat één tik naar vandaag; nog een tik opent
-        // de kalender. Zo kom je met één vinger bij de dag van nu, en met twee
-        // bij elke andere.
-        if (this.dag_ === null || this.dag_ === undefined) {
-          this.zetDag_(Date.now());
-          return;
-        }
+        this.openArchief_();
+        return;
+      }
+      if (e.target.closest?.(".kalender")) {
+        // De tik landt op het onzichtbare datumveld zelf; dat opent de kiezer
+        // van het toestel. Op een pc heeft Chrome daar `showPicker` voor nodig.
+        e.stopPropagation();
         const veld = this.$(".datumveld");
-        veld.value = alsDatumveld(this.dag_);
-        // `showPicker` opent de NATIEVE kalender van de browser. Die staat
-        // buiten de pagina; de terugval op focus laat hem er alsnog komen als
-        // een browser dat niet toestaat.
+        veld.value = alsDatumveld(this.dag_ ?? Date.now());
         try {
           veld.showPicker?.();
         } catch {
-          veld.focus();
+          /* op een telefoon opent het veld zichzelf al */
         }
         return;
       }
@@ -607,6 +747,47 @@ class CameraCard extends DacCard {
     });
   }
 
+  /**
+   * Het muiswiel over een rij die OPZIJ scrolt.
+   *
+   * Gemeld op 28 augustus 2026: *"ik kan niet scrollen op de timeline op pc, op
+   * telefoon kan het wel."* Klopt, en het is geen fout in de strook: op een
+   * telefoon veeg je opzij, en een muiswiel draait omhoog en omlaag -- precies
+   * de kant die de strook niet op kan. De scrollbalk staat er bovendien niet
+   * (`scrollbar-width: none`), want vier grijze streepjes onder een kaart is
+   * geen vormgeving.
+   *
+   * Dus: verticaal wielen wordt hier horizontaal schuiven. Alleen als er
+   * werkelijk iets te schuiven valt in die richting -- staat de strook al aan
+   * het eind, dan mag de PAGINA het wiel weer hebben, anders blijft je dashboard
+   * onder je muis hangen.
+   */
+  wielScroll_() {
+    for (const sel of [".tijdlijn", ".cams", ".camkeuze", ".presets"]) {
+      const rij = this.$(sel);
+      if (!rij) continue;
+      this.on(
+        rij,
+        "wheel",
+        (e) => {
+          // Wielt iemand al opzij (een trackpad, een muis met kantelwiel), laat
+          // de browser dat dan zelf doen.
+          if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+          const ruimte = rij.scrollWidth - rij.clientWidth;
+          if (ruimte <= 1) return;
+          const heen = e.deltaY > 0;
+          const aanHetEind = heen
+            ? Math.ceil(rij.scrollLeft) >= ruimte
+            : rij.scrollLeft <= 0;
+          if (aanHetEind) return;
+          e.preventDefault();
+          rij.scrollLeft += e.deltaY;
+        },
+        { passive: false }
+      );
+    }
+  }
+
   /** Een andere dag kiezen. Voorbij vandaag heeft geen zin: daar staat niets. */
   zetDag_(dag) {
     const vandaag = dagOm(Date.now()).vanaf;
@@ -629,7 +810,7 @@ class CameraCard extends DacCard {
     return filterBeelden(this.beelden_ ?? [], {
       soorten: this.soorten_,
       camera: this.camFilter_,
-      dag: this.dag_ ?? null,
+      dag: this.dag_ ?? dagOm(Date.now()).vanaf,
       config: this.config,
     });
   }
@@ -648,11 +829,23 @@ class CameraCard extends DacCard {
 
     const alle = this.beelden_ ?? [];
 
-    this.text(".datum", dagLabel(this.dag_ ?? null));
-    this.$('.pijl[data-dag="1"]').disabled =
-      this.dag_ !== null && this.dag_ !== undefined && this.dag_ >= dagOm(Date.now()).vanaf;
+    // De kaart begint op VANDAAG en niet op "alles". Gevraagd op 28 augustus
+    // 2026: *"het vak van vandaag moet vandaag of de datum laten zien."*
+    const dag = this.dag_ ?? dagOm(Date.now()).vanaf;
+    this.text(".datum", dagLabel(dag));
 
-    this.paintSoorten_(alle);
+    // Een pijl staat uit als er in die richting geen dag met beelden meer is.
+    const dagen = dagenMetBeelden(alle);
+    this.$('.pijl[data-dag="-1"]').disabled = dagStap(dagen, dag, -1) === null;
+    this.$('.pijl[data-dag="1"]').disabled =
+      dag >= dagOm(Date.now()).vanaf || dagStap(dagen, dag, 1) === null;
+
+    // De tellers gaan over de dag en de camera die je ZIET, niet over de hele
+    // voorraad. Anders staat er 4 op de knop en komen er 2 tevoorschijn als je
+    // hem indrukt -- en dan is het getal geen informatie maar een raadsel.
+    this.paintSoorten_(
+      filterBeelden(alle, { camera: this.camFilter_, dag, config: this.config })
+    );
     this.paintCamFilter_();
   }
 
@@ -1337,6 +1530,7 @@ class CameraCard extends DacCard {
       e.stopPropagation();
       groot.hidden = true;
     });
+    this.archiefLuisteraars_();
 
     const verbinding = this.hass?.connection;
     if (!verbinding?.sendMessagePromise) return;
@@ -1394,6 +1588,15 @@ class CameraCard extends DacCard {
       const antwoord = await this.hass.connection.sendMessagePromise({
         type: "domotiapp_lovelace/bewaking/timeline",
         cameras: this.bewakingCameras_(),
+        // ALLES ophalen, niet de eerste zestig. De kaart toont sinds 0.31.0 één
+        // dag tegelijk, en dan moet hij weten welke dagen er zijn -- anders
+        // springen de pijlen naar een dag die alleen buiten de eerste zestig
+        // bestaat. Het opslagscherm heeft dezelfde voorraad nodig.
+        //
+        // Dat het goedkoper is dan het lijkt: er worden alleen miniaturen
+        // GETEKEND voor de dag die je ziet. Vóór deze ronde stonden er zestig
+        // <img> in de strook, nu een handvol.
+        limiet: 0,
       });
       this.beelden_ = antwoord?.beelden ?? [];
     } catch (fout) {
@@ -1435,6 +1638,7 @@ class CameraCard extends DacCard {
     }
     this.paintFilters_();
     this.paintTijdlijn_(true);
+    this.paintArchief_();
   }
 
   async bewakingRegels_() {
@@ -1538,6 +1742,156 @@ class CameraCard extends DacCard {
         );
       })
       .join("");
+  }
+
+  /* --------------------------------------------------------- opslagscherm */
+
+  /**
+   * Het opslagscherm openen: alle snapshots, per dag, met hun datum.
+   *
+   * Gevraagd op 28 augustus 2026: *"dan wil ik een soort opslag icoontje waar we
+   * alle snapshots kunnen zien met de datum, want dat kan toch ook als je de
+   * timeline doorscrollt in de tijd."*
+   *
+   * Het toont ALLES, ongefilterd. De filters op de kaart zijn er om iets terug
+   * te vinden; dit scherm is er om te zien wat er ligt -- en om het weg te
+   * kunnen gooien. Een filter dat stilletjes meeloopt zou betekenen dat
+   * "alles wissen" niet alles wist.
+   */
+  openArchief_() {
+    const laag = this.$(".archief");
+    laag.hidden = false;
+    this.slotLos_?.();
+    this.slotLos_ = zetScrollSlot();
+    this.teardown_.push(() => this.slotLos_?.());
+    this.paintArchief_();
+  }
+
+  sluitArchief_() {
+    this.$(".archief").hidden = true;
+    this.slotLos_?.();
+    this.slotLos_ = null;
+  }
+
+  archiefLuisteraars_() {
+    const laag = this.$(".archief");
+    this.on(laag, "click", async (e) => {
+      e.stopPropagation();
+      if (e.target.closest?.(".adicht")) return this.sluitArchief_();
+
+      const weg = e.target.closest?.("[data-weg]");
+      if (weg) {
+        const beeld = (this.beelden_ ?? []).find((b) => b.id === weg.dataset.weg);
+        return this.wis_([weg.dataset.weg], beeld ? `dit beeld van ${beeld.naam ?? "de camera"}` : "dit beeld");
+      }
+
+      const dag = e.target.closest?.("[data-wisdag]");
+      if (dag) {
+        const groep = perDag(this.beelden_ ?? []).find(
+          (g) => String(g.dag) === dag.dataset.wisdag
+        );
+        if (!groep) return;
+        return this.wis_(
+          groep.beelden.map((b) => b.id),
+          `${groep.beelden.length} beelden van ${dagLabel(groep.dag).toLowerCase()}`
+        );
+      }
+
+      if (e.target.closest?.(".awis")) {
+        const alle = this.beelden_ ?? [];
+        if (!alle.length) return;
+        return this.wis_(alle.map((b) => b.id), `alle ${alle.length} beelden`);
+      }
+
+      const kiek = e.target.closest?.("[data-beeld]");
+      if (kiek) this.toonGroot_(kiek.dataset.beeld);
+    });
+  }
+
+  /**
+   * Wissen, met een vraag ervoor.
+   *
+   * `vraagBevestiging` en niet `dialog-box` van Home Assistant: die is er op een
+   * vers geladen dashboard gewoon niet (valkuil 26). En weggegooid beeld komt
+   * niet terug, dus dit is precies het geval waar een vraag voor is.
+   */
+  async wis_(ids, wat) {
+    if (!ids?.length) return;
+    const ja = await vraagBevestiging({
+      title: "Snapshots verwijderen",
+      text: `Weet je zeker dat je ${wat} wilt verwijderen? Weg is weg.`,
+      confirmText: "Verwijderen",
+      dismissText: "Annuleren",
+    });
+    if (!ja) return;
+    try {
+      await this.hass.connection.sendMessagePromise({
+        type: "domotiapp_lovelace/bewaking/verwijder",
+        ids,
+      });
+    } catch (fout) {
+      console.warn("DomotiApp: verwijderen mislukt", fout);
+      return;
+    }
+    // De server meldt het via het abonnement, maar wachten op dat rondje maakt
+    // een knop die pas na een tel iets doet. Hier meteen, en het bericht dat
+    // straks binnenkomt haalt niets dubbels weg.
+    const weg = new Set(ids);
+    this.beelden_ = (this.beelden_ ?? []).filter((b) => !weg.has(b.id));
+    this.paintFilters_();
+    this.paintTijdlijn_(true);
+    this.paintArchief_();
+  }
+
+  paintArchief_() {
+    const laag = this.$(".archief");
+    if (!laag || laag.hidden) return;
+
+    const alle = this.beelden_ ?? [];
+    const groepen = perDag(alle);
+    const bytes = alle.reduce((som, b) => som + (Number(b.bytes) || 0), 0);
+    const meerdere = this.cameras_().length > 1;
+
+    this.text(".astat", alle.length ? `${alle.length} beelden · ${alsGrootte(bytes)}` : "");
+    this.$(".awis").disabled = !alle.length;
+
+    this.$(".alijst").innerHTML = groepen.length
+      ? groepen
+          .map((groep) => {
+            const kop =
+              groep.dag === null ? "Zonder datum" : dagLabel(groep.dag);
+            return (
+              `<div class="dagkop"><span>${escape_(kop)}</span>` +
+              `<span class="bij">${groep.beelden.length} · ${alsGrootte(groep.bytes)}</span>` +
+              `<button type="button" data-wisdag="${groep.dag}">Wis deze dag</button></div>` +
+              `<div class="dagraster">` +
+              groep.beelden
+                .map((beeld) => {
+                  const cam = meerdere ? `${escape_(this.camNaam_(beeld.camera))} · ` : "";
+                  const klok = escape_(tijdVan(this.hass, beeld.tijd));
+                  return (
+                    `<button type="button" class="kiek" data-beeld="${escape_(beeld.id)}">` +
+                    `<img src="${escape_(beeld.url)}" alt="" loading="lazy">` +
+                    `<span class="bij">${cam}${escape_(beeld.naam ?? "")} · ${klok}</span>` +
+                    `<span class="weg" role="button" data-weg="${escape_(beeld.id)}"` +
+                    ` aria-label="Verwijder">${resolve("close")}</span>` +
+                    `</button>`
+                  );
+                })
+                .join("") +
+              `</div>`
+            );
+          })
+          .join("")
+      : `<div class="aleeg">Er liggen geen snapshots.</div>`;
+
+    // Waar het staat en hoe groot het is -- zijn eigen vraag, en het antwoord
+    // verandert elke dag.
+    this.$(".awaar").innerHTML =
+      `De beelden staan als losse jpeg's in <code>&lt;config&gt;/domotiapp_lovelace/beelden/</code>, ` +
+      `niet in <code>www/</code> — daar zou iedereen op je netwerk erbij kunnen zonder in te loggen. ` +
+      `Ze verdwijnen vanzelf na een week, en er blijven er hoogstens 500 per camera staan ` +
+      `(ongeveer 75 MB per camera).`;
   }
 
   toonGroot_(beeldId) {
