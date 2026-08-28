@@ -166,6 +166,15 @@ FUNCTIE die je in zijn geheel aan of uit zet. De vorm is: een schakelaar op éé
 regel, en het uitklapblok eronder alleen als hij aanstaat. Zie `section()` in
 `src/editor/base.js` en valkuil 33.
 
+**Een kaart die zijn hoogte aan zijn INHOUD ontleent, hoort een knop te
+hebben om dat vast te zetten.** De camerakaart volgt zijn camera, en dat is goed
+in een pop-up waar er één staat. Maar in een `horizontal-stack` staan er drie
+naast elkaar, en dan is elke andere beeldverhouding een andere hoogte -- gemeld
+op 28 augustus 2026 met een schermafdruk: *"de linker onderste camera is groter,
+zie je dat?"* Dus: standaard volgen, met een instelling om het gelijk te trekken.
+Niet andersom, want een vaste maat snijdt beeld af en dat is een keuze van de
+klant.
+
 **Statusregels weglaten als er niets te melden is.** Zijn rolluiken melden niets
 terug, en een zin die zegt dat er niets bekend is maakt de rij alleen hoger.
 
@@ -942,8 +951,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.31.2):** 898 JS-tests en 597 Python-tests,
-alle groen; bundel 622.726 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.32.0):** 898 JS-tests en 597 Python-tests,
+alle groen; bundel 625.348 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
