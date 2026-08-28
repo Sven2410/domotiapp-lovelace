@@ -157,6 +157,15 @@ zelfgekozen icoon gaat voor allebei.
 **Weergave-blokken in editors houdt hij niet.** Instellingen staan op één
 niveau; hij haalde ze bij de kopkaart, het afval en de knop expliciet weg.
 
+**Behalve als hij er zelf om vraagt, en dan met een vinkje ervoor.** Op
+28 augustus 2026: *"ik wil dat de presets onder een uitklapmenu vallen, dat ik ze
+kan aanzetten met 1 vinkje, iets van presets en dan een vinkje er achter -- zo
+houd je overzicht op de GUI."* Het verschil met wat hij eerder weghaalde: die
+blokken waren een INDELING van instellingen die er toch stonden, dit blok is een
+FUNCTIE die je in zijn geheel aan of uit zet. De vorm is: een schakelaar op één
+regel, en het uitklapblok eronder alleen als hij aanstaat. Zie `section()` in
+`src/editor/base.js` en valkuil 33.
+
 **Statusregels weglaten als er niets te melden is.** Zijn rolluiken melden niets
 terug, en een zin die zegt dat er niets bekend is maakt de rij alleen hoger.
 
@@ -311,6 +320,16 @@ Light groups (config-entry-helpers, dus in `.storage`, niet in YAML):
 | `light.lege_groep` | geen | SPEC 13.3 |
 | `light.offline_groep` | alleen `light.test_lamp_wegvallend` | SPEC 13.6, "alle lampen offline" |
 | `light.fase_10_groep` | `kleur_en_wit`, `kleurtemp`, `dim` | een lamp die allebei kan naast een die er één kan — de keuzeknoppen uit SPEC 6.5 |
+
+Sinds 28 augustus 2026 staan er zes **sjabloon-bewegingsmelders** in
+`configuration.yaml`, die samen de zes soorten van de cameratijdlijn dekken:
+`binary_sensor.persoon_oprit`, `auto_oprit`, `huisdier_tuin`, `deurbel`,
+`slot_voordeur` en `beweging_tuin`. Ze staan altijd op `off`; hun GESCHIEDENIS is
+met de hand in `home-assistant_v2.db` gezet (container stoppen, `states_meta` en
+`states.last_updated_ts` bijwerken, container starten), zodat er een hele dag
+te meten valt. Aanzetten voor een proef kan met `POST /api/states/<id>` -- dat
+overschrijft de sjabloonwaarde tot de volgende herstart, en het levert een echte
+regel in de recorder op.
 
 Sinds 25 augustus 2026 staan er ook helpers voor de keuzelijst, de tabbladen en
 de vaatwasser. Allemaal met de hand aangemaakt via de websocket
@@ -783,6 +802,35 @@ die daar niet staan:
    commit die alleen commentaar aanraakt hoeft de gecommitte bundel niet te
    veranderen, en `npm run verify` klaagt dan terecht niet.
 
+32. **De recorder van Home Assistant schrijft met VERTRAGING weg.** Wie
+   `history/history_during_period` aanroept vlak nadat er iets gebeurd is, krijgt
+   dat laatste er niet bij. Gemeten op 28 augustus 2026 in de testinstance:
+
+   ```
+   melder gaat aan   10:55:41
+   opgehaald         10:55:43  ->  de nieuwe regel ontbrak
+   opgehaald         10:55:59  ->  hij stond er
+   ```
+
+   Twee seconden is dus te kort, vijf is genoeg gebleken. Het venijn zit in wat
+   je ONDERTUSSEN wél ziet: een merkje dat uit `hass` komt verschijnt meteen, en
+   dan lijkt de lijst eronder kapot in plaats van traag. Deze meting komt uit een
+   tijdlijn die de geschiedenis las; die is er niet meer (de snapshots van de
+   bewakingsmotor zijn de bron geworden), maar de marge geldt voor alles wat de
+   recorder kort na een gebeurtenis uitleest.
+
+33. **Een uitklapblok in `ha-form` met een `name` NESTELT zijn waarden.**
+   `ha-form` geeft een blok met een naam `data[name]` mee in plaats van de hele
+   config, dus `presets` belandt dan als `presets_blok: {presets: ...}` in de
+   YAML en de kaart vindt zijn eigen instellingen niet meer terug. Precies
+   hetzelfde als bij `row()`, waar de lege `name` ook geen versiering is. Zo
+   stond `section()` in `src/editor/base.js` sinds het begin, en het is nooit
+   opgevallen omdat geen enkele kaart hem gebruikte -- de eerste die hem gebruikt
+   loopt er dus vol in. Sinds 28 augustus 2026 heeft hij een lege naam en een
+   aparte `title`, en geeft `DacEditor.label()` voor een `expandable` die titel
+   terug. Toets het na met `Object.keys(config).filter(k => typeof config[k] ===
+   "object")`: daar hoort niets in te staan.
+
 ---
 
 ## Projectstand
@@ -836,9 +884,15 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op het moment van schrijven:** 612 JS-tests en 526 Python-tests,
-alle groen; bundel 478.453 bytes; 137 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.30.0):** 876 JS-tests en 593 Python-tests,
+alle groen; bundel 608.405 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
+
+**De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
+is met opzet: de lopende stand hoort in
+`C:\dev\notities\domotiapp-lovelace\waar-gebleven.md` en de ronde zelf in
+`docs/<naam>/RAPPORT.md`. Wat hier staat is het soort kennis dat blijft gelden,
+niet wat er het laatst uitgebracht is.
 
 **Wat er open staat:**
 
