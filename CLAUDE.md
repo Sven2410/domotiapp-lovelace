@@ -928,6 +928,29 @@ die daar niet staan:
    ontgrendeling zou vijf snapshots opleveren. Daar is het veld *"↳ hoort bij
    welke camera"* voor, en bij UniFi is het invullen ervan geen luxe.
 
+37. **Een `tag` op een melding VERVANGT de vorige met dezelfde tag.** Dat is
+   precies wat je wilt bij twintig bewegingen op dezelfde oprit, en precies wat
+   je NIET wilt als er twee verschillende dingen aan dezelfde camera hangen. Bij
+   hem hingen `event.voordeur_deurbel_drukken` en `event.voordeur_toegang`
+   allebei aan `camera.voordeur`, en dan duwde "Ontgrendelen" de melding
+   "Aanbellen" van zijn scherm. Sinds 0.33.1 gaat de tag per camera ÉN melder;
+   de `group` blijft gedeeld, zodat ze wel bij elkaar staan.
+
+38. **Hij draait zijn EIGEN automatiseringen naast onze kaarten.** Op zijn
+   installatie staan blueprint-automatiseringen die bij dezelfde gebeurtenis ook
+   een snapshot maken en een melding sturen (`Bezoeker voordeur snapshot +
+   notificatie`, `Ontgrendeling voordeur snapshot + notificatie`, en dezelfde
+   voor de oprit en het fietsenhok). Krijgt hij twee meldingen of gedraagt er
+   zich één anders dan de onze, kijk dan eerst of het er twee zijn:
+
+   ```
+   GET /api/states  ->  automation.*  met attributes.last_triggered
+   GET /api/config/automation/config/<id>
+   ```
+
+   Vraag het hem daarna; het is zijn huis en zijn keuze welke van de twee blijft.
+   Neem niet aan dat een melding die zich vreemd gedraagt van ons is.
+
 ---
 
 ## Projectstand
@@ -981,7 +1004,7 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.33.0):** 900 JS-tests en 602 Python-tests,
+**Tellingen op 28 augustus 2026 (0.33.1):** 900 JS-tests en 604 Python-tests,
 alle groen; bundel 625.497 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
