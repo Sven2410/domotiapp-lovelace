@@ -20,6 +20,7 @@ import {
   raadSoort,
   soortVan,
   soortVanBeeld,
+  soortenVoorFilter,
   telPerSoort,
   tijdVanBeeld,
   uitDatumveld,
@@ -82,16 +83,26 @@ describe("raden welke soort een melder is", () => {
     assert.equal(raadSoort("binary_sensor.deurbel_bel"), "aanbellen");
   });
 
-  it("valt terug op de algemene soort bij een gewone bewegingsmelder", () => {
-    assert.equal(raadSoort("binary_sensor.oprit_motion"), "beweging");
-    assert.equal(raadSoort("binary_sensor.gang"), "beweging");
+  it("geeft NIETS terug als er niets te herkennen valt", () => {
+    // Tot 0.30.0 werd dit stilzwijgend "beweging", en dan verscheen er een
+    // filterknop voor iets dat niemand had ingesteld: *"Je hebt Voorkant erbij
+    // gezet als filter maar die heb ik helemaal niet gedefinieerd als
+    // beweging."*
+    assert.equal(raadSoort("binary_sensor.voorkant"), null);
+    assert.equal(raadSoort("binary_sensor.oprit_motion"), null);
+    assert.equal(raadSoort("binary_sensor.gang"), null);
   });
 });
 
 describe("de soort van een beeld", () => {
   it("volgt wat er in de editor gekozen is", () => {
     const b = beeld("binary_sensor.oprit_motion", "Beweging", om(9));
-    assert.equal(soortVanBeeld(b), "beweging");
+    // Niets gekozen en niets te raden: geen soort.
+    assert.equal(soortVanBeeld(b), null);
+    assert.equal(
+      soortVanBeeld(b, { "meldersoort:binary_sensor.oprit_motion": "beweging" }),
+      "beweging"
+    );
     assert.equal(
       soortVanBeeld(b, { "meldersoort:binary_sensor.oprit_motion": "voertuig" }),
       "voertuig"
@@ -181,6 +192,76 @@ describe("filteren", () => {
   it("noemt de dagen waarop er beelden zijn, nieuwste eerst", () => {
     assert.deepEqual(dagenMetBeelden(beelden), [DAG, verschuifDag(DAG, -1)]);
     assert.deepEqual(dagenMetBeelden([]), []);
+  });
+});
+
+describe("welke filterknoppen er horen te staan", () => {
+  it("toont alleen de soorten die aan een melder hangen", () => {
+    const melders = [
+      { entity: "binary_sensor.a", soort: "mens" },
+      { entity: "binary_sensor.b", soort: "voertuig" },
+    ];
+    assert.deepEqual(
+      soortenVoorFilter(melders).map((s) => s.sleutel),
+      ["mens", "voertuig"]
+    );
+  });
+
+  it("houdt de vaste volgorde aan, hoe de melders ook staan", () => {
+    const melders = [
+      { entity: "a", soort: "ontgrendeling" },
+      { entity: "b", soort: "dier" },
+      { entity: "c", soort: "mens" },
+    ];
+    assert.deepEqual(
+      soortenVoorFilter(melders).map((s) => s.sleutel),
+      ["mens", "dier", "ontgrendeling"]
+    );
+  });
+
+  it("laat een melder ZONDER soort geen knop opleveren", () => {
+    // Dit is de melding van 28 augustus 2026: "Voorkant" hing nergens aan en
+    // kreeg toch een knop "Beweging".
+    const melders = [
+      { entity: "binary_sensor.voorkant", soort: null },
+      { entity: "binary_sensor.oprit_person", soort: "mens" },
+    ];
+    assert.deepEqual(
+      soortenVoorFilter(melders).map((s) => s.sleutel),
+      ["mens"]
+    );
+  });
+
+  it("geeft een lege rij als er niets is ingesteld", () => {
+    assert.deepEqual(soortenVoorFilter([{ entity: "x", soort: null }]), []);
+    assert.deepEqual(soortenVoorFilter([]), []);
+    assert.deepEqual(soortenVoorFilter(undefined), []);
+  });
+
+  it("toont Beweging pas als je hem zelf gekozen hebt", () => {
+    assert.deepEqual(soortenVoorFilter([{ entity: "x", soort: null }]), []);
+    assert.deepEqual(
+      soortenVoorFilter([{ entity: "x", soort: "beweging" }]).map((s) => s.sleutel),
+      ["beweging"]
+    );
+  });
+});
+
+describe("een beeld zonder soort", () => {
+  const zonder = beeld("binary_sensor.voorkant", "Voorkant", om(9));
+  const mens = beeld("binary_sensor.oprit_person", "Persoon", om(8));
+
+  it("staat er gewoon bij zolang er niet gefilterd wordt", () => {
+    assert.equal(filterBeelden([zonder, mens]).length, 2);
+  });
+
+  it("valt buiten elk soortfilter", () => {
+    const uit = filterBeelden([zonder, mens], { soorten: new Set(["mens"]) });
+    assert.deepEqual(uit.map((b) => b.naam), ["Persoon"]);
+  });
+
+  it("telt bij geen enkele knop mee", () => {
+    assert.deepEqual(telPerSoort([zonder, mens]), { mens: 1 });
   });
 });
 
