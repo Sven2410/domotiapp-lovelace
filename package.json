@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/check-css.mjs && node scripts/build.mjs",
     "verify": "node scripts/build.mjs --check",
     "watch": "node scripts/build.mjs --watch",
     "test": "node --test \"tests/js/**/*.test.mjs\"",

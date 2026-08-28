@@ -6,6 +6,7 @@
 | `bewaking/save` | iedere ingelogde gebruiker |
 | `bewaking/timeline` | iedere ingelogde gebruiker |
 | `bewaking/subscribe` | iedere ingelogde gebruiker |
+| `bewaking/verwijder` | iedere ingelogde gebruiker |
 
 Niet admin-only, om dezelfde reden als bij de scenes: de klant draait Fully
 Kiosk met een niet-adminaccount en moet zijn eigen camerakaart kunnen
@@ -69,6 +70,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_save)
     websocket_api.async_register_command(hass, ws_timeline)
     websocket_api.async_register_command(hass, ws_subscribe)
+    websocket_api.async_register_command(hass, ws_verwijder)
 
     data[DATA_WS_REGISTERED] = True
     _LOGGER.debug("Bewakingscommando's geregistreerd")
@@ -207,7 +209,9 @@ async def ws_save(
     {
         vol.Required("type"): f"{DOMAIN}/bewaking/timeline",
         vol.Optional("cameras"): [cv.string],
-        vol.Optional("limiet"): vol.All(int, vol.Range(min=1, max=MAX_LIMIET)),
+        # 0 betekent: alles. Dat is voor het opslagscherm, waar je juist de hele
+        # voorraad wilt zien; de strook op de kaart vraagt om de standaard.
+        vol.Optional("limiet"): vol.All(int, vol.Range(min=0, max=MAX_LIMIET)),
     }
 )
 @callback
@@ -226,6 +230,31 @@ def ws_timeline(
     connection.send_result(
         msg["id"], {"beelden": [_met_url(hass, beeld) for beeld in beelden]}
     )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/bewaking/verwijder",
+        vol.Required("ids"): [cv.string],
+    }
+)
+@websocket_api.async_response
+async def ws_verwijder(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Verwijder beelden met de hand.
+
+    De ID's komen uit het opslagscherm van de kaart. Er is bewust geen
+    "verwijder alles"-vorm: wie wist stuurt wat hij bedoelt, en dan kan een
+    verdwaald commando nooit meer weghalen dan er op het scherm stond.
+    """
+    motor = hass.data.get(DOMAIN, {}).get(DATA_MOTOR)
+    if motor is None:
+        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        return
+
+    verwijderd = await motor.async_verwijder(list(msg["ids"]))
+    connection.send_result(msg["id"], {"verwijderd": verwijderd})
 
 
 @websocket_api.websocket_command(

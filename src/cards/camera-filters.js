@@ -250,6 +250,75 @@ export function dagenMetBeelden(beelden) {
   return [...dagen].sort((a, b) => b - a);
 }
 
+/**
+ * De eerstvolgende dag MET beelden, vanaf `dag` in de richting `stap`.
+ *
+ * Gevraagd op 28 augustus 2026, tussen de regels door: hij stapt met pijltjes
+ * door de tijd. Zonder deze functie stapt hij per dag, en op een dag zonder
+ * beweging staat er dan niets -- vier keer klikken om bij de vorige gebeurtenis
+ * te komen. Nu springt de pijl naar de eerstvolgende dag waar wél iets staat.
+ *
+ * Is er in die richting niets meer, dan geeft hij `null` en hoort de pijl uit
+ * te staan.
+ *
+ * @param {number[]} dagen begin-van-de-dag, nieuwste eerst (`dagenMetBeelden`)
+ * @param {number} dag de dag waar je nu staat
+ * @param {number} stap -1 voor terug in de tijd, +1 voor vooruit
+ */
+export function dagStap(dagen, dag, stap) {
+  const nu = dagOm(dag).vanaf;
+  const kandidaten = (dagen ?? []).filter((d) => (stap < 0 ? d < nu : d > nu));
+  if (!kandidaten.length) return null;
+  // `dagen` staat nieuwste eerst: terug is de eerste die kleiner is, vooruit de
+  // laatste die groter is.
+  return stap < 0 ? kandidaten[0] : kandidaten[kandidaten.length - 1];
+}
+
+/**
+ * De beelden per dag, nieuwste dag eerst, en binnen een dag nieuwste eerst.
+ *
+ * Voor het opslagscherm: *"een soort opslag icoontje waar we alle snapshots
+ * kunnen zien met de datum."*
+ *
+ * @returns {Array<{dag: number, beelden: Array<object>, bytes: number}>}
+ */
+export function perDag(beelden) {
+  const bakken = new Map();
+  for (const beeld of Array.isArray(beelden) ? beelden : []) {
+    const ms = tijdVanBeeld(beeld);
+    // Een beeld zonder leesbare tijd hoort ergens te staan en niet nergens:
+    // hij krijgt zijn eigen bak onderaan.
+    const dag = ms === null ? null : dagOm(ms).vanaf;
+    if (!bakken.has(dag)) bakken.set(dag, []);
+    bakken.get(dag).push(beeld);
+  }
+  const uit = [...bakken.entries()].map(([dag, lijst]) => ({
+    dag,
+    beelden: lijst.sort((a, b) => (tijdVanBeeld(b) ?? 0) - (tijdVanBeeld(a) ?? 0)),
+    bytes: lijst.reduce((som, b) => som + (Number(b.bytes) || 0), 0),
+  }));
+  return uit.sort((a, b) => {
+    if (a.dag === null) return 1;
+    if (b.dag === null) return -1;
+    return b.dag - a.dag;
+  });
+}
+
+/**
+ * Een aantal bytes als tekst waar een mens iets aan heeft.
+ *
+ * Hij vroeg er zelf naar: *"hoe groot zal het bestand etc worden?"* Dat hoort
+ * niet alleen in een rapport te staan maar op het scherm zelf, want het
+ * verandert elke dag.
+ */
+export function alsGrootte(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (n >= 1024 * 1024) return `${Math.round(n / (1024 * 1024))} MB`;
+  if (n >= 1024) return `${Math.round(n / 1024)} kB`;
+  return `${n} B`;
+}
+
 /** Begin en eind van de dag waar dit moment in valt, in de tijdzone van de kijker. */
 export function dagOm(moment) {
   const d = new Date(moment);

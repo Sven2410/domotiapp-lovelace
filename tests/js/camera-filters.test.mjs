@@ -13,7 +13,10 @@ import {
   ALGEMEEN,
   SOORTEN,
   alsDatumveld,
+  alsGrootte,
   camerasVoorFilter,
+  dagStap,
+  perDag,
   dagLabel,
   dagOm,
   dagenMetBeelden,
@@ -299,6 +302,81 @@ describe("een beeld zonder soort", () => {
 
   it("telt bij geen enkele knop mee", () => {
     assert.deepEqual(telPerSoort([zonder, mens]), { mens: 1 });
+  });
+});
+
+describe("van dag naar dag springen", () => {
+  const dagen = [DAG, verschuifDag(DAG, -1), verschuifDag(DAG, -4)];
+
+  it("springt naar de eerstvolgende dag waar iets staat", () => {
+    // Van vandaag terug is gisteren; van gisteren terug is vier dagen geleden,
+    // en niet eergisteren -- daar staat niets.
+    assert.equal(dagStap(dagen, DAG, -1), verschuifDag(DAG, -1));
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -1), -1), verschuifDag(DAG, -4));
+  });
+
+  it("springt ook weer vooruit", () => {
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -4), 1), verschuifDag(DAG, -1));
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -1), 1), DAG);
+  });
+
+  it("geeft null als er in die richting niets meer is", () => {
+    assert.equal(dagStap(dagen, DAG, 1), null);
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -4), -1), null);
+    assert.equal(dagStap([], DAG, -1), null);
+  });
+
+  it("werkt vanaf een dag die zelf niets heeft", () => {
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -2), -1), verschuifDag(DAG, -4));
+    assert.equal(dagStap(dagen, verschuifDag(DAG, -2), 1), verschuifDag(DAG, -1));
+  });
+});
+
+describe("het opslagscherm: per dag", () => {
+  it("groepeert per dag, nieuwste dag eerst", () => {
+    const beelden = [
+      beeld("binary_sensor.a", "A", om(9)),
+      beeld("binary_sensor.b", "B", verschuifDag(DAG, -1) + 3600000),
+      beeld("binary_sensor.c", "C", om(20)),
+    ];
+    const groepen = perDag(beelden);
+    assert.deepEqual(groepen.map((g) => g.dag), [DAG, verschuifDag(DAG, -1)]);
+    // Binnen een dag ook nieuwste eerst.
+    assert.deepEqual(groepen[0].beelden.map((b) => b.naam), ["C", "A"]);
+  });
+
+  it("telt de bytes per dag op", () => {
+    const met = (tijd, bytes) => ({ ...beeld("binary_sensor.a", "A", tijd), bytes });
+    const groepen = perDag([met(om(9), 100), met(om(10), 250)]);
+    assert.equal(groepen[0].bytes, 350);
+  });
+
+  it("zet een beeld zonder leesbare tijd onderaan in een eigen bak", () => {
+    const groepen = perDag([
+      beeld("binary_sensor.a", "A", om(9)),
+      { id: "x", camera: "camera.oprit", melder: "binary_sensor.b", tijd: "?" },
+    ]);
+    assert.deepEqual(groepen.map((g) => g.dag), [DAG, null]);
+  });
+
+  it("geeft een lege lijst voor niets", () => {
+    assert.deepEqual(perDag([]), []);
+    assert.deepEqual(perDag(undefined), []);
+  });
+});
+
+describe("een aantal bytes leesbaar maken", () => {
+  it("kiest de eenheid waar een mens iets aan heeft", () => {
+    assert.equal(alsGrootte(0), "0 B");
+    assert.equal(alsGrootte(900), "900 B");
+    assert.equal(alsGrootte(150 * 1024), "150 kB");
+    assert.equal(alsGrootte(75 * 1024 * 1024), "75 MB");
+    assert.equal(alsGrootte(2.5 * 1024 * 1024 * 1024), "2.5 GB");
+  });
+
+  it("valt terug op nul bij onzin", () => {
+    assert.equal(alsGrootte(undefined), "0 B");
+    assert.equal(alsGrootte("veel"), "0 B");
   });
 });
 
