@@ -354,18 +354,10 @@ export function dagLabel(dag, nu = Date.now()) {
   return `${DAGEN[d.getDay()]} ${d.getDate()} ${MAANDEN[d.getMonth()]}`;
 }
 
-/** Voor `<input type="date">`: yyyy-mm-dd in de eigen tijdzone. */
-export function alsDatumveld(moment) {
-  const d = new Date(moment);
-  return (
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-` +
-    `${String(d.getDate()).padStart(2, "0")}`
-  );
-}
-
-/** En terug. Geeft null als er onzin in staat. */
-export function uitDatumveld(tekst) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(tekst ?? ""));
-  if (!m) return null;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
-}
+/*
+ * Er stonden hier twee helpers voor een `<input type="date">`:
+ * `alsDatumveld` en `uitDatumveld`. Die zijn op 28 augustus 2026 weggehaald met
+ * de kalender zelf: *"ik wil geen kalender trouwens (...) ik wil gewoon de
+ * kalender van een week terug."* De dagenlijst in de kaart werkt met
+ * milliseconden en heeft geen tekstvorm nodig.
+ */
