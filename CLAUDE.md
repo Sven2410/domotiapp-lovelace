@@ -865,6 +865,30 @@ die daar niet staan:
    terug. Toets het na met `Object.keys(config).filter(k => typeof config[k] ===
    "object")`: daar hoort niets in te staan.
 
+34. **In een pop-up is `position: fixed` niet vast aan het scherm.** Zodra een
+   voorouder een `transform`, `filter` of `backdrop-filter` heeft, wordt DIE het
+   referentievlak. De pop-ups van bubble-card -- waar de eigenaar het halve
+   dashboard mee opbouwt -- schuiven open met een transform, en dus:
+
+   - vulde het opslagscherm van de camerakaart de pop-up in plaats van het
+     scherm, met zijn kop (en dus de terugknop) erbuiten;
+   - landde een menu dat met vensterkoördinaten geplaatst werd buiten beeld. Je
+     ziet dan alleen dat de knop oplicht en verder niets gebeuren. Gemeld op
+     28 augustus 2026: *"als ik op vandaag klik wordt hij blauw en gebeurt er
+     niets."*
+
+   **Alles wat over het scherm hoort te liggen, hangt daarom aan
+   `document.body`** -- de bevestigingsvraag (`vraag.js`), het mediazoekscherm en
+   sinds 0.31.2 ook het opslagscherm van de camera (`cards/camera-archief.js`).
+   Dat staat sinds 26 augustus in de kop van `vraag.js`, en het is op 28 augustus
+   alsnog misgegaan in een ander bestand: **kennis in één bestand is geen
+   bewaking.**
+
+   En andersom: iets dat aan een KAART hoort (een uitklaplijstje bij een knop)
+   houd je juist `absolute`. Fixed ontsnapt wel aan `overflow: hidden`, maar valt
+   om in een pop-up. Zit de kaart in de weg met `overflow: hidden`, haal dat dan
+   daar weg in plaats van naar `fixed` te grijpen.
+
 ---
 
 ## Projectstand
@@ -918,8 +942,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.31.1):** 898 JS-tests en 597 Python-tests,
-alle groen; bundel 622.517 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.31.2):** 898 JS-tests en 597 Python-tests,
+alle groen; bundel 622.726 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat

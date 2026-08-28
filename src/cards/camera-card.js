@@ -69,6 +69,7 @@ import {
 } from "./camera-filters.js";
 import { teVersturen } from "./bewaking-logica.js";
 import { vraagBevestiging } from "../vraag.js";
+import { openArchief, ververArchief } from "./camera-archief.js";
 import { zetScrollSlot } from "../scrollslot.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
 
@@ -111,8 +112,12 @@ class CameraCard extends DacCard {
     :host { display: block; }
     *, *::before, *::after { box-sizing: border-box; }
 
+    /* GEEN overflow:hidden hier. Dat stond er om het beeld binnen de ronde
+       hoeken te houden, maar het knipte ook de dagenlijst af -- vier van de
+       zeven dagen waren te zien. Het beeld rondt nu zijn eigen bovenhoeken af,
+       en de kaart laat los wat erbuiten hoort te mogen hangen. */
     .card {
-      padding: 0; overflow: hidden;
+      padding: 0;
       display: flex; flex-direction: column;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
@@ -130,6 +135,7 @@ class CameraCard extends DacCard {
     .vak {
       position: relative; width: 100%; min-height: 120px;
       overflow: hidden; background: #000;
+      border-radius: var(--dac-radius) var(--dac-radius) 0 0;
       touch-action: none; cursor: default;
       display: flex;
     }
@@ -316,13 +322,17 @@ class CameraCard extends DacCard {
        Precies zo: de bewaartermijn is een week, dus alles daarbuiten is een
        maand aanwijzen waar niets staat. Zeven regels, met erachter hoeveel
        beelden er die dag liggen. */
-    /* position:fixed en niet absolute: de kaart staat op overflow:hidden (voor
-       de ronde hoeken van het beeld), en dan wordt een lijstje dat eronder
-       uitsteekt afgeknipt -- in de proef waren vier van de zeven dagen te zien.
-       De plek wordt bij het openen uitgerekend, want een vast venster kent de
-       kaart niet. */
+    /* absolute en NIET fixed. Fixed leek slimmer -- het ontsnapt aan elke
+       overflow -- maar het is niet vast aan het scherm zodra een voorouder een
+       transform heeft, en een pop-up van bubble-card heeft die. Dan landt het
+       lijstje op coördinaten die tegen het verkeerde vlak gerekend zijn, en zie
+       je alleen dat de dagknop blauw wordt. Gemeld op 28 augustus 2026:
+       *"als ik op vandaag klik wordt hij blauw en gebeurt er niets."*
+
+       Absoluut binnen de filterrij dus, en de kaart klemt niet meer (zie
+       .card hierboven). */
     .filters .dagmenu {
-      position: fixed; z-index: 12; min-width: 180px;
+      position: absolute; left: 0; top: 36px; z-index: 8; min-width: 180px;
       padding: 5px; display: flex; flex-direction: column;
       background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
       border-radius: var(--dac-radius-sm); box-shadow: 0 18px 40px -14px rgba(0,0,0,.72);
@@ -435,123 +445,10 @@ class CameraCard extends DacCard {
       font-size: 11.5px; color: var(--dac-ink-3); padding: 2px 0 6px;
     }
 
-    /* Groot bekijken. Eén laag over de kaart heen, tikken sluit hem.
-       Bewust geen dialoog van Home Assistant: die verwacht een eigen element en
-       een eigen levensduur, en dit is één plaatje. */
-    /* z-index 14: HOGER dan het opslagscherm (12), want je opent een beeld
-       vanuit dat scherm. Stond op 9, en dan opende het beeld eronder -- je klikte
-       en er gebeurde zichtbaar niets. Gemeten op 28 augustus 2026. */
-    .groot {
-      position: fixed; inset: 0; z-index: 14; display: grid; place-items: center;
-      background: rgba(0,0,0,.86); padding: 16px; cursor: zoom-out;
-    }
-    .groot[hidden] { display: none; }
-    /* Op het grote beeld dezelfde knop. Buiten het beeld tikken sluit hem ook,
-       maar *"dat moet de klant maar net weten"* -- en daar heeft hij gelijk in. */
-    .groot .gterug {
-      position: absolute; left: 14px; top: 14px; z-index: 1; cursor: pointer;
-      background: color-mix(in srgb, var(--dac-bg) 78%, transparent);
-      backdrop-filter: blur(8px); color: #fff; border-color: rgba(255,255,255,.22);
-    }
-    .groot img { max-width: 100%; max-height: 84vh; border-radius: var(--dac-radius-sm); }
-    .groot .onder {
-      position: absolute; left: 0; right: 0; bottom: 14px;
-      text-align: center; color: #fff; font-size: 12.5px;
-      text-shadow: 0 1px 3px rgba(0,0,0,.8);
-    }
-
-    /* ---- het opslagscherm ----
-       Gevraagd op 28 augustus 2026: *"een soort opslag icoontje waar we alle
-       snapshots kunnen zien met de datum (...) en dan een verwijder snapshots
-       knop of iets dat ik handmatig ook kan verwijderen."*
-
-       Eén laag over het scherm, net als de laag om groot te bekijken. Bewust
-       geen dialoog van Home Assistant: die verwacht een eigen element en een
-       eigen levensduur, en dit hangt aan één kaart. */
-    .archief {
-      position: fixed; inset: 0; z-index: 12; display: flex; flex-direction: column;
-      background: var(--dac-bg); color: var(--dac-ink);
-    }
-    .archief[hidden] { display: none; }
-    .archief .akop {
-      display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
-      padding: 14px 16px; border-bottom: 1px solid var(--dac-border);
-    }
-    .archief .atitel { font-size: 15px; font-weight: 600; }
-    .archief .astat { font-size: 11.5px; color: var(--dac-ink-3); }
-    .archief .rek { flex: 1 1 auto; }
-    .archief .awis {
-      flex: 0 0 auto; cursor: pointer; font: inherit; color: var(--dac-ink-2);
-      background: var(--dac-surface); border: 1px solid var(--dac-border);
-      border-radius: var(--dac-radius-pill);
-      padding: 6px 12px; font-size: 12px;
-    }
-    .archief .awis[disabled] { opacity: .4; cursor: default; }
-
-    /* Een TERUGKNOP met het woord erbij, en niet alleen een kruisje rechtsboven.
-       Gemeld op 28 augustus 2026: *"ik heb geen terug knopje om uit het menu te
-       gaan."* Er stond wel een kruisje, maar dat moet je maar net zien -- en dit
-       scherm ligt over het hele dashboard, dus wie het niet vindt zit vast. */
-    .archief .aterug, .groot .gterug {
-      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 12px 6px 8px; cursor: pointer; font: inherit; font-size: 12.5px;
-      color: var(--dac-ink); background: var(--dac-surface);
-      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
-    }
-    .archief .aterug .icon, .groot .gterug .icon {
-      width: 15px; height: 15px; transform: rotate(180deg);
-    }
-
-    .archief .alijst {
-      flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
-      padding: 12px 16px 20px;
-    }
-    .archief .dagkop {
-      display: flex; align-items: center; gap: 10px;
-      padding: 14px 0 8px; font-size: 12.5px; font-weight: 600;
-    }
-    .archief .dagkop .bij { font-weight: 400; font-size: 11px; color: var(--dac-ink-3); }
-    .archief .dagkop button {
-      margin-left: auto; padding: 4px 10px; cursor: pointer; font: inherit;
-      font-size: 11px; color: var(--dac-ink-3); background: transparent;
-      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
-    }
-    /* Een raster dat meegroeit: op een telefoon twee op een rij, op een scherm
-       zoveel als er passen. */
-    .archief .dagraster {
-      display: grid; gap: 8px;
-      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-    }
-    .archief .kiek {
-      position: relative; padding: 0; cursor: pointer; overflow: hidden;
-      aspect-ratio: 16 / 9; background: #000;
-      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-sm);
-    }
-    .archief .kiek img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .archief .kiek .bij {
-      position: absolute; left: 0; right: 0; bottom: 0;
-      padding: 12px 6px 4px; font-size: 10px; line-height: 1.3; color: #fff;
-      text-align: left; text-shadow: 0 1px 2px rgba(0,0,0,.85);
-      background: linear-gradient(to top, rgba(0,0,0,.82), transparent);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .archief .kiek .weg {
-      position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
-      display: grid; place-items: center; padding: 0; cursor: pointer;
-      color: #fff; background: rgba(0,0,0,.55); border: none;
-      border-radius: 50%;
-    }
-    .archief .kiek .weg .icon { width: 13px; height: 13px; }
-    .archief .aleeg { padding: 30px 0; text-align: center; color: var(--dac-ink-3); font-size: 12.5px; }
-
-    /* Waar het staat en hoe groot het is. Hij vroeg er zelf naar, en het
-       verandert elke dag -- dus hoort het op het scherm en niet alleen in een
-       rapport. */
-    .archief .awaar {
-      flex: 0 0 auto; padding: 10px 16px 14px; font-size: 10.5px; line-height: 1.5;
-      color: var(--dac-ink-3); border-top: 1px solid var(--dac-border);
-    }
-    .archief .awaar code { font-size: 10.5px; color: var(--dac-ink-2); }
+    /* Het opslagscherm en het vergrote beeld staan NIET meer in deze kaart.
+       Ze hangen aan document.body -- zie camera-archief.js voor waarom: in een
+       pop-up van bubble-card is position:fixed niet vast aan het scherm, en dan
+       valt de terugknop buiten beeld. */
 
     :host([dead]) .card { opacity: .5; }
   `;
@@ -677,21 +574,7 @@ class CameraCard extends DacCard {
         </div>
         <div class="tijdlijn" hidden></div>
       </div>
-      <div class="groot" hidden>
-        <button type="button" class="gterug">${resolve("chevronRight")}<span>Terug</span></button>
-        <img alt=""><div class="onder"></div>
-      </div>
-      <div class="archief" hidden>
-        <div class="akop">
-          <button type="button" class="aterug">${resolve("chevronRight")}<span>Terug</span></button>
-          <span class="atitel">Snapshots</span>
-          <span class="astat"></span>
-          <span class="rek"></span>
-          <button type="button" class="awis">Alles wissen</button>
-        </div>
-        <div class="alijst"></div>
-        <div class="awaar"></div>
-      </div>`;
+`;
   }
 
   wire() {
@@ -790,15 +673,11 @@ class CameraCard extends DacCard {
     document.addEventListener("click", buiten, true);
     this.teardown_.push(() => document.removeEventListener("click", buiten, true));
 
-    // Een vast menu schuift niet mee met de pagina; dan hoort het dicht te gaan
-    // in plaats van los boven het dashboard te blijven hangen.
-    const weg = () => { if (!this.$(".dagmenu")?.hidden) this.sluitDagmenu_(); };
-    window.addEventListener("scroll", weg, true);
-    window.addEventListener("resize", weg);
-    this.teardown_.push(() => {
-      window.removeEventListener("scroll", weg, true);
-      window.removeEventListener("resize", weg);
-    });
+    // GEEN sluiten-bij-scrollen. Dat hoorde bij de vaste stand van 0.31.1: een
+    // menu dat aan het scherm hing bleef anders los boven het dashboard hangen.
+    // Nu hangt het aan de filterrij en schuift het gewoon mee. Erger nog: het
+    // sloot zichzelf, want `scrollIntoView` hieronder is zelf een scroll --
+    // je klikte, de lijst kwam en verdween in dezelfde tel.
   }
 
   /* ------------------------------------------------------------ dagenlijst */
@@ -809,16 +688,10 @@ class CameraCard extends DacCard {
     this.paintDagmenu_();
     menu.hidden = false;
     this.$(".datum").setAttribute("aria-expanded", "true");
-
-    // De plek uitrekenen: onder de knop, tenzij dat niet meer past -- dan
-    // erboven. Op een telefoon in liggende stand is dat het verschil tussen een
-    // lijst die je ziet en een lijst die half onder de rand hangt.
-    const knop = this.$(".datum").getBoundingClientRect();
-    const vak = menu.getBoundingClientRect();
-    const onder = knop.bottom + 4;
-    const past = onder + vak.height <= window.innerHeight - 8;
-    menu.style.left = `${Math.max(8, Math.min(knop.left, window.innerWidth - vak.width - 8))}px`;
-    menu.style.top = past ? `${onder}px` : `${Math.max(8, knop.top - vak.height - 4)}px`;
+    // Zit de kaart in een pop-up die zelf scrolt, dan kan de onderkant van de
+    // lijst erbuiten vallen. `block: "nearest"` schuift precies genoeg en laat
+    // een lijst die al helemaal past met rust.
+    menu.scrollIntoView({ block: "nearest" });
   }
 
   sluitDagmenu_() {
@@ -1632,15 +1505,8 @@ class CameraCard extends DacCard {
       const knop = e.target.closest?.("[data-beeld]");
       if (!knop) return;
       e.stopPropagation();
-      this.toonGroot_(knop.dataset.beeld);
+      this.openArchief_(knop.dataset.beeld);
     });
-
-    const groot = this.$(".groot");
-    this.on(groot, "click", (e) => {
-      e.stopPropagation();
-      groot.hidden = true;
-    });
-    this.archiefLuisteraars_();
 
     const verbinding = this.hass?.connection;
     if (!verbinding?.sendMessagePromise) return;
@@ -1748,7 +1614,7 @@ class CameraCard extends DacCard {
     }
     this.paintFilters_();
     this.paintTijdlijn_(true);
-    this.paintArchief_();
+    ververArchief(this.beelden_);
   }
 
   async bewakingRegels_() {
@@ -1859,62 +1725,31 @@ class CameraCard extends DacCard {
   /**
    * Het opslagscherm openen: alle snapshots, per dag, met hun datum.
    *
-   * Gevraagd op 28 augustus 2026: *"dan wil ik een soort opslag icoontje waar we
-   * alle snapshots kunnen zien met de datum, want dat kan toch ook als je de
-   * timeline doorscrollt in de tijd."*
+   * Het scherm zelf staat in `camera-archief.js` en hangt aan `document.body`.
+   * Deze kaart levert alleen de gegevens en handelt het wissen af.
    *
    * Het toont ALLES, ongefilterd. De filters op de kaart zijn er om iets terug
    * te vinden; dit scherm is er om te zien wat er ligt -- en om het weg te
    * kunnen gooien. Een filter dat stilletjes meeloopt zou betekenen dat
    * "alles wissen" niet alles wist.
+   *
+   * @param {string} [beeld] open meteen dit ene beeld groot, zonder de lijst
    */
-  openArchief_() {
-    const laag = this.$(".archief");
-    laag.hidden = false;
+  openArchief_(beeld) {
     this.slotLos_?.();
     this.slotLos_ = zetScrollSlot();
     this.teardown_.push(() => this.slotLos_?.());
-    this.paintArchief_();
-  }
-
-  sluitArchief_() {
-    this.$(".archief").hidden = true;
-    this.slotLos_?.();
-    this.slotLos_ = null;
-  }
-
-  archiefLuisteraars_() {
-    const laag = this.$(".archief");
-    this.on(laag, "click", async (e) => {
-      e.stopPropagation();
-      if (e.target.closest?.(".aterug")) return this.sluitArchief_();
-
-      const weg = e.target.closest?.("[data-weg]");
-      if (weg) {
-        const beeld = (this.beelden_ ?? []).find((b) => b.id === weg.dataset.weg);
-        return this.wis_([weg.dataset.weg], beeld ? `dit beeld van ${beeld.naam ?? "de camera"}` : "dit beeld");
-      }
-
-      const dag = e.target.closest?.("[data-wisdag]");
-      if (dag) {
-        const groep = perDag(this.beelden_ ?? []).find(
-          (g) => String(g.dag) === dag.dataset.wisdag
-        );
-        if (!groep) return;
-        return this.wis_(
-          groep.beelden.map((b) => b.id),
-          `${groep.beelden.length} beelden van ${dagLabel(groep.dag).toLowerCase()}`
-        );
-      }
-
-      if (e.target.closest?.(".awis")) {
-        const alle = this.beelden_ ?? [];
-        if (!alle.length) return;
-        return this.wis_(alle.map((b) => b.id), `alle ${alle.length} beelden`);
-      }
-
-      const kiek = e.target.closest?.("[data-beeld]");
-      if (kiek) this.toonGroot_(kiek.dataset.beeld);
+    openArchief({
+      beelden: this.beelden_ ?? [],
+      beeld,
+      meerdere: this.cameras_().length > 1,
+      camNaam: (id) => this.camNaam_(id),
+      klok: (iso, volledig) => tijdVan(this.hass, iso, volledig),
+      wis: (ids, wat) => this.wis_(ids, wat),
+      dicht: () => {
+        this.slotLos_?.();
+        this.slotLos_ = null;
+      },
     });
   }
 
@@ -1950,71 +1785,7 @@ class CameraCard extends DacCard {
     this.beelden_ = (this.beelden_ ?? []).filter((b) => !weg.has(b.id));
     this.paintFilters_();
     this.paintTijdlijn_(true);
-    this.paintArchief_();
-  }
-
-  paintArchief_() {
-    const laag = this.$(".archief");
-    if (!laag || laag.hidden) return;
-
-    const alle = this.beelden_ ?? [];
-    const groepen = perDag(alle);
-    const bytes = alle.reduce((som, b) => som + (Number(b.bytes) || 0), 0);
-    const meerdere = this.cameras_().length > 1;
-
-    this.text(".astat", alle.length ? `${alle.length} beelden · ${alsGrootte(bytes)}` : "");
-    this.$(".awis").disabled = !alle.length;
-
-    this.$(".alijst").innerHTML = groepen.length
-      ? groepen
-          .map((groep) => {
-            const kop =
-              groep.dag === null ? "Zonder datum" : dagLabel(groep.dag);
-            return (
-              `<div class="dagkop"><span>${escape_(kop)}</span>` +
-              `<span class="bij">${groep.beelden.length} · ${alsGrootte(groep.bytes)}</span>` +
-              `<button type="button" data-wisdag="${groep.dag}">Wis deze dag</button></div>` +
-              `<div class="dagraster">` +
-              groep.beelden
-                .map((beeld) => {
-                  const cam = meerdere ? `${escape_(this.camNaam_(beeld.camera))} · ` : "";
-                  const klok = escape_(tijdVan(this.hass, beeld.tijd));
-                  return (
-                    `<button type="button" class="kiek" data-beeld="${escape_(beeld.id)}">` +
-                    `<img src="${escape_(beeld.url)}" alt="" loading="lazy">` +
-                    `<span class="bij">${cam}${escape_(beeld.naam ?? "")} · ${klok}</span>` +
-                    `<span class="weg" role="button" data-weg="${escape_(beeld.id)}"` +
-                    ` aria-label="Verwijder">${resolve("close")}</span>` +
-                    `</button>`
-                  );
-                })
-                .join("") +
-              `</div>`
-            );
-          })
-          .join("")
-      : `<div class="aleeg">Er liggen geen snapshots.</div>`;
-
-    // Eén regel, en alleen wat je als gebruiker moet weten. Er stond eerst bij
-    // waar de bestanden staan en waarom niet in `www` -- gemeld op 28 augustus
-    // 2026: *"verwijder dat bericht beneden van de opslag, zeg alleen dat ze een
-    // week bewaard worden."* Terecht: waar ze staan is iets voor wie de
-    // integratie installeert, niet voor wie naar zijn oprit kijkt. Dat verhaal
-    // staat in het rapport en in de helptekst van de editor.
-    this.text(
-      ".awaar",
-      "Snapshots blijven een week staan en verdwijnen daarna vanzelf, oudste eerst. Per camera worden er hoogstens 500 bewaard."
-    );
-  }
-
-  toonGroot_(beeldId) {
-    const beeld = (this.beelden_ ?? []).find((b) => b.id === beeldId);
-    if (!beeld) return;
-    const laag = this.$(".groot");
-    laag.querySelector("img").src = beeld.url;
-    laag.querySelector(".onder").textContent =
-      `${this.camNaam_(beeld.camera)} · ${beeld.naam ?? ""} · ${tijdVan(this.hass, beeld.tijd, true)}`;
-    laag.hidden = false;
+    ververArchief(this.beelden_);
   }
 
   static getConfigElement() {
