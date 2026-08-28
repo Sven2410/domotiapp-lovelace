@@ -918,8 +918,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.31.0):** 899 JS-tests en 597 Python-tests,
-alle groen; bundel 619.582 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.31.1):** 898 JS-tests en 597 Python-tests,
+alle groen; bundel 622.517 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat

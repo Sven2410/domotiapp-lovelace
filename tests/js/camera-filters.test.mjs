@@ -12,7 +12,6 @@ import { describe, it } from "node:test";
 import {
   ALGEMEEN,
   SOORTEN,
-  alsDatumveld,
   alsGrootte,
   camerasVoorFilter,
   dagStap,
@@ -27,7 +26,6 @@ import {
   soortenVoorFilter,
   telPerSoort,
   tijdVanBeeld,
-  uitDatumveld,
   verschuifDag,
 } from "../../src/cards/camera-filters.js";
 
@@ -389,7 +387,9 @@ describe("de dag", () => {
 
   it("schuift een dag terug over een maandgrens heen", () => {
     const eerste = new Date(2026, 8, 1, 12, 0).getTime();
-    assert.equal(alsDatumveld(verschuifDag(eerste, -1)), "2026-08-31");
+    const terug = new Date(verschuifDag(eerste, -1));
+    assert.equal(terug.getMonth(), 7);
+    assert.equal(terug.getDate(), 31);
   });
 
   it("noemt vandaag en gisteren bij naam, en niets 'Alles'", () => {
@@ -400,10 +400,4 @@ describe("de dag", () => {
     assert.equal(dagLabel(null, nu), "Alles");
   });
 
-  it("gaat heen en weer naar een datumveld", () => {
-    assert.equal(alsDatumveld(om(23, 59)), "2026-08-28");
-    assert.equal(uitDatumveld("2026-08-28"), DAG);
-    assert.equal(uitDatumveld("onzin"), null);
-    assert.equal(uitDatumveld(null), null);
-  });
 });
