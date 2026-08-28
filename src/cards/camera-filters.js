@@ -208,6 +208,38 @@ export function soortenVoorFilter(melders) {
   return ALLE_SOORTEN.filter((s) => aanwezig.has(s.sleutel));
 }
 
+/**
+ * Welke camera's horen er in de camerakeuze van het filter te staan?
+ *
+ * Gemeld op 28 augustus 2026: *"Voorkant staat bij mij er nog bij terwijl ik
+ * geen bewegingsmelder heb gekoppeld aan die camera, hoe kan dat?"* Terecht: een
+ * camera zonder melder maakt nooit een snapshot, dus filteren op die naam levert
+ * per definitie een lege strook op. Een knop die alleen "niets" kan opleveren is
+ * geen keuze maar een valstrik.
+ *
+ * Dezelfde toets die de SERVER gebruikt om een bewakingsregel aan of uit te
+ * zetten (`regelsVoorKaart`: `aan: eigen.length > 0`), nu ook voor deze rij.
+ *
+ * Een camera met beelden blijft wél staan, ook als zijn melder inmiddels weg is
+ * -- anders staan er beelden in de strook waar je niet meer op kunt filteren.
+ *
+ * @param {string[]} cameras alle camera's van de kaart, in kaartvolgorde
+ * @param {Array<string|null>} melderCameras per melder de camera waar hij bij
+ *   hoort; `null` betekent "bij alle camera's"
+ * @param {Array<{camera: string}>} beelden wat er in de timeline ligt
+ */
+export function camerasVoorFilter(cameras, melderCameras, beelden) {
+  const perMelder = Array.isArray(melderCameras) ? melderCameras : [];
+  // Eén melder die bij ALLE camera's hoort maakt elke camera bruikbaar.
+  if (perMelder.some((c) => c === null || c === undefined)) return [...(cameras ?? [])];
+
+  const met = new Set(perMelder.filter(Boolean));
+  for (const beeld of Array.isArray(beelden) ? beelden : []) {
+    if (beeld?.camera) met.add(beeld.camera);
+  }
+  return (cameras ?? []).filter((c) => met.has(c));
+}
+
 /** De dagen waarop er beelden zijn, nieuwste eerst. */
 export function dagenMetBeelden(beelden) {
   const dagen = new Set();

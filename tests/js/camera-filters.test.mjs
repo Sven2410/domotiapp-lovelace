@@ -13,6 +13,7 @@ import {
   ALGEMEEN,
   SOORTEN,
   alsDatumveld,
+  camerasVoorFilter,
   dagLabel,
   dagOm,
   dagenMetBeelden,
@@ -244,6 +245,42 @@ describe("welke filterknoppen er horen te staan", () => {
       soortenVoorFilter([{ entity: "x", soort: "beweging" }]).map((s) => s.sleutel),
       ["beweging"]
     );
+  });
+});
+
+describe("welke camera's in het filter horen", () => {
+  const OPRIT = "camera.oprit";
+  const TUIN = "camera.tuin";
+  const VOORKANT = "camera.voorkant";
+
+  it("laat een camera weg waar geen melder aan hangt", () => {
+    // De melding van 28 augustus 2026: "Voorkant staat bij mij er nog bij
+    // terwijl ik geen bewegingsmelder heb gekoppeld aan die camera."
+    const uit = camerasVoorFilter([OPRIT, TUIN, VOORKANT], [OPRIT, TUIN], []);
+    assert.deepEqual(uit, [OPRIT, TUIN]);
+  });
+
+  it("houdt de volgorde van de kaart aan", () => {
+    assert.deepEqual(camerasVoorFilter([OPRIT, TUIN], [TUIN, OPRIT], []), [OPRIT, TUIN]);
+  });
+
+  it("laat alle camera's staan zodra één melder bij allemaal hoort", () => {
+    const uit = camerasVoorFilter([OPRIT, TUIN, VOORKANT], [OPRIT, null], []);
+    assert.deepEqual(uit, [OPRIT, TUIN, VOORKANT]);
+  });
+
+  it("houdt een camera die nog beelden heeft, ook zonder melder", () => {
+    // Anders staan er beelden in de strook waar je niet meer op kunt filteren.
+    const uit = camerasVoorFilter(
+      [OPRIT, VOORKANT],
+      [OPRIT],
+      [{ camera: VOORKANT, melder: "binary_sensor.oud" }]
+    );
+    assert.deepEqual(uit, [OPRIT, VOORKANT]);
+  });
+
+  it("geeft een lege lijst als er nergens een melder aan hangt", () => {
+    assert.deepEqual(camerasVoorFilter([OPRIT, TUIN], [], []), []);
   });
 });
 

@@ -49,7 +49,7 @@ import { resolve } from "../icons.js";
 import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { zetCamerabeeld } from "./camerabeeld.js";
-import { hoortBij } from "./camera-logica.js";
+import { cameraVanMelder, hoortBij } from "./camera-logica.js";
 import {
   ALLE_SOORTEN,
   alsDatumveld,
@@ -59,6 +59,7 @@ import {
   filterBeelden,
   raadSoort,
   soortVan,
+  camerasVoorFilter,
   soortVanBeeld,
   soortenVoorFilter,
   telPerSoort,
@@ -694,11 +695,35 @@ class CameraCard extends DacCard {
   }
 
   /** Filteren op camera; alleen als er meer dan één op de kaart staat. */
+  /**
+   * Filteren op camera -- maar alleen op de camera's die iets kunnen opleveren.
+   *
+   * Zie `camerasVoorFilter` voor het waarom. Blijft er één camera over, dan is
+   * er niets te kiezen en verdwijnt de rij; "Alle" naast één naam is geen keuze.
+   */
   paintCamFilter_() {
     const vak = this.$(".camkeuze");
-    const lijst = this.cameras_();
+    const alle = this.cameras_();
+    const melderCameras = this.melders_().map((m) =>
+      cameraVanMelder(this.hass, m.entity, alle, m.bijCamera)
+    );
+    const lijst = camerasVoorFilter(alle, melderCameras, this.beelden_ ?? []);
+
     vak.hidden = lijst.length < 2;
-    if (lijst.length < 2) return;
+    if (lijst.length < 2) {
+      // Stond er een camerafilter aan die nu wegvalt, dan hoort hij ook uit te
+      // gaan -- anders blijft de strook leeg zonder dat er nog een knop is om
+      // dat mee terug te draaien.
+      if (this.camFilter_ && !lijst.includes(this.camFilter_)) {
+        this.camFilter_ = null;
+        this.paintTijdlijn_(true);
+      }
+      return;
+    }
+    if (this.camFilter_ && !lijst.includes(this.camFilter_)) {
+      this.camFilter_ = null;
+      this.paintTijdlijn_(true);
+    }
 
     const namen = lijst.map((id) => this.camNaam_(id));
     const sig = `${lijst.join(",")}|${namen.join(",")}|${this.camFilter_ ?? ""}`;

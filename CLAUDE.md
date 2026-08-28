@@ -694,6 +694,33 @@ die daar niet staan:
    kaarten -- deed het 's avonds weer, zonder ingrijpen. Trek dus geen conclusie
    over onbruikbaarheid; probeer het later opnieuw.
 
+   **Tweede bijstelling, 28 augustus 2026: het wissen van de service worker is
+   ook de WEG ERUIT.** Toen dit opnieuw gebeurde -- `hui-root` zonder `hui-view`,
+   `hui-sections-view` niet eens gedefinieerd, geen fout in de console -- hielp
+   precies dat: de service worker en de caches wissen, tabblad sluiten, vers
+   tabblad. Daarna bouwde alles weer.
+
+   **En hoe je in vijf minuten weet dat het niet aan je kaart ligt.** Deze fout
+   is die dag drie keer verkeerd gediagnosticeerd (de nieuwe config, de
+   sections-view, de kaart zelf). Twee toetsen die het meteen uitwijzen:
+
+   - **Bouwt het automatisch gegenereerde dashboard "Thuis" nog wel?** Doet die
+     het en de rest niet, dan ligt het aan de frontend van HA in dat tabblad.
+   - **Hang je kaart met de hand in de pagina** en kijk of hij zich tekent:
+
+     ```js
+     const el = document.createElement("domotiapp-camera-card");
+     el.setConfig(config);
+     el.hass = document.querySelector("home-assistant").hass;
+     document.body.appendChild(el);
+     ```
+
+     Dat is de echte kaart met de echte `hass` en de echte websocket -- alleen
+     zonder de view-laag van Home Assistant eromheen. Tekent hij zich daar wél,
+     dan zit het probleem in die laag en niet bij jou. Het is bovendien een
+     bruikbare meetopstelling: er kan gewoon met een echte klik in geklikt
+     worden.
+
 22. **De slagschaduw op een kaart van één rasterrij is een vlek.** Een schaduw
    van 18px omlaag met 40px onscherpte valt weg onder een kaart van drie rijen,
    maar staat onder een kaart van 56px net zo hoog als de kaart zelf -- en drie
@@ -884,8 +911,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.30.0):** 876 JS-tests en 593 Python-tests,
-alle groen; bundel 608.405 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 28 augustus 2026 (0.30.2):** 889 JS-tests en 593 Python-tests,
+alle groen; bundel 608.988 bytes; 158 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
