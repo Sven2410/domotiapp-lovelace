@@ -352,3 +352,90 @@ async def test_de_oudste_gaat_eruit_voordat_de_nieuwe_erin_gaat(
         p.stem for p in (beeldmap / "domotiapp_lovelace" / "beelden").glob("*.jpg")
     }
     assert op_schijf == {b["id"] for b in beelden}
+
+
+# --------------------------------------------------------------------------
+# Melders die nooit "on" worden — NIEUW GEDRAG
+#
+# Gemeld op 28 augustus 2026: bij het ontgrendelen van de voordeur kwam er geen
+# snapshot. In zijn eigen Home Assistant nagekeken: UniFi Access levert dat als
+# een `event`-entiteit en als een `lock`, en geen van beide wordt ooit "on".
+# --------------------------------------------------------------------------
+
+
+def test_een_event_entiteit_is_elke_nieuwe_waarde_een_detectie() -> None:
+    """De toestand van een `event` IS het tijdstip; er valt niets om te slaan."""
+    from custom_components.domotiapp_lovelace.bewaking.motor import is_detectie
+
+    assert is_detectie(
+        "event.voordeur_toegang",
+        "2026-08-28T12:26:21.448+00:00",
+        "2026-08-28T12:26:03.818+00:00",
+    )
+    # Dezelfde waarde is geen nieuwe gebeurtenis (een attribuutwijziging).
+    assert not is_detectie(
+        "event.voordeur_toegang",
+        "2026-08-28T12:26:21.448+00:00",
+        "2026-08-28T12:26:21.448+00:00",
+    )
+    # "Nog nooit gebeurd" en een storing tellen niet.
+    assert not is_detectie("event.voordeur_toegang", "unknown", "unavailable")
+    assert not is_detectie("event.voordeur_toegang", "unavailable", "2026-08-28T12:26:21+00:00")
+
+
+def test_een_slot_dat_van_slot_gaat_is_een_detectie() -> None:
+    from custom_components.domotiapp_lovelace.bewaking.motor import is_detectie
+
+    assert is_detectie("lock.voordeur", "unlocked", "locked")
+    # Weer op slot is geen gebeurtenis om een beeld van te maken.
+    assert not is_detectie("lock.voordeur", "locked", "unlocked")
+    assert not is_detectie("lock.voordeur", "unlocked", "unlocked")
+
+
+def test_een_gewone_melder_verandert_niet() -> None:
+    from custom_components.domotiapp_lovelace.bewaking.motor import is_detectie
+
+    assert is_detectie("binary_sensor.oprit_persoon", "on", "off")
+    assert not is_detectie("binary_sensor.oprit_persoon", "off", "on")
+    assert not is_detectie("binary_sensor.oprit_persoon", "on", "on")
+
+
+async def test_een_event_melder_levert_een_beeld_op(
+    hass, bewaking_op, zet_regel, index
+) -> None:
+    """De hele keten, met een melder die nooit `on` wordt."""
+    from .conftest import CAMERA
+
+    melder = "event.voordeur_toegang"
+    hass.states.async_set(melder, "unknown", {"friendly_name": "Voordeur toegang"})
+    await hass.async_block_till_done()
+
+    await zet_regel(melders=[melder], rustperiode=0)
+
+    hass.states.async_set(melder, "2026-08-28T12:26:21.448+00:00", {"event_type": "unifi_access_entry"})
+    await hass.async_block_till_done()
+
+    beelden = index().voor([CAMERA])
+    assert len(beelden) == 1
+    assert beelden[0]["melder"] == melder
+
+
+async def test_een_slot_levert_een_beeld_op_bij_ontgrendelen(
+    hass, bewaking_op, zet_regel, index
+) -> None:
+    from .conftest import CAMERA
+
+    melder = "lock.voordeur"
+    hass.states.async_set(melder, "locked", {"friendly_name": "Voordeur"})
+    await hass.async_block_till_done()
+
+    await zet_regel(melders=[melder], rustperiode=0)
+
+    hass.states.async_set(melder, "unlocked", {})
+    await hass.async_block_till_done()
+    assert len(index().voor([CAMERA])) == 1
+
+    # En weer op slot levert er geen tweede op.
+    hass.states.async_set(melder, "locked", {})
+    await hass.async_block_till_done()
+    assert len(index().voor([CAMERA])) == 1

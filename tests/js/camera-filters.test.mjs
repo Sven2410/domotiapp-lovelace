@@ -72,6 +72,22 @@ describe("raden welke soort een melder is", () => {
     assert.equal(raadSoort("binary_sensor.melder_4", "Er is aangebeld"), "aanbellen");
   });
 
+  it("herkent wat UniFi levert", () => {
+    // Uit zijn eigen installatie, op 28 augustus 2026 uitgelezen.
+    assert.equal(raadSoort("event.voordeur_toegang", "Voordeur Deur Gebeurtenis"), "ontgrendeling");
+    assert.equal(raadSoort("event.voordeur_deurbel_drukken", "Voordeur Deurbel"), "aanbellen");
+    assert.equal(raadSoort("event.fietsenhok_voertuig", "Fietsenhok Voertuig"), "voertuig");
+    assert.equal(raadSoort("lock.voordeur", "Voordeur"), "ontgrendeling");
+  });
+
+  it("gelooft de device_class boven de naam", () => {
+    // Een deurbel die "Meterkast" heet is nog steeds een deurbel.
+    assert.equal(raadSoort("event.meterkast_knop_1", "Meterkast", "doorbell"), "aanbellen");
+    // En zonder die device_class valt hij terug op het raden -- en dan is er
+    // niets te herkennen.
+    assert.equal(raadSoort("event.meterkast_knop_1", "Meterkast"), null);
+  });
+
   it("noemt een slot een ontgrendeling, hoe het ook heet", () => {
     assert.equal(raadSoort("lock.voordeur"), "ontgrendeling");
     assert.equal(raadSoort("lock.mooie_naam", "Poort"), "ontgrendeling");

@@ -553,7 +553,9 @@ class CameraCard extends DacCard {
         // Reolink meteen klopt zonder dat er iets ingevuld hoeft te worden.
         // `null` als er niets gekozen is en er ook niets te raden valt. Dan
         // krijgt hij geen filterknop -- zie `soortenVoorFilter`.
-        soort: c[`meldersoort:${entity}`] || raadSoort(entity, naam),
+        soort:
+          c[`meldersoort:${entity}`] ||
+          raadSoort(entity, naam, stateOf(this.hass, entity)?.attributes?.device_class),
       };
     });
   }
@@ -1939,8 +1941,9 @@ class CameraEditor extends DacEditor {
     // En de GERADEN soort per melder, om dezelfde reden: de kaart heeft er al
     // een gekozen, dus een leeg keuzevak liegt erover.
     for (const id of melders) {
-      const naam = c[`melder:${id}`] || this.hass_?.states?.[id]?.attributes?.friendly_name;
-      const geraden = raadSoort(id, naam);
+      const attrs = this.hass_?.states?.[id]?.attributes;
+      const naam = c[`melder:${id}`] || attrs?.friendly_name;
+      const geraden = raadSoort(id, naam, attrs?.device_class);
       // Alleen zaaien wat er WERKELIJK uit de naam volgt. Vindt hij niets, dan
       // blijft het vakje leeg -- dat is eerlijker dan er "Beweging" in zetten en
       // daar een filterknop op baseren die niemand heeft gekozen.
