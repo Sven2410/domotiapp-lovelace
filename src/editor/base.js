@@ -54,10 +54,29 @@ export const sel = {
  */
 export const row = (...schema) => ({ type: "grid", name: "", schema });
 
-/** A collapsible block. Keeps the first screen of the editor short. */
-export const section = (name, icon, schema, expanded = false) => ({
+/**
+ * Een uitklapblok. Houdt het eerste scherm van de editor kort.
+ *
+ * **De lege `name` is hier net zo min decoratief als bij `row`.** `ha-form`
+ * geeft een blok met een naam de waarde `data[name]` mee in plaats van de hele
+ * config -- dan zou `presets` in de YAML als `presets_blok: {presets: ...}`
+ * belanden en zou de kaart zijn eigen instellingen niet meer terugvinden. Met
+ * een lege naam blijft de config plat, en dat is wat elke kaart hier verwacht.
+ *
+ * De kop komt daarom uit `title` en niet uit `name`. Home Assistant heeft die
+ * kop in de loop van de tijd op twee manieren getekend -- rechtstreeks uit
+ * `schema.title`, of via `computeLabel` -- dus `DacEditor.label()` geeft voor
+ * een `expandable` de titel terug en dan is het allebei goed.
+ *
+ * @param {string} title wat er op de kop staat
+ * @param {string} icon een `mdi:`-naam, of leeg
+ * @param {Array<object>} schema de velden erin
+ * @param {boolean} expanded staat hij meteen open?
+ */
+export const section = (title, icon, schema, expanded = false) => ({
   type: "expandable",
-  name,
+  name: "",
+  title,
   icon,
   expanded,
   schema,
@@ -166,6 +185,9 @@ export class DacEditor extends HTMLElement {
 
   /** Dutch labels for the schema keys. */
   label(schemaItem) {
+    // Een uitklapblok draagt zijn kop in `title`; zijn naam is met opzet leeg
+    // (zie `section`), dus zonder deze regel krijgt hij een lege kop.
+    if (schemaItem.type === "expandable") return schemaItem.title ?? "";
     return LABELS[schemaItem.name] ?? schemaItem.name;
   }
 
