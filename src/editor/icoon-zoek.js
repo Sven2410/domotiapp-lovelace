@@ -28,9 +28,9 @@
  */
 export const GROEPEN = [
   ["Woning", ["house", "homeLeave", "homeStatus", "homeThermo", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
-  ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "eettafel", "kitchen", "shower", "toilet", "desk", "garage", "storage"]],
-  ["Buiten", ["tree", "parasol", "veranda", "fence", "sun", "awning", "gras", "kruiden", "car", "beach"]],
-  ["Rolluiken", ["shutter", "shutterOpen", "awning", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
+  ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "eettafel", "kitchen", "shower", "toilet", "desk", "speelkamer", "garage", "storage"]],
+  ["Buiten", ["tree", "parasol", "veranda", "fence", "gate", "sun", "awning", "gras", "kruiden", "car", "beach"]],
+  ["Rolluiken", ["shutter", "shutterOpen", "awning", "gate", "gateOpen", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
   ["Personen", ["person", "people", "away", "dier"]],
   ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "van", "washer", "dishwasher", "koelkast", "oven", "magnetron", "printer", "printer3d", "fan", "airco", "radio", "boiler"]],
@@ -100,6 +100,7 @@ export const TERMEN = {
   shower: ["badkamer", "douche", "shower", "bad", "bathroom", "wassen", "sanitair"],
   toilet: ["wc", "toilet", "sanitair", "badkamer", "restroom", "plee"],
   desk: ["kantoor", "werkkamer", "bureau", "desk", "office", "computer", "monitor", "beeldscherm"],
+  speelkamer: ["speelkamer", "kinderkamer", "speelgoed", "kinderen", "kind", "beer", "teddybeer", "knuffel", "spelen", "playroom", "speelhoek"],
 
   /* Buiten */
   tree: ["tuin", "boom", "buiten", "garden", "tree", "achtertuin", "voortuin", "groen", "natuur"],
@@ -110,6 +111,8 @@ export const TERMEN = {
   shutter: ["rolluik", "gordijn", "zonwering", "shutter", "screen", "jaloezie", "dicht", "gesloten", "cover"],
   shutterOpen: ["rolluik open", "gordijn open", "zonwering", "shutter", "cover", "omhoog"],
   awning: ["zonnescherm", "luifel", "markies", "awning", "terras", "zonwering", "buiten"],
+  gate: ["poort", "hek", "toegangspoort", "oprit", "inrit", "gate", "schuifpoort", "draaipoort", "erf", "dicht", "gesloten"],
+  gateOpen: ["poort open", "poort", "hek open", "gate open", "oprit", "toegang", "geopend", "open"],
   garageOpen: ["garagedeur open", "garage", "deur open", "omhoog", "geopend"],
   garageClosed: ["garagedeur dicht", "garage", "deur dicht", "gesloten", "omlaag"],
   arrowUp: ["omhoog", "pijl omhoog", "open", "up", "boven", "openen", "stijgen"],

@@ -95,6 +95,17 @@ export const icons = {
     <path d="M2.8 18.4h18.4"/>
     <path d="M5.2 18.4v2.4M18.8 18.4v2.4"/>`),
 
+  /* De speelkamer: een beer, want blokken lezen op 19px als dozen en die staan
+     al in de set (`storage`). Twee oren die boven de kop uitsteken is de vorm
+     die een kind tekent, en dat is precies de kamer die het is. Gevraagd op
+     30 augustus 2026. */
+  speelkamer: draw(`<circle cx="6.8" cy="7.6" r="2.8"/>
+    <circle cx="17.2" cy="7.6" r="2.8"/>
+    <circle cx="12" cy="13.8" r="5.8"/>
+    <path d="M9.8 12.4v.1M14.2 12.4v.1"/>
+    <circle cx="12" cy="15.6" r="1.9"/>
+    <path d="M12 14.7v.1"/>`),
+
   stairs: draw(`<path d="M3.6 20.4V16h4.3v-4.3h4.3V7.4h4.3V3.2h4.1"/>
     <path d="M3.6 20.4h16.8"/>`),
 
@@ -121,6 +132,24 @@ export const icons = {
 
   shutterOpen: draw(`<path d="M3.6 4.2h16.8M5.2 4.2v15.6M18.8 4.2v15.6"/>
     <path d="M5.2 6.6h13.6M5.2 8.6h13.6"/>`),
+
+  /* De poort van de oprit: twee staanders met er tussenin twee vleugels die in
+     het midden op elkaar sluiten. Dat middennaadje is het enige verschil met
+     `fence`, en het is precies wat een poort een poort maakt. Gevraagd op
+     30 augustus 2026 -- een poort schuift opzij, dus de pijlen omhoog en omlaag
+     klopten er ook al niet bij; zie `poort` in de rolluikkaart. */
+  gate: draw(`<path d="M2.6 20.6h18.8"/>
+    <path d="M4.2 20.6V6.8M19.8 20.6V6.8"/>
+    <path d="M5.8 9.6h12.4M5.8 16.6h12.4"/>
+    <path d="M8.4 9.6v7M15.6 9.6v7"/>
+    <path d="M11.4 9.6v7M12.6 9.6v7"/>`),
+
+  gateOpen: draw(`<path d="M2.6 20.6h18.8"/>
+    <path d="M4.2 20.6V6.8M19.8 20.6V6.8"/>
+    <path d="M4.2 9.6h3.6M4.2 16.6h3.6"/>
+    <path d="M7.8 9.6v7"/>
+    <path d="M16.2 9.6h3.6M16.2 16.6h3.6"/>
+    <path d="M16.2 9.6v7"/>`),
 
   /* De eettafel: een blad met vier poten en twee stoelen ertegenaan.
      `desk` is het bureau -- dat heeft een la en staat tegen de muur. */
@@ -828,6 +857,7 @@ export function defaultIcon(entityId, attrs = {}) {
     case "switch":
       return "switchOn";
     case "cover":
+      if (attrs.device_class === "gate") return "gate";
       return attrs.device_class === "awning" || attrs.device_class === "blind"
         ? "awning"
         : "shutter";
