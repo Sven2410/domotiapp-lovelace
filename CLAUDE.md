@@ -177,6 +177,10 @@ klant.
 
 **Statusregels weglaten als er niets te melden is.** Zijn rolluiken melden niets
 terug, en een zin die zegt dat er niets bekend is maakt de rij alleen hoger.
+Sinds 0.34.0 mag de statusregel op de rolluikkaart ook met de hand uit, en dan
+geldt: **een STORING blijft altijd staan.** "Niet bereikbaar" is geen status
+maar een defect, en dat verbergen geeft een kaart die net doet alsof alles in
+orde is.
 
 ### De vormtaal komt van DomotiApp Coach
 
@@ -485,6 +489,23 @@ Zat de MCP-tab achter een ander tabblad in datzelfde venster, dan blijft het
 `hidden`. Wat wél werkte: met `WScript.Shell.SendKeys` `^{TAB}` doorstappen tot
 de venstertitel de paginatitel is. Daarna `visible` en `hasFocus() === true`.
 Je mag het hem ook gewoon vragen; dat deed hij zonder morren.
+
+**En de omweg om te vinden WELK venster het tabblad heeft**, als er drie
+Chrome-vensters openstaan met elk tien tabbladen: zet de paginatitel vanuit het
+tabblad zelf op een uniek woord (`document.title = "ZZMCPDOELZZ"`) en loop dan
+met `EnumWindows` de vensters af tot de venstertitel daarmee begint. Zonder dat
+zoek je op "Kaarttest", en dat staat op vier tabbladen tegelijk.
+
+Maar let op: **dat vindt het venster, en dat is niet hetzelfde als het
+tabblad naar voren halen.** Op 30 augustus 2026 wees de venstertitel het juiste
+tabblad aan terwijl `visibilityState` gewoon `hidden` bleef -- het venster was
+volledig bedekt door een ander, en Chrome zet een bedekt venster op `hidden`.
+`SetForegroundWindow`, `BringWindowToTop`, `ShowWindow(SW_RESTORE)` en
+`SW_SHOWMAXIMIZED` hielpen geen van alle. Twee dingen die daarbij misgingen en
+niet nog een keer hoeven: een `SendKeys("%")` om de voorgrondwissel toe te staan
+landt op het venster dat op DAT moment focus heeft, en `^{TAB}` blijft dus in
+zijn vensters tabbladen omwisselen. Kost dat meer dan twee pogingen, vraag het
+hem dan; dat is één zin en het werkt meteen.
 
 **Een native kiezer van de browser is niet met de browsertool te bedienen** —
 een klok, een kalender, een `<select>`-dropdown. Dat is een venster buiten de
@@ -951,6 +972,17 @@ die daar niet staan:
    Vraag het hem daarna; het is zijn huis en zijn keuze welke van de twee blijft.
    Neem niet aan dat een melding die zich vreemd gedraagt van ons is.
 
+39. **`ha-form` lijnt de cellen van een `row()` BOVENLANGS uit.** Twee
+   schakelaars naast elkaar staan dus alleen recht als de hulpteksten eronder
+   even hoog zijn. Op 30 augustus 2026 in de rolluik-editor gemeten: onder de
+   ene stond een hulptekst van twee regels en onder de andere een van drie, en
+   de twee schakelaars stonden **17,8px** uit elkaar (y=617,5 en y=635,3). Dat
+   leest als slordigheid, en het is niet met een maat te repareren -- de ene
+   hulptekst wordt bij een langere entiteitsnaam vanzelf weer een regel langer.
+   Zet zulke velden dus onder elkaar; dat is bovendien de vorm die de eigenaar
+   voor editors wil (zie *Vormregels*). Gebruik `row()` voor velden ZONDER
+   hulptekst, of voor twee die er allebei een van dezelfde hoogte hebben.
+
 ---
 
 ## Projectstand
@@ -966,7 +998,7 @@ met **twintig kaarttypes**:
 | | |
 |---|---|
 | Kop en indeling | header, separator, **navbalk**, **tabbladen** |
-| Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, rolluiken |
+| Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
@@ -1010,8 +1042,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 28 augustus 2026 (0.33.1):** 900 JS-tests en 604 Python-tests,
-alle groen; bundel 625.497 bytes; 158 getekende iconen (het DomotiTech-logo
+**Tellingen op 30 augustus 2026 (0.34.0):** 931 JS-tests en 604 Python-tests,
+alle groen; bundel 628.871 bytes; 161 getekende iconen (het DomotiTech-logo
 meegerekend, dat als data-URI is ingebakken).
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
