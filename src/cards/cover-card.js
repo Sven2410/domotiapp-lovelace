@@ -1,5 +1,5 @@
 /**
- * Rolluiken, zonneschermen en alles wat op een cover-entiteit zit.
+ * Rolluiken, poorten, zonneschermen en alles wat op een cover-entiteit zit.
  *
  * Gebouwd voor het gewone Nederlandse geval: een motor die open, stop en dicht
  * aanneemt en niets terugmeldt. Home Assistant houdt die eeuwig op `unknown`, en
@@ -16,6 +16,12 @@
  * Een positieschuif verschijnt alleen wanneer de entiteit SET_POSITION
  * adverteert. Zelfde principe als de lichtkaart: vraag het apparaat, niet de
  * installateur.
+ *
+ * Drie dingen staan per regel in te stellen, want het zijn eigenschappen van
+ * het apparaat en niet van de kaart: `poort` (woorden op de knoppen in plaats
+ * van pijlen, want een poort schuift opzij), `invert` (de motor is omgekeerd
+ * aangesloten) en een eigen naam. Het rekenwerk daarachter staat los in
+ * `cover-logica.js`, met een gewone Node-test eromheen.
  */
 
 import { DacCard, registerCard, registerEditor, rowsFor, toneValue, INCOMPLETE } from "../base.js";
@@ -23,22 +29,21 @@ import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { attrsOf, bindActions, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import {
+  BIT_VOOR_DIENST,
+  F,
+  dienstVoor,
+  getoondeStand,
+  isOmgekeerd,
+  isPoort,
+  keerPositie,
+  knopTekst,
+  standaardIconen,
+  statusTekst,
+  toestandUit,
+} from "./cover-logica.js";
 
-const F = { OPEN: 1, CLOSE: 2, SET_POSITION: 4, STOP: 8 };
 const can = (st, bit) => Boolean((st?.attributes?.supported_features ?? 0) & bit);
-
-/** Wat een rolluik draagt als de config niets zegt. */
-const defaultIcons = (attrs = {}) => {
-  switch (attrs.device_class) {
-    case "garage":
-      return { open: "garageOpen", closed: "garageClosed" };
-    case "awning":
-    case "blind":
-      return { open: "awning", closed: "awning" };
-    default:
-      return { open: "shutterOpen", closed: "shutter" };
-  }
-};
 
 class CoverCard extends DacCard {
   static css = /* css */ `
@@ -97,6 +102,14 @@ class CoverCard extends DacCard {
     .keys button .icon { width: 18px; height: 18px; }
     .keys button:disabled { opacity: .3; cursor: default; }
 
+    /* Een poort schuift opzij; omhoog en omlaag zeggen daar niets over. Dan
+       maar woorden, en die hebben een andere breedte dan een pijl. */
+    .keys.woorden button.tekst {
+      width: auto; min-width: 58px; padding: 0 11px;
+      font-family: inherit; font-size: 12.5px; font-weight: 500; line-height: 1;
+      white-space: nowrap;
+    }
+
     /* ---- positie, alleen bij motoren die terugmelden ---- */
     .pos { grid-column: 1 / -1; margin: 2px 0 4px; display: flex; }
     .pos[hidden] { display: none; }
@@ -104,7 +117,10 @@ class CoverCard extends DacCard {
 
     .cv.unavailable { opacity: .42; pointer-events: none; }
 
-    @media (max-width: 380px) { .keys button { width: 34px; } }
+    @media (max-width: 380px) {
+      .keys button { width: 34px; }
+      .keys.woorden button.tekst { min-width: 0; padding: 0 8px; font-size: 12px; }
+    }
   `;
 
   validate(config) {
@@ -120,12 +136,16 @@ class CoverCard extends DacCard {
     return this.config.covers.map((c) => c.entity);
   }
 
-  keysHtml(withStop) {
+  keysHtml(withStop, poort) {
+    const tekst = knopTekst(poort);
+    const knop = (act, naam, teken) =>
+      `<button type="button" class="${poort ? "tekst" : ""}" data-act="${act}" ` +
+      `aria-label="${naam}">${teken}</button>`;
     return `
-      <div class="keys">
-        <button type="button" data-act="open" aria-label="Open">${icons.arrowUp}</button>
+      <div class="keys${poort ? " woorden" : ""}">
+        ${knop("open", tekst.open, poort ? tekst.open : icons.arrowUp)}
         ${withStop ? `<button type="button" data-act="stop" aria-label="Stop">${icons.stop}</button>` : ""}
-        <button type="button" data-act="close" aria-label="Dicht">${icons.arrowDown}</button>
+        ${knop("close", tekst.close, poort ? tekst.close : icons.arrowDown)}
       </div>`;
   }
 
@@ -139,7 +159,7 @@ class CoverCard extends DacCard {
       <div class="cv" data-i="${i}" data-shown="closed" style="--tone:${toneValue(cv.tone ?? c.tone, "solar")}">
         <button class="chip" type="button" aria-label="Meer info"></button>
         <div class="txt"><div class="nm"></div><div class="st"></div></div>
-        ${this.keysHtml(c.show_stop !== false)}
+        ${this.keysHtml(c.show_stop !== false, isPoort(cv, c))}
         <div class="pos" hidden></div>
       </div>`
       )
@@ -154,7 +174,9 @@ class CoverCard extends DacCard {
     // teardown heeft de oude koppeling net weggehaald.
     this.bound_ = new Set();
     // Wat we dénken dat een motor zonder terugkoppeling doet, per rij. Leeft
-    // alleen in dit tabblad -- er is niets om op de server te bewaren.
+    // alleen in dit tabblad -- er is niets om op de server te bewaren. Staat in
+    // de richting die de KAART toont, dus een omgekeerde motor hoeft hier niet
+    // nog eens omgedraaid te worden.
     this.assumed_ = new Map();
 
     this.$$(".cv").forEach((cvEl) => {
@@ -163,8 +185,10 @@ class CoverCard extends DacCard {
       cvEl.querySelectorAll(".keys button").forEach((btn) => {
         this.on(btn, "click", () => {
           const act = btn.dataset.act;
-          const map = { open: "open_cover", stop: "stop_cover", close: "close_cover" };
-          this.hass.callService("cover", map[act], { entity_id: this.config.covers[+i].entity });
+          const cfg = this.config.covers[+i];
+          this.hass.callService("cover", dienstVoor(act, isOmgekeerd(cfg, this.config)), {
+            entity_id: cfg.entity,
+          });
 
           if (act === "stop") return;
           this.assumed_.set(i, act === "open" ? "open" : "closed");
@@ -188,27 +212,20 @@ class CoverCard extends DacCard {
       const st = stateOf(this.hass, cfg.entity);
       const attrs = attrsOf(this.hass, cfg.entity);
       const dead = !st || st.state === "unavailable";
-      const state = st?.state ?? "unknown";
+      const omgekeerd = isOmgekeerd(cfg, this.config);
+      const poort = isPoort(cfg, this.config);
+      const state = toestandUit(st?.state ?? "unknown", omgekeerd);
 
       cvEl.classList.toggle("unavailable", dead);
       cvEl.querySelector(".nm").textContent = nameOf(this.hass, cfg.entity, cfg.name);
 
       const hasPos = can(st, F.SET_POSITION) && attrs.current_position != null;
+      const positie = hasPos ? keerPositie(attrs.current_position, omgekeerd) : null;
 
-      // Welke van de twee iconen: wat de motor meldt, anders wat je zojuist
-      // indrukte, anders dicht. Dat laatste is de rustige gok: een opgelicht
-      // icoon trekt aandacht, en aandacht trekken voor iets wat niemand weet is
-      // erger dan het even mis hebben in de andere richting.
-      const shown = hasPos
-        ? attrs.current_position > 0
-          ? "open"
-          : "closed"
-        : state === "open" || state === "closed"
-          ? state
-          : (this.assumed_.get(i) ?? "closed");
+      const shown = getoondeStand({ state, positie, aanname: this.assumed_.get(i) });
       cvEl.dataset.shown = shown;
 
-      const fallback = defaultIcons(attrs);
+      const fallback = standaardIconen(attrs, poort);
       const wanted =
         (shown === "open" ? cfg.icon_open : cfg.icon_closed) ??
         (shown === "open" ? this.config.icon_open : this.config.icon_closed) ??
@@ -220,32 +237,14 @@ class CoverCard extends DacCard {
         chip.innerHTML = resolve(wanted, fallback[shown]);
       }
 
-      // Geen terugkoppeling betekent geen statusregel. Een zin die zegt dat er
-      // niets bekend is, is nog steeds een zin die de rij hoger maakt.
       const stEl = cvEl.querySelector(".st");
       if (!this.dragging_.has(i)) {
-        stEl.textContent = dead
-          ? "Niet bereikbaar"
-          : state === "opening"
-            ? "Gaat open"
-            : state === "closing"
-              ? "Gaat dicht"
-              : hasPos
-                ? `${attrs.current_position}% open`
-                : state === "open"
-                  ? "Open"
-                  : state === "closed"
-                    ? "Dicht"
-                    : "";
+        stEl.textContent = statusTekst({ dood: dead, state, positie, toon: this.toonStatus_() });
       }
 
       cvEl.querySelectorAll(".keys button").forEach((b) => {
-        if (b.dataset.act === "stop") {
-          b.disabled = dead || !can(st, F.STOP);
-          return;
-        }
-        const isOpenBtn = b.dataset.act === "open";
-        b.disabled = dead || (isOpenBtn ? !can(st, F.OPEN) : !can(st, F.CLOSE));
+        const dienst = dienstVoor(b.dataset.act, omgekeerd);
+        b.disabled = dead || !can(st, BIT_VOOR_DIENST[dienst]);
       });
 
       const pos = cvEl.querySelector(".pos");
@@ -266,28 +265,34 @@ class CoverCard extends DacCard {
           const set = (v) => {
             el0.style.setProperty("--v", `${v}%`);
             el0.setAttribute("aria-valuenow", String(v));
-            cvEl.querySelector(".st").textContent = `${v}% open`;
+            if (this.toonStatus_()) cvEl.querySelector(".st").textContent = `${v}% open`;
           };
           this.teardown_.push(
             bindSlider(el0, {
-              value: () => attrsOf(this.hass, cfg.entity).current_position ?? 0,
+              value: () =>
+                keerPositie(attrsOf(this.hass, cfg.entity).current_position ?? 0, omgekeerd),
               onInput: set,
               onCommit: (v) =>
                 this.hass.callService("cover", "set_cover_position", {
                   entity_id: cfg.entity,
-                  position: v,
+                  position: keerPositie(v, omgekeerd),
                 }),
             })
           );
         }
         const el = pos.querySelector(".slider");
         if (!el.classList.contains("dragging")) {
-          const v = attrs.current_position ?? 0;
+          const v = positie ?? 0;
           el.style.setProperty("--v", `${v}%`);
           el.setAttribute("aria-valuenow", String(v));
         }
       }
     });
+  }
+
+  /** Mag de regel onder de naam er staan? "Niet bereikbaar" komt er altijd. */
+  toonStatus_() {
+    return this.config.show_state !== false;
   }
 
   /** Elke rolluikregel is 40px, plus de rand van de kaart en een eventuele schuif. */
@@ -318,7 +323,7 @@ class CoverCard extends DacCard {
 
 class CoverEditor extends DacEditor {
   defaults() {
-    return { show_stop: true, show_position: true };
+    return { show_stop: true, show_position: true, show_state: true };
   }
 
   pickers() {
@@ -332,9 +337,10 @@ class CoverEditor extends DacEditor {
    * De editor werkt op een platte vorm, de config op een lijst met objecten.
    *
    * Dezelfde steiger als bij de personenkaart, en om dezelfde reden: `ha-form`
-   * kent geen herhalende rij, dus wordt elk gekozen rolluik een eigen tekstveld
-   * `naam:<entity>` in het formulier, en vouwt `serialize` dat terug in
-   * `covers: [{ entity, name }]`. De steiger komt nooit in de YAML terecht.
+   * kent geen herhalende rij, dus wordt elk gekozen rolluik een eigen veld
+   * `naam:<entity>`, `poort:<entity>` en `invert:<entity>` in het formulier, en
+   * vouwt `serialize` dat terug in `covers: [{ entity, name, poort, invert }]`.
+   * De steiger komt nooit in de YAML terecht.
    *
    * De KAART kende die naam al -- `nameOf(hass, cfg.entity, cfg.name)` staat er
    * sinds hij bestaat -- maar er was geen veld om hem in te typen. Gemeld op
@@ -346,7 +352,11 @@ class CoverEditor extends DacEditor {
       (c) => (typeof c === "string" ? { entity: c } : c),
     );
     flat.covers = lijst.map((c) => c.entity);
-    for (const c of lijst) if (c.name) flat[`naam:${c.entity}`] = c.name;
+    for (const c of lijst) {
+      if (c.name) flat[`naam:${c.entity}`] = c.name;
+      if (c.poort) flat[`poort:${c.entity}`] = true;
+      if (c.invert) flat[`invert:${c.entity}`] = true;
+    }
     super.setConfig(flat);
   }
 
@@ -354,31 +364,61 @@ class CoverEditor extends DacEditor {
     const uit = { ...config };
     const ids = uit.covers ?? [];
     uit.covers = ids.map((id) => {
-      const naam = uit[`naam:${id}`];
-      return naam ? { entity: id, name: naam } : id;
+      const extra = {};
+      if (uit[`naam:${id}`]) extra.name = uit[`naam:${id}`];
+      if (uit[`poort:${id}`]) extra.poort = true;
+      if (uit[`invert:${id}`]) extra.invert = true;
+      return Object.keys(extra).length ? { entity: id, ...extra } : id;
     });
-    for (const k of Object.keys(uit)) if (k.startsWith("naam:")) delete uit[k];
+    for (const k of Object.keys(uit)) if (/^(naam|poort|invert):/.test(k)) delete uit[k];
     return uit;
   }
 
+  /**
+   * Alles onder elkaar, en met opzet geen `row()`.
+   *
+   * Twee schakelaars naast elkaar zetten leek korter, maar `ha-form` zet de
+   * cellen van een raster boven-uitgelijnd: staat er onder de ene een
+   * hulptekst van twee regels en onder de andere een van drie, dan staan de
+   * schakelaars 17,8px uit elkaar. Gemeten in de echte editor op 30 augustus
+   * 2026. Een instelling per regel heeft dat probleem niet, en het is ook de
+   * vorm die de rest van deze editors aanhoudt.
+   */
   schema() {
     const ids = (this.config_?.covers ?? []).filter((x) => typeof x === "string");
     return [
       { name: "covers", selector: { entity: { domain: "cover", multiple: true } } },
-      ...ids.map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
+      ...ids.flatMap((id) => [
+        { name: `naam:${id}`, selector: sel.text() },
+        { name: `poort:${id}`, selector: sel.bool() },
+        { name: `invert:${id}`, selector: sel.bool() },
+      ]),
       { name: "show_stop", selector: sel.bool() },
+      { name: "show_state", selector: sel.bool() },
     ];
   }
 
+  /** Hoe deze entiteit in de labels heet. De eigen naam wint van die van HA. */
+  naamVan_(id) {
+    return (
+      this.config_?.[`naam:${id}`] ||
+      this.hass?.states?.[id]?.attributes?.friendly_name ||
+      id
+    );
+  }
+
   label(s) {
-    if (s.name.startsWith("naam:")) {
-      const id = s.name.slice(5);
-      return `Naam voor ${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}`;
-    }
+    // De naam van de entiteit staat in ELK van de drie labels, want met drie
+    // rolluiken onder elkaar is "Poort" op zichzelf niet te plaatsen.
+    if (s.name.startsWith("naam:")) return `Naam voor ${this.naamVan_(s.name.slice(5))}`;
+    if (s.name.startsWith("poort:")) return `${this.naamVan_(s.name.slice(6))} is een poort`;
+    if (s.name.startsWith("invert:"))
+      return `${this.naamVan_(s.name.slice(7))} omgekeerd aangesloten`;
     return (
       {
         covers: "Rolluiken",
         show_stop: "Stopknop tonen",
+        show_state: "Status tonen",
       }[s.name] ?? super.label(s)
     );
   }
@@ -386,6 +426,12 @@ class CoverEditor extends DacEditor {
   helper(s) {
     if (s.name === "covers")
       return "Melden ze hun stand terug, dan komt er vanzelf een schuif bij. Zo niet, dan blijven het open, stop en dicht, en volgt het icoon de knop die je indrukt. Per rolluik kun je hieronder een eigen naam zetten.";
+    if (s.name.startsWith("poort:"))
+      return "Zet pijltjes om in Openen en Sluiten, en geeft een poorticoon. Een poort schuift opzij, dus omhoog en omlaag zeggen er niets over.";
+    if (s.name.startsWith("invert:"))
+      return "Voor een motor die andersom is aangesloten: open wordt dicht en dicht wordt open. De knoppen, de status en de schuif draaien samen om.";
+    if (s.name === "show_state")
+      return "Haalt de regel Open, Dicht of het percentage onder de naam weg. Niet bereikbaar blijft altijd staan.";
     return undefined;
   }
 }
