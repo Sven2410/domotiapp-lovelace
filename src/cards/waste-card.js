@@ -22,6 +22,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { dayCount, daysBetween, nameOf, parseDate, relativeDay, shortDate, stateOf } from "../ha.js";
 import { korteNamen } from "./afval-namen.js";
+import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Bin colours, matched on what the sensor happens to be called. */
 const FRACTIONS = [
@@ -91,16 +92,30 @@ class WasteCard extends DacCard {
        en de kaart schildert dan over zijn buurman.
 
        Naast elkaar past het wél, en het is bovendien wat hij vroeg: zo min
-       mogelijk hoogte. */
+       mogelijk hoogte.
+
+       EN OP EEN TELEFOON WORDT HET TWEE RIJEN, gemeld op 7 september 2026 met
+       een schermafdruk van een klant. Naast de titel is daar zo'n 220px over,
+       en vier bakken van minstens 86px breken dan af naar twee-bij-twee. Dat
+       is prima -- alleen stond de kaart vast op ÉÉN rasterrij (56px), en twee
+       rijen bakken zijn 66px: de tekst zat tegen de rand en tegen elkaar. De
+       hoogte wordt daarom sinds die dag GEMETEN, net als bij de weerkaart:
+       past het op één rij dan is het één rij, breekt het af dan worden het er
+       twee. Vandaar .rij als tussenlaag: .card blijft een kolom, zodat
+       inhoudsHoogte de kinderen kan optellen (dat telt kinderen ONDER elkaar
+       en niet naast elkaar). */
+    :host([vorm="breed"]) { height: auto; }
     :host([vorm="breed"]) .card {
-      flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px;
+      height: auto; min-height: var(--dac-raster, 56px);
+      justify-content: center; gap: 0; padding: 8px 12px;
     }
+    :host([vorm="breed"]) .rij { display: flex; align-items: center; gap: 12px; }
     :host([vorm="breed"]) .head { flex: 0 0 auto; }
     :host([vorm="breed"]) .head b { font-size: 12.5px; }
 
     .breed { display: none; }
     :host([vorm="breed"]) .breed {
-      display: grid; gap: 6px; flex: 1 1 auto;
+      display: grid; gap: 6px; flex: 1 1 auto; min-width: 0;
       grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
       align-content: center;
     }
@@ -205,6 +220,11 @@ class WasteCard extends DacCard {
     return this.config.sensors.map((s) => s.entity);
   }
 
+  wire() {
+    // Alleen de brede vorm groeit; de lijstvorm staat vast op zijn rijen.
+    if (this.breed_()) this.teardown_.push(volgRaster(this.$(".card")));
+  }
+
   /**
    * Lees elke sensor, en laat er GEEN stil verdwijnen.
    *
@@ -224,10 +244,15 @@ class WasteCard extends DacCard {
     const now = new Date();
     const ruw = this.config.sensors.map((cfg) => {
       const st = stateOf(this.hass, cfg.entity);
+      // De toestand eerst, en dan de attributen waar integraties de datum nog
+      // eens kaal in zetten. `Year_month_day_date` is die van Afvalbeheer
+      // (Circulus en zo'n dertig andere gemeenten); de eigenaar wees er op
+      // 7 september 2026 op dat de datum "bij de attributen gewoon staat".
       const date = st
         ? parseDate(st.state) ??
           parseDate(st.attributes.date) ??
-          parseDate(st.attributes.next_date)
+          parseDate(st.attributes.next_date) ??
+          parseDate(st.attributes.Year_month_day_date)
         : null;
       return { cfg, st, date };
     });
@@ -284,9 +309,21 @@ class WasteCard extends DacCard {
     const c = this.config;
     if (c.bare) this.setAttribute("bare", "");
     this.setAttribute("vorm", this.breed_() ? "breed" : "lijst");
+    // De brede vorm: titel en bakken samen in één rij, zodat de kaart zelf een
+    // kolom blijft en zijn hoogte gemeten kan worden. Zie de CSS erboven.
+    if (this.breed_()) {
+      return `
+      <div class="card surface">
+        <div class="rij">
+          ${c.title ? `<div class="head"><b>${escapeHtml(c.title)}</b></div>` : ""}
+          <div class="breed"></div>
+        </div>
+        <div class="empty" hidden>Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>
+      </div>`;
+    }
     return `
       <div class="card surface">
-        ${c.title ? `<div class="head"><b>${c.title}</b></div>` : ""}
+        ${c.title ? `<div class="head"><b>${escapeHtml(c.title)}</b></div>` : ""}
         ${c.show_hero === false ? "" : `<div class="hero" hidden>
           <span class="bin"></span>
           <span class="what">
@@ -314,6 +351,10 @@ class WasteCard extends DacCard {
 
     if (this.breed_()) {
       this.paintBreed_(items, komend[0]);
+      // Zelf meten en niet op de waarnemer vertrouwen (valkuil 8): op een
+      // telefoon breken de bakken af naar twee rijen, en dan hoort de kaart
+      // naar 120px te groeien in plaats van de tekst tegen de rand te duwen.
+      meetRaster(this.$(".card"));
       return;
     }
 
@@ -424,10 +465,10 @@ class WasteCard extends DacCard {
    */
   rows_() {
     const n = this.config?.sensors?.length ?? 1;
-    // De brede vorm is één rasterrij, hoeveel bakken er ook staan -- ze staan
-    // naast elkaar. Bij meer dan vier breekt het raster af naar een tweede rij;
-    // vandaar de deling.
-    if (this.breed_()) return Math.max(1, Math.ceil(n / 4));
+    // De brede vorm is één rasterrij zolang de bakken naast elkaar passen. Of
+    // dat zo is hangt van de breedte af en wordt gemeten; dit is de schatting
+    // zolang er nog niets gemeten is.
+    if (this.breed_()) return this.minRijen_(".card", Math.max(1, Math.ceil(n / 4)));
     if (this.config?.show_list === false) return 1;
     if (this.config?.show_hero === false) return Math.max(1, rowsFor(20 + n * 33));
     return Math.max(2, n);
@@ -437,7 +478,16 @@ class WasteCard extends DacCard {
     return this.rows_();
   }
 
+  /**
+   * De lijstvorm staat vast op zijn aantal rijen. De brede vorm niet: op een
+   * telefoon breken vier bakken af naar twee-bij-twee, en dan moet de kaart
+   * mee kunnen groeien. Vandaar `rows: "auto"` met een GEMETEN ondergrens --
+   * zie CLAUDE.md valkuil 8 en 12.
+   */
   getGridOptions() {
+    if (this.breed_()) {
+      return { columns: 12, rows: "auto", min_columns: 6, min_rows: this.rows_() };
+    }
     const rows = this.rows_();
     return { columns: 12, rows, min_columns: 6, min_rows: rows, max_rows: rows };
   }

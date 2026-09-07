@@ -420,23 +420,45 @@ export const daysBetween = (from, to) =>
   Math.round((startOfDay(to) - startOfDay(from)) / 86400000);
 
 /**
- * Parse the date shapes an integration might hand us.
+ * Lees de datumvormen die een integratie ons kan geven.
  *
- * Dutch waste integrations commonly emit `18-08-2026`, which `Date.parse` reads
- * as an American month-day and quietly returns either the wrong day or NaN.
- * That is worth handling explicitly rather than discovering it in December.
+ * Nederlandse afvalintegraties geven `18-08-2026`, en `Date.parse` leest dat
+ * als een Amerikaanse maand-dag: stilletjes de verkeerde dag voor de eerste
+ * twaalf van de maand en NaN voor de rest. Daarom een eigen parser.
+ *
+ * ## De datum staat niet altijd VOORAAN, gemeld op 7 september 2026
+ *
+ * Afvalbeheer (Circulus) zet er een dagnaam voor: `Vandaag, 07-09-2026`,
+ * `Maandag, 14-09-2026`. De eerste versie van deze functie verankerde het
+ * patroon aan het begin van de tekst en viel daarna terug op `new Date()`, en
+ * dat gaf precies de fout van hierboven, maar dan verstopt achter een woord:
+ *
+ *     "Vandaag, 07-09-2026"  ->  9 juli 2026      ->  "is geweest"
+ *     "Maandag, 14-09-2026"  ->  Invalid Date     ->  "geen datum"
+ *
+ * Twee bakken op dezelfde kaart, twee verschillende fouten, en allebei op een
+ * sensor waar de datum gewoon in staat. De datum wordt nu ergens in de tekst
+ * gezocht, en `new Date()` krijgt nooit meer een tekst met een dag-maand-jaar
+ * erin te zien.
  */
 export function parseDate(value) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(+value) ? null : value;
   const s = String(value).trim();
 
-  let m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+  // Dag-maand-jaar, waar hij ook staat: "07-09-2026", "Vandaag, 07-09-2026",
+  // "wo 16-09-2026: PMD". Ook met punten of schuine strepen, want die komen
+  // voor: "07.09.2026", "7/9/2026".
+  let m = s.match(/(?:^|\D)(\d{1,2})[-./](\d{1,2})[-./](\d{4})(?!\d)/);
   if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
 
-  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  // Jaar-maand-dag, ook ergens in de tekst: "2026-09-14", "2026-09-14T00:00".
+  m = s.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
 
+  // Alleen wat overblijft mag naar de browser: een ISO-tijdstip met tijdzone,
+  // een Engelse datum. Een tekst met een streepjesdatum erin is hierboven al
+  // afgehandeld, dus de Amerikaanse lezing kan hier niet meer toeslaan.
   const d = new Date(s);
   return Number.isNaN(+d) ? null : d;
 }
