@@ -983,6 +983,28 @@ die daar niet staan:
    voor editors wil (zie *Vormregels*). Gebruik `row()` voor velden ZONDER
    hulptekst, of voor twee die er allebei een van dezelfde hoogte hebben.
 
+40. **Verklein het browservenster NIET met `resize_window`, en reken op een
+   verborgen tabblad niet met `setTimeout`.** Twee dingen die op 7 september
+   2026 samen een uur kostten:
+
+   - Na `resize_window` naar 430 breed bleef `innerWidth` gewoon 1920, maar
+     gaf elke schermafdruk daarna `Page.captureScreenshot timed out`. Terug
+     naar 1600 breed herstelde het één keer, en daarna niet meer. Een smalle
+     vorm meet je door de kaart met de hand in de pagina te hangen in een
+     `div` van 350px (valkuil 21), niet door het venster te verkleinen.
+   - In een verborgen tabblad (`visibilityState === "hidden"`) vertraagt
+     Chrome timers tot één per seconde: een lus van 40 × 250 ms duurde 39
+     seconden. Kliks komen nog wél aan en `fetch` werkt, maar het lazy laden
+     van `hui-dialog-edit-card` kwam niet meer door: de editor gaat dan niet
+     open, ook niet via `ll-edit-card`. Voor de kaartproef is dat geen
+     probleem; voor de editorproef moet het tabblad zichtbaar zijn, en dat is
+     één zin aan de eigenaar.
+
+   En de afvaldatum: **`new Date("Vandaag, 07-09-2026")` is 9 juli.** V8 slaat
+   onbekende woorden vóór het eerste getal over en leest de rest Amerikaans.
+   `parseDate` in `ha.js` zoekt de datum daarom ergens in de tekst en laat
+   `new Date()` nooit meer een tekst met een streepjesdatum zien.
+
 ---
 
 ## Projectstand
@@ -993,12 +1015,12 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **twintig kaarttypes**:
+met **eenentwintig kaarttypes**:
 
 | | |
 |---|---|
 | Kop en indeling | header, separator, **navbalk**, **tabbladen** |
-| Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, rolluiken (ook poorten, en motoren die omgekeerd hangen) |
+| Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
