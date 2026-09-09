@@ -2480,11 +2480,14 @@ iPad (kiosk-mode haalt kop en zijbalk weg), verlichting als optie die de
 receptie of de installateur bepaalt, nieuws van buiten via RSS, foto's én
 initialen, en geen DomotiApp-merk op het scherm zelf.*
 
-*Herzien op 10 september 2026 (ronde 2) op aanwijzing van de eigenaar: de
-schermkaart heeft GEEN kaartconfig meer ("gewoon toevoegen en dan klaar"), het
+*Herzien op 10 september 2026 (ronde 2) op aanwijzing van de eigenaar: het
 welkomscherm is één scherm zonder tabbladen met een indeling die de receptie
-sleept, en de entiteiten kiest de installateur in het beheer. Dit hoofdstuk is
-daarop aangepast; zie `docs/infoscherm-ronde-2/RAPPORT.md`.*
+sleept. Opnieuw herzien op 10 september 2026 (ronde 3), ook op zijn aanwijzing:
+de INSTALLATIE (weerentiteit, lampen, agenda's, kioskaccounts) staat weer in de
+kaartconfig van de schermkaart ("installatie helemaal weg, dat moet ik via de
+GUI editor doen"), de nachtstand en de middernachtregel zijn weg, het nieuws
+van het pand is opgegaan in de mededelingen, en er is een verjaardagenblok. Zie
+`docs/infoscherm-ronde-2/RAPPORT.md` en `docs/infoscherm-ronde-3/RAPPORT.md`.*
 
 ### 20.1 Doel
 
@@ -2511,22 +2514,30 @@ de beheerkaart wél een kleine kopregel.
 
 ### 20.4 Opslag en rechten
 
-Alles staat in `Store` `domotiapp_lovelace.infoscherm`; de schermkaart heeft
-geen kaartconfig en negeert wat er in een oude YAML nog staat. Onderdelen:
-praktijk (naam, adres, welkomsteksten, openingstijden, uitzonderingen),
-personen, mededelingen, nieuws, `scherm` (logo, accent, uiterlijk, vorm van
-de foto's, terugvaltijd, nachtstand, weergave van de aanwezigen, teller,
-afbeeldingen bij het nieuws, bewegende weericonen, schaal), `installatie`
-(weerentiteit, agenda's, lampen met een naam), `indeling` (de blokken van het
-welkomscherm: soort, x, y, breedte, hoogte, aantal, in een raster van zes bij
-zes zonder overlap), instellingen (middernacht, verlichting tonen, feeds,
-kioskaccounts) en de lijst van bestanden. Rechten:
+De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
+staat in de kaartconfig van de schermkaart (`weather`, `lights`, `calendars`,
+`kiosk_users`) en wordt door de kaart naar de opslag gestuurd zodra een
+beheerder hem met die config ziet (`infoscherm/installatie/sync`, alleen
+admin, alleen bij verschil), zodat het beheer de lampen kent en de server de
+kioskaccounts. Onderdelen van de opslag: praktijk (openingstijden en
+uitzonderingen; niets anders), personen, mededelingen (tekst, `van` en `tot`
+als datum of datum-met-tijd), verjaardagen (naam, geboortedatum, leeftijd
+tonen), `scherm` (logo, accent, uiterlijk, vorm van de foto's, terugvaltijd,
+weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
+mededeling, en wat er in het welkomblok staat: tekst, logo, openingsregel),
+`installatie` (de kopie van de kaartconfig, met per lamp de naam van de
+receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
+hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
+(verlichting tonen, feeds, kioskaccounts) en de lijst van bestanden. Een
+opslag van vóór ronde 3 wordt bij het laden eenmalig bijgewerkt: berichten van
+het pand worden mededelingen, de eerste welkomsttekst wordt de tekst van het
+welkomblok. Rechten:
 
 | handeling | wie |
 |---|---|
 | lezen, abonneren, aanwezigheid omzetten, lampen schakelen | iedere ingelogde gebruiker |
-| personen, nieuws, mededelingen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN van de lampen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| de entiteiten (weer, agenda's, lampen) kiezen, kioskgebruikers aanwijzen, gebruikerslijst opvragen | admin |
+| personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN van de lampen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
+| de entiteiten (weer, agenda's, lampen) kiezen en kioskgebruikers aanwijzen (in de kaarteditor; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
 Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
 typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
@@ -2561,22 +2572,35 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 ### 20.7 Gedrag van het scherm
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
-  met blokken (welkom, weer, mededeling, openingstijden, aanwezig, nieuws,
-  verlichting, agenda) op de plek en maat uit `indeling`. Een blok waar niets
-  in te tonen valt staat niet op het scherm. Een blok met een pagina erachter
-  heeft een kop die een knop is ("Alles bekijken"); de pagina heeft een
-  terugknop. Aanwezig en afwezig staan op de pagina gescheiden naast elkaar
-  (of per functie naast elkaar, of als één lijst; de receptie kiest).
+  met blokken (welkom, weer, mededelingen, openingstijden, aanwezig, nieuws,
+  verlichting, agenda, verjaardagen) op de plek en maat uit `indeling`. Een
+  blok waar niets in te tonen valt staat niet op het scherm. Een blok met een
+  pagina erachter heeft een kop die een knop is ("Alles bekijken"); de pagina
+  heeft een terugknop. Aanwezig en afwezig staan op de pagina gescheiden naast
+  elkaar (of per functie naast elkaar, of als één lijst; de receptie kiest).
+  Passen de gewone tegels niet in een blok, dan worden ze compact voordat er
+  iets wegvalt. In de indeling ruilen twee blokken van dezelfde maat van plek
+  als het ene op het andere wordt losgelaten.
+- Het welkomblok toont wat de receptie kiest: een tekst, het logo (dan niet
+  ook in de kop), en de regel met de openingstijd van vandaag.
+- De mededelingen zijn een reeks: één tegelijk, met een teller ("2 van 3"),
+  die na een instelbare tijd (standaard 10 s) naar de volgende schuift. Een
+  veeg op het scherm schuift zelf en zet de klok opnieuw. Het vlak heeft de
+  kleur van de andere blokken en geen icoon. Een mededeling geldt vanaf en tot
+  een datum of een datum met tijd.
+- Verjaardagen: vandaag eerst, dan op volgorde van hoe lang nog, met de
+  leeftijd die iemand wordt (als het jaar getoond mag worden); een pagina
+  met het hele jaar.
 - Initialen: de eerste letter van het eerste woord en de eerste letter van het
   laatste woord van de naam, hoofdletter of niet.
 - Na een instelbare tijd zonder aanraking (standaard 60 s) terug naar Welkom.
-- Buiten de openingstijden uit het beheer een nachtstand: klok, datum en
-  "Gesloten · morgen open om 08:00"; een tik haalt het scherm even terug.
-  Uitzonderingen (feestdagen, studiedagen) gaan vóór de weekdag.
-- Om middernacht iedereen op afwezig, instelbaar in het beheer.
-- Nieuws van buiten wordt elk kwartier aan de serverkant opgehaald en staat
-  ná het nieuws van het pand; vastgezette berichten van het pand bovenaan.
-- Verlichting: de installateur kiest de lampen in het beheer; de receptie
+- Uitzonderingen op de openingstijden (feestdagen, studiedagen) gaan vóór de
+  weekdag. Er is geen nachtstand en geen middernachtregel meer (ronde 3):
+  iedereen beheert zijn eigen aanwezigheid, en de receptie kan die in het
+  beheer achteraf omzetten.
+- Nieuws is alleen nog nieuws van buiten (RSS), elk kwartier aan de serverkant
+  opgehaald, altijd met afbeelding als de bron er een geeft.
+- Verlichting: de installateur kiest de lampen in de kaarteditor; de receptie
   bepaalt met één schakelaar of ze op het scherm staan en hoe ze heten.
 
 ### 20.8 Foutgedrag

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from homeassistant.core import HomeAssistant
 
-from custom_components.domotiapp_lovelace.infoscherm import async_middernacht
-
 from .conftest import stuur
 
 
@@ -129,10 +127,10 @@ async def test_een_gewone_gebruiker_mag_wel_beheren_maar_geen_kiosk_aanwijzen(
     """De receptie is geen admin, en dat mag geen belemmering zijn."""
     receptie = await hass_ws_client(hass, hass_read_only_access_token)
     antwoord = await stuur(
-        receptie, "praktijk/save", praktijk={"naam": "De Molen", "welkom": ["Welkom"]}
+        receptie, "praktijk/save", praktijk={"openingstijden": {"ma": [["08:00", "17:00"]]}}
     )
     assert antwoord["success"] is True
-    assert antwoord["result"]["praktijk"]["naam"] == "De Molen"
+    assert antwoord["result"]["praktijk"]["openingstijden"]["ma"] == [["08:00", "17:00"]]
 
     antwoord = await stuur(
         receptie, "instellingen/save", instellingen={"kiosk_gebruikers": [hass_read_only_user.id]}
@@ -160,19 +158,66 @@ async def test_een_admin_ziet_de_gebruikers_en_wijst_de_kiosk_aan(
     assert antwoord["result"]["instellingen"]["kiosk_gebruikers"] == [hass_read_only_user.id]
 
 
-async def test_middernacht_zet_iedereen_op_afwezig_tenzij_uitgezet(
-    hass: HomeAssistant, infoscherm_op, store
+async def test_de_receptie_zet_iemand_achteraf_aanwezig_via_personen_save(
+    hass: HomeAssistant, infoscherm_op, store, hass_ws_client
 ) -> None:
-    personen = await store().async_zet_personen([{"naam": "A", "aanwezig": True}])
-    assert personen[0]["aanwezig"] is True
+    """Ronde 3: "via het beheer moet het vice versa werken, dat de receptie de
+    mensen achteraf alsnog op aan- en afwezig kan zetten." Een `aanwezig` dat
+    het beheer uitdrukkelijk meestuurt wint van de stand op de iPad."""
+    personen = await store().async_zet_personen([{"naam": "A"}, {"naam": "B"}])
+    pid = personen[0]["id"]
+    client = await hass_ws_client(hass)
+    antwoord = await stuur(
+        client, "personen/save", personen=[{"id": pid, "naam": "A", "aanwezig": True}, {"id": personen[1]["id"], "naam": "B"}]
+    )
+    assert antwoord["success"] is True
+    assert [p["aanwezig"] for p in antwoord["result"]["personen"]] == [True, False]
+    antwoord = await stuur(
+        client, "personen/save", personen=[{"id": pid, "naam": "A", "aanwezig": False}, {"id": personen[1]["id"], "naam": "B"}]
+    )
+    assert [p["aanwezig"] for p in antwoord["result"]["personen"]] == [False, False]
 
-    assert await async_middernacht(hass) == 1
-    assert store().snapshot()["personen"][0]["aanwezig"] is False
 
-    await store().async_zet_aanwezig(personen[0]["id"], True)
-    await store().async_zet_instellingen({"reset_middernacht": False}, mag_kiosk_wijzigen=True)
-    assert await async_middernacht(hass) == 0
-    assert store().snapshot()["personen"][0]["aanwezig"] is True
+async def test_verjaardagen_save(hass: HomeAssistant, infoscherm_op, hass_ws_client) -> None:
+    """Ronde 3 (NIEUW GEDRAG)."""
+    client = await hass_ws_client(hass)
+    antwoord = await stuur(client, "verjaardagen/save", verjaardagen=[{"naam": "Marieke", "datum": "1990-09-10"}])
+    assert antwoord["success"] is True
+    assert antwoord["result"]["verjaardagen"][0]["naam"] == "Marieke"
+    antwoord = await stuur(client, "get")
+    assert antwoord["result"]["stand"]["verjaardagen"][0]["datum"] == "1990-09-10"
+
+
+async def test_installatie_sync_alleen_admin_en_alleen_bij_verschil_een_stand(
+    hass: HomeAssistant,
+    infoscherm_op,
+    hass_ws_client,
+    hass_read_only_access_token,
+) -> None:
+    """Ronde 3 (NIEUW GEDRAG): de infoschermkaart stuurt zijn kaartconfig."""
+    receptie = await hass_ws_client(hass, hass_read_only_access_token)
+    antwoord = await stuur(receptie, "installatie/sync", installatie={"weer": "weather.thuis"})
+    assert antwoord["success"] is False
+    assert antwoord["error"]["code"] == "unauthorized"
+
+    admin = await hass_ws_client(hass)
+    await stuur(admin, "subscribe")
+    # Het stand-event gaat vóór het resultaat de deur uit (zie de abonneetest).
+    bericht = await stuur(
+        admin, "installatie/sync", installatie={"weer": "weather.thuis", "verlichting": ["light.a"], "kiosk_gebruikers": ["k1"]}
+    )
+    assert bericht["event"]["soort"] == "stand"
+    assert bericht["event"]["stand"]["instellingen"]["kiosk_gebruikers"] == ["k1"]
+    antwoord = await admin.receive_json()
+    assert antwoord["success"] is True
+    assert antwoord["result"]["gewijzigd"] is True
+    assert antwoord["result"]["installatie"]["weer"] == "weather.thuis"
+
+    # Nog een keer hetzelfde: geen wijziging, en geen stand die rondgaat.
+    antwoord = await stuur(
+        admin, "installatie/sync", installatie={"weer": "weather.thuis", "verlichting": ["light.a"], "kiosk_gebruikers": ["k1"]}
+    )
+    assert antwoord["result"]["gewijzigd"] is False
 
 
 # ------------------------------------------------------------- ronde 2 (NIEUW GEDRAG)

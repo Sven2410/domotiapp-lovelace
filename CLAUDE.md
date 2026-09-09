@@ -1068,6 +1068,30 @@ die daar niet staan:
    `indeling` bij een kaart die erom vroeg. Bundel gewijzigd: entry herladen.
    Python gewijzigd: `docker restart ha-lovelace`, en daarna een vers tabblad.
 
+50. **`querySelector("span:last-child")` vindt het eerste element dat de
+   laatste van ZIJN ouder is, niet de laatste span van het geheel.** In het
+   beheer stond de tekst "Aanwezig" achter een schakelaar die zelf een
+   `<span><input><span></span></span>` is; de zoekopdracht vond dat binnenste
+   span en schreef de tekst dwars door het knopje heen ("ezig Afwezig" op de
+   schermafdruk van 10 september 2026). Geef zo'n tekst een eigen klasse en
+   zoek daarop; een structurele selector is geen naam.
+
+51. **Pointer capture gaat verloren zodra het element uit de DOM gaat**, ook
+   als het meteen weer wordt ingevoegd. Een rij die tijdens het slepen met
+   `insertBefore` van plek wisselt, verliest daarmee zijn `pointermove` en
+   `pointerup`: hij sprong één plek en bleef "hangen", zonder opslaan. Zet de
+   luisteraars voor slepen op `window` (capture) en niet op het element met
+   `setPointerCapture`. Het raster van de indeling heeft daar geen last van,
+   want dat verplaatst niets in de DOM tijdens het slepen.
+
+52. **Een `overflow`-container verliest zijn scrollpositie op `display:
+   none`.** De mededelingenreeks staat op "3 van 3", een pagina gaat open
+   (het raster gaat op `display: none`), en bij terugkomst staat hij op
+   "1 van 3". Dat is Chrome, niet de kaart; hier is het ook wat je wilt. Maar
+   meet nooit `scrollLeft` of `clientWidth` van iets dat op dat moment
+   verborgen is: allebei zijn dan nul, en een teller die erop rekent zegt dan
+   iets anders dan wat er straks in beeld staat.
+
 ---
 
 ## Projectstand
@@ -1087,7 +1111,7 @@ met **drieëntwintig kaarttypes**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
-| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; sinds 0.37.0 zonder kaartconfig en als één scherm met een sleepbare indeling) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
+| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.38.0 staat de INSTALLATIE -- weer, lampen, agenda's, kioskaccounts -- weer in de kaartconfig en al het andere in het beheer) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de
@@ -1130,9 +1154,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 30 augustus 2026 (0.34.0):** 931 JS-tests en 604 Python-tests,
-alle groen; bundel 628.871 bytes; 161 getekende iconen (het DomotiTech-logo
-meegerekend, dat als data-URI is ingebakken).
+**Tellingen op 10 september 2026 (0.38.0):** 1008 JS-tests en 662 Python-tests,
+alle groen; bundel 776.210 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in

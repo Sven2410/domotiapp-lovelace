@@ -14,18 +14,29 @@ De beheerkaart stuurt per onderdeel de HELE lijst (alle personen, alle
 berichten). Dat is bewust simpel: er is één receptie, en een lijst van
 tweehonderd namen is nog altijd kleiner dan één foto.
 
-## Sinds ronde 2 (10 september 2026): niets meer in de kaartconfig
-
-De eigenaar: *"De domotiapp infoscherm moet geen kaartconfiguratie hebben. Dat
-is gewoon toevoegen en dan klaar. De admin (installateur) stelt alles in op het
-beheerscherm."* Daarom staan hier nu ook:
+## Sinds ronde 2 (10 september 2026): de inhoud staat hier, niet in de kaart
 
 - `scherm`: wat de receptie over het uiterlijk beslist (logo, accent, licht of
-  donker, terugvaltijd, nachtstand, hoe de aanwezigen staan);
-- `installatie`: de entiteiten die de installateur kiest (weer, lampen,
-  agenda's) -- de NAMEN van de lampen mag de receptie wél wijzigen;
+  donker, terugvaltijd, hoe de aanwezigen staan, wat er in het welkomblok
+  staat, hoe snel de mededelingen wisselen);
+- `installatie`: de entiteiten (weer, lampen, agenda's). Sinds ronde 3 kiest
+  de installateur die in de KAARTEDITOR van het infoscherm; de kaart stuurt ze
+  hierheen (`async_zet_installatie_van_kaart`) zodat het beheer de lampen kent
+  en de receptie hun NAMEN kan wijzigen. Het blok Installatie in het beheer is
+  weg: *"installatie helemaal weg, dat moet ik via de GUI editor doen."*
 - `indeling`: welke blokken er op het welkomscherm staan, waar, hoe groot en
   met hoeveel items. De receptie sleept ze in het beheer.
+- `verjaardagen`: naam en geboortedatum, voor het blok Verjaardagen (ronde 3).
+
+## Wat er in ronde 3 (10 september 2026) uit is gegaan
+
+De nachtstand, de middernachtregel ("iedereen op afwezig"), de schakelaar voor
+afbeeldingen bij het nieuws, en het eigen nieuws van het pand: *"Nieuws van het
+pand mag helemaal weg, dat moet gewoon mededelingen worden."* Oude berichten
+worden bij het laden eenmalig mededelingen (`async_load`); de sleutel `nieuws`
+in de opslag wordt daarna niet meer gelezen. Van `praktijk` blijven alleen de
+openingstijden en de uitzonderingen over; naam, adres en welkomsteksten zijn
+weg (de welkomsttekst verhuist naar `scherm.welkom_tekst`).
 
 Het logo en het accent stonden tot 0.36.0 in `praktijk`; bij het laden
 verhuizen ze eenmalig naar `scherm` (zie `async_load`).
@@ -58,10 +69,9 @@ from .const import (
     MAX_LANG,
     MAX_MEDEDELINGEN,
     MAX_MIDDEL,
-    MAX_NIEUWS,
     MAX_PERSONEN,
     MAX_UITZONDERINGEN,
-    MAX_WELKOM,
+    MAX_VERJAARDAGEN,
     RIJEN,
     STORAGE_KEY,
     STORAGE_VERSION,
@@ -112,6 +122,26 @@ def _tijd(rauw: Any, veld: str) -> str:
     if not isinstance(rauw, str) or not _TIJD.match(rauw):
         raise InfoFout(f"'{veld}' moet een tijd zijn, zoals 08:30")
     return rauw
+
+
+def _datum_tijd(rauw: Any, veld: str) -> str | None:
+    """Een datum met of zonder tijd: `2026-09-20` of `2026-09-20T12:00`.
+
+    Sinds ronde 3 mag een mededeling op een TIJDSTIP ingaan of aflopen
+    ("vanaf 12:00 gesloten"): *"nu heb je alleen de datum."* Een kale datum
+    blijft toegestaan en betekent de hele dag.
+    """
+    if rauw is None or rauw == "":
+        return None
+    if not isinstance(rauw, str):
+        raise InfoFout(f"'{veld}' moet een datum zijn, zoals 2026-09-20 of 2026-09-20T12:00")
+    datum = _datum(rauw[:10], veld)
+    rest = rauw[10:]
+    if not rest:
+        return datum
+    if rest[0] not in "T " or not _TIJD.match(rest[1:6]):
+        raise InfoFout(f"'{veld}' moet een datum zijn, zoals 2026-09-20 of 2026-09-20T12:00")
+    return f"{datum}T{rest[1:6]}"
 
 
 def _bestand_id(rauw: Any, veld: str) -> str | None:
@@ -234,9 +264,9 @@ def valideer_mededeling(rauw: Any) -> dict[str, Any]:
         raise InfoFout("een mededeling is een object")
     return {
         "id": _id(rauw.get("id")),
-        "tekst": _tekst(rauw.get("tekst"), "tekst", MAX_MIDDEL, verplicht=True),
-        "van": _datum(rauw.get("van"), "van"),
-        "tot": _datum(rauw.get("tot"), "tot"),
+        "tekst": _tekst(rauw.get("tekst"), "tekst", MAX_LANG, verplicht=True),
+        "van": _datum_tijd(rauw.get("van"), "van"),
+        "tot": _datum_tijd(rauw.get("tot"), "tot"),
     }
 
 
@@ -247,26 +277,55 @@ def valideer_mededelingen(rauw: Any) -> list[dict[str, Any]]:
     )
 
 
-def valideer_nieuws_item(rauw: Any) -> dict[str, Any]:
+def nieuws_naar_mededeling(rauw: Any) -> dict[str, Any] | None:
+    """Een bericht van het pand uit een opslag van vóór ronde 3 als mededeling.
+
+    De titel wordt de eerste regel, de tekst komt eronder. De afbeelding gaat
+    verloren: een mededeling heeft er geen. None als er niets bruikbaars in
+    staat.
+    """
     if not isinstance(rauw, dict):
-        raise InfoFout("een nieuwsbericht is een object")
-    gemaakt = rauw.get("gemaakt")
-    if not isinstance(gemaakt, str) or dt_util.parse_datetime(gemaakt) is None:
-        gemaakt = dt_util.utcnow().isoformat()
+        return None
+    titel = rauw.get("titel") if isinstance(rauw.get("titel"), str) else ""
+    tekst = rauw.get("tekst") if isinstance(rauw.get("tekst"), str) else ""
+    samen = "\n".join(r for r in (titel.strip(), tekst.strip()) if r)
+    if not samen:
+        return None
+    try:
+        return valideer_mededeling(
+            {"id": rauw.get("id"), "tekst": samen[:MAX_LANG], "van": rauw.get("van"), "tot": rauw.get("tot")}
+        )
+    except InfoFout:
+        return None
+
+
+# --------------------------------------------------------------------------
+# Verjaardagen
+# --------------------------------------------------------------------------
+
+
+def valideer_verjaardag(rauw: Any) -> dict[str, Any]:
+    """Naam en geboortedatum. Iedereen mag erin, niet alleen medewerkers:
+    *"een verjaardagskalender dat beheer iedereen kan toevoegen met de
+    geboortedatum."* Het jaar mag ontbreken (dan geen leeftijd op het scherm)."""
+    if not isinstance(rauw, dict):
+        raise InfoFout("een verjaardag is een object")
+    datum = _datum(rauw.get("datum"), "datum")
+    if datum is None:
+        raise InfoFout("een verjaardag heeft een datum")
     return {
         "id": _id(rauw.get("id")),
-        "titel": _tekst(rauw.get("titel"), "titel", MAX_KORT, verplicht=True),
-        "tekst": _tekst(rauw.get("tekst"), "tekst", MAX_LANG),
-        "afbeelding": _bestand_id(rauw.get("afbeelding"), "afbeelding"),
-        "van": _datum(rauw.get("van"), "van"),
-        "tot": _datum(rauw.get("tot"), "tot"),
-        "vast": bool(rauw.get("vast", False)),
-        "gemaakt": gemaakt,
+        "naam": _tekst(rauw.get("naam"), "naam", MAX_KORT, verplicht=True),
+        "datum": datum,
+        "jaar_tonen": bool(rauw.get("jaar_tonen", True)),
     }
 
 
-def valideer_nieuws(rauw: Any) -> list[dict[str, Any]]:
-    return _uniek([valideer_nieuws_item(n) for n in _lijst(rauw, "nieuws", MAX_NIEUWS)], "nieuws")
+def valideer_verjaardagen(rauw: Any) -> list[dict[str, Any]]:
+    return _uniek(
+        [valideer_verjaardag(v) for v in _lijst(rauw, "verjaardagen", MAX_VERJAARDAGEN)],
+        "verjaardagen",
+    )
 
 
 # --------------------------------------------------------------------------
@@ -311,35 +370,28 @@ def valideer_uitzondering(rauw: Any) -> dict[str, Any]:
 
 def leeg_praktijk() -> dict[str, Any]:
     return {
-        "naam": "",
-        "adres": "",
-        "welkom": [],
         "openingstijden": {dag: [] for dag in DAGEN},
         "uitzonderingen": [],
     }
 
 
 def valideer_praktijk(rauw: Any) -> dict[str, Any]:
-    """Naam, adres, welkomsteksten en openingstijden.
+    """De openingstijden en de afwijkende dagen. Meer niet.
 
-    `logo` en `accent` horen sinds ronde 2 bij `scherm`; staan ze hier nog in
-    (oude opslag, oude kaart), dan worden ze genegeerd en niet geweigerd.
+    Naam, adres en welkomsteksten stonden hier tot ronde 3; de eigenaar:
+    *"Praktijk en openingstijden veranderen in openingstijden. Naam, adres en
+    welkomsteksten weg."* Staan ze nog in wat er gestuurd wordt (oude opslag,
+    oude kaart), dan worden ze genegeerd en niet geweigerd. Net als `logo` en
+    `accent`, die sinds ronde 2 bij `scherm` horen.
     """
     if not isinstance(rauw, dict):
         raise InfoFout("'praktijk' is een object")
-    welkom = [
-        _tekst(regel, "welkom", MAX_MIDDEL)
-        for regel in _lijst(rauw.get("welkom"), "welkom", MAX_WELKOM)
-    ]
     uitzonderingen = [
         valideer_uitzondering(u)
         for u in _lijst(rauw.get("uitzonderingen"), "uitzonderingen", MAX_UITZONDERINGEN)
     ]
     uitzonderingen.sort(key=lambda u: u["datum"])
     return {
-        "naam": _tekst(rauw.get("naam"), "naam", MAX_KORT),
-        "adres": _tekst(rauw.get("adres"), "adres", MAX_KORT),
-        "welkom": [w for w in welkom if w],
         "openingstijden": valideer_openingstijden(rauw.get("openingstijden")),
         "uitzonderingen": uitzonderingen,
     }
@@ -357,12 +409,14 @@ def leeg_scherm() -> dict[str, Any]:
         "uiterlijk": "donker",
         "foto_vorm": "rond",
         "terug_na": 60,
-        "nachtstand": True,
         "aanwezig_weergave": "gescheiden",
         "aanwezig_teller": True,
-        "nieuws_afbeeldingen": True,
         "weer_animatie": True,
         "schaal": 1.0,
+        "mededeling_interval": 10,
+        "welkom_tekst": "Welkom",
+        "welkom_logo": False,
+        "welkom_onder": True,
     }
 
 
@@ -381,14 +435,24 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
         "uiterlijk": _keuze(rauw.get("uiterlijk"), "uiterlijk", ("donker", "licht"), "donker"),
         "foto_vorm": _keuze(rauw.get("foto_vorm"), "foto_vorm", ("rond", "vierkant"), "rond"),
         "terug_na": int(_getal(rauw.get("terug_na"), "terug_na", 0, 3600, standaard["terug_na"])),
-        "nachtstand": bool(rauw.get("nachtstand", True)),
         "aanwezig_weergave": _keuze(
             rauw.get("aanwezig_weergave"), "aanwezig_weergave", AANWEZIG_WEERGAVEN, "gescheiden"
         ),
         "aanwezig_teller": bool(rauw.get("aanwezig_teller", True)),
-        "nieuws_afbeeldingen": bool(rauw.get("nieuws_afbeeldingen", True)),
         "weer_animatie": bool(rauw.get("weer_animatie", True)),
         "schaal": float(_getal(rauw.get("schaal"), "schaal", 0.5, 2, 1.0)),
+        # Hoe lang één mededeling blijft staan voordat de volgende erin
+        # schuift. Minstens drie seconden, anders is het geen lezen meer.
+        "mededeling_interval": int(
+            _getal(rauw.get("mededeling_interval"), "mededeling_interval", 3, 600, standaard["mededeling_interval"])
+        ),
+        # Het welkomblok: de tekst (leeg = geen tekst), het logo erin, en de
+        # regel met "Vandaag geopend tot 17:00" eronder.
+        "welkom_tekst": _tekst(
+            rauw.get("welkom_tekst", standaard["welkom_tekst"]), "welkom_tekst", MAX_KORT
+        ),
+        "welkom_logo": bool(rauw.get("welkom_logo", False)),
+        "welkom_onder": bool(rauw.get("welkom_onder", True)),
     }
 
 
@@ -524,25 +588,27 @@ def valideer_feed(rauw: Any) -> dict[str, str]:
 
 def leeg_instellingen() -> dict[str, Any]:
     return {
-        "reset_middernacht": True,
         "verlichting_tonen": True,
         "feeds": [],
         "kiosk_gebruikers": [],
     }
 
 
-def valideer_instellingen(rauw: Any) -> dict[str, Any]:
-    if not isinstance(rauw, dict):
-        raise InfoFout("'instellingen' is een object")
-    gebruikers = _lijst(rauw.get("kiosk_gebruikers"), "kiosk_gebruikers", 50)
+def valideer_kiosk_gebruikers(rauw: Any) -> list[str]:
+    gebruikers = _lijst(rauw, "kiosk_gebruikers", 50)
     for g in gebruikers:
         if not isinstance(g, str) or not g:
             raise InfoFout("'kiosk_gebruikers' is een lijst met gebruikers-ID's")
+    return list(dict.fromkeys(gebruikers))
+
+
+def valideer_instellingen(rauw: Any) -> dict[str, Any]:
+    if not isinstance(rauw, dict):
+        raise InfoFout("'instellingen' is een object")
     return {
-        "reset_middernacht": bool(rauw.get("reset_middernacht", True)),
         "verlichting_tonen": bool(rauw.get("verlichting_tonen", True)),
         "feeds": [valideer_feed(f) for f in _lijst(rauw.get("feeds"), "feeds", MAX_FEEDS)],
-        "kiosk_gebruikers": list(dict.fromkeys(gebruikers)),
+        "kiosk_gebruikers": valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers")),
     }
 
 
@@ -560,7 +626,7 @@ class InfoStore:
         self._praktijk = leeg_praktijk()
         self._personen: list[dict[str, Any]] = []
         self._mededelingen: list[dict[str, Any]] = []
-        self._nieuws: list[dict[str, Any]] = []
+        self._verjaardagen: list[dict[str, Any]] = []
         self._scherm = leeg_scherm()
         self._installatie = leeg_installatie()
         self._indeling = standaard_indeling()
@@ -582,7 +648,7 @@ class InfoStore:
         self._indeling = self._lees(data.get("indeling"), valideer_indeling, standaard_indeling(), "indeling")
         self._personen = self._lees_lijst(data.get("personen"), valideer_persoon, "persoon")
         self._mededelingen = self._lees_lijst(data.get("mededelingen"), valideer_mededeling, "mededeling")
-        self._nieuws = self._lees_lijst(data.get("nieuws"), valideer_nieuws_item, "nieuwsbericht")
+        self._verjaardagen = self._lees_lijst(data.get("verjaardagen"), valideer_verjaardag, "verjaardag")
         bestanden = data.get("bestanden") or {}
         self._bestanden = {
             bid: meta
@@ -601,8 +667,25 @@ class InfoStore:
             if self._scherm["accent"] is None and isinstance(accent, str) and _HEX.match(accent):
                 self._scherm["accent"] = accent.lower()
                 verhuisd = True
+        # Tot 0.37.0 was er nieuws van het pand naast de mededelingen; sinds
+        # ronde 3 zijn dat mededelingen. Eén keer overnemen, achteraan.
+        oud_nieuws = data.get("nieuws")
+        if isinstance(oud_nieuws, list) and oud_nieuws:
+            bekend = {m["id"] for m in self._mededelingen}
+            erbij = [m for m in (nieuws_naar_mededeling(n) for n in oud_nieuws) if m and m["id"] not in bekend]
+            if erbij:
+                self._mededelingen = _uniek(self._mededelingen + erbij, "mededelingen")[:MAX_MEDEDELINGEN]
+            _LOGGER.info("Infoscherm: %d bericht(en) van het pand zijn mededelingen geworden", len(erbij))
+            verhuisd = True
+        # En de eerste welkomsttekst uit `praktijk` wordt de tekst van het welkomblok.
+        welkom = oud.get("welkom")
+        if "welkom_tekst" not in (data.get("scherm") or {}) and isinstance(welkom, list) and welkom:
+            eerste = welkom[0]
+            if isinstance(eerste, str) and eerste.strip():
+                self._scherm["welkom_tekst"] = eerste.strip()[:MAX_KORT]
+                verhuisd = True
         if verhuisd:
-            _LOGGER.info("Infoscherm: logo en accent verhuisd van praktijk naar scherm")
+            _LOGGER.info("Infoscherm: opslag van een oudere uitgave bijgewerkt")
             await self._async_save()
 
     @staticmethod
@@ -633,7 +716,7 @@ class InfoStore:
             "praktijk": dict(self._praktijk),
             "personen": [dict(p) for p in self._personen],
             "mededelingen": [dict(m) for m in self._mededelingen],
-            "nieuws": [dict(n) for n in self._nieuws],
+            "verjaardagen": [dict(v) for v in self._verjaardagen],
             "scherm": dict(self._scherm),
             "installatie": {
                 "weer": self._installatie["weer"],
@@ -657,9 +740,7 @@ class InfoStore:
     def in_gebruik(self, bestand_id: str) -> bool:
         if self._scherm.get("logo") == bestand_id:
             return True
-        if any(p.get("foto") == bestand_id for p in self._personen):
-            return True
-        return any(n.get("afbeelding") == bestand_id for n in self._nieuws)
+        return any(p.get("foto") == bestand_id for p in self._personen)
 
     @property
     def instellingen(self) -> dict[str, Any]:
@@ -688,25 +769,15 @@ class InfoStore:
                 return dict(p)
         return None
 
-    async def async_reset_aanwezig(self) -> int:
-        aantal = 0
-        for p in self._personen:
-            if p["aanwezig"]:
-                p["aanwezig"] = False
-                aantal += 1
-        if aantal:
-            await self._async_save()
-        return aantal
-
     async def async_zet_mededelingen(self, rauw: Any) -> list[dict[str, Any]]:
         self._mededelingen = valideer_mededelingen(rauw)
         await self._async_save()
         return self.snapshot()["mededelingen"]
 
-    async def async_zet_nieuws(self, rauw: Any) -> list[dict[str, Any]]:
-        self._nieuws = valideer_nieuws(rauw)
+    async def async_zet_verjaardagen(self, rauw: Any) -> list[dict[str, Any]]:
+        self._verjaardagen = valideer_verjaardagen(rauw)
         await self._async_save()
-        return self.snapshot()["nieuws"]
+        return self.snapshot()["verjaardagen"]
 
     async def async_zet_praktijk(self, rauw: Any) -> dict[str, Any]:
         self._praktijk = valideer_praktijk(rauw)
@@ -738,6 +809,37 @@ class InfoStore:
         await self._async_save()
         return self.snapshot()["installatie"]
 
+    async def async_zet_installatie_van_kaart(self, rauw: Any) -> dict[str, Any]:
+        """De entiteiten en de kioskaccounts zoals ze in de KAARTCONFIG van het
+        infoscherm staan (ronde 3). De kaart stuurt ze zodra een beheerder hem
+        met die config ziet -- in de editor of op het dashboard -- en alleen
+        als ze afwijken van wat hier staat.
+
+        De namen van de lampen blijven staan: die zijn van de receptie. Een
+        lamp die uit de config verdwijnt neemt zijn naam mee; komt hij terug,
+        dan begint hij leeg. Geeft True in `gewijzigd` terug als er iets
+        veranderd is, zodat de aanroeper weet of er een stand rond moet."""
+        if not isinstance(rauw, dict):
+            raise InfoFout("'installatie' is een object")
+        nieuw = valideer_installatie(
+            {
+                "weer": rauw.get("weer"),
+                "agendas": rauw.get("agendas"),
+                "verlichting": rauw.get("verlichting"),
+            }
+        )
+        namen = {l["entity"]: l["naam"] for l in self._installatie["verlichting"]}
+        nieuw["verlichting"] = [
+            {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])} for l in nieuw["verlichting"]
+        ]
+        kiosk = valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers"))
+        gewijzigd = nieuw != self._installatie or kiosk != self._instellingen["kiosk_gebruikers"]
+        if gewijzigd:
+            self._installatie = nieuw
+            self._instellingen["kiosk_gebruikers"] = kiosk
+            await self._async_save()
+        return {"gewijzigd": gewijzigd, "installatie": self.snapshot()["installatie"]}
+
     async def async_zet_indeling(self, rauw: Any) -> dict[str, Any]:
         self._indeling = valideer_indeling(rauw)
         await self._async_save()
@@ -767,9 +869,6 @@ class InfoStore:
         for p in self._personen:
             if p.get("foto") == bestand_id:
                 p["foto"] = None
-        for n in self._nieuws:
-            if n.get("afbeelding") == bestand_id:
-                n["afbeelding"] = None
         await self._async_save()
         return meta
 
@@ -779,7 +878,7 @@ class InfoStore:
                 "praktijk": self._praktijk,
                 "personen": self._personen,
                 "mededelingen": self._mededelingen,
-                "nieuws": self._nieuws,
+                "verjaardagen": self._verjaardagen,
                 "scherm": self._scherm,
                 "installatie": self._installatie,
                 "indeling": self._indeling,

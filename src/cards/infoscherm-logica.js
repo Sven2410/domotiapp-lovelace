@@ -24,6 +24,7 @@ export const DAGNAMEN = {
 
 const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
   "augustus", "september", "oktober", "november", "december"];
+const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 const twee = (n) => String(n).padStart(2, "0");
 
@@ -34,6 +35,9 @@ export const dagSleutel = (d) => DAGEN[(d.getDay() + 6) % 7];
 export const isoDatum = (d) => `${d.getFullYear()}-${twee(d.getMonth() + 1)}-${twee(d.getDate())}`;
 
 export const klok = (d) => `${twee(d.getHours())}:${twee(d.getMinutes())}`;
+
+/** Lokale datum én tijd als "JJJJ-MM-DDTUU:MM", voor mededelingen met een tijdstip. */
+export const isoDatumTijd = (d) => `${isoDatum(d)}T${klok(d)}`;
 
 export const datumLang = (d) =>
   `${DAGNAMEN[dagSleutel(d)]} ${d.getDate()} ${MAANDEN[d.getMonth()]}`;
@@ -55,35 +59,69 @@ export function dagKort(d, nu) {
 }
 
 /**
- * Geldt dit item vandaag? `van` en `tot` zijn beide inclusief; ontbreken ze,
- * dan is die kant open.
+ * Geldt dit item nu? `van` en `tot` zijn beide inclusief; ontbreken ze, dan is
+ * die kant open.
+ *
+ * Sinds ronde 3 mag een grens een TIJD dragen ("2026-09-20T12:00"); een kale
+ * datum is de hele dag. `nu` mag een datum zijn ("2026-09-20", dan telt de dag)
+ * of een datum met tijd (`isoDatumTijd`). Tekstvergelijking volstaat omdat
+ * alles op dezelfde manier is opgeschreven: jaar-maand-dag, dan uur:minuut.
  */
-export function geldigNu(item, vandaag) {
-  if (item?.van && item.van > vandaag) return false;
-  if (item?.tot && item.tot < vandaag) return false;
+export function geldigNu(item, nu) {
+  const moment = nu.length === 10 ? `${nu}T00:00` : nu;
+  const van = item?.van ? (item.van.length === 10 ? `${item.van}T00:00` : item.van) : null;
+  const tot = item?.tot ? (item.tot.length === 10 ? `${item.tot}T23:59` : item.tot) : null;
+  if (van && van > moment) return false;
+  if (tot && tot < moment) return false;
   return true;
 }
 
-export const actieveMededelingen = (lijst, vandaag) =>
-  (lijst ?? []).filter((m) => m.tekst && geldigNu(m, vandaag));
+export const actieveMededelingen = (lijst, nu) =>
+  (lijst ?? []).filter((m) => m.tekst && geldigNu(m, nu));
 
 /**
- * Eigen nieuws en nieuws van buiten in één lijst.
+ * Het nieuws: alleen nog wat er van buiten komt, nieuwste eerst.
  *
- * Eigen berichten eerst -- dat is het nieuws van het pand, en daar is het
- * scherm voor. Vastgezette berichten daarbinnen bovenaan, de rest op
- * aanmaakdatum. Daarna de feeds, nieuwste eerst.
+ * Tot 0.37.0 stonden hier de berichten van het pand vóór de feeds. Sinds
+ * ronde 3 zijn die mededelingen: *"Nieuws van het pand mag helemaal weg, dat
+ * moet gewoon mededelingen worden."*
  */
-export function nieuwsLijst(eigen, feeds, vandaag) {
-  const eigenNu = (eigen ?? [])
-    .filter((n) => n.titel && geldigNu(n, vandaag))
-    .map((n) => ({ ...n, eigen: true, datum: n.gemaakt ?? null }))
-    .sort((a, b) => Number(Boolean(b.vast)) - Number(Boolean(a.vast)) || String(b.gemaakt ?? "").localeCompare(String(a.gemaakt ?? "")));
-  const buiten = (feeds ?? [])
+export function nieuwsLijst(feeds) {
+  return (feeds ?? [])
     .filter((n) => n.titel)
     .map((n) => ({ ...n, eigen: false }))
     .sort((a, b) => String(b.datum ?? "").localeCompare(String(a.datum ?? "")));
-  return [...eigenNu, ...buiten];
+}
+
+/* ------------------------------------------------------------ verjaardagen */
+
+/**
+ * De verjaardagen op volgorde van "hoe lang nog", vandaag eerst.
+ *
+ * Elk item krijgt `dagen` (0 = vandaag), `wanneer` ("vandaag", "morgen",
+ * "za 12 sep") en `leeftijd` (het getal dat iemand WORDT; null als het jaar
+ * niet getoond mag worden of niet ingevuld is). 29 februari valt in een
+ * gewoon jaar op 1 maart.
+ */
+export function komendeVerjaardagen(lijst, nu) {
+  const vandaag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
+  const uit = [];
+  for (const v of lijst ?? []) {
+    if (!v?.naam || !v?.datum) continue;
+    const [jaar, maand, dag] = v.datum.split("-").map(Number);
+    if (!maand || !dag) continue;
+    let volgende = new Date(vandaag.getFullYear(), maand - 1, dag);
+    if (volgende < vandaag) volgende = new Date(vandaag.getFullYear() + 1, maand - 1, dag);
+    const dagen = Math.round((volgende - vandaag) / 86400000);
+    const leeftijd = v.jaar_tonen !== false && jaar > 1900 ? volgende.getFullYear() - jaar : null;
+    uit.push({
+      ...v,
+      dagen,
+      leeftijd,
+      wanneer: dagen === 0 ? "vandaag" : dagen === 1 ? "morgen" : `${DAGEN[(volgende.getDay() + 6) % 7]} ${volgende.getDate()} ${MAANDEN_KORT[volgende.getMonth()]}`,
+    });
+  }
+  return uit.sort((a, b) => a.dagen - b.dagen || a.naam.localeCompare(b.naam, "nl"));
 }
 
 /** "08:00 – 12:30, 13:30 – 17:00", of "gesloten". */
@@ -161,9 +199,8 @@ export const heeftOpeningstijden = (praktijk) =>
 
 /**
  * Staat de verlichting op het scherm? Twee dingen: de installateur heeft
- * lampen gekozen, en de receptie heeft het niet uitgezet. De keuze
- * "altijd/nooit/beheer" uit de kaartconfig is er sinds ronde 2 niet meer --
- * er IS geen kaartconfig meer.
+ * lampen gekozen (sinds ronde 3 weer in de kaartconfig; de kaart zet ze in
+ * `installatie`), en de receptie heeft het niet uitgezet.
  */
 export function verlichtingZichtbaar(stand) {
   if (!((stand?.installatie?.verlichting?.length ?? 0) > 0)) return false;
@@ -177,10 +214,11 @@ export function verlichtingZichtbaar(stand) {
 export function paginas(stand, feeds) {
   const uit = ["welkom"];
   if ((stand?.personen?.length ?? 0) > 0) uit.push("aanwezig");
-  if ((stand?.nieuws?.length ?? 0) > 0 || (feeds?.length ?? 0) > 0) uit.push("nieuws");
+  if ((feeds?.length ?? 0) > 0) uit.push("nieuws");
   if (stand?.installatie?.weer) uit.push("weer");
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
+  if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
   return uit;
 }
 
@@ -243,7 +281,7 @@ export function relatieveTijd(iso, nu) {
   if (isoDatum(t) === isoDatum(nu)) return `vandaag ${klok(t)}`;
   const gisteren = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
   if (isoDatum(t) === isoDatum(gisteren)) return `gisteren ${klok(t)}`;
-  return `${t.getDate()} ${MAANDEN[t.getMonth()].slice(0, 3)}`;
+  return `${t.getDate()} ${MAANDEN_KORT[t.getMonth()]}`;
 }
 
 /** Om de beurt een van de teksten; met één tekst altijd die ene. */
@@ -283,12 +321,13 @@ export const RIJEN = 6;
 export const BLOK_INFO = {
   welkom: { naam: "Welkom", icoon: "house", pagina: null, aantal: false, maat: [6, 1] },
   weer: { naam: "Weer", icoon: "sun", pagina: "weer", aantal: false, maat: [2, 2] },
-  mededeling: { naam: "Mededeling", icoon: "bell", pagina: null, aantal: false, maat: [2, 1] },
+  mededeling: { naam: "Mededelingen", icoon: "bell", pagina: null, aantal: false, maat: [2, 1] },
   openingstijden: { naam: "Openingstijden", icoon: "clock", pagina: null, aantal: false, maat: [2, 3] },
   aanwezig: { naam: "Aanwezig", icoon: "people", pagina: "aanwezig", aantal: true, maat: [2, 3] },
   nieuws: { naam: "Nieuws", icoon: "news", pagina: "nieuws", aantal: true, maat: [2, 4] },
   verlichting: { naam: "Verlichting", icoon: "bulb", pagina: "verlichting", aantal: true, maat: [2, 1] },
   agenda: { naam: "Agenda", icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
+  verjaardagen: { naam: "Verjaardagen", icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
 };
 
 export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
@@ -336,6 +375,9 @@ export function vrijePlek(blokken, w, h) {
  * vak in een wachtkamer leest als kapot. In het beheer staat het blok er wél,
  * met de reden erbij, zodat de receptie weet wat er ontbreekt.
  *
+ * `vandaag` mag ook een datum met tijd zijn (`isoDatumTijd`), voor
+ * mededelingen met een tijdstip.
+ *
  * @returns {string|null} null als het zichtbaar is, anders waarom niet
  */
 export function blokOntbreekt(soort, stand, feeds, vandaag) {
@@ -344,9 +386,11 @@ export function blokOntbreekt(soort, stand, feeds, vandaag) {
     case "welkom":
       return null;
     case "weer":
-      return s.installatie?.weer ? null : "Geen weerentiteit gekozen (Installatie)";
+      return s.installatie?.weer ? null : "Geen weerentiteit gekozen (kaartinstellingen van het infoscherm)";
     case "mededeling":
       return actieveMededelingen(s.mededelingen, vandaag).length ? null : "Geen mededeling die nu geldt";
+    case "verjaardagen":
+      return (s.verjaardagen?.length ?? 0) > 0 ? null : "Nog geen verjaardagen";
     case "openingstijden":
       return heeftOpeningstijden(s.praktijk) ? null : "Geen openingstijden ingevuld";
     case "aanwezig":
@@ -354,10 +398,10 @@ export function blokOntbreekt(soort, stand, feeds, vandaag) {
     case "nieuws":
       return null;
     case "verlichting":
-      if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (Installatie)";
+      if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (kaartinstellingen van het infoscherm)";
       return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
     case "agenda":
-      return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (Installatie)";
+      return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
     default:
       return "Onbekend blok";
   }

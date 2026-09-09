@@ -2,16 +2,18 @@
  * DomotiApp Infoscherm Beheer -- wat de receptie op haar pc ziet.
  *
  * Alles wat op het wachtkamerscherm staat wordt hier onderhouden: de
- * medewerkers, de mededeling van de dag, het nieuws, de praktijkgegevens met
- * de openingstijden, de INDELING van het scherm (slepen, groter en kleiner
- * maken, blokken erbij en eraf), de namen van de lampen, en de instellingen
- * met het logo. Niets hiervan staat in een kaartconfig: de receptie is een
- * gewone gebruiker, en die kan geen dashboard opslaan. Het gaat allemaal naar
- * de serverkant (`infoscherm/`), en elk open scherm krijgt het meteen.
+ * medewerkers, de mededelingen, de verjaardagen, de openingstijden, de
+ * INDELING van het scherm (slepen, groter en kleiner maken, blokken erbij en
+ * eraf), de namen van de lampen, en de instellingen met het logo. Niets
+ * hiervan staat in een kaartconfig: de receptie is een gewone gebruiker, en
+ * die kan geen dashboard opslaan. Het gaat allemaal naar de serverkant
+ * (`infoscherm/`), en elk open scherm krijgt het meteen.
  *
- * Voor de INSTALLATEUR (een admin) is er één blok extra: Installatie, met de
- * weerentiteit, de lampen en de agenda's. Dat blok ziet de receptie niet, en
- * de server weigert de entiteiten ook als ze het toch zou sturen.
+ * De ENTITEITEN (weer, lampen, agenda's) en de kioskaccounts staan hier niet:
+ * die kiest de installateur in de kaarteditor van het infoscherm zelf. Tot
+ * 0.37.0 zat daar een blok Installatie voor; op 10 september 2026 wilde de
+ * eigenaar dat "helemaal weg". De infoschermkaart stuurt zijn config naar de
+ * opslag, en zo weet dit beheer welke lampen er zijn.
  *
  * GEEN ha-form
  *
@@ -56,7 +58,6 @@ import {
   abonneer,
   bestandUrl,
   bewaar,
-  haalGebruikers,
   haalStand,
   nogNietGereed,
   upload,
@@ -73,7 +74,8 @@ import {
   RIJEN,
   blokOntbreekt,
   initialen,
-  isoDatum,
+  isoDatumTijd,
+  overlapt,
   pastVrij,
   standaardIndeling,
   vrijePlek,
@@ -82,39 +84,39 @@ import {
 const TAG = "domotiapp-infoscherm-beheer-card";
 
 /* Wat er in de opslag staat, per onderdeel; elk onderdeel heeft zijn eigen save. */
-const SECTIES = ["personen", "mededelingen", "nieuws", "praktijk", "scherm", "installatie", "indeling", "instellingen"];
+const SECTIES = ["personen", "mededelingen", "verjaardagen", "praktijk", "scherm", "installatie", "indeling", "instellingen"];
 
 const teken = (body) =>
   `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ` +
   `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 const ICOON = {
-  news: teken(`<rect x="3.4" y="4.6" width="17.2" height="14.8" rx="2"/><path d="M7.2 9.2h9.6M7.2 12.6h9.6M7.2 16h5.6"/>`),
   layout: teken(`<rect x="3.4" y="3.4" width="17.2" height="17.2" rx="2"/><path d="M3.4 9.6h17.2M9.6 9.6v11"/>`),
-  wrench: teken(`<path d="M14.5 5.5a4 4 0 0 0 4.9 5.3l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8.6-8.6a4 4 0 0 0-2.3-2.7z"/>`),
+  cake: teken(
+    `<path d="M4.4 19.4h15.2v-6.2a2 2 0 0 0-2-2H6.4a2 2 0 0 0-2 2z"/><path d="M4.4 15.6c1.3 0 1.3 1.2 2.5 1.2s1.3-1.2 2.5-1.2 1.3 1.2 2.6 1.2 1.3-1.2 2.5-1.2 1.3 1.2 2.5 1.2 1.3-1.2 2.6-1.2"/><path d="M12 11.2V8.4M9 11.2V8.8M15 11.2V8.8"/><path d="M12 8.4a1.3 1.3 0 0 0 1-2.2L12 4.6l-1 1.6a1.3 1.3 0 0 0 1 2.2z"/>`
+  ),
+  grip: teken(`<circle cx="9" cy="6" r="1.2" fill="currentColor"/><circle cx="15" cy="6" r="1.2" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><circle cx="9" cy="18" r="1.2" fill="currentColor"/><circle cx="15" cy="18" r="1.2" fill="currentColor"/>`),
 };
 const icoon = (naam) => ICOON[naam] ?? resolve(naam);
 
 const BLOKKEN = [
   { key: "personen", titel: "Medewerkers", icoon: "people", secties: ["personen"] },
-  { key: "mededelingen", titel: "Mededeling van de dag", icoon: "bell", secties: ["mededelingen"] },
-  { key: "nieuws", titel: "Nieuws van het pand", icoon: "news", secties: ["nieuws"] },
-  { key: "praktijk", titel: "Praktijk en openingstijden", icoon: "house", secties: ["praktijk"] },
+  { key: "mededelingen", titel: "Mededelingen", icoon: "bell", secties: ["mededelingen", "scherm"] },
+  { key: "verjaardagen", titel: "Verjaardagen", icoon: "cake", secties: ["verjaardagen"] },
+  { key: "praktijk", titel: "Openingstijden", icoon: "clock", secties: ["praktijk"] },
   { key: "indeling", titel: "Indeling van het scherm", icoon: "layout", secties: ["indeling"] },
   { key: "verlichting", titel: "Verlichting", icoon: "bulb", secties: ["installatie", "instellingen"] },
   { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
-  { key: "installatie", titel: "Installatie (alleen beheerder)", icoon: "wrench", secties: ["installatie", "instellingen"], admin: true },
 ];
 
 const STANDAARD = {
   title: "Infoscherm",
   show_personen: true,
   show_mededelingen: true,
-  show_nieuws: true,
+  show_verjaardagen: true,
   show_praktijk: true,
   show_indeling: true,
   show_verlichting: true,
   show_instellingen: true,
-  show_installatie: true,
   open: "personen",
 };
 
@@ -152,7 +154,7 @@ const css = /* css */ `
   .rij { display: grid; gap: 10px; align-items: center; }
   .veld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .veld label { font-size: 12px; color: var(--dac-ink-2); }
-  input[type="text"], input[type="url"], input[type="date"], input[type="time"], input[type="number"], input[type="color"], textarea, select {
+  input[type="text"], input[type="url"], input[type="date"], input[type="datetime-local"], input[type="time"], input[type="number"], input[type="color"], textarea, select {
     font: inherit; font-size: 14px; color: var(--dac-ink); background: var(--dac-surface);
     border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm); padding: 8px 10px;
     min-height: 40px; width: 100%; min-width: 0; color-scheme: dark;
@@ -190,9 +192,10 @@ const css = /* css */ `
   /* lijsten */
   .lijst { display: flex; flex-direction: column; gap: 8px; }
   .item { display: grid; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--dac-radius-sm); background: var(--dac-surface); }
-  .item.persoon { grid-template-columns: 44px minmax(0, 1.4fr) minmax(0, 1fr) auto auto; }
-  .item.mededeling { grid-template-columns: minmax(0, 2fr) 150px 150px auto; }
-  .item.bericht { grid-template-columns: minmax(0, 1fr); }
+  .item.persoon { grid-template-columns: 28px 44px minmax(0, 1.4fr) minmax(0, 1fr) auto auto; }
+  .item.mededeling { grid-template-columns: minmax(0, 2fr) 190px 190px auto; align-items: start; }
+  .item.mededeling textarea { min-height: 40px; }
+  .item.verjaardag { grid-template-columns: minmax(0, 2fr) 170px auto auto; }
   .item.feed { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
   .item.uitz { grid-template-columns: 150px auto 110px 110px minmax(0, 1fr) auto; }
   .item.lamp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -200,12 +203,17 @@ const css = /* css */ `
   .item.lamp .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item.lamp .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .knoppen { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  /* De greep om een rij te verslepen: echte pointer-events, geen pijltjes.
+     Gevraagd op 10 september 2026: "drag en drop ipv pijltjes". */
+  .greep { width: 28px; height: 44px; display: grid; place-items: center; color: var(--dac-ink-3); cursor: grab; touch-action: none; border-radius: 6px; }
+  .greep .icon { font-size: 20px; }
+  .item.sleept { opacity: 0.9; border: 1px solid var(--dac-accent-hi); box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: grabbing; position: relative; z-index: 2; }
+  .item.sleept .greep { cursor: grabbing; }
   .avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-size: 14px; font-weight: 700; color: var(--dac-ink-3); background: var(--dac-surface-hi); border: 1px solid var(--dac-border); cursor: pointer; }
   .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .avatar.aan { color: var(--dac-accent-hi); background: var(--dac-accent-soft); border-color: color-mix(in srgb, var(--dac-accent-hi) 40%, transparent); }
   .leeg { font-size: 13px; color: var(--dac-ink-3); padding: 6px 2px; }
 
-  .bericht .b-rij { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px auto; gap: 10px; align-items: end; }
   .b-onder { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .plaatje { width: 96px; height: 64px; border-radius: var(--dac-radius-sm); overflow: hidden; background: var(--dac-surface-hi); display: grid; place-items: center; color: var(--dac-ink-3); font-size: 20px; }
   .plaatje img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -222,8 +230,6 @@ const css = /* css */ `
   .twee { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .drie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hulp { font-size: 12px; color: var(--dac-ink-3); line-height: 1.4; }
-  .gebruikers, .keuzes { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; padding: 4px 6px; border: 1px solid var(--dac-border); border-radius: var(--dac-radius-sm); }
-  .keuzes .vink { min-height: 32px; }
   .feedfout { font-size: 12px; color: var(--dac-bad); }
   .sub { font-size: 13px; font-weight: 600; margin-top: 4px; }
 
@@ -264,9 +270,9 @@ const css = /* css */ `
   .file { display: none; }
 
   @container (max-width: 720px) {
-    .item.persoon { grid-template-columns: 44px minmax(0, 1fr) auto; }
-    .item.persoon .veld:nth-child(3) { grid-column: 2 / -1; }
-    .item.mededeling, .bericht .b-rij, .item.uitz, .item.lamp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .item.persoon { grid-template-columns: 28px 44px minmax(0, 1fr) auto; }
+    .item.persoon .veld:nth-child(4) { grid-column: 3 / -1; }
+    .item.mededeling, .item.verjaardag, .item.uitz, .item.lamp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .item.feed { grid-template-columns: minmax(0, 1fr); }
     .ot-tabel { grid-template-columns: 70px auto 1fr 1fr; }
     .ot-tabel .vak2 { display: none; }
@@ -299,7 +305,6 @@ export class InfoschermBeheerCard extends DacCard {
     this.fouten_ = {};
     this.uitgesteld_ = new Set();
     this.open_ = null;
-    this.gebruikers_ = null;
     this.meldingen_ = {};
     this.herkansing_ = new Herkansing(() => this.haal_());
     this.verbinding_ = new Verbindingswacht();
@@ -400,16 +405,6 @@ export class InfoschermBeheerCard extends DacCard {
       this.fout_ = null;
       this.herkansing_.herstel();
       this.nieuweStand_(r.stand, true);
-      if (r.is_admin && this.gebruikers_ === null) {
-        haalGebruikers(this.hass)
-          .then((g) => {
-            this.gebruikers_ = g.gebruikers ?? [];
-            this.teken_("installatie");
-          })
-          .catch(() => {
-            this.gebruikers_ = [];
-          });
-      }
     } catch (fout) {
       if (nogNietGereed(fout)) {
         this.herkansing_.plan();
@@ -481,7 +476,7 @@ export class InfoschermBeheerCard extends DacCard {
       const item = this.$(`.blok[data-blok="personen"] .item[data-i="${i}"]`);
       const inp = item?.querySelector('input[data-veld="aanwezig"]');
       if (inp) inp.checked = p.aanwezig;
-      const lbl = item?.querySelector(".vink span:last-child");
+      const lbl = item?.querySelector(".vink .vl");
       if (lbl) lbl.textContent = p.aanwezig ? "Aanwezig" : "Afwezig";
       item?.querySelector(".avatar")?.classList.toggle("aan", p.aanwezig);
     });
@@ -548,13 +543,12 @@ export class InfoschermBeheerCard extends DacCard {
     this.uitgesteld_.delete(blok);
     const html = {
       personen: () => this.htmlPersonen_(this.werk_.personen),
-      mededelingen: () => this.htmlMededelingen_(this.werk_.mededelingen),
-      nieuws: () => this.htmlNieuws_(this.werk_.nieuws),
+      mededelingen: () => this.htmlMededelingen_(this.werk_.mededelingen, this.werk_.scherm),
+      verjaardagen: () => this.htmlVerjaardagen_(this.werk_.verjaardagen),
       praktijk: () => this.htmlPraktijk_(this.werk_.praktijk),
       indeling: () => this.htmlIndeling_(this.werk_.indeling),
       verlichting: () => this.htmlVerlichting_(this.werk_.installatie, this.werk_.instellingen),
       instellingen: () => this.htmlInstellingen_(this.werk_.scherm, this.werk_.instellingen),
-      installatie: () => this.htmlInstallatie_(this.werk_.installatie, this.werk_.instellingen),
     }[blok]();
     const inhoud = sec.querySelector(".inhoud");
     inhoud.innerHTML = html + this.htmlVoet_(blok);
@@ -579,12 +573,11 @@ export class InfoschermBeheerCard extends DacCard {
     const tel = {
       personen: () => `${(w.personen ?? []).filter((p) => p.aanwezig).length} van ${(w.personen ?? []).length} aanwezig`,
       mededelingen: () => `${(w.mededelingen ?? []).length}`,
-      nieuws: () => `${(w.nieuws ?? []).length}`,
-      praktijk: () => w.praktijk?.naam ?? "",
+      verjaardagen: () => `${(w.verjaardagen ?? []).length}`,
+      praktijk: () => "",
       indeling: () => `${(w.indeling?.blokken ?? []).length} blokken`,
       verlichting: () => `${(w.installatie?.verlichting ?? []).length} lampen${w.instellingen?.verlichting_tonen === false ? " · uit" : ""}`,
       instellingen: () => `${(w.instellingen?.feeds ?? []).length} nieuwsbron(nen)`,
-      installatie: () => (w.installatie?.weer ? "weer gekozen" : "geen weer"),
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
     const info = this.blokInfo_(blok);
@@ -608,10 +601,16 @@ export class InfoschermBeheerCard extends DacCard {
     } value="${at(waarde)}" ${extra}></div>`;
   }
 
+  /**
+   * Een schakelaar met een tekst erachter. De tekst heeft een eigen klasse
+   * (`.vl`): wie hem met `span:last-child` zoekt vindt het BINNENSTE span van
+   * de schakelaar zelf, en schrijft "Aanwezig" dwars door het knopje heen.
+   * Precies dat stond op een schermafdruk van 10 september 2026.
+   */
   schakel_(naam, aan, { i, label, s } = {}) {
     return `<label class="vink"><span class="schakel"><input type="checkbox" data-veld="${naam}" ${s ? `data-s="${s}"` : ""} ${
       i !== undefined ? `data-i="${at(String(i))}"` : ""
-    } ${aan ? "checked" : ""}><span></span></span>${label ? `<span>${at(label)}</span>` : ""}</label>`;
+    } ${aan ? "checked" : ""}><span></span></span>${label ? `<span class="vl">${at(label)}</span>` : ""}</label>`;
   }
 
   keuze_(label, naam, waarde, opties, { s } = {}) {
@@ -626,63 +625,56 @@ export class InfoschermBeheerCard extends DacCard {
     const rijen = lijst
       .map(
         (p, i) => `<div class="item persoon" data-i="${i}">
+          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
           <div class="avatar ${p.aanwezig ? "aan" : ""}" data-actie="foto" data-i="${i}" data-bestand="${at(p.foto)}" title="Foto kiezen">${at(initialen(p.naam))}</div>
           ${this.veld_("Naam", "naam", p.naam, { i })}
           ${this.veld_("Functie", "functie", p.functie, { i })}
           ${this.schakel_("aanwezig", p.aanwezig, { i, label: p.aanwezig ? "Aanwezig" : "Afwezig" })}
           <div class="knoppen">
-            <button class="knop ico" type="button" data-actie="omhoog" data-i="${i}" title="Omhoog" ${i === 0 ? "disabled" : ""}>${resolve("arrowUp")}</button>
-            <button class="knop ico" type="button" data-actie="omlaag" data-i="${i}" title="Omlaag" ${i === lijst.length - 1 ? "disabled" : ""}>${resolve("arrowDown")}</button>
             ${p.foto ? `<button class="knop ico" type="button" data-actie="fotoweg" data-i="${i}" title="Foto weghalen">${resolve("close")}</button>` : ""}
             <button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button>
           </div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Tik op de cirkel om een foto te kiezen. Zonder foto staan de initialen op het scherm (eerste letter van de voornaam en van het laatste woord van de achternaam). De volgorde hier is de volgorde op het scherm. Alles wordt vanzelf opgeslagen.</div>
+    return `<div class="hulp">Tik op de cirkel om een foto te kiezen. Zonder foto staan de initialen op het scherm (eerste letter van de voornaam en van het laatste woord van de achternaam). Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. De schakelaar zet iemand aan- of afwezig, ook achteraf. Alles wordt vanzelf opgeslagen.</div>
       <div class="lijst">${rijen || `<div class="leeg">Nog geen medewerkers.</div>`}</div>
       <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Medewerker toevoegen</button></div>`;
   }
 
-  htmlMededelingen_(lijst = []) {
+  htmlMededelingen_(lijst = [], scherm = {}) {
     const rijen = lijst
       .map(
         (m, i) => `<div class="item mededeling" data-i="${i}">
-          ${this.veld_("Tekst op het scherm", "tekst", m.tekst, { i })}
-          ${this.veld_("Vanaf", "van", m.van, { i, type: "date" })}
-          ${this.veld_("Tot en met", "tot", m.tot, { i, type: "date" })}
+          <div class="veld"><label>Tekst op het scherm</label><textarea data-veld="tekst" data-i="${i}" rows="2">${at(m.tekst)}</textarea></div>
+          ${this.veld_("Vanaf", "van", m.van, { i, type: "datetime-local" })}
+          ${this.veld_("Tot en met", "tot", m.tot, { i, type: "datetime-local" })}
           <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Eén regel op het welkomscherm, bijvoorbeeld "Vrijdag 20 september zijn wij vanaf 12:00 gesloten". Zonder datums staat hij er altijd; met meerdere wisselen ze elkaar af.</div>
+    return `<div class="hulp">Wat er in het blok Mededelingen op het welkomscherm staat: "Vrijdag 20 september zijn wij vanaf 12:00 gesloten", een nieuwe collega, een verbouwing. Zonder datum en tijd staat een mededeling er altijd. Met meerdere schuiven ze vanzelf door; op de iPad kan er ook geveegd worden.</div>
       <div class="lijst">${rijen || `<div class="leeg">Geen mededeling.</div>`}</div>
-      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Mededeling toevoegen</button></div>`;
+      <div class="voet">
+        <button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Mededeling toevoegen</button>
+        ${this.veld_("Elke mededeling blijft staan (seconden)", "mededeling_interval", scherm.mededeling_interval ?? 10, { type: "number", s: "scherm", extra: 'min="3" max="600"' })}
+      </div>`;
   }
 
-  htmlNieuws_(lijst = []) {
+  htmlVerjaardagen_(lijst = []) {
     const rijen = lijst
       .map(
-        (n, i) => `<div class="item bericht" data-i="${i}">
-          <div class="b-rij">
-            ${this.veld_("Titel", "titel", n.titel, { i })}
-            ${this.veld_("Vanaf", "van", n.van, { i, type: "date" })}
-            ${this.veld_("Tot en met", "tot", n.tot, { i, type: "date" })}
-            <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
-          </div>
-          <div class="veld"><label>Tekst</label><textarea data-veld="tekst" data-i="${i}">${at(n.tekst)}</textarea></div>
-          <div class="b-onder">
-            <div class="plaatje" data-bestand="${at(n.afbeelding)}">${n.afbeelding ? "" : resolve("camera")}</div>
-            <button class="knop klein" type="button" data-actie="foto" data-i="${i}">${resolve("camera")} ${n.afbeelding ? "Andere afbeelding" : "Afbeelding kiezen"}</button>
-            ${n.afbeelding ? `<button class="knop klein" type="button" data-actie="fotoweg" data-i="${i}">${resolve("close")} Afbeelding weg</button>` : ""}
-            ${this.schakel_("vast", n.vast, { i, label: "Bovenaan vastzetten" })}
-          </div>
+        (v, i) => `<div class="item verjaardag" data-i="${i}">
+          ${this.veld_("Naam", "naam", v.naam, { i })}
+          ${this.veld_("Geboortedatum", "datum", v.datum, { i, type: "date" })}
+          ${this.schakel_("jaar_tonen", v.jaar_tonen !== false, { i, label: "Leeftijd tonen" })}
+          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Berichten van het pand: een nieuwe collega, een verbouwing, de vakantiesluiting. Ze staan vóór het nieuws van buiten. Zonder datums blijft een bericht staan tot u het weghaalt.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Nog geen berichten.</div>`}</div>
-      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Bericht toevoegen</button></div>`;
+    return `<div class="hulp">Iedereen die op het scherm gefeliciteerd mag worden: medewerkers, vrijwilligers, bewoners. Het blok Verjaardagen op het welkomscherm toont wie er vandaag en binnenkort jarig is; "Alles bekijken" geeft het hele jaar.</div>
+      <div class="lijst">${rijen || `<div class="leeg">Nog geen verjaardagen.</div>`}</div>
+      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Verjaardag toevoegen</button></div>`;
   }
 
   htmlPraktijk_(p = {}) {
@@ -711,17 +703,12 @@ export class InfoschermBeheerCard extends DacCard {
       )
       .join("");
     return `
-      <div class="rij twee">
-        ${this.veld_("Naam van de praktijk", "naam", p.naam)}
-        ${this.veld_("Adresregel", "adres", p.adres)}
-      </div>
-      <div class="veld"><label>Welkomsteksten (één per regel; ze wisselen elkaar af)</label><textarea data-veld="welkom">${at((p.welkom ?? []).join("\n"))}</textarea></div>
       <div class="veld"><label>Openingstijden</label>
         <div class="ot-tabel">
           <span class="k"></span><span class="k"></span><span class="k">Open</span><span class="k">Dicht</span><span class="k vak2">Open</span><span class="k vak2">Dicht</span>
           ${rijenOt}
         </div>
-        <div class="hulp">Twee vakken per dag voor een middagpauze. Buiten deze tijden dimt het scherm naar een klok met "Gesloten · morgen open om 08:00".</div>
+        <div class="hulp">Twee vakken per dag voor een middagpauze. Het welkomscherm zegt ermee "Vandaag geopend tot 17:00" of "Gesloten · morgen open om 08:00".</div>
       </div>
       <div class="veld"><label>Afwijkende dagen (feestdagen, studiedagen)</label>
         <div class="lijst">${uitz || `<div class="leeg">Geen afwijkende dagen.</div>`}</div>
@@ -732,7 +719,7 @@ export class InfoschermBeheerCard extends DacCard {
   /** De indeling: een verkleind scherm waarin de blokken te slepen zijn. */
   htmlIndeling_(ind) {
     const blokken = ind?.blokken ?? [];
-    const vandaag = isoDatum(new Date());
+    const vandaag = isoDatumTijd(new Date());
     const ibs = blokken
       .map((b) => {
         const info = BLOK_INFO[b.soort];
@@ -785,9 +772,7 @@ export class InfoschermBeheerCard extends DacCard {
       .join("");
     return `
       ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: "Verlichting op het scherm tonen", s: "instellingen" })}
-      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. ${
-        this.rechten_.is_admin ? "Welke lampen erbij horen kiest u in het blok Installatie." : "Welke lampen erbij horen bepaalt de installateur."
-      }</div>
+      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van het infoscherm.</div>
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
   }
 
@@ -832,65 +817,26 @@ export class InfoschermBeheerCard extends DacCard {
         ${this.veld_("Terug naar Welkom na (seconden, 0 = nooit)", "terug_na", s.terug_na ?? 60, { type: "number", s: "scherm", extra: 'min="0" max="3600"' })}
         ${this.veld_("Schaal (1 = iPad 11 inch)", "schaal", s.schaal ?? 1, { type: "number", s: "scherm", extra: 'min="0.5" max="2" step="0.05"' })}
       </div>
-      ${this.schakel_("nachtstand", s.nachtstand !== false, { label: "Nachtstand buiten de openingstijden (klok met 'Gesloten · morgen open om …')", s: "scherm" })}
       ${this.schakel_("aanwezig_teller", s.aanwezig_teller !== false, { label: "Teller bij Aanwezig (x van y)", s: "scherm" })}
-      ${this.schakel_("nieuws_afbeeldingen", s.nieuws_afbeeldingen !== false, { label: "Afbeeldingen bij het nieuws", s: "scherm" })}
       ${this.schakel_("weer_animatie", s.weer_animatie !== false, { label: "Bewegende weericonen", s: "scherm" })}
-      ${this.schakel_("reset_middernacht", instellingen.reset_middernacht !== false, { label: "Om middernacht iedereen op afwezig zetten", s: "instellingen" })}
-      <div class="veld"><label>Nieuws van buiten (RSS)</label>
-        <div class="hulp">Bijvoorbeeld het NOS-nieuws: https://feeds.nos.nl/nosnieuwsalgemeen. Wordt elk kwartier opgehaald en staat op het scherm ná het nieuws van het pand.</div>
+      <div class="veld"><label>Het blok Welkom</label>
+        <div class="hulp">Wat er in het welkomblok op het scherm staat. Alleen het logo? Zet de tekst leeg en de openingsregel uit.</div>
+        <div class="rij twee" style="margin-top: 6px">
+          ${this.veld_("Tekst (leeg = geen tekst)", "welkom_tekst", s.welkom_tekst ?? "Welkom", { s: "scherm" })}
+          <div class="veld" style="gap: 0">
+            ${this.schakel_("welkom_logo", s.welkom_logo === true, { label: "Logo in het blok (en niet in de kop)", s: "scherm" })}
+            ${this.schakel_("welkom_onder", s.welkom_onder !== false, { label: "Regel met de openingstijd van vandaag", s: "scherm" })}
+          </div>
+        </div>
+      </div>
+      <div class="veld"><label>Nieuws (RSS)</label>
+        <div class="hulp">Bijvoorbeeld het NOS-nieuws: https://feeds.nos.nl/nosnieuwsalgemeen. Wordt elk kwartier opgehaald.</div>
         <div class="lijst">${feeds || `<div class="leeg">Geen bronnen.</div>`}</div>
         <div class="knoppen" style="justify-content: flex-start; margin-top: 8px">
           <button class="knop" type="button" data-actie="f_nieuw">${resolve("plus")} Bron toevoegen</button>
           <button class="knop" type="button" data-actie="f_ververs">Nu ophalen</button>
         </div>
       </div>`;
-  }
-
-  /** Alleen voor een admin: de entiteiten, en de kioskaccounts. */
-  htmlInstallatie_(inst = {}, instellingen = {}) {
-    const states = this.hass?.states ?? {};
-    const vanDomein = (domeinen) =>
-      Object.values(states)
-        .filter((st) => domeinen.includes(st.entity_id.split(".")[0]))
-        .map((st) => ({ id: st.entity_id, naam: st.attributes?.friendly_name ?? st.entity_id }))
-        .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
-    const weer = vanDomein(["weather"]);
-    const agendas = vanDomein(["calendar"]);
-    const lampen = vanDomein(["light", "switch"]);
-    const gekozenAgenda = new Set(inst.agendas ?? []);
-    const gekozenLamp = new Set((inst.verlichting ?? []).map((l) => l.entity));
-    const vinkjes = (lijst, veld, gekozen) =>
-      lijst.length
-        ? lijst
-            .map(
-              (e) => `<label class="vink" data-zoek="${at(`${e.naam} ${e.id}`.toLowerCase())}"><input type="checkbox" data-veld="${veld}" data-s="installatie" data-i="${at(e.id)}" ${
-                gekozen.has(e.id) ? "checked" : ""
-              }> ${at(e.naam)}<span class="id">${at(e.id)}</span></label>`
-            )
-            .join("")
-        : `<div class="leeg">Geen entiteiten van dit soort gevonden.</div>`;
-
-    let kiosk = "";
-    const lijst = this.gebruikers_ ?? [];
-    const gekozen = new Set(instellingen.kiosk_gebruikers ?? []);
-    kiosk = `<div class="veld"><label>Kioskaccounts</label>
-      <div class="hulp">Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren.</div>
-      <div class="gebruikers">${
-        lijst.length
-          ? lijst.map((g) => `<label class="vink"><input type="checkbox" data-veld="kiosk" data-s="instellingen" data-i="${at(g.id)}" ${gekozen.has(g.id) ? "checked" : ""}> ${at(g.naam)}${g.is_admin ? " (beheerder)" : ""}</label>`).join("")
-          : `<div class="leeg">Gebruikers laden…</div>`
-      }</div></div>`;
-
-    return `
-      <div class="hulp">Dit blok ziet alleen een beheerder. De receptie ziet de gevolgen: het weer, de agenda en de lampen verschijnen op het scherm zodra u ze hier kiest, en de namen van de lampen mag zij zelf aanpassen in het blok Verlichting.</div>
-      ${this.keuze_("Weerentiteit", "weer", inst.weer ?? "", [["", "(geen weer op het scherm)"], ...weer.map((e) => [e.id, `${e.naam} (${e.id})`])], { s: "installatie" })}
-      <div class="veld"><label>Agenda's (de afspraken van vandaag)</label><div class="keuzes">${vinkjes(agendas, "agenda", gekozenAgenda)}</div></div>
-      <div class="veld"><label>Lampen en schakelaars op het scherm</label>
-        <input type="text" data-filter="lampen" placeholder="Zoeken op naam of entiteit…">
-        <div class="keuzes" data-lijst="lampen">${vinkjes(lampen, "lamp", gekozenLamp)}</div>
-      </div>
-      ${kiosk}`;
   }
 
   /** Foto's en logo's uit de blob-cache in de zojuist getekende blokken. */
@@ -921,7 +867,6 @@ export class InfoschermBeheerCard extends DacCard {
 
   invoer_(e) {
     const el = e.target;
-    if (el?.dataset?.filter) return this.filter_(el);
     if (el?.dataset?.actie === "blok_toevoegen") return this.blokToevoegen_(el.value, el);
     const veld = el?.dataset?.veld;
     if (!veld) return undefined;
@@ -939,7 +884,7 @@ export class InfoschermBeheerCard extends DacCard {
     if ((tekst || kleur) && e.type !== "input") return undefined;
     if (!tekst && !kleur && e.type !== "change") return undefined;
 
-    if (sectie === "personen" || sectie === "mededelingen" || sectie === "nieuws") {
+    if (sectie === "personen" || sectie === "mededelingen" || sectie === "verjaardagen") {
       const item = w[Number(i)];
       if (!item) return undefined;
       item[veld] = waarde;
@@ -951,7 +896,7 @@ export class InfoschermBeheerCard extends DacCard {
         // Een schakelaar die hier is omgezet gaat als bewuste keuze mee; de
         // andere blijven van de iPad (zie `bewaar_`).
         item._aanwezig = true;
-        const lbl = el.closest(".vink")?.querySelector("span:last-child");
+        const lbl = el.closest(".vink")?.querySelector(".vl");
         if (lbl) lbl.textContent = waarde ? "Aanwezig" : "Afwezig";
         el.closest(".item")?.querySelector(".avatar")?.classList.toggle("aan", waarde);
       }
@@ -972,29 +917,12 @@ export class InfoschermBeheerCard extends DacCard {
         w[veld] = waarde;
       }
     } else if (sectie === "installatie") {
-      if (veld === "weer") w.weer = waarde || null;
-      else if (veld === "agenda") {
-        const set = new Set(w.agendas ?? []);
-        if (waarde) set.add(i);
-        else set.delete(i);
-        w.agendas = [...set];
-      } else if (veld === "lamp") {
-        w.verlichting ??= [];
-        const bestaat = w.verlichting.findIndex((l) => l.entity === i);
-        if (waarde && bestaat < 0) w.verlichting.push({ entity: i, naam: "" });
-        if (!waarde && bestaat >= 0) w.verlichting.splice(bestaat, 1);
-        this.uitgesteld_.add("verlichting");
-      } else if (veld === "l_naam") {
+      if (veld === "l_naam") {
         const l = w.verlichting?.[Number(i)];
         if (l) l.naam = waarde;
       }
     } else if (sectie === "instellingen") {
-      if (veld === "kiosk") {
-        const set = new Set(w.kiosk_gebruikers ?? []);
-        if (waarde) set.add(i);
-        else set.delete(i);
-        w.kiosk_gebruikers = [...set];
-      } else if (veld.startsWith("f_")) {
+      if (veld.startsWith("f_")) {
         const f = w.feeds[Number(i)];
         if (f) f[veld.slice(2)] = waarde;
       } else {
@@ -1006,9 +934,7 @@ export class InfoschermBeheerCard extends DacCard {
   }
 
   invoerPraktijk_(p, veld, i, waarde, el) {
-    if (veld === "welkom") {
-      p.welkom = String(waarde).split("\n").map((r) => r.trim()).filter(Boolean);
-    } else if (veld === "ot_open") {
+    if (veld === "ot_open") {
       p.openingstijden ??= {};
       p.openingstijden[i] = waarde ? [["08:00", "17:00"]] : [];
       const rij = el.closest(".ot-tabel");
@@ -1017,7 +943,7 @@ export class InfoschermBeheerCard extends DacCard {
         const [, n, k] = inp.dataset.veld.split("_");
         inp.value = p.openingstijden[i][Number(n)]?.[Number(k)] ?? "";
       }
-      const lbl = el.closest(".vink")?.querySelector("span:last-child");
+      const lbl = el.closest(".vink")?.querySelector(".vl");
       if (lbl) lbl.textContent = waarde ? "open" : "gesloten";
     } else if (veld.startsWith("ot_")) {
       const [, n, k] = veld.split("_").map(Number);
@@ -1039,7 +965,7 @@ export class InfoschermBeheerCard extends DacCard {
           inp.disabled = !waarde;
           inp.value = waarde ? (inp.dataset.veld === "u_van" ? "08:00" : "17:00") : "";
         }
-        const lbl = el.closest(".vink")?.querySelector("span:last-child");
+        const lbl = el.closest(".vink")?.querySelector(".vl");
         if (lbl) lbl.textContent = waarde ? "open" : "gesloten";
       } else if (naam === "van" || naam === "tot") {
         u.tijden = [[naam === "van" ? waarde : u.tijden?.[0]?.[0] ?? "", naam === "tot" ? waarde : u.tijden?.[0]?.[1] ?? ""]];
@@ -1048,15 +974,6 @@ export class InfoschermBeheerCard extends DacCard {
       }
     } else {
       p[veld] = waarde;
-    }
-  }
-
-  /** Het zoekveld boven een lange lijst vinkjes. Slaat niets op. */
-  filter_(el) {
-    const zoek = el.value.trim().toLowerCase();
-    const lijst = el.parentElement?.querySelector(`[data-lijst="${el.dataset.filter}"]`);
-    for (const rij of lijst?.querySelectorAll("[data-zoek]") ?? []) {
-      rij.hidden = Boolean(zoek) && !rij.dataset.zoek.includes(zoek);
     }
   }
 
@@ -1093,8 +1010,65 @@ export class InfoschermBeheerCard extends DacCard {
     return this.teken_("indeling", true);
   }
 
+  /**
+   * Een rij in een lijst verslepen aan zijn greep. De rij volgt de vinger
+   * door telkens vóór de rij te springen waar de vinger boven de helft van
+   * staat; bij het loslaten wordt de werkkopie in die volgorde gezet.
+   */
+  sleepLijst_(e, greep) {
+    const item = greep.closest(".item");
+    const lijst = item?.parentElement;
+    const blok = item?.closest(".blok")?.dataset.blok;
+    if (!item || !lijst || !blok) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const sectie = this.blokInfo_(blok).secties[0];
+    const w = this.werk_[sectie];
+    const van = Number(item.dataset.i);
+    if (!Array.isArray(w) || !w[van]) return;
+
+    e.preventDefault();
+    item.classList.add("sleept");
+
+    // De luisteraars staan op window en NIET op de greep met pointer capture:
+    // de rij wordt tijdens het slepen in de DOM verplaatst, en Chrome laat
+    // de capture los zodra het element uit het document gaat. Gemeten op
+    // 10 september 2026: de rij sprong één plek en bleef daarna "hangen",
+    // zonder pointerup en zonder opslaan.
+    const beweeg = (ev) => {
+      const anderen = [...lijst.children].filter((x) => x !== item);
+      let doel = null;
+      for (const ander of anderen) {
+        const r = ander.getBoundingClientRect();
+        if (ev.clientY < r.top + r.height / 2) {
+          doel = ander;
+          break;
+        }
+      }
+      if (item.nextElementSibling !== doel && item !== doel) lijst.insertBefore(item, doel);
+    };
+    const klaar = () => {
+      window.removeEventListener("pointermove", beweeg, true);
+      window.removeEventListener("pointerup", klaar, true);
+      window.removeEventListener("pointercancel", klaar, true);
+      item.classList.remove("sleept");
+      const naar = [...lijst.children].indexOf(item);
+      if (naar !== van && naar >= 0) {
+        const [rij] = w.splice(van, 1);
+        w.splice(naar, 0, rij);
+        this.markeer_(sectie, blok);
+      }
+      this.teken_(blok, true);
+    };
+    window.addEventListener("pointermove", beweeg, true);
+    window.addEventListener("pointerup", klaar, true);
+    window.addEventListener("pointercancel", klaar, true);
+    this.teardown_.push(klaar);
+  }
+
   /** Slepen en de maat wijzigen, met echte pointer-events en pointer capture. */
   sleepStart_(e) {
+    const greep = e.target.closest?.(".greep");
+    if (greep) return this.sleepLijst_(e, greep);
     const ib = e.target.closest?.(".ib");
     if (!ib || e.target.closest("button, input, select")) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -1114,6 +1088,17 @@ export class InfoschermBeheerCard extends DacCard {
     try { ib.setPointerCapture(e.pointerId); } catch { /* geen capture: dan gewoon doorgaan */ }
     ib.classList.add("sleept");
 
+    // Twee blokken van dezelfde maat mogen van plek ruilen: laat je het
+    // ene precies op het andere los, dan gaat dat andere naar de plek waar
+    // dit vandaan kwam. Gevraagd op 10 september 2026: "als een blok even
+    // groot is en ik zet hem over het andere blok moeten ze swappen."
+    const ruilpartner = (kand) => {
+      if (modus !== "plaats") return null;
+      const rakend = w.blokken.filter((b) => b.id !== kand.id && overlapt(b, kand));
+      if (rakend.length !== 1) return null;
+      const ander = rakend[0];
+      return ander.w === kand.w && ander.h === kand.h && ander.x === kand.x && ander.y === kand.y ? ander : null;
+    };
     const beweeg = (ev) => {
       const dx = Math.round((ev.clientX - start.x) / celW);
       const dy = Math.round((ev.clientY - start.y) / celH);
@@ -1122,7 +1107,7 @@ export class InfoschermBeheerCard extends DacCard {
         modus === "plaats"
           ? { ...blok, x: klem(blok.x + dx, 0, KOLOMMEN - blok.w), y: klem(blok.y + dy, 0, RIJEN - blok.h) }
           : { ...blok, w: klem(blok.w + dx, 1, KOLOMMEN - blok.x), h: klem(blok.h + dy, 1, RIJEN - blok.y) };
-      ib.classList.toggle("ongeldig", !pastVrij(w.blokken, kandidaat));
+      ib.classList.toggle("ongeldig", !pastVrij(w.blokken, kandidaat) && !ruilpartner(kandidaat));
       ib.style.cssText = this.ibStijl_(kandidaat);
     };
     const klaar = () => {
@@ -1131,7 +1116,12 @@ export class InfoschermBeheerCard extends DacCard {
       ib.removeEventListener("pointercancel", klaar);
       ib.classList.remove("sleept", "ongeldig");
       const anders = kandidaat.x !== blok.x || kandidaat.y !== blok.y || kandidaat.w !== blok.w || kandidaat.h !== blok.h;
-      if (bewogen && anders && pastVrij(w.blokken, kandidaat)) {
+      const ander = bewogen && anders ? ruilpartner(kandidaat) : null;
+      if (ander) {
+        Object.assign(ander, { x: blok.x, y: blok.y });
+        Object.assign(blok, { x: kandidaat.x, y: kandidaat.y });
+        this.markeer_("indeling", "indeling");
+      } else if (bewogen && anders && pastVrij(w.blokken, kandidaat)) {
         Object.assign(blok, kandidaat);
         this.markeer_("indeling", "indeling");
       }
@@ -1163,10 +1153,10 @@ export class InfoschermBeheerCard extends DacCard {
     const w = this.werk_[sectie];
 
     if (actie === "nieuw") {
-      const leeg = { personen: { naam: "", functie: "", aanwezig: false }, mededelingen: { tekst: "" }, nieuws: { titel: "", tekst: "" } }[sectie];
+      const leeg = { personen: { naam: "", functie: "", aanwezig: false }, mededelingen: { tekst: "" }, verjaardagen: { naam: "", datum: "", jaar_tonen: true } }[sectie];
       w.push(leeg);
       this.teken_(blok, true);
-      this.$(`.blok[data-blok="${blok}"] .item:last-of-type input[type="text"]`)?.focus();
+      this.$(`.blok[data-blok="${blok}"] .item:last-of-type input[type="text"], .blok[data-blok="${blok}"] .item:last-of-type textarea`)?.focus();
       return;
     }
     if (actie === "verwijder") {
@@ -1180,15 +1170,8 @@ export class InfoschermBeheerCard extends DacCard {
       this.markeer_(sectie, blok);
       return this.teken_(blok, true);
     }
-    if (actie === "omhoog" || actie === "omlaag") {
-      const j = actie === "omhoog" ? i - 1 : i + 1;
-      if (j < 0 || j >= w.length) return;
-      [w[i], w[j]] = [w[j], w[i]];
-      this.markeer_(sectie, blok);
-      return this.teken_(blok, true);
-    }
     if (actie === "foto" || actie === "logo") {
-      this.doel_ = actie === "logo" ? { sectie: "scherm", blok, veld: "logo" } : { sectie, blok, i, veld: sectie === "personen" ? "foto" : "afbeelding" };
+      this.doel_ = actie === "logo" ? { sectie: "scherm", blok, veld: "logo" } : { sectie, blok, i, veld: "foto" };
       const file = this.$(".file");
       file.value = "";
       file.click();
@@ -1199,7 +1182,7 @@ export class InfoschermBeheerCard extends DacCard {
         this.werk_.scherm.logo = null;
         this.markeer_("scherm", blok);
       } else {
-        w[i][sectie === "personen" ? "foto" : "afbeelding"] = null;
+        w[i].foto = null;
         this.markeer_(sectie, blok);
       }
       return this.teken_(blok, true);
@@ -1293,11 +1276,10 @@ export class InfoschermBeheerCard extends DacCard {
           .map(({ _aanwezig, aanwezig, ...p }) => (_aanwezig ? { ...p, aanwezig } : p));
       case "mededelingen":
         return (w ?? []).filter((m) => m.tekst?.trim());
-      case "nieuws":
-        return (w ?? []).filter((n) => n.titel?.trim());
+      case "verjaardagen":
+        return (w ?? []).filter((v) => v.naam?.trim() && v.datum);
       case "praktijk":
         return {
-          ...w,
           openingstijden: Object.fromEntries(DAGEN.map((d) => [d, (w.openingstijden?.[d] ?? []).filter((v) => v[0] && v[1])])),
           uitzonderingen: (w.uitzonderingen ?? []).filter((u) => u.datum).map((u) => ({ ...u, tijden: (u.tijden ?? []).filter((v) => v[0] && v[1]) })),
         };
@@ -1366,7 +1348,7 @@ export class InfoschermBeheerCard extends DacCard {
   koppel_(sectie, resultaat) {
     const w = this.werk_[sectie];
     if (!Array.isArray(w) || !Array.isArray(resultaat)) return;
-    const vol = { personen: (p) => p.naam?.trim(), mededelingen: (m) => m.tekst?.trim(), nieuws: (n) => n.titel?.trim() }[sectie];
+    const vol = { personen: (p) => p.naam?.trim(), mededelingen: (m) => m.tekst?.trim(), verjaardagen: (v) => v.naam?.trim() && v.datum }[sectie];
     if (!vol) return;
     let k = 0;
     w.forEach((item, i) => {
@@ -1379,7 +1361,6 @@ export class InfoschermBeheerCard extends DacCard {
         item.initialen = van.initialen;
         if (item._aanwezig) delete item._aanwezig;
       }
-      if (sectie === "nieuws" && van.gemaakt) item.gemaakt = van.gemaakt;
       const rij = this.$(`.blok[data-blok="${sectie}"] .item[data-i="${i}"]`);
       if (rij) rij.dataset.id = van.id;
     });
@@ -1390,9 +1371,7 @@ export class InfoschermBeheerCard extends DacCard {
     return (
       s.scherm?.logo === id ||
       (s.personen ?? []).some((p) => p.foto === id) ||
-      (s.nieuws ?? []).some((n) => n.afbeelding === id) ||
       (this.werk_.personen ?? []).some((p) => p.foto === id) ||
-      (this.werk_.nieuws ?? []).some((n) => n.afbeelding === id) ||
       this.werk_.scherm?.logo === id
     );
   }
@@ -1403,13 +1382,12 @@ export class InfoschermBeheerCard extends DacCard {
 const LABELS = {
   title: "Titel",
   show_personen: "Blok Medewerkers",
-  show_mededelingen: "Blok Mededeling",
-  show_nieuws: "Blok Nieuws",
-  show_praktijk: "Blok Praktijk",
+  show_mededelingen: "Blok Mededelingen",
+  show_verjaardagen: "Blok Verjaardagen",
+  show_praktijk: "Blok Openingstijden",
   show_indeling: "Blok Indeling",
   show_verlichting: "Blok Verlichting",
   show_instellingen: "Blok Instellingen en logo",
-  show_installatie: "Blok Installatie (beheerder)",
   open: "Staat open bij het laden",
 };
 
@@ -1438,10 +1416,7 @@ export class InfoschermBeheerEditor extends DacEditor {
 
   helper(item) {
     if (item.name === "show_instellingen") {
-      return "Logo, accent, uiterlijk, nieuwsbronnen en de middernachtregel. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.";
-    }
-    if (item.name === "show_installatie") {
-      return "Weer, agenda's, lampen en kioskaccounts. Alleen een beheerder ziet dit blok, ook als het aanstaat.";
+      return "Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.";
     }
     return undefined;
   }
@@ -1450,7 +1425,7 @@ export class InfoschermBeheerEditor extends DacEditor {
 registerCard(TAG, InfoschermBeheerCard, {
   name: "DomotiApp Infoscherm Beheer",
   description:
-    "Voor de receptie: medewerkers, mededeling van de dag, nieuws, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm.",
+    "Voor de receptie: medewerkers, mededelingen, verjaardagen, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm.",
   preview: false,
 });
 registerEditor(`${TAG}-editor`, InfoschermBeheerEditor);

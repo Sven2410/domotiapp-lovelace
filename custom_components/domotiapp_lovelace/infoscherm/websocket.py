@@ -7,11 +7,12 @@
 | `infoscherm/aanwezig` | iedere ingelogde gebruiker, ook kiosk |
 | `infoscherm/personen/save` | iedereen behalve kiosk |
 | `infoscherm/mededelingen/save` | idem |
-| `infoscherm/nieuws/save` | idem |
-| `infoscherm/praktijk/save` | idem |
+| `infoscherm/verjaardagen/save` | idem |
+| `infoscherm/praktijk/save` | idem (alleen nog de openingstijden) |
 | `infoscherm/scherm/save` | idem (logo, accent, uiterlijk, terugvaltijd, ...) |
 | `infoscherm/indeling/save` | idem (de blokken op het welkomscherm) |
 | `infoscherm/installatie/save` | idem; de ENTITEITEN erin alleen als admin, de lampnamen mag iedereen |
+| `infoscherm/installatie/sync` | alleen admin: de infoschermkaart stuurt zijn kaartconfig (weer, lampen, agenda's, kioskaccounts) |
 | `infoscherm/instellingen/save` | idem; `kiosk_gebruikers` erin alleen als admin |
 | `infoscherm/bestand/verwijder` | idem |
 | `infoscherm/feeds/ververs` | idem |
@@ -64,11 +65,12 @@ def async_register(hass: HomeAssistant) -> None:
         ws_aanwezig,
         ws_personen_save,
         ws_mededelingen_save,
-        ws_nieuws_save,
+        ws_verjaardagen_save,
         ws_praktijk_save,
         ws_scherm_save,
         ws_indeling_save,
         ws_installatie_save,
+        ws_installatie_sync,
         ws_instellingen_save,
         ws_bestand_verwijder,
         ws_feeds_ververs,
@@ -252,11 +254,14 @@ async def ws_mededelingen_save(hass: HomeAssistant, connection, msg: dict[str, A
 
 
 @websocket_api.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/infoscherm/nieuws/save", vol.Required("nieuws"): list}
+    {
+        vol.Required("type"): f"{DOMAIN}/infoscherm/verjaardagen/save",
+        vol.Required("verjaardagen"): list,
+    }
 )
 @websocket_api.async_response
-async def ws_nieuws_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
-    await _zet(hass, connection, msg, "nieuws", lambda s, v: s.async_zet_nieuws(v))
+async def ws_verjaardagen_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    await _zet(hass, connection, msg, "verjaardagen", lambda s, v: s.async_zet_verjaardagen(v))
 
 
 @websocket_api.websocket_command(
@@ -298,6 +303,31 @@ async def ws_installatie_save(hass: HomeAssistant, connection, msg: dict[str, An
         "installatie",
         lambda s, v: s.async_zet_installatie(v, mag_entiteiten_wijzigen=is_admin),
     )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/installatie/sync", vol.Required("installatie"): dict}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_installatie_sync(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """De infoschermkaart stuurt wat er in zijn kaartconfig staat (ronde 3).
+
+    Alleen een admin, want alleen een admin kan die config gemaakt hebben; het
+    kioskaccount op de iPad ziet dezelfde kaart en stuurt niets. Een stand
+    gaat alleen rond als er echt iets veranderd is, anders zou elke
+    paginalading van een beheerder alle schermen laten hertekenen."""
+    store = _store(hass, connection, msg)
+    if store is None:
+        return
+    try:
+        resultaat = await store.async_zet_installatie_van_kaart(msg["installatie"])
+    except InfoFout as fout:
+        connection.send_error(msg["id"], "invalid_format", str(fout))
+        return
+    if resultaat["gewijzigd"]:
+        async_meld_stand(hass)
+    connection.send_result(msg["id"], resultaat)
 
 
 @websocket_api.websocket_command(
