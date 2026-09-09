@@ -1,8 +1,9 @@
 # Voorstel: DomotiApp Infoscherm
 
-*Geschreven op 9 september 2026, op verzoek van de eigenaar. Dit is een
-VOORSTEL en nog geen SPEC: pas als hij het goedkeurt gaat hoofdstuk 20
-hieronder de `SPEC.md` in. Beslispunten staan aan het eind. Het schermontwerp staat op
+*Geschreven op 9 september 2026, op verzoek van de eigenaar. **Later die dag
+goedgekeurd en gebouwd als 0.36.0**; hoofdstuk 20 staat sindsdien in `SPEC.md`
+met zijn antwoorden op de beslispunten erin verwerkt, en de meting staat in
+`RAPPORT.md`. De tekst hieronder is het voorstel zoals het was. Beslispunten staan aan het eind. Het schermontwerp staat op
 https://claude.ai/code/artifact/03ee2c3c-3224-4182-8e46-ca963efb6a8c (iPad-pagina's
 Welkom, Aanwezig en Verlichting, en het beheerscherm van de receptie).*
 

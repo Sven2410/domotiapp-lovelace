@@ -43,6 +43,7 @@ versie 2026.8.1), pad vanaf `/usr/src/homeassistant/`.
 17. [Frontend-risico's en bouwregels](#17-frontend-risicos-en-bouwregels)
 18. [Foutgedrag](#18-foutgedrag)
 19. [Wat NIET in v1 zit](#19-wat-niet-in-v1-zit)
+20. [Infoscherm](#20-infoscherm)
 
 ---
 
@@ -2467,3 +2468,99 @@ Dit wordt geaccepteerd, zonder lock en zonder waarschuwing. Het gaat om één
 huishouden; het scenario vergt dat twee mensen binnen dezelfde minuut dezelfde
 kamer bewerken. De lampen komen er niet kapot van — er staat hooguit een
 verkeerde lichtstand, die met één druk op een scene-knop verholpen is.
+
+---
+
+## 20. Infoscherm
+
+*Toegevoegd op 9 september 2026, na goedkeuring van het voorstel in
+`docs/infoscherm/VOORSTEL.md` door de eigenaar ("Maak hem echt zo uitgebreid
+mogelijk"). De beslispunten uit dat voorstel zijn verwerkt: geen code op de
+iPad (kiosk-mode haalt kop en zijbalk weg), verlichting als optie die de
+receptie of de installateur bepaalt, nieuws van buiten via RSS, foto's én
+initialen, en geen DomotiApp-merk op het scherm zelf.*
+
+### 20.1 Doel
+
+Een beeldvullend informatiescherm voor een wachtruimte, op een tablet in
+kioskmodus, plus een beheerkaart waarmee een gewone gebruiker de inhoud
+onderhoudt zonder Home Assistant te zien. Twee kaarten en een serverkant in
+dezelfde integratie (`infoscherm/`).
+
+### 20.2 Uitzondering op de rasterregel
+
+`domotiapp-infoscherm-card` is de enige kaart die niet op rasterrijen van 56px
+staat. Hij vult zijn view (`panel`) en wordt nooit naast een andere kaart
+geplaatst; zijn maat is het scherm minus wat er boven de kaart staat, en de
+inhoud schaalt mee met de breedte. `domotiapp-infoscherm-beheer-card` is een
+gewone groeikaart en volgt de rasterregel.
+
+### 20.3 Uitzondering op de kleurregel en het merk
+
+De infoschermkaart heeft een instelbaar accent (uit het beheer, of uit de
+config van de installateur), omdat de identiteit hier die van de klant is. De
+toestandsregel blijft: alleen de chip van een medewerker of een lamp draagt de
+toestand, nooit het hele vlak. Op het scherm zelf staat geen DomotiApp-merk; op
+de beheerkaart wél een kleine kopregel.
+
+### 20.4 Opslag en rechten
+
+Inhoud staat in `Store` `domotiapp_lovelace.infoscherm`, niet in de
+kaartconfig: praktijk, personen, mededelingen, nieuws, instellingen en de
+lijst van bestanden. Rechten:
+
+| handeling | wie |
+|---|---|
+| lezen, abonneren, aanwezigheid omzetten, lampen schakelen | iedere ingelogde gebruiker |
+| personen, nieuws, mededelingen, praktijk, logo, feeds en instellingen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
+| kioskgebruikers aanwijzen, gebruikerslijst opvragen | admin |
+
+Een kioskgebruiker die een beheercommando stuurt krijgt `unauthorized`; de
+beheerkaart toont dan een uitleg in plaats van de blokken. De
+aanwezigheid die op het scherm is gezet wordt door het opslaan van de
+personenlijst in het beheer NIET overschreven, tenzij het beheer `aanwezig`
+uitdrukkelijk meestuurt.
+
+### 20.5 Bestanden
+
+Logo, foto's en nieuwsafbeeldingen gaan via een eigen HTTP-route
+(`/api/domotiapp_lovelace/infoscherm/upload`, `requires_auth`, niet voor
+kioskgebruikers) naar `<config>/domotiapp_lovelace/infoscherm/` en worden met
+`requires_auth` uitgeserveerd op `.../bestand/<id>`. De kaart haalt ze met zijn
+eigen token op en toont ze als `blob:`-URL, zodat er geen handtekening met een
+looptijd nodig is op een tablet die weken aanstaat. Toegestaan: PNG, JPG, GIF,
+WebP en SVG, ten hoogste 4 MB; de soort komt uit de inhoud en niet uit de
+naam; SVG wordt met een `sandbox`-CSP uitgeserveerd. Bestandsnamen komen uit
+een ULID langs een witte lijst, zoals bij de snapshots.
+
+### 20.6 Kioskmodus
+
+Kop en zijbalk verbergen doet de klant met kiosk-mode
+(github.com/maykar/kiosk-mode) en Begeleide Toegang op iOS; de kaart doet dat
+niet zelf. Wel meet de kaart wat er boven hem staat en trekt dat van zijn
+hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
+
+### 20.7 Gedrag van het scherm
+
+- Na een instelbare tijd zonder aanraking (standaard 60 s) terug naar Welkom.
+- Buiten de openingstijden uit het beheer een nachtstand: klok, datum en
+  "Gesloten · morgen open om 08:00"; een tik haalt het scherm even terug.
+  Uitzonderingen (feestdagen, studiedagen) gaan vóór de weekdag.
+- Om middernacht iedereen op afwezig, instelbaar in het beheer.
+- Nieuws van buiten wordt elk kwartier aan de serverkant opgehaald en staat
+  ná het nieuws van het pand; vastgezette berichten van het pand bovenaan.
+- Verlichting: de installateur kiest per scherm `altijd`, `nooit` of `beheer`;
+  bij `beheer` beslist de receptie met één schakelaar.
+
+### 20.8 Foutgedrag
+
+- Commando's die nog niet bestaan na een herstart worden opnieuw geprobeerd
+  (`nogNietGereed`, `Herkansing`), en na een herverbinding wordt de stand
+  opnieuw gehaald en het abonnement opnieuw genomen.
+- Valt de verbinding weg, dan blijft het scherm zijn laatste inhoud tonen met
+  een klein merkje; het gaat niet op zwart.
+- Een onleesbaar onderdeel in de opslag blokkeert de rest niet: wat leesbaar
+  is wordt getoond, de rest gelogd en overgeslagen (als in SPEC 18.2).
+- Een feed die faalt laat de andere met rust; de fout staat bij de bron in het
+  beheer.
+

@@ -32,7 +32,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import loader, migratie, resource, websocket
-from . import bewaking
+from . import bewaking, infoscherm
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -121,6 +121,10 @@ async def _async_zet_commandos_klaar(hass: HomeAssistant, data: dict) -> None:
     # verderop om dezelfde reden als de rest: een camerakaart die net na een
     # herstart verbindt, hoort geen `Unknown command.` te krijgen.
     await bewaking.async_zet_op(hass)
+
+    # Het infoscherm: eigen opslag, een feedlezer en een middernachtklok.
+    # Zelfde plek, zelfde reden.
+    await infoscherm.async_zet_op(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -298,6 +302,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # bewegingsmelder die blijft staan, schrijft straks beelden weg naar een
         # opslag die niemand meer beheert.
         bewaking.async_stop(hass)
+        infoscherm.async_stop(hass)
 
         if data.pop(ALARM_DATA_STORE, None) is not None:
             _LOGGER.debug("Wekkeropslag losgelaten")

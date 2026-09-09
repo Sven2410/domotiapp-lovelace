@@ -1005,6 +1005,45 @@ die daar niet staan:
    `parseDate` in `ha.js` zoekt de datum daarom ergens in de tekst en laat
    `new Date()` nooit meer een tekst met een streepjesdatum zien.
 
+41. **Noem een parameter van een WS-commando nooit `id`.** Elk bericht van
+   Home Assistant draagt zelf een `id` (het berichtnummer), en `msg["id"]` is
+   dan dat getal en niet jouw waarde. `bestand/verwijder` gaf zo
+   `KeyError: 'result'` in de test, zonder een woord over de oorzaak. Gevonden
+   op 9 september 2026; de parameters heten nu `persoon` en `bestand`.
+
+42. **`wire()` draait terwijl `isConnected` nog false is, dus zeg een
+   abonnement daar niet op af.** Home Assistant zet `hass` vóórdat het element
+   in de view hangt (valkuil 25), en `set hass` bouwt de kaart meteen. Een
+   `if (!this.isConnected) opzeggen()` na het `await` van
+   `subscribeMessage` zegt het abonnement dan meteen weer op, en de kaart
+   krijgt daarna nooit meer een wijziging -- terwijl zijn eigen aanroepen
+   gewoon werken, zodat het eruitziet alsof alles in orde is. Gemeten op
+   9 september 2026 op het infoscherm: de tik op een naam werkte, een
+   wijziging uit het beheer kwam nooit. Zet een `dood`-vlag via `teardown_`
+   en toets die (zie `abonnement_` in `infoscherm-card.js`). De weerkaart
+   heeft de oude toets nog.
+
+43. **Een `<button>` is in Chrome geen echte flexcontainer.** Kinderen worden
+   gecentreerd en krijgen geen hoogte; met `-webkit-line-clamp` erin schoof de
+   samenvatting over de titel heen. Een tegel die klikbaar moet zijn is een
+   `<div role="button" tabindex="0">`, met een eigen `:focus-visible`.
+
+44. **`display: flex` op een klasse wint van `[hidden]`.** De browser zet
+   `[hidden]` op `display: none` met een lage voorrang; een `.vak { display:
+   flex }` erbovenop laat het vak gewoon staan. Elke kaart die `hidden` op een
+   flex- of grid-element zet heeft `[hidden] { display: none !important; }`
+   nodig in zijn eigen CSS.
+
+45. **`StreamReader.read(n)` van aiohttp geeft wat er TOEVALLIG binnen is**,
+   niet n bytes en niet de hele body. De NOS-feed kwam zo half aan, met
+   "unclosed CDATA section" als fout. Lees in stukken (`iter_chunked`) tot het
+   einde, met een teller voor de bovengrens.
+
+46. **Een mediaquery ziet het venster, niet de kaart.** Een kaart in een kolom
+   van 500 px in een venster van 1920 krijgt de brede opmaak. Gebruik
+   `container-type: inline-size` op `:host` en `@container` in plaats van
+   `@media` voor alles wat van de kaartbreedte afhangt.
+
 ---
 
 ## Projectstand
@@ -1015,7 +1054,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **eenentwintig kaarttypes**:
+met **drieëntwintig kaarttypes**:
 
 | | |
 |---|---|
@@ -1024,6 +1063,7 @@ met **eenentwintig kaarttypes**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
+| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus) en **infoscherm-beheer** (voor de receptie) |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de
@@ -1032,7 +1072,9 @@ met verwijderen, en meldingen naar de telefoon.
 
 Serverkant: een eigen `Store` met validatie en foutgedrag, WebSocket-commando's
 voor de scenes en voor Music Assistant, `labels.py`, `ma.py`, `migratie.py` en een
-options flow.
+options flow. Sinds 0.36.0 (9 september 2026) ook `infoscherm/`: opslag,
+commando's, upload en een feedlezer voor het wachtkamerscherm; zie SPEC 20 en
+`docs/infoscherm/`.
 
 **Laatste release: 0.17.0** (26 augustus 2026) — vier meldingen van de eigenaar:
 de scenes die het op één telefoon niet deden (een wedloop met het opstarten, zie
