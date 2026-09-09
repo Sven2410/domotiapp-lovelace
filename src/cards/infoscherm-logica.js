@@ -1,11 +1,13 @@
 /**
  * Het rekenwerk van het infoscherm, zonder DOM: openingstijden, wat er nú
- * geldig is, de volgorde van het nieuws, de klok.
+ * geldig is, de volgorde van het nieuws, de klok, en sinds ronde 2 het raster
+ * van het welkomscherm.
  *
  * Los van de kaart zodat het in een gewone unittest kan (CLAUDE.md: geen
  * jsdom). De serverkant heeft van `openingVandaag` een tweeling in
  * `infoscherm/store.py` (`vandaag_open`); dit is de kant die het scherm
- * tekent, die de kant die de nacht bewaakt.
+ * tekent, die de kant die de nacht bewaakt. Zo ook `overlapt` en
+ * `standaardIndeling`: de server weigert wat hier al niet mag.
  */
 
 export const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
@@ -41,6 +43,15 @@ export function datumKort(iso) {
   if (!iso) return "";
   const [, m, dg] = iso.split("-").map(Number);
   return `${dg} ${MAANDEN[m - 1]}`;
+}
+
+/** "ma", "di", ... voor een dagvoorspelling; "vandaag" en "morgen" met naam. */
+export function dagKort(d, nu) {
+  const iso = isoDatum(d);
+  if (iso === isoDatum(nu)) return "vandaag";
+  const morgen = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1);
+  if (iso === isoDatum(morgen)) return "morgen";
+  return DAGNAMEN[dagSleutel(d)];
 }
 
 /**
@@ -149,35 +160,41 @@ export const heeftOpeningstijden = (praktijk) =>
   DAGEN.some((dag) => (praktijk?.openingstijden?.[dag] ?? []).length > 0);
 
 /**
- * Welke pagina's het scherm heeft, in volgorde.
- *
- * Verlichting hangt van drie dingen af: staat er een lamp in de config, wat
- * de installateur koos (`altijd`, `nooit`, `beheer`), en bij `beheer` wat de
- * receptie in het beheer aanzette. Zo kan een tablet in een kantoor de
- * lampen altijd tonen en die in de wachtkamer alleen als de receptie het wil.
+ * Staat de verlichting op het scherm? Twee dingen: de installateur heeft
+ * lampen gekozen, en de receptie heeft het niet uitgezet. De keuze
+ * "altijd/nooit/beheer" uit de kaartconfig is er sinds ronde 2 niet meer --
+ * er IS geen kaartconfig meer.
  */
-export function paginas(config, stand) {
-  const uit = ["welkom"];
-  if (config.show_aanwezig !== false && (stand?.personen?.length ?? 0) > 0) uit.push("aanwezig");
-  if (config.show_nieuws !== false) uit.push("nieuws");
-  if (verlichtingZichtbaar(config, stand)) uit.push("verlichting");
-  if (config.show_agenda !== false && (config.calendars?.length ?? 0) > 0) uit.push("agenda");
-  return uit;
-}
-
-export function verlichtingZichtbaar(config, stand) {
-  if (!(config.lights?.length > 0)) return false;
-  const keuze = config.verlichting ?? "beheer";
-  if (keuze === "altijd") return true;
-  if (keuze === "nooit") return false;
+export function verlichtingZichtbaar(stand) {
+  if (!((stand?.installatie?.verlichting?.length ?? 0) > 0)) return false;
   return stand?.instellingen?.verlichting_tonen !== false;
 }
 
-/** 'Marieke de Vries' -> 'MV'. Tweeling van `initialen` in store.py. */
+/**
+ * Welke pagina's er achter de koppen zitten. Welkom is het scherm zelf; de
+ * rest is er alleen als er iets te tonen valt.
+ */
+export function paginas(stand, feeds) {
+  const uit = ["welkom"];
+  if ((stand?.personen?.length ?? 0) > 0) uit.push("aanwezig");
+  if ((stand?.nieuws?.length ?? 0) > 0 || (feeds?.length ?? 0) > 0) uit.push("nieuws");
+  if (stand?.installatie?.weer) uit.push("weer");
+  if (verlichtingZichtbaar(stand)) uit.push("verlichting");
+  if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
+  return uit;
+}
+
+/**
+ * 'Sven Kool' -> 'SK', 'Dennis van den dam' -> 'DD'.
+ *
+ * De eerste letter van het EERSTE woord en de eerste letter van het LAATSTE
+ * woord, hoofdletter of niet. Tot 0.36.0 telden alleen woorden met een
+ * hoofdletter mee, en dan werd een tussenvoegsel in kleine letters
+ * overgeslagen: 'van den dam' viel weg en er stond 'DE'. Gemeld op
+ * 10 september 2026. Tweeling van `initialen` in store.py.
+ */
 export function initialen(naam) {
-  const woorden = String(naam ?? "").trim().split(/\s+/).filter(Boolean);
-  const hoofd = woorden.filter((w) => w[0] === w[0].toUpperCase() && /\p{L}/u.test(w[0]));
-  const delen = hoofd.length ? hoofd : woorden;
+  const delen = String(naam ?? "").trim().split(/\s+/).filter(Boolean);
   if (!delen.length) return "?";
   if (delen.length === 1) return delen[0].slice(0, 2).toUpperCase();
   return (delen[0][0] + delen[delen.length - 1][0]).toUpperCase();
@@ -192,6 +209,27 @@ export function groepeerOpFunctie(personen) {
     groepen.get(sleutel).push(p);
   }
   return [...groepen].map(([functie, leden]) => ({ functie, personen: leden }));
+}
+
+/**
+ * Aanwezig en afwezig uit elkaar, elk in de volgorde van het beheer.
+ *
+ * Gemeld op 10 september 2026: *"aanwezig en afwezig staan door elkaar heen"*.
+ * De volgorde uit het beheer blijft binnen elke groep staan; alleen de groepen
+ * komen los van elkaar.
+ */
+export function splitsAanwezig(personen) {
+  const lijst = personen ?? [];
+  return {
+    aanwezig: lijst.filter((p) => p.aanwezig),
+    afwezig: lijst.filter((p) => !p.aanwezig),
+  };
+}
+
+/** Aanwezigen eerst, dan de rest, allebei in de volgorde van het beheer. */
+export function aanwezigEerst(personen) {
+  const { aanwezig, afwezig } = splitsAanwezig(personen);
+  return [...aanwezig, ...afwezig];
 }
 
 /** "zojuist", "12 min geleden", "vandaag 09:30", "gisteren", "8 sep". */
@@ -225,4 +263,103 @@ export function geslotenRegel(praktijk, nu) {
   const volgende = volgendeOpening(praktijk, nu);
   if (volgende) delen.push(`${volgende.dag} open om ${volgende.tijd}`);
   return delen.join(" · ");
+}
+
+/* ------------------------------------------------------------ het raster */
+
+/**
+ * Het welkomscherm is een raster van zes bij zes. De receptie sleept de
+ * blokken in het beheer; het scherm tekent ze op precies die plek. Tweeling
+ * van `KOLOMMEN`, `RIJEN` en `standaard_indeling` in store.py.
+ */
+export const KOLOMMEN = 6;
+export const RIJEN = 6;
+
+/**
+ * Wat een blok is: de naam op de kop, het icoon, of er een pagina achter zit
+ * (dan is de kop een knop), of het een aantal heeft, en de maat waarmee het
+ * wordt toegevoegd.
+ */
+export const BLOK_INFO = {
+  welkom: { naam: "Welkom", icoon: "house", pagina: null, aantal: false, maat: [6, 1] },
+  weer: { naam: "Weer", icoon: "sun", pagina: "weer", aantal: false, maat: [2, 2] },
+  mededeling: { naam: "Mededeling", icoon: "bell", pagina: null, aantal: false, maat: [2, 1] },
+  openingstijden: { naam: "Openingstijden", icoon: "clock", pagina: null, aantal: false, maat: [2, 3] },
+  aanwezig: { naam: "Aanwezig", icoon: "people", pagina: "aanwezig", aantal: true, maat: [2, 3] },
+  nieuws: { naam: "Nieuws", icoon: "news", pagina: "nieuws", aantal: true, maat: [2, 4] },
+  verlichting: { naam: "Verlichting", icoon: "bulb", pagina: "verlichting", aantal: true, maat: [2, 1] },
+  agenda: { naam: "Agenda", icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
+};
+
+export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
+
+export function standaardIndeling() {
+  const blokken = [
+    ["welkom", 0, 0, 6, 1, 0],
+    ["weer", 0, 1, 2, 2, 0],
+    ["aanwezig", 2, 1, 2, 3, 4],
+    ["nieuws", 4, 1, 2, 5, 3],
+    ["openingstijden", 0, 3, 2, 3, 0],
+    ["mededeling", 2, 4, 2, 1, 0],
+    ["verlichting", 2, 5, 2, 1, 4],
+  ];
+  return {
+    blokken: blokken.map(([soort, x, y, w, h, aantal]) => ({ id: `std-${soort}`, soort, x, y, w, h, aantal })),
+  };
+}
+
+export const overlapt = (a, b) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+export const inRaster = (b) =>
+  b.x >= 0 && b.y >= 0 && b.w >= 1 && b.h >= 1 && b.x + b.w <= KOLOMMEN && b.y + b.h <= RIJEN;
+
+/** Mag dit blok hier staan? Binnen het raster, en zonder een ander blok te raken. */
+export function pastVrij(blokken, kandidaat) {
+  if (!inRaster(kandidaat)) return false;
+  return !(blokken ?? []).some((b) => b.id !== kandidaat.id && overlapt(b, kandidaat));
+}
+
+/** De eerste vrije plek voor een blok van w bij h, van linksboven af. */
+export function vrijePlek(blokken, w, h) {
+  for (let y = 0; y + h <= RIJEN; y += 1) {
+    for (let x = 0; x + w <= KOLOMMEN; x += 1) {
+      if (pastVrij(blokken, { id: "", x, y, w, h })) return { x, y };
+    }
+  }
+  return null;
+}
+
+/**
+ * Is er voor dit blok iets te tonen? Een blok zonder inhoud staat niet op
+ * het scherm -- een weervak zonder weerentiteit is een leeg vak, en een leeg
+ * vak in een wachtkamer leest als kapot. In het beheer staat het blok er wél,
+ * met de reden erbij, zodat de receptie weet wat er ontbreekt.
+ *
+ * @returns {string|null} null als het zichtbaar is, anders waarom niet
+ */
+export function blokOntbreekt(soort, stand, feeds, vandaag) {
+  const s = stand ?? {};
+  switch (soort) {
+    case "welkom":
+      return null;
+    case "weer":
+      return s.installatie?.weer ? null : "Geen weerentiteit gekozen (Installatie)";
+    case "mededeling":
+      return actieveMededelingen(s.mededelingen, vandaag).length ? null : "Geen mededeling die nu geldt";
+    case "openingstijden":
+      return heeftOpeningstijden(s.praktijk) ? null : "Geen openingstijden ingevuld";
+    case "aanwezig":
+      return (s.personen?.length ?? 0) > 0 ? null : "Nog geen medewerkers";
+    case "nieuws":
+      return null;
+    case "verlichting":
+      if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (Installatie)";
+      return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
+    case "agenda":
+      return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (Installatie)";
+    default:
+      return "Onbekend blok";
+  }
+  // `feeds` doet hier niets: een nieuwsblok zonder nieuws zegt dat zelf.
 }

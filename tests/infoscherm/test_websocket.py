@@ -18,6 +18,9 @@ async def test_get_geeft_een_lege_stand_met_rechten(
     r = antwoord["result"]
     assert r["stand"]["personen"] == []
     assert r["stand"]["praktijk"]["openingstijden"]["ma"] == []
+    assert r["stand"]["scherm"]["terug_na"] == 60
+    assert r["stand"]["installatie"]["weer"] is None
+    assert [b["soort"] for b in r["stand"]["indeling"]["blokken"]][0] == "welkom"
     assert r["feeds"] == []
     assert r["mag_beheren"] is True
     assert r["is_admin"] is True
@@ -170,3 +173,69 @@ async def test_middernacht_zet_iedereen_op_afwezig_tenzij_uitgezet(
     await store().async_zet_instellingen({"reset_middernacht": False}, mag_kiosk_wijzigen=True)
     assert await async_middernacht(hass) == 0
     assert store().snapshot()["personen"][0]["aanwezig"] is True
+
+
+# ------------------------------------------------------------- ronde 2 (NIEUW GEDRAG)
+
+
+async def test_de_receptie_bewaart_scherm_en_indeling_maar_geen_entiteiten(
+    hass: HomeAssistant,
+    infoscherm_op,
+    store,
+    hass_ws_client,
+    hass_read_only_access_token,
+) -> None:
+    """Alles wat de receptie in het beheer sleept en instelt gaat gewoon door;
+    de entiteiten blijven van de installateur."""
+    admin = await hass_ws_client(hass)
+    r = await stuur(
+        admin,
+        "installatie/save",
+        installatie={"weer": "weather.thuis", "verlichting": [{"entity": "light.a", "naam": "A"}]},
+    )
+    assert r["success"] is True
+    assert r["result"]["installatie"]["weer"] == "weather.thuis"
+
+    receptie = await hass_ws_client(hass, hass_read_only_access_token)
+    r = await stuur(receptie, "scherm/save", scherm={"uiterlijk": "licht", "terug_na": 30})
+    assert r["success"] is True
+    assert r["result"]["scherm"]["uiterlijk"] == "licht"
+
+    r = await stuur(
+        receptie,
+        "indeling/save",
+        indeling={"blokken": [{"soort": "welkom", "x": 0, "y": 0, "w": 6, "h": 1, "aantal": 0}]},
+    )
+    assert r["success"] is True
+    assert len(r["result"]["indeling"]["blokken"]) == 1
+
+    r = await stuur(
+        receptie,
+        "installatie/save",
+        installatie={
+            "weer": None,
+            "verlichting": [{"entity": "light.a", "naam": "Wachtkamer"}, {"entity": "light.z", "naam": "Z"}],
+        },
+    )
+    assert r["success"] is True
+    assert r["result"]["installatie"]["weer"] == "weather.thuis"
+    assert r["result"]["installatie"]["verlichting"] == [{"entity": "light.a", "naam": "Wachtkamer"}]
+
+
+async def test_een_overlappende_indeling_wordt_geweigerd(
+    hass: HomeAssistant, infoscherm_op, hass_ws_client
+) -> None:
+    client = await hass_ws_client(hass)
+    r = await stuur(
+        client,
+        "indeling/save",
+        indeling={
+            "blokken": [
+                {"soort": "weer", "x": 0, "y": 0, "w": 2, "h": 2},
+                {"soort": "nieuws", "x": 1, "y": 0, "w": 2, "h": 2},
+            ]
+        },
+    )
+    assert r["success"] is False
+    assert r["error"]["code"] == "invalid_format"
+    assert "overlappen" in r["error"]["message"]

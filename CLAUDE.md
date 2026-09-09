@@ -1044,6 +1044,30 @@ die daar niet staan:
    `container-type: inline-size` op `:host` en `@container` in plaats van
    `@media` voor alles wat van de kaartbreedte afhangt.
 
+47. **Een schermafdruk van de browsertool heeft niet altijd dezelfde schaal.**
+   Op 10 september 2026 kwam dezelfde pagina in één sessie terug als 1568
+   breed voor 1920 CSS-pixels (factor 0,817) én als een uitsnede op factor
+   1,0 (de zijbalk van 256 px stond er 256 px breed op). Reken de factor dus
+   niet uit de breedte van de afdruk, maar uit een element waarvan je de
+   CSS-maat kent -- de zijbalk van Home Assistant is 256 px -- of gebruik een
+   klikpunt dat je uit `getBoundingClientRect()` haalt en controleer met een
+   capture-luisteraar waar de klik landde (valkuil 14).
+
+48. **Een MCP-tabblad sluiten kan de hele tabgroep laten verdwijnen.** Na
+   `tabs_close_mcp` op het oude tabblad meldde `tabs_context_mcp` "No tab
+   group exists", ook al stond het nieuwe tabblad nog open; daarna waren alle
+   tab-ID's ongeldig en moest de groep opnieuw aangemaakt worden (in een nieuw
+   venster). Sluit een oud tabblad dus pas aan het EIND, en reken erop dat de
+   ID's daarna niet meer kloppen.
+
+49. **Een herstart van de container is nodig voor Python-wijzigingen; de
+   config entry herladen is niet genoeg.** Home Assistant houdt de
+   geïmporteerde modules vast; na een `reload` van de entry draait
+   `store.py` van vóór de wijziging, terwijl de bundel (die van schijf wordt
+   gelezen) wél nieuw is. Op 10 september 2026 gaf dat een stand zonder
+   `indeling` bij een kaart die erom vroeg. Bundel gewijzigd: entry herladen.
+   Python gewijzigd: `docker restart ha-lovelace`, en daarna een vers tabblad.
+
 ---
 
 ## Projectstand
@@ -1063,7 +1087,7 @@ met **drieëntwintig kaarttypes**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
-| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus) en **infoscherm-beheer** (voor de receptie) |
+| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; sinds 0.37.0 zonder kaartconfig en als één scherm met een sleepbare indeling) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de

@@ -50,6 +50,25 @@ def test_rss_wordt_gelezen_en_nieuwste_eerst_gezet() -> None:
     assert all(i["id"].startswith("feed-") for i in items)
 
 
+RSS_IMG_IN_HTML = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Blog</title>
+<item>
+  <title>Zonder enclosure</title>
+  <link>https://blog.example/1</link>
+  <description><![CDATA[<p><img src="https://blog.example/foto.jpg" alt=""/>Tekst.</p>]]></description>
+</item>
+</channel></rss>"""
+
+
+def test_een_afbeelding_in_de_beschrijving_telt_ook() -> None:
+    """NIEUW GEDRAG (10 september 2026): feeds zonder enclosure zetten hun
+    foto als <img> in de HTML van de beschrijving. Die viel weg, en de
+    eigenaar meldde een nieuws zonder cover."""
+    items = parse_feed(RSS_IMG_IN_HTML, "Blog")
+    assert items[0]["afbeelding"] == "https://blog.example/foto.jpg"
+    assert items[0]["tekst"] == "Tekst."
+
+
 def test_atom_wordt_gelezen() -> None:
     items = parse_feed(ATOM, "Blog")
     assert len(items) == 1

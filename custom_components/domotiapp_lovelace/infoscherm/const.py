@@ -67,6 +67,10 @@ MAX_WELKOM: Final = 10
 MAX_FEEDS: Final = 10
 MAX_UITZONDERINGEN: Final = 100
 
+MAX_LAMPEN: Final = 40
+MAX_AGENDAS: Final = 10
+MAX_BLOKKEN: Final = 12
+
 MAX_KORT: Final = 120
 MAX_MIDDEL: Final = 500
 MAX_LANG: Final = 5000
@@ -79,6 +83,22 @@ FEED_TIMEOUT: Final = 15
 FEED_MAX_ITEMS: Final = 15
 
 DAGEN: Final = ("ma", "di", "wo", "do", "vr", "za", "zo")
+
+# Het welkomscherm is een raster van zes bij zes. De receptie sleept de
+# blokken in het beheer; het scherm tekent ze op precies die plek.
+KOLOMMEN: Final = 6
+RIJEN: Final = 6
+BLOK_SOORTEN: Final = (
+    "welkom",
+    "weer",
+    "mededeling",
+    "openingstijden",
+    "aanwezig",
+    "nieuws",
+    "verlichting",
+    "agenda",
+)
+AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 
 EVENT_STAND: Final = "stand"
 EVENT_FEEDS: Final = "feeds"
