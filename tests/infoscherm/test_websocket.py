@@ -52,17 +52,27 @@ async def test_een_abonnee_krijgt_elke_wijziging(
     inschrijving = await client.receive_json()
     assert inschrijving["success"] is True
 
-    await stuur(client, "mededelingen/save", mededelingen=[{"tekst": "Vrijdag gesloten"}])
-    # Het resultaat van save, het stand-event, en mogelijk ook een feeds-event
-    # van de feedlezer die bij het opstarten zijn (lege) lijst meldt: de
-    # volgorde is niet gegarandeerd, dus we zoeken het stand-event.
+    # Bewust niet via `stuur`: die leest één antwoord terug, en het eerste
+    # bericht na een save is het stand-EVENT (dat gaat vóór het resultaat de
+    # deur uit). `stuur` at dat event op, en de test zocht daarna vergeefs.
+    await client.send_json_auto_id(
+        {
+            "type": "domotiapp_lovelace/infoscherm/mededelingen/save",
+            "mededelingen": [{"tekst": "Vrijdag gesloten"}],
+        }
+    )
+    # Het stand-event, het resultaat van save, en mogelijk een feeds-event van
+    # de feedlezer die bij het opstarten zijn (lege) lijst meldt: de volgorde
+    # is niet gegarandeerd, dus we zoeken het stand-event.
     stand = None
+    gezien = []
     for _ in range(4):
         bericht = await client.receive_json()
+        gezien.append((bericht.get("type"), bericht.get("event", {}).get("soort"), bericht.get("success")))
         if bericht.get("type") == "event" and bericht["event"]["soort"] == "stand":
             stand = bericht["event"]["stand"]
             break
-    assert stand is not None, "geen stand-event ontvangen"
+    assert stand is not None, f"geen stand-event ontvangen; gezien: {gezien}"
     assert stand["mededelingen"][0]["tekst"] == "Vrijdag gesloten"
 
 
