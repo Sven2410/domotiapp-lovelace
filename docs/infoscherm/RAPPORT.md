@@ -110,7 +110,7 @@ daarvan alleen in de versietekst.
 | handeling | `isTrusted` | wat er gemeten is |
 |---|---|---|
 | tab Aanwezig | `true` op `BUTTON.tab` | `pagina_` = `aanwezig`; zes tegels van 520×109 met 14 px ertussen |
-| tik op Sanne Koster | `true` op `BUTTON.persoon` | WS `aanwezig {persoon, aanwezig: true}` verstuurd; server: `aanwezig: true`; kop "5 van 6 aanwezig" |
+| tik op de derde medewerker | `true` op `BUTTON.persoon` | WS `aanwezig {persoon, aanwezig: true}` verstuurd; server: `aanwezig: true`; kop "5 van 6 aanwezig" |
 | terugvaltimer | -- | 108 s na de laatste tik stond `pagina_` weer op `welkom` (ingesteld: 60 s) |
 | tab Nieuws, tik op een bericht | `true` | detaillaag `open`, titel en tekst erin; Sluiten sluit hem |
 | tab Verlichting, tik op Test Lamp Dim | `true` op `.lamp` | `homeassistant.toggle` aangeroepen; toestand `off`; tegel "Uit" |
@@ -125,10 +125,10 @@ Hoogte: `--hoogte` = `calc(100dvh - 56px)`, scherm 855 px in een venster van
 ### Het beheer, met echte toetsaanslagen
 
 - Klik in het naamveld van de eerste medewerker, End, en getypt ` Jr`: keydown
-  van de spatie `isTrusted: true`, waarde `Marieke de Vries Jr`, werkkopie
+  van de spatie `isTrusted: true`, waarde `<voornaam> <achternaam> Jr`, werkkopie
   gelijk, blok vuil, **focus nog in het veld** (er is niets opnieuw getekend).
 - Klik op Opslaan (`isTrusted: true` op `BUTTON.knop acc vuil`): server heeft
-  `Marieke de Vries Jr`, initialen `MJ`, en `aanwezig` bleef `true` (het beheer
+  `<voornaam> <achternaam> Jr`, initialen zoals de regel ze maakt, en `aanwezig` bleef `true` (het beheer
   overschrijft de iPad niet).
 - In een kolom van 500 px: `grid-template-columns` `44px 344px 0px`, het
   naamveld 344 px breed (containerquery).

@@ -34,6 +34,16 @@ import {
   relatieveTijd,
   verlichtingZichtbaar,
   volgendeOpening,
+  aanwezigEerst,
+  blokOntbreekt,
+  dagKort,
+  KOLOMMEN,
+  overlapt,
+  pastVrij,
+  RIJEN,
+  splitsAanwezig,
+  standaardIndeling,
+  vrijePlek,
 } from "../../src/cards/infoscherm-logica.js";
 
 // Woensdag 9 september 2026, 10:42 lokale tijd.
@@ -162,34 +172,95 @@ describe("openingstijden", () => {
   });
 });
 
-describe("pagina's", () => {
-  const stand = { personen: [{ naam: "A" }], instellingen: { verlichting_tonen: true } };
+describe("pagina's (sinds ronde 2 uit de opslag, niet uit een kaartconfig)", () => {
+  const lampen = { verlichting: [{ entity: "light.a", naam: "A" }] };
+  const stand = { personen: [{ naam: "A" }], nieuws: [{ titel: "x" }], instellingen: { verlichting_tonen: true }, installatie: {} };
 
-  it("standaard: welkom, aanwezig, nieuws; verlichting alleen met lampen", () => {
-    assert.deepEqual(paginas({}, stand), ["welkom", "aanwezig", "nieuws"]);
-    assert.deepEqual(paginas({ lights: ["light.a"] }, stand), ["welkom", "aanwezig", "nieuws", "verlichting"]);
+  it("welkom altijd; aanwezig, nieuws, weer, verlichting en agenda alleen met inhoud", () => {
+    assert.deepEqual(paginas(stand, []), ["welkom", "aanwezig", "nieuws"]);
+    assert.deepEqual(paginas({ ...stand, installatie: { ...lampen, weer: "weather.x", agendas: ["calendar.x"] } }, []), [
+      "welkom", "aanwezig", "nieuws", "weer", "verlichting", "agenda",
+    ]);
+    assert.deepEqual(paginas({ personen: [], nieuws: [] }, []), ["welkom"]);
+    assert.deepEqual(paginas({ personen: [], nieuws: [] }, [{ titel: "NOS" }]), ["welkom", "nieuws"]);
   });
 
-  it("zonder personen geen aanwezigpagina, en de schakelaars in de config werken", () => {
-    assert.deepEqual(paginas({ show_nieuws: false }, { personen: [] }), ["welkom"]);
-    assert.deepEqual(paginas({ show_aanwezig: false, calendars: ["calendar.x"] }, stand), ["welkom", "nieuws", "agenda"]);
+  it("verlichting: lampen van de installateur én de schakelaar van de receptie", () => {
+    assert.equal(verlichtingZichtbaar({ installatie: lampen, instellingen: { verlichting_tonen: false } }), false);
+    assert.equal(verlichtingZichtbaar({ installatie: lampen, instellingen: { verlichting_tonen: true } }), true);
+    assert.equal(verlichtingZichtbaar({ installatie: { verlichting: [] }, instellingen: {} }), false);
+  });
+});
+
+describe("het raster van het welkomscherm", () => {
+  it("de standaardindeling past in zes bij zes zonder overlap", () => {
+    const { blokken } = standaardIndeling();
+    assert.equal(KOLOMMEN, 6);
+    assert.equal(RIJEN, 6);
+    for (const b of blokken) assert.equal(pastVrij(blokken, b), true, b.soort);
   });
 
-  it("verlichting: beheer beslist, tenzij de installateur altijd of nooit koos", () => {
-    const uit = { personen: [], instellingen: { verlichting_tonen: false } };
-    assert.equal(verlichtingZichtbaar({ lights: ["light.a"] }, uit), false);
-    assert.equal(verlichtingZichtbaar({ lights: ["light.a"], verlichting: "altijd" }, uit), true);
-    assert.equal(verlichtingZichtbaar({ lights: ["light.a"], verlichting: "nooit" }, stand), false);
-    assert.equal(verlichtingZichtbaar({ lights: [] , verlichting: "altijd" }, stand), false);
+  it("overlapt en pastVrij", () => {
+    const a = { id: "a", x: 0, y: 0, w: 2, h: 2 };
+    assert.equal(overlapt(a, { x: 1, y: 1, w: 2, h: 2 }), true);
+    assert.equal(overlapt(a, { x: 2, y: 0, w: 2, h: 2 }), false);
+    assert.equal(pastVrij([a], { id: "b", x: 1, y: 0, w: 1, h: 1 }), false);
+    assert.equal(pastVrij([a], { id: "a", x: 1, y: 0, w: 1, h: 1 }), true, "zichzelf telt niet mee");
+    assert.equal(pastVrij([a], { id: "b", x: 5, y: 0, w: 2, h: 1 }), false, "buiten het raster");
+  });
+
+  it("vrijePlek zoekt van linksboven af, en geeft null als het vol is", () => {
+    const { blokken } = standaardIndeling();
+    // De standaardindeling vult alle 36 cellen: er past niets meer bij.
+    assert.equal(vrijePlek(blokken, 1, 1), null);
+    const zonderWelkom = blokken.filter((b) => b.soort !== "welkom");
+    assert.deepEqual(vrijePlek(zonderWelkom, 2, 1), { x: 0, y: 0 });
+    const vol = [{ id: "v", x: 0, y: 0, w: 6, h: 6 }];
+    assert.equal(vrijePlek(vol, 1, 1), null);
+    assert.deepEqual(vrijePlek([], 2, 2), { x: 0, y: 0 });
+  });
+
+  it("blokOntbreekt zegt waarom een blok niet op het scherm staat", () => {
+    const stand = { personen: [], praktijk: { openingstijden: {} }, installatie: {}, instellingen: {} };
+    assert.match(blokOntbreekt("weer", stand, [], "2026-09-10"), /weerentiteit/);
+    assert.match(blokOntbreekt("aanwezig", stand, [], "2026-09-10"), /medewerkers/);
+    assert.match(blokOntbreekt("verlichting", stand, [], "2026-09-10"), /lampen/);
+    assert.equal(blokOntbreekt("welkom", stand, [], "2026-09-10"), null);
+    assert.equal(blokOntbreekt("nieuws", stand, [], "2026-09-10"), null);
+    const vol = {
+      personen: [{ naam: "A" }],
+      mededelingen: [{ tekst: "Hoi" }],
+      praktijk: { openingstijden: { ma: [["08:00", "17:00"]] } },
+      installatie: { weer: "weather.x", verlichting: [{ entity: "light.a" }], agendas: ["calendar.a"] },
+      instellingen: { verlichting_tonen: false },
+    };
+    for (const soort of ["weer", "mededeling", "openingstijden", "aanwezig", "agenda"]) {
+      assert.equal(blokOntbreekt(soort, vol, [], "2026-09-10"), null, soort);
+    }
+    assert.match(blokOntbreekt("verlichting", vol, [], "2026-09-10"), /uit in het beheer/);
   });
 });
 
 describe("personen", () => {
-  it("initialen zoals de server ze maakt", () => {
+  it("initialen: eerste letter van het eerste en van het laatste woord", () => {
     assert.equal(initialen("Marieke de Vries"), "MV");
     assert.equal(initialen("Sanne"), "SA");
     assert.equal(initialen("anouk van den berg"), "AB");
+    // NIEUW GEDRAG (10 september 2026): een tussenvoegsel in kleine letters
+    // telde niet mee, en dan werd "Pieter van der berg" ten onrechte "PI".
+    assert.equal(initialen("Pieter van der berg"), "PB");
+    assert.equal(initialen("Tessa de groot"), "TG");
     assert.equal(initialen(""), "?");
+  });
+
+  it("aanwezig en afwezig uit elkaar, elk in de volgorde van het beheer", () => {
+    const lijst = [
+      { naam: "A", aanwezig: false }, { naam: "B", aanwezig: true }, { naam: "C", aanwezig: false }, { naam: "D", aanwezig: true },
+    ];
+    const { aanwezig, afwezig } = splitsAanwezig(lijst);
+    assert.deepEqual(aanwezig.map((p) => p.naam), ["B", "D"]);
+    assert.deepEqual(afwezig.map((p) => p.naam), ["A", "C"]);
+    assert.deepEqual(aanwezigEerst(lijst).map((p) => p.naam), ["B", "D", "A", "C"]);
   });
 
   it("groepeerOpFunctie houdt de volgorde van eerste voorkomen", () => {
@@ -209,6 +280,12 @@ describe("kleine helpers", () => {
     assert.equal(relatieveTijd(new Date(2026, 8, 1, 18, 0).toISOString(), NU), "1 sep");
     assert.equal(relatieveTijd("kapot", NU), "");
     assert.equal(relatieveTijd(null, NU), "");
+  });
+
+  it("dagKort: vandaag, morgen, dan de dagnaam", () => {
+    assert.equal(dagKort(new Date(2026, 8, 9), NU), "vandaag");
+    assert.equal(dagKort(new Date(2026, 8, 10), NU), "morgen");
+    assert.equal(dagKort(new Date(2026, 8, 11), NU), "vrijdag");
   });
 
   it("omDeBeurt", () => {

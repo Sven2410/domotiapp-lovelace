@@ -2480,6 +2480,12 @@ iPad (kiosk-mode haalt kop en zijbalk weg), verlichting als optie die de
 receptie of de installateur bepaalt, nieuws van buiten via RSS, foto's én
 initialen, en geen DomotiApp-merk op het scherm zelf.*
 
+*Herzien op 10 september 2026 (ronde 2) op aanwijzing van de eigenaar: de
+schermkaart heeft GEEN kaartconfig meer ("gewoon toevoegen en dan klaar"), het
+welkomscherm is één scherm zonder tabbladen met een indeling die de receptie
+sleept, en de entiteiten kiest de installateur in het beheer. Dit hoofdstuk is
+daarop aangepast; zie `docs/infoscherm-ronde-2/RAPPORT.md`.*
+
 ### 20.1 Doel
 
 Een beeldvullend informatiescherm voor een wachtruimte, op een tablet in
@@ -2497,23 +2503,35 @@ gewone groeikaart en volgt de rasterregel.
 
 ### 20.3 Uitzondering op de kleurregel en het merk
 
-De infoschermkaart heeft een instelbaar accent (uit het beheer, of uit de
-config van de installateur), omdat de identiteit hier die van de klant is. De
+De infoschermkaart heeft een instelbaar accent (uit het beheer), omdat de
+identiteit hier die van de klant is. De
 toestandsregel blijft: alleen de chip van een medewerker of een lamp draagt de
 toestand, nooit het hele vlak. Op het scherm zelf staat geen DomotiApp-merk; op
 de beheerkaart wél een kleine kopregel.
 
 ### 20.4 Opslag en rechten
 
-Inhoud staat in `Store` `domotiapp_lovelace.infoscherm`, niet in de
-kaartconfig: praktijk, personen, mededelingen, nieuws, instellingen en de
-lijst van bestanden. Rechten:
+Alles staat in `Store` `domotiapp_lovelace.infoscherm`; de schermkaart heeft
+geen kaartconfig en negeert wat er in een oude YAML nog staat. Onderdelen:
+praktijk (naam, adres, welkomsteksten, openingstijden, uitzonderingen),
+personen, mededelingen, nieuws, `scherm` (logo, accent, uiterlijk, vorm van
+de foto's, terugvaltijd, nachtstand, weergave van de aanwezigen, teller,
+afbeeldingen bij het nieuws, bewegende weericonen, schaal), `installatie`
+(weerentiteit, agenda's, lampen met een naam), `indeling` (de blokken van het
+welkomscherm: soort, x, y, breedte, hoogte, aantal, in een raster van zes bij
+zes zonder overlap), instellingen (middernacht, verlichting tonen, feeds,
+kioskaccounts) en de lijst van bestanden. Rechten:
 
 | handeling | wie |
 |---|---|
 | lezen, abonneren, aanwezigheid omzetten, lampen schakelen | iedere ingelogde gebruiker |
-| personen, nieuws, mededelingen, praktijk, logo, feeds en instellingen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| kioskgebruikers aanwijzen, gebruikerslijst opvragen | admin |
+| personen, nieuws, mededelingen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN van de lampen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
+| de entiteiten (weer, agenda's, lampen) kiezen, kioskgebruikers aanwijzen, gebruikerslijst opvragen | admin |
+
+Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
+typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
+andere lampenlijst stuurt houdt de lampen van de installateur en wijzigt
+alleen hun namen.
 
 Een kioskgebruiker die een beheercommando stuurt krijgt `unauthorized`; de
 beheerkaart toont dan een uitleg in plaats van de blokken. De
@@ -2542,6 +2560,15 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 
 ### 20.7 Gedrag van het scherm
 
+- Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
+  met blokken (welkom, weer, mededeling, openingstijden, aanwezig, nieuws,
+  verlichting, agenda) op de plek en maat uit `indeling`. Een blok waar niets
+  in te tonen valt staat niet op het scherm. Een blok met een pagina erachter
+  heeft een kop die een knop is ("Alles bekijken"); de pagina heeft een
+  terugknop. Aanwezig en afwezig staan op de pagina gescheiden naast elkaar
+  (of per functie naast elkaar, of als één lijst; de receptie kiest).
+- Initialen: de eerste letter van het eerste woord en de eerste letter van het
+  laatste woord van de naam, hoofdletter of niet.
 - Na een instelbare tijd zonder aanraking (standaard 60 s) terug naar Welkom.
 - Buiten de openingstijden uit het beheer een nachtstand: klok, datum en
   "Gesloten · morgen open om 08:00"; een tik haalt het scherm even terug.
@@ -2549,8 +2576,8 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 - Om middernacht iedereen op afwezig, instelbaar in het beheer.
 - Nieuws van buiten wordt elk kwartier aan de serverkant opgehaald en staat
   ná het nieuws van het pand; vastgezette berichten van het pand bovenaan.
-- Verlichting: de installateur kiest per scherm `altijd`, `nooit` of `beheer`;
-  bij `beheer` beslist de receptie met één schakelaar.
+- Verlichting: de installateur kiest de lampen in het beheer; de receptie
+  bepaalt met één schakelaar of ze op het scherm staan en hoe ze heten.
 
 ### 20.8 Foutgedrag
 

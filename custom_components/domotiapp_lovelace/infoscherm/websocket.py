@@ -9,6 +9,9 @@
 | `infoscherm/mededelingen/save` | idem |
 | `infoscherm/nieuws/save` | idem |
 | `infoscherm/praktijk/save` | idem |
+| `infoscherm/scherm/save` | idem (logo, accent, uiterlijk, terugvaltijd, ...) |
+| `infoscherm/indeling/save` | idem (de blokken op het welkomscherm) |
+| `infoscherm/installatie/save` | idem; de ENTITEITEN erin alleen als admin, de lampnamen mag iedereen |
 | `infoscherm/instellingen/save` | idem; `kiosk_gebruikers` erin alleen als admin |
 | `infoscherm/bestand/verwijder` | idem |
 | `infoscherm/feeds/ververs` | idem |
@@ -63,6 +66,9 @@ def async_register(hass: HomeAssistant) -> None:
         ws_mededelingen_save,
         ws_nieuws_save,
         ws_praktijk_save,
+        ws_scherm_save,
+        ws_indeling_save,
+        ws_installatie_save,
         ws_instellingen_save,
         ws_bestand_verwijder,
         ws_feeds_ververs,
@@ -259,6 +265,39 @@ async def ws_nieuws_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -
 @websocket_api.async_response
 async def ws_praktijk_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     await _zet(hass, connection, msg, "praktijk", lambda s, v: s.async_zet_praktijk(v))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/scherm/save", vol.Required("scherm"): dict}
+)
+@websocket_api.async_response
+async def ws_scherm_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    await _zet(hass, connection, msg, "scherm", lambda s, v: s.async_zet_scherm(v))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/indeling/save", vol.Required("indeling"): dict}
+)
+@websocket_api.async_response
+async def ws_indeling_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    await _zet(hass, connection, msg, "indeling", lambda s, v: s.async_zet_indeling(v))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/installatie/save", vol.Required("installatie"): dict}
+)
+@websocket_api.async_response
+async def ws_installatie_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Weer, agenda's en lampen. De entiteiten kiest de installateur (admin);
+    een receptie-account mag alleen de namen van de lampen wijzigen."""
+    is_admin = bool(connection.user and connection.user.is_admin)
+    await _zet(
+        hass,
+        connection,
+        msg,
+        "installatie",
+        lambda s, v: s.async_zet_installatie(v, mag_entiteiten_wijzigen=is_admin),
+    )
 
 
 @websocket_api.websocket_command(

@@ -87,9 +87,14 @@ def _tekst_van(el: ET.Element | None) -> str | None:
 
 
 def _afbeelding(el: ET.Element) -> str | None:
-    """`enclosure`, `media:content` of `media:thumbnail` met een afbeelding."""
+    """`enclosure`, `media:content` of `media:thumbnail` met een afbeelding,
+    ook als die in een `media:group` zit."""
     for kind in el:
         naam = _lokale_naam(kind)
+        if naam == "group":
+            if (url := _afbeelding(kind)) is not None:
+                return url
+            continue
         if naam in ("enclosure", "content", "thumbnail"):
             url = kind.get("url")
             soort = kind.get("type", "")
@@ -100,14 +105,32 @@ def _afbeelding(el: ET.Element) -> str | None:
     return None
 
 
+_IMG = re.compile(r"""<img[^>]+src=["']([^"']+)["']""", re.IGNORECASE)
+
+
+def _afbeelding_in_html(html_tekst: str | None) -> str | None:
+    """Feeds zonder enclosure zetten hun foto vaak als <img> in de beschrijving."""
+    if not html_tekst:
+        return None
+    m = _IMG.search(html_tekst)
+    url = html.unescape(m.group(1)).strip() if m else ""
+    return url if url.startswith(("http://", "https://")) else None
+
+
 def _rss_item(item: ET.Element, bron: str) -> dict[str, Any] | None:
     titel = _kaal(_tekst_van(_kind(item, "title")))
     if not titel:
         return None
     link = (_tekst_van(_kind(item, "link")) or "").strip()
-    tekst = _kaal(_tekst_van(_kind(item, "description")))
+    beschrijving = _tekst_van(_kind(item, "description"))
+    tekst = _kaal(beschrijving)
     datum = _datum(_tekst_van(_kind(item, "pubDate")) or _tekst_van(_kind(item, "date")))
-    return _item(bron, titel, tekst, link, datum, _afbeelding(item))
+    afbeelding = (
+        _afbeelding(item)
+        or _afbeelding_in_html(beschrijving)
+        or _afbeelding_in_html(_tekst_van(_kind(item, "encoded")))
+    )
+    return _item(bron, titel, tekst, link, datum, afbeelding)
 
 
 def _atom_entry(entry: ET.Element, bron: str) -> dict[str, Any] | None:
@@ -119,9 +142,10 @@ def _atom_entry(entry: ET.Element, bron: str) -> dict[str, Any] | None:
         if _lokale_naam(kind) == "link" and kind.get("rel", "alternate") == "alternate":
             link = kind.get("href", "")
             break
-    tekst = _kaal(_tekst_van(_kind(entry, "summary")) or _tekst_van(_kind(entry, "content")))
+    inhoud = _tekst_van(_kind(entry, "summary")) or _tekst_van(_kind(entry, "content"))
+    tekst = _kaal(inhoud)
     datum = _datum(_tekst_van(_kind(entry, "published")) or _tekst_van(_kind(entry, "updated")))
-    return _item(bron, titel, tekst, link, datum, _afbeelding(entry))
+    return _item(bron, titel, tekst, link, datum, _afbeelding(entry) or _afbeelding_in_html(inhoud))
 
 
 def _item(bron, titel, tekst, link, datum, afbeelding) -> dict[str, Any]:
