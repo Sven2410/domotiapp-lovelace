@@ -14,7 +14,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  actieveMededelingen,
   dagSleutel,
   datumKort,
   datumLang,
@@ -44,6 +43,9 @@ import {
   splitsAanwezig,
   standaardIndeling,
   vrijePlek,
+  isoDatumTijd,
+  komendeVerjaardagen,
+  actieveMededelingen,
 } from "../../src/cards/infoscherm-logica.js";
 
 // Woensdag 9 september 2026, 10:42 lokale tijd.
@@ -97,25 +99,71 @@ describe("geldig nu", () => {
   });
 });
 
-describe("nieuws", () => {
-  it("eigen nieuws eerst, vastgezet bovenaan, daarna de feeds nieuwste eerst", () => {
-    const eigen = [
-      { titel: "Oud eigen", gemaakt: "2026-09-01T10:00:00Z" },
-      { titel: "Vast", gemaakt: "2026-08-01T10:00:00Z", vast: true },
-      { titel: "Nieuw eigen", gemaakt: "2026-09-08T10:00:00Z" },
-      { titel: "Verlopen", tot: "2026-09-01" },
-    ];
+describe("nieuws (ronde 3: alleen nog van buiten)", () => {
+  it("de feeds, nieuwste eerst, zonder titel valt weg", () => {
     const feeds = [
       { titel: "NOS oud", datum: "2026-09-09T06:00:00Z" },
+      { titel: "", datum: "2026-09-09T09:00:00Z" },
       { titel: "NOS nieuw", datum: "2026-09-09T08:00:00Z" },
     ];
-    const uit = nieuwsLijst(eigen, feeds, "2026-09-09");
-    assert.deepEqual(
-      uit.map((n) => n.titel),
-      ["Vast", "Nieuw eigen", "Oud eigen", "NOS nieuw", "NOS oud"]
+    const uit = nieuwsLijst(feeds);
+    assert.deepEqual(uit.map((n) => n.titel), ["NOS nieuw", "NOS oud"]);
+    assert.equal(uit[0].eigen, false);
+  });
+});
+
+describe("mededelingen met een tijdstip (ronde 3, NIEUW GEDRAG)", () => {
+  it("een grens met tijd telt op de minuut; een kale datum is de hele dag", () => {
+    assert.equal(geldigNu({ van: "2026-09-10T15:00" }, "2026-09-10T14:59"), false);
+    assert.equal(geldigNu({ van: "2026-09-10T15:00" }, "2026-09-10T15:00"), true);
+    assert.equal(geldigNu({ tot: "2026-09-10T12:00" }, "2026-09-10T12:00"), true);
+    assert.equal(geldigNu({ tot: "2026-09-10T12:00" }, "2026-09-10T12:01"), false);
+    assert.equal(geldigNu({ tot: "2026-09-10" }, "2026-09-10T23:30"), true);
+    assert.equal(geldigNu({ van: "2026-09-10" }, "2026-09-10T00:00"), true);
+  });
+
+  it("isoDatumTijd is lokaal en op de minuut", () => {
+    assert.equal(isoDatumTijd(new Date(2026, 8, 10, 7, 5)), "2026-09-10T07:05");
+  });
+
+  it("actieveMededelingen met een datum met tijd als 'nu'", () => {
+    const lijst = [
+      { tekst: "Altijd" },
+      { tekst: "Vanmiddag", van: "2026-09-10T12:00", tot: "2026-09-10T17:00" },
+      { tekst: "Morgen", van: "2026-09-11" },
+    ];
+    assert.deepEqual(actieveMededelingen(lijst, "2026-09-10T11:00").map((m) => m.tekst), ["Altijd"]);
+    assert.deepEqual(actieveMededelingen(lijst, "2026-09-10T13:00").map((m) => m.tekst), ["Altijd", "Vanmiddag"]);
+  });
+});
+
+describe("verjaardagen (ronde 3, NIEUW GEDRAG)", () => {
+  const nu = new Date(2026, 8, 10, 14, 30);
+  it("vandaag eerst, dan op volgorde van hoe lang nog; de leeftijd is wat iemand WORDT", () => {
+    const uit = komendeVerjaardagen(
+      [
+        { naam: "Volgend jaar", datum: "2000-09-09" },
+        { naam: "Vandaag", datum: "1990-09-10" },
+        { naam: "Morgen", datum: "1985-09-11" },
+        { naam: "Zonder jaar", datum: "1800-10-01", jaar_tonen: false },
+      ],
+      nu
     );
-    assert.equal(uit[0].eigen, true);
-    assert.equal(uit[3].eigen, false);
+    assert.deepEqual(
+      uit.map((v) => [v.naam, v.dagen, v.wanneer, v.leeftijd]),
+      [
+        ["Vandaag", 0, "vandaag", 36],
+        ["Morgen", 1, "morgen", 41],
+        ["Zonder jaar", 21, "do 1 okt", null],
+        ["Volgend jaar", 364, "do 9 sep", 27],
+      ]
+    );
+  });
+
+  it("zonder naam of datum telt niet mee; 29 februari valt in een gewoon jaar op 1 maart", () => {
+    assert.deepEqual(komendeVerjaardagen([{ naam: "", datum: "2000-01-01" }, { naam: "X" }], nu), []);
+    const [v] = komendeVerjaardagen([{ naam: "Schrikkel", datum: "1988-02-29" }], nu);
+    assert.equal(v.wanneer, "ma 1 mrt");
   });
 });
 
@@ -174,15 +222,16 @@ describe("openingstijden", () => {
 
 describe("pagina's (sinds ronde 2 uit de opslag, niet uit een kaartconfig)", () => {
   const lampen = { verlichting: [{ entity: "light.a", naam: "A" }] };
-  const stand = { personen: [{ naam: "A" }], nieuws: [{ titel: "x" }], instellingen: { verlichting_tonen: true }, installatie: {} };
+  const stand = { personen: [{ naam: "A" }], instellingen: { verlichting_tonen: true }, installatie: {} };
 
-  it("welkom altijd; aanwezig, nieuws, weer, verlichting en agenda alleen met inhoud", () => {
-    assert.deepEqual(paginas(stand, []), ["welkom", "aanwezig", "nieuws"]);
-    assert.deepEqual(paginas({ ...stand, installatie: { ...lampen, weer: "weather.x", agendas: ["calendar.x"] } }, []), [
-      "welkom", "aanwezig", "nieuws", "weer", "verlichting", "agenda",
-    ]);
-    assert.deepEqual(paginas({ personen: [], nieuws: [] }, []), ["welkom"]);
-    assert.deepEqual(paginas({ personen: [], nieuws: [] }, [{ titel: "NOS" }]), ["welkom", "nieuws"]);
+  it("welkom altijd; aanwezig, nieuws, weer, verlichting, agenda en verjaardagen alleen met inhoud", () => {
+    assert.deepEqual(paginas(stand, []), ["welkom", "aanwezig"]);
+    assert.deepEqual(
+      paginas({ ...stand, verjaardagen: [{ naam: "X", datum: "2000-01-01" }], installatie: { ...lampen, weer: "weather.x", agendas: ["calendar.x"] } }, [{ titel: "NOS" }]),
+      ["welkom", "aanwezig", "nieuws", "weer", "verlichting", "agenda", "verjaardagen"]
+    );
+    assert.deepEqual(paginas({ personen: [] }, []), ["welkom"]);
+    assert.deepEqual(paginas({ personen: [] }, [{ titel: "NOS" }]), ["welkom", "nieuws"]);
   });
 
   it("verlichting: lampen van de installateur én de schakelaar van de receptie", () => {

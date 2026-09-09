@@ -37,8 +37,14 @@ export const abonneer = (hass, cb) =>
 
 export const zetAanwezig = (hass, persoon, aanwezig) => roep(hass, "aanwezig", { persoon, aanwezig });
 
-/** `soort` is personen, mededelingen, nieuws, praktijk of instellingen. */
+/** `soort` is personen, mededelingen, verjaardagen, praktijk, scherm, indeling, installatie of instellingen. */
 export const bewaar = (hass, soort, waarde) => roep(hass, `${soort}/save`, { [soort]: waarde });
+
+/**
+ * De kaartconfig van het infoscherm naar de opslag (alleen een admin). Het
+ * antwoord zegt of er iets veranderd is.
+ */
+export const syncInstallatie = (hass, installatie) => roep(hass, "installatie/sync", { installatie });
 
 export const verwijderBestand = (hass, bestand) => roep(hass, "bestand/verwijder", { bestand });
 export const ververFeeds = (hass) => roep(hass, "feeds/ververs");

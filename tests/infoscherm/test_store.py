@@ -18,7 +18,8 @@ from custom_components.domotiapp_lovelace.infoscherm.store import (
     valideer_indeling,
     valideer_installatie,
     valideer_instellingen,
-    valideer_nieuws_item,
+    valideer_mededeling,
+    valideer_verjaardag,
     valideer_persoon,
     valideer_praktijk,
     valideer_scherm,
@@ -246,10 +247,29 @@ def test_vandaag_open_volgt_de_dag_en_de_uitzondering() -> None:
 # ------------------------------------------------------------- nieuws en instellingen
 
 
-def test_een_nieuwsbericht_krijgt_een_aanmaaktijd() -> None:
-    n = valideer_nieuws_item({"titel": "Nieuw", "gemaakt": "geen datum"})
-    assert n["gemaakt"].startswith("20")
-    assert n["vast"] is False
+def test_een_mededeling_mag_een_tijdstip_dragen() -> None:
+    """Ronde 3 (NIEUW GEDRAG): "vanaf 12:00 gesloten" is een grens met een tijd."""
+    m = valideer_mededeling({"tekst": "Vanmiddag dicht", "van": "2026-09-20T12:00", "tot": "2026-09-20"})
+    assert m["van"] == "2026-09-20T12:00"
+    assert m["tot"] == "2026-09-20"
+    assert valideer_mededeling({"tekst": "x", "van": "2026-09-20 08:30"})["van"] == "2026-09-20T08:30"
+    with pytest.raises(InfoFout, match="datum"):
+        valideer_mededeling({"tekst": "x", "van": "2026-09-20T25:00"})
+    with pytest.raises(InfoFout, match="datum"):
+        valideer_mededeling({"tekst": "x", "tot": "morgen"})
+
+
+def test_een_verjaardag_heeft_een_naam_en_een_datum() -> None:
+    """Ronde 3 (NIEUW GEDRAG)."""
+    v = valideer_verjaardag({"naam": " Marieke ", "datum": "1990-09-10"})
+    assert v["naam"] == "Marieke"
+    assert v["datum"] == "1990-09-10"
+    assert v["jaar_tonen"] is True
+    assert v["id"]
+    with pytest.raises(InfoFout, match="datum"):
+        valideer_verjaardag({"naam": "X"})
+    with pytest.raises(InfoFout, match="naam"):
+        valideer_verjaardag({"naam": "", "datum": "1990-09-10"})
 
 
 def test_een_nieuwsbron_moet_een_url_zijn() -> None:
@@ -257,7 +277,82 @@ def test_een_nieuwsbron_moet_een_url_zijn() -> None:
         valideer_instellingen({"feeds": [{"naam": "NOS", "url": "nos.nl"}]})
     i = valideer_instellingen({"feeds": [{"naam": "NOS", "url": "https://feeds.nos.nl/x"}]})
     assert i["feeds"] == [{"naam": "NOS", "url": "https://feeds.nos.nl/x"}]
-    assert i["reset_middernacht"] is True
+    # De middernachtregel is er sinds ronde 3 niet meer.
+    assert "reset_middernacht" not in i
+
+
+def test_de_praktijk_is_alleen_nog_de_openingstijden() -> None:
+    """Ronde 3: naam, adres en welkomsteksten worden genegeerd, niet geweigerd."""
+    p = valideer_praktijk({"naam": "De Molen", "adres": "x", "welkom": ["Hoi"], "openingstijden": {"ma": [["08:00", "17:00"]]}})
+    assert set(p) == {"openingstijden", "uitzonderingen"}
+    assert p["openingstijden"]["ma"] == [["08:00", "17:00"]]
+
+
+def test_scherm_kent_het_welkomblok_en_de_mededelingentijd_en_geen_nachtstand() -> None:
+    """Ronde 3 (NIEUW GEDRAG)."""
+    s = valideer_scherm({"welkom_tekst": "", "welkom_logo": True, "welkom_onder": False, "mededeling_interval": 7, "nachtstand": True})
+    assert s["welkom_tekst"] == ""
+    assert s["welkom_logo"] is True
+    assert s["welkom_onder"] is False
+    assert s["mededeling_interval"] == 7
+    assert "nachtstand" not in s and "nieuws_afbeeldingen" not in s
+    assert valideer_scherm({})["welkom_tekst"] == "Welkom"
+    with pytest.raises(InfoFout, match="mededeling_interval"):
+        valideer_scherm({"mededeling_interval": 1})
+
+
+async def test_oud_nieuws_van_het_pand_wordt_een_mededeling(hass: HomeAssistant, hass_storage) -> None:
+    """Ronde 3 (NIEUW GEDRAG): "Nieuws van het pand mag helemaal weg, dat moet
+    gewoon mededelingen worden." Eén keer overgenomen bij het laden."""
+    hass_storage["domotiapp_lovelace.infoscherm"] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": "domotiapp_lovelace.infoscherm",
+        "data": {
+            "mededelingen": [{"id": "m1", "tekst": "Bestond al"}],
+            "nieuws": [
+                {"id": "n1", "titel": "Nieuwe collega", "tekst": "Vanaf maandag.", "tot": "2026-12-31"},
+                {"id": "n2", "titel": "", "tekst": ""},
+            ],
+            "praktijk": {"welkom": ["Welkom bij De Molen", "Fijn dat u er bent"]},
+        },
+    }
+    store = InfoStore(hass)
+    await store.async_load()
+    stand = store.snapshot()
+    assert [m["tekst"] for m in stand["mededelingen"]] == ["Bestond al", "Nieuwe collega\nVanaf maandag."]
+    assert stand["mededelingen"][1]["tot"] == "2026-12-31"
+    assert stand["scherm"]["welkom_tekst"] == "Welkom bij De Molen"
+    assert "nieuws" not in stand
+    # En weggeschreven, zodat het niet elke start opnieuw gebeurt.
+    assert "nieuws" not in hass_storage["domotiapp_lovelace.infoscherm"]["data"]
+
+
+async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAssistant) -> None:
+    """Ronde 3 (NIEUW GEDRAG): de entiteiten komen uit de kaartconfig; de
+    lampnamen zijn van de receptie en blijven staan."""
+    store = InfoStore(hass)
+    await store.async_zet_installatie(
+        {"weer": "weather.oud", "verlichting": [{"entity": "light.a", "naam": "Wachtkamer"}]},
+        mag_entiteiten_wijzigen=True,
+    )
+    r = await store.async_zet_installatie_van_kaart(
+        {"weer": "weather.thuis", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
+    )
+    assert r["gewijzigd"] is True
+    assert r["installatie"] == {
+        "weer": "weather.thuis",
+        "agendas": ["calendar.x"],
+        "verlichting": [{"entity": "light.b", "naam": ""}, {"entity": "light.a", "naam": "Wachtkamer"}],
+    }
+    assert store.instellingen["kiosk_gebruikers"] == ["u1"]
+    # Dezelfde config nog eens: niets gewijzigd.
+    r = await store.async_zet_installatie_van_kaart(
+        {"weer": "weather.thuis", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
+    )
+    assert r["gewijzigd"] is False
+    with pytest.raises(InfoFout):
+        await store.async_zet_installatie_van_kaart({"weer": "sensor.x"})
 
 
 # ------------------------------------------------------------- de opslag
@@ -295,16 +390,6 @@ async def test_de_receptie_overschrijft_de_aanwezigheid_van_de_ipad_niet(
     assert bijgewerkt[0]["aanwezig"] is False
 
 
-async def test_reset_zet_iedereen_op_afwezig(hass: HomeAssistant, hass_storage) -> None:
-    store = InfoStore(hass)
-    await store.async_load()
-    personen = await store.async_zet_personen([{"naam": "A", "aanwezig": True}, {"naam": "B"}])
-    assert await store.async_reset_aanwezig() == 1
-    assert all(p["aanwezig"] is False for p in store.snapshot()["personen"])
-    assert await store.async_reset_aanwezig() == 0
-    del personen
-
-
 async def test_een_kapot_item_in_de_opslag_sleept_de_rest_niet_mee(
     hass: HomeAssistant, hass_storage
 ) -> None:
@@ -314,8 +399,8 @@ async def test_een_kapot_item_in_de_opslag_sleept_de_rest_niet_mee(
         "key": "domotiapp_lovelace.infoscherm",
         "data": {
             "personen": [{"naam": ""}, {"naam": "Goed"}],
-            "nieuws": "geen lijst",
-            "praktijk": {"naam": 5},
+            "verjaardagen": [{"naam": "Zonder datum"}, {"naam": "Goed", "datum": "1990-01-01"}],
+            "praktijk": {"openingstijden": "kapot"},
             "scherm": {"accent": "kapot"},
         },
     }
@@ -323,8 +408,8 @@ async def test_een_kapot_item_in_de_opslag_sleept_de_rest_niet_mee(
     await store.async_load()
     stand = store.snapshot()
     assert [p["naam"] for p in stand["personen"]] == ["Goed"]
-    assert stand["nieuws"] == []
-    assert stand["praktijk"]["naam"] == ""
+    assert [v["naam"] for v in stand["verjaardagen"]] == ["Goed"]
+    assert stand["praktijk"]["openingstijden"]["ma"] == []
     assert stand["scherm"]["accent"] is None
 
 

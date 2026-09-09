@@ -19,7 +19,9 @@ gebruiker openstaan. Dezelfde redenering als SPEC 14 voor `scenes/save`.
 
 Er zijn drie soorten gebruikers, en het verschil zit niet in HA's adminvlag:
 
-- de installateur (admin): plaatst de kaarten en wijst de kioskaccounts aan;
+- de installateur (admin): plaatst de kaarten, kiest in de kaarteditor van
+  het infoscherm de entiteiten (weer, lampen, agenda's) en wijst daar de
+  kioskaccounts aan; de kaart stuurt dat naar de opslag (ronde 3);
 - de receptie (gewone gebruiker): beheert alles wat op het scherm staat;
 - het kioskaccount (gewone gebruiker, de iPad): mag ALLEEN aanwezigheid
   omzetten en verlichting schakelen.
@@ -44,7 +46,6 @@ DATA_FEEDS: Final = "infoscherm_feeds"
 DATA_WS_REGISTERED: Final = "infoscherm_ws_registered"
 DATA_VIEW_REGISTERED: Final = "infoscherm_view_registered"
 DATA_ABONNEES: Final = "infoscherm_abonnees"
-DATA_MIDDERNACHT: Final = "infoscherm_middernacht"
 
 # Bestanden (logo, foto's, nieuwsafbeeldingen) staan naast de camerabeelden,
 # onder de configuratiemap en niet onder `www/`: alles onder `www/` is zonder
@@ -62,8 +63,7 @@ MAX_BESTANDEN: Final = 500
 # waar iedereen met een login in kan typen.
 MAX_PERSONEN: Final = 200
 MAX_MEDEDELINGEN: Final = 50
-MAX_NIEUWS: Final = 200
-MAX_WELKOM: Final = 10
+MAX_VERJAARDAGEN: Final = 300
 MAX_FEEDS: Final = 10
 MAX_UITZONDERINGEN: Final = 100
 
@@ -97,6 +97,7 @@ BLOK_SOORTEN: Final = (
     "nieuws",
     "verlichting",
     "agenda",
+    "verjaardagen",
 )
 AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 
