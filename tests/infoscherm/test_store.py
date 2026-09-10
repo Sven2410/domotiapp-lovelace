@@ -134,6 +134,7 @@ def test_installatie_eist_het_juiste_domein_en_ontdubbelt() -> None:
         }
     )
     assert i["weer"] == "weather.thuis"
+    assert i["energie"] is None
     assert i["agendas"] == ["calendar.praktijk"]
     assert [l["entity"] for l in i["verlichting"]] == ["light.wachtkamer", "switch.balie"]
     assert i["verlichting"][0]["naam"] == "Wachtkamer"
@@ -141,6 +142,16 @@ def test_installatie_eist_het_juiste_domein_en_ontdubbelt() -> None:
         valideer_installatie({"weer": "sensor.temperatuur"})
     with pytest.raises(InfoFout, match="calendar"):
         valideer_installatie({"agendas": ["light.x"]})
+    # Ronde 4 (NIEUW GEDRAG): de energiesensor, alleen een sensor.
+    assert valideer_installatie({"energie": "sensor.verbruik"})["energie"] == "sensor.verbruik"
+    with pytest.raises(InfoFout, match="sensor"):
+        valideer_installatie({"energie": "light.x"})
+
+
+def test_een_energieblok_mag_in_de_indeling() -> None:
+    """Ronde 4 (NIEUW GEDRAG): het blok Energie bestond niet; de server weigerde het."""
+    ind = valideer_indeling({"blokken": [{"id": "e", "soort": "energie", "x": 0, "y": 0, "w": 2, "h": 2}]})
+    assert ind["blokken"][0]["soort"] == "energie"
 
 
 def test_indeling_standaard_past_in_het_raster_zonder_overlap() -> None:
@@ -337,18 +348,19 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         mag_entiteiten_wijzigen=True,
     )
     r = await store.async_zet_installatie_van_kaart(
-        {"weer": "weather.thuis", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
+        {"weer": "weather.thuis", "energie": "sensor.verbruik", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
     )
     assert r["gewijzigd"] is True
     assert r["installatie"] == {
         "weer": "weather.thuis",
+        "energie": "sensor.verbruik",
         "agendas": ["calendar.x"],
         "verlichting": [{"entity": "light.b", "naam": ""}, {"entity": "light.a", "naam": "Wachtkamer"}],
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
     # Dezelfde config nog eens: niets gewijzigd.
     r = await store.async_zet_installatie_van_kaart(
-        {"weer": "weather.thuis", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
+        {"weer": "weather.thuis", "energie": "sensor.verbruik", "agendas": ["calendar.x"], "verlichting": ["light.b", "light.a"], "kiosk_gebruikers": ["u1"]}
     )
     assert r["gewijzigd"] is False
     with pytest.raises(InfoFout):

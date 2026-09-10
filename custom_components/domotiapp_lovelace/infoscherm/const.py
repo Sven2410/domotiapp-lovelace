@@ -98,6 +98,7 @@ BLOK_SOORTEN: Final = (
     "verlichting",
     "agenda",
     "verjaardagen",
+    "energie",
 )
 AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 

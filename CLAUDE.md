@@ -1092,6 +1092,27 @@ die daar niet staan:
    verborgen is: allebei zijn dan nul, en een teller die erop rekent zegt dan
    iets anders dan wat er straks in beeld staat.
 
+53. **In de bewerkmodus van een panel-view ligt de knop "Bewerken" ONDER een
+   beeldvullende kaart, en de view scrolt niet.** Home Assistant zet die
+   knop in `hui-card-options` onder de kaart; een kaart van `100dvh - top`
+   duwt hem uit beeld (gemeten op 10 september 2026: knop op y=874 in een
+   venster van 855). Dat las bij de eigenaar als "ik kan geen verlichting
+   toevoegen in de GUI-editor". Een beeldvullende kaart hoort in de
+   bewerkmodus korter te zijn; `inBewerkmodus_()` in de infoschermkaart
+   zoekt `hui-card-options` als voorouder -- als gewone ouder, niet als
+   shadow host.
+
+54. **Een raster met automatische rijen in een `flex: 1`-kind krimpt zijn
+   rijen tot wat er past**, niet tot de inhoud: lampen van 17px met een chip
+   van 31px erin (gemeten op 10 september 2026). Wil je de EIGEN maat van de
+   rijen weten, zet de lijst dan even op `flex: 0 0 auto`, meet, en zet hem
+   terug. Zie `pasBij_` in de infoschermkaart.
+
+55. **Een keuze met waarde `""` in een `ha-form`-keuzelijst is niet te
+   kiezen.** `DacEditor.patch_` haalt lege waarden uit de config (met opzet:
+   een leeg veld hoort niet in de YAML), dus de keuze valt meteen terug op
+   de standaard. Geef zo'n keuze een echte waarde (`geen`).
+
 ---
 
 ## Projectstand
@@ -1154,8 +1175,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 10 september 2026 (0.38.0):** 1008 JS-tests en 662 Python-tests,
-alle groen; bundel 776.210 bytes.
+**Tellingen op 10 september 2026 (0.39.0):** 1026 JS-tests en 664 Python-tests,
+alle groen; bundel 794.390 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in

@@ -2572,20 +2572,36 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 ### 20.7 Gedrag van het scherm
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
-  met blokken (welkom, weer, mededelingen, openingstijden, aanwezig, nieuws,
-  verlichting, agenda, verjaardagen) op de plek en maat uit `indeling`. Een
-  blok waar niets in te tonen valt staat niet op het scherm. Een blok met een
-  pagina erachter heeft een kop die een knop is ("Alles bekijken"); de pagina
-  heeft een terugknop. Aanwezig en afwezig staan op de pagina gescheiden naast
-  elkaar (of per functie naast elkaar, of als één lijst; de receptie kiest).
-  Passen de gewone tegels niet in een blok, dan worden ze compact voordat er
-  iets wegvalt. In de indeling ruilen twee blokken van dezelfde maat van plek
-  als het ene op het andere wordt losgelaten.
+  met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
+  nieuws, verlichting, agenda, verjaardagen) op de plek en maat uit
+  `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
+  Een blok met een pagina erachter heeft een kop die een knop is ("Alles
+  bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
+  pagina gescheiden naast elkaar (of per functie naast elkaar, of als één
+  lijst; de receptie kiest). In de indeling ruilen twee blokken van dezelfde
+  maat van plek als het ene op het andere wordt losgelaten.
+- **Alles in een blok schaalt met de maat van het blok** (ronde 4): een blok
+  van 2×2 is de maat 1, groter wordt groter en kleiner kleiner. Een blok met
+  een lijst (aanwezig, nieuws, verlichting, agenda, verjaardagen) schaalt
+  alleen met zijn breedte en toont in de hoogte MEER: de rijen die passen
+  zijn even hoog en vullen het blok; blijft er bijna een rij over, dan gaat
+  alles een tikje kleiner zodat die rij erbij past. Wat er niet in past
+  staat als "nog N" in de kop. Passen de gewone tegels niet allemaal, dan
+  worden ze compact als er dan meer in gaan. De kop van een blok schaalt
+  niet mee.
+- Het blok Energie toont de energiesensor uit de kaartconfig: een
+  vermogenssensor (W, kW) als getal van nu met een live lijn van de afgelopen
+  24 uur; een tellerstand (kWh) als verbruik per uur met het totaal van de
+  afgelopen 24 uur. De geschiedenis komt uit de recorder
+  (`history/history_during_period`), de verse waarden uit `hass`. De pagina
+  erachter toont nu, gemiddeld, piek (en totaal) en de grote grafiek. De
+  lijn draagt het accent; de getallen staan in neutrale inkt.
 - Het welkomblok toont wat de receptie kiest: een tekst, het logo (dan niet
   ook in de kop), en de regel met de openingstijd van vandaag.
 - De mededelingen zijn een reeks: één tegelijk, met een teller ("2 van 3"),
   die na een instelbare tijd (standaard 10 s) naar de volgende schuift. Een
-  veeg op het scherm schuift zelf en zet de klok opnieuw. Het vlak heeft de
+  veeg op het scherm schuift zelf en zet de klok opnieuw; met een muis is de
+  baan te slepen, en de stippen eronder zijn knoppen. Het vlak heeft de
   kleur van de andere blokken en geen icoon. Een mededeling geldt vanaf en tot
   een datum of een datum met tijd.
 - Verjaardagen: vandaag eerst, dan op volgorde van hoe lang nog, met de

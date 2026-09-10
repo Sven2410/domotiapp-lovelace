@@ -343,3 +343,176 @@ describe("kleine helpers", () => {
     assert.equal(omDeBeurt([], 0), "");
   });
 });
+
+/*
+ * Ronde 4 (10 september 2026). NIEUW GEDRAG: blokSchaal, pasLijst en de
+ * energiehelpers bestonden niet vóór deze ronde.
+ */
+import {
+  blokSchaal,
+  energiePunten,
+  energieReeks,
+  energieSamenvatting,
+  formatEnergie,
+  isTellerstand,
+  lijnPad,
+  pasLijst,
+} from "../../src/cards/infoscherm-logica.js";
+
+describe("de maat van een blok (ronde 4)", () => {
+  it("blokSchaal: 2×2 is 1, breder en hoger is groter, smaller en lager kleiner", () => {
+    assert.equal(blokSchaal("weer", 2, 2), 1);
+    assert.ok(blokSchaal("weer", 3, 3) > 1);
+    assert.ok(blokSchaal("weer", 1, 1) < 1);
+    assert.ok(blokSchaal("weer", 6, 6) > blokSchaal("weer", 3, 3));
+    // Een welkomblok van 6×1 wordt niet reusachtig.
+    assert.ok(blokSchaal("welkom", 6, 1) < 1.15);
+  });
+
+  it("blokSchaal: een lijstblok volgt alleen zijn breedte", () => {
+    assert.equal(blokSchaal("nieuws", 2, 5), blokSchaal("nieuws", 2, 1));
+    assert.ok(blokSchaal("nieuws", 4, 2) > blokSchaal("nieuws", 2, 2));
+    assert.equal(blokSchaal("aanwezig", 2, 3), 1);
+  });
+
+  it("blokSchaal verdraagt onzin", () => {
+    assert.equal(blokSchaal("weer", 0, 99), blokSchaal("weer", 1, 6));
+    assert.equal(blokSchaal("weer", undefined, null), blokSchaal("weer", 1, 1));
+  });
+
+  it("pasLijst: de schermafdruk van het nieuws -- zes passen, er blijft bijna een rij over, dus zeven iets kleiner", () => {
+    // Zes rijen van 92 met 8 ertussen is 592; er was 640 beschikbaar.
+    const uit = pasLijst({ beschikbaar: 640, hoogte: 92, gap: 8, aantal: 10 });
+    assert.equal(uit.rijen, 7);
+    assert.equal(uit.tonen, 7);
+    assert.ok(uit.pas < 1 && uit.pas > 0.85, `pas ${uit.pas}`);
+    // En ze passen dan ook echt.
+    assert.ok(7 * 92 * uit.pas + 6 * 8 <= 640 + 0.5);
+  });
+
+  it("pasLijst: past alles, dan niets kleiner en alles tonen", () => {
+    assert.deepEqual(pasLijst({ beschikbaar: 640, hoogte: 92, gap: 8, aantal: 3 }), { rijen: 3, tonen: 3, pas: 1 });
+  });
+
+  it("pasLijst: een klein restje levert geen extra rij op", () => {
+    const uit = pasLijst({ beschikbaar: 600, hoogte: 92, gap: 8, aantal: 10 });
+    assert.equal(uit.rijen, 6);
+    assert.equal(uit.pas, 1);
+  });
+
+  it("pasLijst: met twee kolommen tellen de rijen, niet de tegels", () => {
+    const uit = pasLijst({ beschikbaar: 200, hoogte: 64, gap: 10, aantal: 7, kolommen: 2 });
+    assert.equal(uit.rijen, 3);
+    assert.equal(uit.tonen, 6);
+  });
+
+  it("pasLijst: past er niet één rij, dan toch één, kleiner", () => {
+    const uit = pasLijst({ beschikbaar: 50, hoogte: 92, gap: 8, aantal: 4 });
+    assert.equal(uit.rijen, 1);
+    assert.equal(uit.tonen, 1);
+    assert.ok(uit.pas >= 0.5 && uit.pas < 1);
+  });
+
+  it("pasLijst: niets te tonen of niets gemeten", () => {
+    assert.deepEqual(pasLijst({ beschikbaar: 0, hoogte: 92, aantal: 4 }), { rijen: 0, tonen: 0, pas: 1 });
+    assert.deepEqual(pasLijst({ beschikbaar: 400, hoogte: 0, aantal: 4 }), { rijen: 0, tonen: 0, pas: 1 });
+    assert.deepEqual(pasLijst({ beschikbaar: 400, hoogte: 92, aantal: 0 }), { rijen: 0, tonen: 0, pas: 1 });
+  });
+});
+
+describe("energie (ronde 4)", () => {
+  const UUR = 3600000;
+  const nu = new Date(2026, 8, 10, 12, 0).getTime();
+
+  it("isTellerstand: kWh en total_increasing zijn een teller, W niet", () => {
+    assert.equal(isTellerstand({ unit_of_measurement: "kWh" }), true);
+    assert.equal(isTellerstand({ unit_of_measurement: "W", state_class: "total_increasing" }), true);
+    assert.equal(isTellerstand({ unit_of_measurement: "W", state_class: "measurement" }), false);
+    assert.equal(isTellerstand({}), false);
+  });
+
+  it("energiePunten leest beide vormen van de recorder en laat onzin weg", () => {
+    const p = energiePunten([
+      { state: "unavailable", last_updated: "2026-09-10T08:00:00+00:00" },
+      { s: "120", lu: 1789000000 },
+      { state: "100.5", last_updated: "2026-09-10T09:00:00+00:00" },
+      { s: "kapot", lu: 1789000100 },
+    ]);
+    assert.equal(p.length, 2);
+    assert.ok(p[0].t <= p[1].t);
+    assert.deepEqual(p.map((x) => x.v).sort(), [100.5, 120]);
+  });
+
+  it("energieReeks (vermogen): het venster, met een punt vooraf en een punt op nu", () => {
+    const punten = [
+      { t: nu - 30 * UUR, v: 50 },
+      { t: nu - 3 * UUR, v: 100 },
+      { t: nu - 1 * UUR, v: 300 },
+    ];
+    const r = energieReeks(punten, { nu });
+    assert.equal(r.perUur, false);
+    assert.equal(r.van, nu - 24 * UUR);
+    assert.equal(r.tot, nu);
+    // Het punt van 30 uur geleden staat op de linkerrand, en de lijn loopt door tot nu.
+    assert.deepEqual(r.punten[0], { t: nu - 24 * UUR, v: 50 });
+    assert.deepEqual(r.punten[r.punten.length - 1], { t: nu, v: 300 });
+    assert.equal(r.punten.length, 4);
+  });
+
+  it("energieReeks (teller): verbruik per uur, en een reset telt als nul", () => {
+    const punten = [
+      { t: nu - 25 * UUR, v: 1000 },
+      { t: nu - 23.5 * UUR, v: 1001 },
+      { t: nu - 22.5 * UUR, v: 1003 },
+      { t: nu - 21.5 * UUR, v: 5 }, // gereset
+      { t: nu - 20.5 * UUR, v: 6 },
+    ];
+    const r = energieReeks(punten, { nu, tellerstand: true });
+    assert.equal(r.perUur, true);
+    const v = Object.fromEntries(r.punten.map((p) => [(nu - p.t) / UUR, p.v]));
+    assert.equal(v[24], 1);
+    assert.equal(v[23], 2);
+    assert.equal(v[22], 0);
+    assert.equal(v[21], 1);
+    assert.ok(r.punten.every((p) => p.t >= r.van));
+  });
+
+  it("energieSamenvatting: nu, gemiddeld, piek; totaal alleen per uur", () => {
+    const s = energieSamenvatting({ punten: [{ t: 1, v: 100 }, { t: 2, v: 300 }], perUur: false });
+    assert.deepEqual(s, { nu: 300, gemiddeld: 200, piek: 300, totaal: null });
+    assert.equal(energieSamenvatting({ punten: [{ t: 1, v: 1 }, { t: 2, v: 2 }], perUur: true }).totaal, 3);
+    assert.deepEqual(energieSamenvatting({ punten: [] }), { nu: null, gemiddeld: null, piek: null, totaal: null });
+  });
+
+  it("lijnPad: nul onderaan, piek op 5% van boven, en het vlak sluit op de nullijn", () => {
+    const r = { punten: [{ t: 0, v: 0 }, { t: 50, v: 100 }, { t: 100, v: 50 }], van: 0, tot: 100, perUur: false };
+    const p = lijnPad(r, { w: 1000, h: 400 });
+    assert.equal(p.lijn, "M0.0,400.0 L500.0,20.0 L1000.0,210.0");
+    assert.ok(p.vlak.endsWith("L1000.0,400.0 L0.0,400.0 Z"));
+    assert.equal(p.min, 0);
+    assert.equal(lijnPad({ punten: [{ t: 0, v: 1 }], van: 0, tot: 1 }).lijn, "");
+  });
+
+  it("lijnPad: teruglevering (negatief) legt de nullijn boven de bodem", () => {
+    const r = { punten: [{ t: 0, v: -100 }, { t: 100, v: 100 }], van: 0, tot: 100 };
+    const p = lijnPad(r, { w: 100, h: 100 });
+    assert.equal(p.min, -100);
+    assert.match(p.vlak, /L100\.0,5[0-9]\.\d L0\.0,5[0-9]\.\d Z$/);
+  });
+
+  it("formatEnergie: watt wordt kilowatt vanaf 1000, met Nederlandse komma", () => {
+    assert.equal(formatEnergie(350, "W"), "350 W");
+    assert.equal(formatEnergie(1234, "W"), "1,23 kW");
+    assert.equal(formatEnergie(12345, "W"), "12,3 kW");
+    assert.equal(formatEnergie(0.456, "kWh"), "0,46 kWh");
+    assert.equal(formatEnergie(null, "W"), "--");
+    assert.equal(formatEnergie("x", "W"), "--");
+  });
+
+  it("paginas en blokOntbreekt kennen energie", () => {
+    assert.ok(paginas({ personen: [], installatie: { energie: "sensor.x" } }, []).includes("energie"));
+    assert.ok(!paginas({ personen: [], installatie: {} }, []).includes("energie"));
+    assert.match(blokOntbreekt("energie", { installatie: {} }, [], "2026-09-10"), /energiesensor/);
+    assert.equal(blokOntbreekt("energie", { installatie: { energie: "sensor.x" } }, [], "2026-09-10"), null);
+  });
+});

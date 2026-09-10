@@ -71,18 +71,26 @@ import {
   actieveMededelingen,
   aanwezigEerst,
   blokOntbreekt,
+  blokSchaal,
   dagKort,
   datumLang,
+  energiePunten,
+  energieReeks,
+  energieSamenvatting,
+  formatEnergie,
   geslotenRegel,
   groepeerOpFunctie,
   heeftOpeningstijden,
+  isTellerstand,
   isoDatumTijd,
   klok,
   komendeVerjaardagen,
+  lijnPad,
   nieuwsLijst,
   openingVandaag,
   openingsRegels,
   paginas,
+  pasLijst,
   relatieveTijd,
   splitsAanwezig,
   standaardIndeling,
@@ -111,18 +119,27 @@ const PAGINA_KOP = {
   verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
   agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
+  energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
 };
 
 /** Wat er in de kaartconfig staat: de installatie. De rest komt uit het beheer. */
-const STANDAARD = { weather: "", lights: [], calendars: [], kiosk_users: [] };
+const STANDAARD = { weather: "", energy: "", lights: [], calendars: [], kiosk_users: [] };
+
+/* De afgelopen 24 uur in de energiegrafiek. */
+const ENERGIE_VENSTER = 24;
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const css = /* css */ `
   :host { display: block; height: 100%; }
 
+  /* --ss is de schaal van het SCHERM (de breedte gedeeld door die van een
+     iPad van 11 inch). --s is wat alles gebruikt; buiten de blokken is dat
+     hetzelfde getal, en in een blok komt daar de maat van het blok bij
+     (zie .blok hieronder). */
   .scherm {
     --tone: var(--dac-accent-hi);
-    --s: 1;
+    --ss: 1;
+    --s: var(--ss);
     position: relative; width: 100%; height: var(--hoogte, 100dvh);
     overflow: hidden; background: var(--dac-bg); color: var(--dac-ink);
     display: flex; flex-direction: column;
@@ -192,12 +209,22 @@ const css = /* css */ `
     grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr));
     gap: calc(14px * var(--s));
   }
+  /* ALLES IN EEN BLOK SCHAALT MET HET BLOK. Elke maat in een blok is
+     calc(px * var(--s)), en --s is hier de schermschaal maal de maat van het
+     blok (--b, uit blokSchaal: 2×2 is 1) maal de pasfactor (--pas, uit
+     pasLijst: een tikje kleiner als er dan net een rij bij past). Gevraagd
+     op 10 september 2026: "alles van alle kaarten moet meegeschaald worden
+     als je ze kleiner en groter maakt." De kop van een blok doet daar niet
+     aan mee: die is op elk blok even groot, anders leest het raster als
+     zeven verschillende kaarten. */
   .blok {
+    --s: calc(var(--ss) * var(--b, 1) * var(--pas, 1));
     display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
     background: var(--dac-surface); border: 1px solid var(--dac-border);
     border-radius: var(--dac-radius); box-shadow: var(--dac-shadow);
     container-type: inline-size;
   }
+  .blok > .bk { --s: var(--ss); }
   .blok.welkom { background: none; border: none; box-shadow: none; justify-content: center; }
   .bk {
     display: flex; align-items: center; gap: calc(10px * var(--s)); flex: 0 0 auto; width: 100%;
@@ -269,10 +296,14 @@ const css = /* css */ `
     .blok.weer .w-tekst { font-size: calc(12px * var(--s)); margin-top: calc(2px * var(--s)); }
     .blok.weer .uren { display: none; }
   }
-  .blok.klein .w-icoon { font-size: calc(34px * var(--s)); }
-  .blok.klein .temp { font-size: calc(24px * var(--s)); }
-  .blok.klein .w-tekst { display: none; }
-  .blok.klein .w-nu { gap: calc(10px * var(--s)); }
+  /* Eén rij hoog: icoon en getal kleiner, en de tekst op één regel erbij.
+     Die tekst stond eerst uit; gemeld op 10 september 2026: "nu wordt het
+     weer wel laten zien maar de tekst niet." */
+  .blok.klein .w-icoon { font-size: calc(38px * var(--s)); }
+  .blok.klein .temp { font-size: calc(26px * var(--s)); }
+  .blok.klein .w-tekst { font-size: calc(13px * var(--s)); margin-top: calc(1px * var(--s)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blok.klein .w-nu { gap: calc(12px * var(--s)); }
+  .blok.klein .w-nu > div:last-child { min-width: 0; }
   .uren { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(8px * var(--s)); }
   .uur, .dag { display: flex; flex-direction: column; align-items: center; gap: calc(4px * var(--s)); padding: calc(8px * var(--s)) 0; border-radius: var(--dac-radius-sm); background: var(--dac-surface); }
   .uur .u, .dag .u { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); }
@@ -306,15 +337,23 @@ const css = /* css */ `
     overscroll-behavior-x: contain; touch-action: pan-x;
   }
   .m-baan::-webkit-scrollbar { display: none; }
+  /* Met een muis kun je een scrollvak niet vegen; op de pc sleept een
+     pointer de baan zelf (zie sleepMededeling_), zonder snap tijdens het
+     slepen, anders springt hij terug. Gemeld op 10 september 2026: "ik kan
+     niet swipen op mededelingen." */
+  .m-baan.sleept { scroll-snap-type: none; cursor: grabbing; scroll-behavior: auto; }
+  @media (hover: hover) { .m-baan { cursor: grab; } }
   .m-slide {
     flex: 0 0 100%; width: 100%; scroll-snap-align: start; scroll-snap-stop: always;
     display: flex; align-items: center; min-width: 0; box-sizing: border-box;
     padding: calc(12px * var(--s)) calc(18px * var(--s));
   }
   .m-tekst { font-size: calc(18px * var(--s)); line-height: 1.35; white-space: pre-wrap; overflow: hidden; overflow-wrap: anywhere; max-height: 100%; }
-  .m-stippen { display: flex; gap: calc(5px * var(--s)); justify-content: center; padding: 0 0 calc(8px * var(--s)); flex: 0 0 auto; }
-  .m-stippen span { width: calc(6px * var(--s)); height: calc(6px * var(--s)); border-radius: 50%; background: var(--dac-border-hi); }
-  .m-stippen span.nu { background: var(--tone); }
+  .m-stippen { display: flex; gap: calc(2px * var(--s)); justify-content: center; padding: 0 0 calc(4px * var(--s)); flex: 0 0 auto; }
+  /* Elke stip is ook een knop: tikken springt naar die mededeling. Het
+     raakvlak is groter dan de stip zelf. */
+  .m-stippen span { width: calc(6px * var(--s)); height: calc(6px * var(--s)); border-radius: 50%; background: var(--dac-border-hi); background-clip: content-box; padding: calc(4px * var(--s)); box-sizing: content-box; cursor: pointer; }
+  .m-stippen span.nu { background-color: var(--tone); }
   .blok.klein .m-stippen { display: none; }
   .blok.klein .m-slide { padding: calc(6px * var(--s)) calc(14px * var(--s)); }
 
@@ -331,6 +370,14 @@ const css = /* css */ `
   .ot .dicht span:last-child { color: var(--dac-ink-3); }
   .ot .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ot-nu { font-size: calc(15px * var(--s)); color: var(--dac-ink-2); }
+
+  /* DE LIJSTEN IN EEN BLOK VULLEN HET BLOK. Elke lijst is een raster; pasBij_
+     zet er inline grid-template-rows op (repeat(n, 1fr)) zodat de rijen die
+     erin passen even hoog worden en samen precies de hoogte vullen. Zonder
+     die inline regel (op een pagina, of vóór het meten) staan de rijen op
+     hun eigen maat, bovenaan. Gemeld op 10 september 2026: "maak dan alles
+     dezelfde grootte en passend." */
+  .bi > .tegels, .bi > .n-lijst, .bi > .lampen, .bi > .afspraken, .bi > .vj-lijst { flex: 1 1 auto; min-height: 0; }
 
   /* aanwezig */
   .tegels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10px * var(--s)); align-content: start; }
@@ -379,21 +426,23 @@ const css = /* css */ `
   .persoon:focus-visible, .bericht:focus-visible, .lamp:focus-visible, .bk:focus-visible, .terug:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
 
   /* nieuws */
-  .n-lijst { display: flex; flex-direction: column; gap: calc(8px * var(--s)); }
+  .n-lijst { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(8px * var(--s)); align-content: start; }
   .nieuws-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(14px * var(--s)); align-content: start; }
   .bericht {
-    display: flex; gap: calc(12px * var(--s)); padding: calc(10px * var(--s)) calc(12px * var(--s)); cursor: pointer;
+    display: flex; align-items: stretch; gap: calc(12px * var(--s)); padding: calc(10px * var(--s)) calc(12px * var(--s)); cursor: pointer;
     background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
-    box-shadow: var(--dac-shadow); text-align: left; font: inherit; color: inherit; min-width: 0;
+    box-shadow: var(--dac-shadow); text-align: left; font: inherit; color: inherit; min-width: 0; box-sizing: border-box;
   }
   .nieuws-raster .bericht { padding: calc(16px * var(--s)) calc(18px * var(--s)); gap: calc(16px * var(--s)); min-height: calc(110px * var(--s)); }
   .bericht:active { background: var(--dac-surface-hi); }
   .bericht.eigen { border-color: color-mix(in srgb, var(--tone) 40%, transparent); }
-  .bericht .foto { width: calc(84px * var(--s)); height: calc(60px * var(--s)); flex: 0 0 auto; border-radius: var(--dac-radius-sm); overflow: hidden; background: var(--dac-surface); }
-  .nieuws-raster .bericht .foto { width: calc(120px * var(--s)); height: calc(84px * var(--s)); }
+  /* De foto groeit mee met de rij: in een blok dat de rijen uitsmeert wordt
+     hij hoger, en de tekst blijft in het midden staan. */
+  .bericht .foto { width: calc(84px * var(--s)); min-height: calc(60px * var(--s)); flex: 0 0 auto; border-radius: var(--dac-radius-sm); overflow: hidden; background: var(--dac-surface); }
+  .nieuws-raster .bericht .foto { width: calc(120px * var(--s)); min-height: calc(84px * var(--s)); }
   .bericht .foto:empty { display: none; }
   .bericht .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .b-tekst { min-width: 0; display: flex; flex-direction: column; gap: calc(3px * var(--s)); flex: 1 1 auto; }
+  .b-tekst { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(3px * var(--s)); flex: 1 1 auto; }
   .b-bron { font-size: calc(11px * var(--s)); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bericht.eigen .b-bron { color: var(--tone); }
   /* De titel mag drie regels: twee sneden een NOS-kop halverwege af
@@ -422,8 +471,8 @@ const css = /* css */ `
   .p-inhoud .l-naam { font-size: calc(19px * var(--s)); }
   .l-status { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); }
 
-  .afspraken { display: flex; flex-direction: column; gap: calc(8px * var(--s)); }
-  .afspraak { display: flex; align-items: center; gap: calc(14px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); min-width: 0; }
+  .afspraken { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(8px * var(--s)); align-content: start; }
+  .afspraak { display: flex; box-sizing: border-box; align-items: center; gap: calc(14px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); min-width: 0; }
   .p-inhoud .afspraak { padding: calc(14px * var(--s)) calc(20px * var(--s)); }
   .a-tijd { font-size: calc(16px * var(--s)); font-variant-numeric: tabular-nums; color: var(--tone); font-weight: 600; flex: 0 0 auto; }
   .p-inhoud .a-tijd { font-size: calc(20px * var(--s)); min-width: calc(120px * var(--s)); }
@@ -432,7 +481,7 @@ const css = /* css */ `
   .a-kalender { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); margin-left: auto; flex: 0 0 auto; }
 
   /* verjaardagen */
-  .vj-lijst { display: flex; flex-direction: column; gap: calc(8px * var(--s)); }
+  .vj-lijst { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(8px * var(--s)); align-content: start; }
   .vj-raster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(12px * var(--s)); align-content: start; }
   .vj { display: flex; align-items: center; gap: calc(14px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); min-width: 0; }
   .vj-raster .vj { padding: calc(14px * var(--s)) calc(18px * var(--s)); }
@@ -455,6 +504,40 @@ const css = /* css */ `
     .blok.verjaardagen .vj-tekst { width: 100%; }
     .blok.verjaardagen .vj-wanneer { font-size: calc(12px * var(--s)); }
   }
+
+  /* energie: het getal in neutrale inkt, de lijn in het accent. De grafiek
+     is een SVG die met het vak meerekt (preserveAspectRatio none); de lijn
+     houdt zijn dikte door vector-effect. De opschriften staan in HTML naast
+     en onder het vak, zodat ze niet mee vervormen. */
+  .blok.energie .bi { gap: calc(8px * var(--s)); }
+  .e-nu { display: flex; align-items: baseline; gap: calc(10px * var(--s)); flex: 0 0 auto; min-width: 0; flex-wrap: wrap; }
+  .e-waarde { font-size: calc(36px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .e-sub { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .e-grafiek { position: relative; flex: 1 1 auto; min-height: calc(36px * var(--s)); }
+  .e-grafiek svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  .e-grafiek .e-vlak { fill: var(--tone); fill-opacity: 0.16; stroke: none; }
+  .e-grafiek .e-lijn { fill: none; stroke: var(--tone); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .e-grafiek .e-nul { stroke: var(--dac-border-hi); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+  .e-grafiek .e-piek { position: absolute; left: 0; top: 0; font-size: calc(11px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .e-grafiek .e-stip { position: absolute; right: 0; width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; background: var(--tone); border: 2px solid var(--dac-bg-raise); transform: translate(50%, -50%); box-sizing: content-box; }
+  .e-as { display: flex; justify-content: space-between; flex: 0 0 auto; font-size: calc(11px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
+  .e-leeg { font-size: calc(14px * var(--s)); color: var(--dac-ink-3); }
+  /* Eén rij hoog: getal links, grafiek rechts. */
+  .blok.klein.energie .bi { flex-direction: row; align-items: stretch; gap: calc(14px * var(--s)); }
+  .blok.klein .e-nu { flex-direction: column; gap: calc(2px * var(--s)); justify-content: center; }
+  .blok.klein .e-waarde { font-size: calc(26px * var(--s)); }
+  .blok.klein .e-as, .blok.klein .e-piek { display: none; }
+  .blok.klein .e-grafiek { min-height: 0; }
+  @container (max-width: 240px) { .blok.energie .e-as span:nth-child(2) { display: none; } }
+  /* De pagina: de samenvatting als tegels, daaronder de grote grafiek. */
+  .e-pagina { display: flex; flex-direction: column; gap: calc(20px * var(--s)); height: 100%; min-height: 0; }
+  .e-tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(150px * var(--s)), 1fr)); gap: calc(12px * var(--s)); flex: 0 0 auto; }
+  .e-tegel { padding: calc(14px * var(--s)) calc(18px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); display: flex; flex-direction: column; gap: calc(4px * var(--s)); min-width: 0; }
+  .e-tegel .e-l { font-size: calc(12px * var(--s)); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dac-ink-3); }
+  .e-tegel .e-w { font-size: calc(30px * var(--s)); font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .e-pagina .e-vak { flex: 1 1 auto; min-height: calc(200px * var(--s)); display: flex; flex-direction: column; gap: calc(8px * var(--s)); padding: calc(18px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); }
+  .e-pagina .e-grafiek { min-height: calc(160px * var(--s)); }
+  .e-pagina .e-titel { font-size: calc(14px * var(--s)); color: var(--dac-ink-2); flex: 0 0 auto; }
 
   /* ------------------------------------------------------------ lagen */
   .laag { position: absolute; inset: 0; display: none; background: var(--dac-bg); color: var(--dac-ink); }
@@ -516,17 +599,21 @@ export class InfoschermCard extends DacCard {
     /* Tot wanneer een scrollbeweging van de mededelingen van onszelf is en
        niet van een vinger; daarna zet een scroll de klok opnieuw. */
     this.mAuto_ = 0;
+    /* De energiesensor: de punten van de afgelopen dag uit de recorder, met
+       de live waarden erachteraan. */
+    this.energie_ = { entiteit: null, punten: [], geladen: 0 };
   }
 
   /**
-   * De installatie: weer, lampen, agenda's en de kioskaccounts. Mag NOOIT
-   * gooien (CLAUDE.md), dus een vreemde waarde wordt gewoon leeg.
+   * De installatie: weer, energie, lampen, agenda's en de kioskaccounts. Mag
+   * NOOIT gooien (CLAUDE.md), dus een vreemde waarde wordt gewoon leeg.
    */
   validate(config) {
     return {
       ...STANDAARD,
       ...config,
       weather: typeof config.weather === "string" ? config.weather : "",
+      energy: typeof config.energy === "string" ? config.energy : "",
       lights: lijstVan(config.lights),
       calendars: lijstVan(config.calendars),
       kiosk_users: lijstVan(config.kiosk_users),
@@ -543,6 +630,7 @@ export class InfoschermCard extends DacCard {
     const namen = new Map((this.stand_?.installatie?.verlichting ?? []).map((l) => [l.entity, l.naam]));
     return {
       weer: c.weather || null,
+      energie: c.energy || null,
       agendas: c.calendars,
       verlichting: c.lights.map((entity) => ({ entity, naam: namen.get(entity) ?? "" })),
     };
@@ -563,6 +651,7 @@ export class InfoschermCard extends DacCard {
     const c = this.config;
     const wens = {
       weer: c.weather || null,
+      energie: c.energy || null,
       agendas: c.calendars,
       verlichting: c.lights,
       kiosk_gebruikers: c.kiosk_users,
@@ -571,6 +660,7 @@ export class InfoschermCard extends DacCard {
     const i = this.stand_.installatie ?? {};
     const nu = JSON.stringify({
       weer: i.weer ?? null,
+      energie: i.energie ?? null,
       agendas: i.agendas ?? [],
       verlichting: (i.verlichting ?? []).map((l) => l.entity),
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
@@ -588,7 +678,7 @@ export class InfoschermCard extends DacCard {
 
   watched() {
     const i = this.installatie_();
-    return [i.weer, "sun.sun", ...i.verlichting.map((l) => l.entity)].filter(Boolean);
+    return [i.weer, i.energie, "sun.sun", ...i.verlichting.map((l) => l.entity)].filter(Boolean);
   }
 
   getCardSize() {
@@ -655,8 +745,16 @@ export class InfoschermCard extends DacCard {
 
     // Eén luisteraar voor alles wat klikbaar is; de vakken worden vaak
     // opnieuw getekend, en een luisteraar per tegel zou dan telkens weg zijn.
+    // Met een muis (of pen) is de baan van de mededelingen te slepen.
+    this.on(scherm, "pointerdown", (e) => {
+      const baan = e.target?.closest?.(".m-baan");
+      if (baan && e.pointerType !== "touch") this.sleepMededeling_(e, baan);
+    });
+
     this.on(scherm, "click", (e) => {
       const doel = e.target;
+      const stip = doel.closest(".m-stippen span");
+      if (stip) return this.mededelingNaar_(stip.closest(".blok")?.querySelector(".m-baan"), [...stip.parentElement.children].indexOf(stip));
       const kop = doel.closest(".bk[data-pagina]");
       if (kop) return this.gaNaar_(kop.dataset.pagina);
       if (doel.closest(".terug")) return this.gaNaar_("welkom");
@@ -676,10 +774,19 @@ export class InfoschermCard extends DacCard {
     // Gemeten in de ResizeObserver en niet alleen bij het bouwen: op dat
     // moment hangt de kaart nog niet in de view en is zijn bovenkant 0
     // (valkuil 25), dus het eerste antwoord is altijd 100dvh.
+    //
+    // In de BEWERKMODUS van het dashboard zet Home Assistant onder de kaart
+    // een balk met "Bewerken"; een beeldvullende kaart duwt die balk onder
+    // de rand van het venster, en een panel-view scrolt niet. Gemeten op
+    // 10 september 2026: de knop stond op y=874 in een venster van 855 hoog.
+    // Dat is waarom de installateur "geen verlichting kon toevoegen": de
+    // editor was vanaf het dashboard niet te openen. Dus: in de bewerkmodus
+    // 72px korter, zodat de balk in beeld staat.
     const hoogte = () => {
       if (this.inDialoog_()) return scherm.style.setProperty("--hoogte", "600px");
       const top = Math.max(0, Math.round(this.getBoundingClientRect().top));
-      const wens = top ? `calc(100dvh - ${top}px)` : "100dvh";
+      const marge = top + (this.inBewerkmodus_() ? 72 : 0);
+      const wens = marge ? `calc(100dvh - ${marge}px)` : "100dvh";
       if (scherm.style.getPropertyValue("--hoogte") !== wens) scherm.style.setProperty("--hoogte", wens);
       return undefined;
     };
@@ -691,7 +798,7 @@ export class InfoschermCard extends DacCard {
       if (!r.width) return;
       const schaal = Number(this.stand_?.scherm?.schaal) || 1;
       const s = Math.min(r.width / 1194, r.height ? r.height / 834 : 9) * schaal;
-      scherm.style.setProperty("--s", Math.max(0.35, s).toFixed(3));
+      scherm.style.setProperty("--ss", Math.max(0.35, s).toFixed(3));
       requestAnimationFrame(() => this.pasAlleBij_());
     };
     this.meet_ = meet;
@@ -719,15 +826,34 @@ export class InfoschermCard extends DacCard {
     this.leeft_();
     this.teardown_.push(() => clearTimeout(this.terugTimer_));
 
-    // Agenda om de tien minuten.
+    // Agenda om de tien minuten; de energiegeschiedenis om het kwartier
+    // (tussendoor komen de live waarden via hass binnen).
     const agenda = setInterval(() => this.haalAgenda_(), 10 * 60000);
     this.teardown_.push(() => clearInterval(agenda));
+    const energie = setInterval(() => this.laadEnergie_(true), 15 * 60000);
+    this.teardown_.push(() => clearInterval(energie));
 
     this.teardown_.push(() => this.herkansing_.stop());
     this.teardown_.push(() => this.zegWeerOp_());
 
     this.haal_();
     this.luister_();
+  }
+
+  /**
+   * Staat het dashboard in de bewerkmodus? Dan hangt de kaart in
+   * `hui-card-options`, de schil met de knop Bewerken eronder.
+   */
+  inBewerkmodus_() {
+    // Omhoog door de boom, ook door shadow roots heen: `hui-card-options`
+    // is een gewone voorouder van `hui-card` (geen shadow host), dus alleen
+    // naar hosts kijken vindt hem niet -- gemeten op 10 september 2026.
+    let node = this.parentNode;
+    while (node) {
+      if (node.tagName?.toLowerCase() === "hui-card-options") return true;
+      node = node.parentNode ?? node.host ?? null;
+    }
+    return false;
   }
 
   /** Zit deze kaart in HA's bewerkdialoog? Dan geen schermvullende hoogte. */
@@ -769,6 +895,7 @@ export class InfoschermCard extends DacCard {
     this.stand_ = stand;
     this.meet_?.();
     this.abonneerWeer_();
+    this.laadEnergie_();
     this.haalAgenda_();
     this.sync_();
     this.mededelingStart_();
@@ -895,6 +1022,122 @@ export class InfoschermCard extends DacCard {
     this.paintPagina_("agenda");
   }
 
+  /* ------------------------------------------------------------ energie */
+
+  /**
+   * De afgelopen dag van de energiesensor uit de recorder. Opnieuw als de
+   * sensor verandert, of (met `vernieuw`) om het kwartier; tussendoor
+   * plakt `energieLive_` de verse waarden erachteraan.
+   */
+  async laadEnergie_(vernieuw = false) {
+    const entiteit = this.installatie_().energie;
+    if (entiteit === this.energie_.entiteit && this.energie_.geladen && !vernieuw) return;
+    if (entiteit !== this.energie_.entiteit) this.energie_ = { entiteit, punten: [], geladen: 0 };
+    if (!entiteit || !this.hass?.connection?.sendMessagePromise) return;
+    const eind = new Date();
+    const start = new Date(eind.getTime() - (ENERGIE_VENSTER + 1) * 3600000);
+    try {
+      const r = await this.hass.connection.sendMessagePromise({
+        type: "history/history_during_period",
+        start_time: start.toISOString(),
+        end_time: eind.toISOString(),
+        entity_ids: [entiteit],
+        minimal_response: true,
+        no_attributes: true,
+        significant_changes_only: false,
+      });
+      if (this.energie_.entiteit !== entiteit) return;
+      this.energie_.punten = energiePunten(r?.[entiteit]);
+      this.energie_.geladen = Date.now();
+    } catch {
+      // Geen recorder, of nog niet klaar: dan alleen de live waarden.
+      this.energie_.geladen = Date.now();
+    }
+    this.energieLive_();
+    this.paintRaster_();
+    this.paintPagina_("energie");
+  }
+
+  /** De huidige waarde van de sensor achter de reeks, als hij nieuwer is. */
+  energieLive_() {
+    const e = this.energie_;
+    if (!e.entiteit) return;
+    const st = stateOf(this.hass, e.entiteit);
+    const v = Number(st?.state);
+    if (!st || !Number.isFinite(v)) return;
+    const t = Date.parse(st.last_updated) || Date.now();
+    const laatste = e.punten[e.punten.length - 1];
+    if (laatste && laatste.t >= t) return;
+    e.punten.push({ t, v });
+    const grens = Date.now() - (ENERGIE_VENSTER + 2) * 3600000;
+    if (e.punten.length > 2000 || (e.punten[0] && e.punten[0].t < grens)) {
+      e.punten = e.punten.filter((p) => p.t >= grens);
+    }
+  }
+
+  /**
+   * Het energieblok (of, met `groot`, de pagina). Een vermogenssensor geeft
+   * de lijn van de afgelopen 24 uur en het getal van nu; een tellerstand
+   * (kWh) het verbruik per uur, met het totaal van de dag.
+   */
+  htmlEnergie_(groot = false, klein = false) {
+    const entiteit = this.installatie_().energie;
+    if (!entiteit) return "";
+    this.energieLive_();
+    const a = attrsOf(this.hass, entiteit);
+    const eenheid = a.unit_of_measurement ?? "W";
+    const teller = isTellerstand(a);
+    const nu = Date.now();
+    const reeks = energieReeks(this.energie_.punten, { nu, tellerstand: teller, venster: ENERGIE_VENSTER });
+    const sam = energieSamenvatting(reeks);
+    const pad = lijnPad(reeks);
+    const st = stateOf(this.hass, entiteit);
+    const dood = !st || st.state === "unavailable" || st.state === "unknown";
+    const huidig = teller ? sam.nu : Number(st?.state);
+    const fmt = (v) => formatEnergie(v, eenheid);
+    const laatste = reeks.punten[reeks.punten.length - 1];
+    const stipTop = laatste && pad.max > pad.min ? (1 - (laatste.v - pad.min) / (pad.max - pad.min)) * 100 : null;
+    const ticks = (n) => {
+      const uit = [];
+      for (let i = 0; i < n; i += 1) uit.push(klok(new Date(reeks.van + ((reeks.tot - reeks.van) * i) / (n - 1))));
+      uit[n - 1] = "nu";
+      return uit;
+    };
+    const grafiek = pad.lijn
+      ? `<div class="e-grafiek">
+          <svg viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
+            <line class="e-nul" x1="0" y1="400" x2="1000" y2="400"/>
+            <path class="e-vlak" d="${pad.vlak}"/>
+            <path class="e-lijn" d="${pad.lijn}"/>
+          </svg>
+          <span class="e-piek">piek ${escapeHtml(fmt(sam.piek))}</span>
+          ${stipTop !== null ? `<span class="e-stip" style="top:${stipTop.toFixed(1)}%"></span>` : ""}
+        </div>`
+      : `<div class="e-grafiek"><div class="e-leeg">${dood ? "Sensor niet bereikbaar." : "Nog geen geschiedenis."}</div></div>`;
+    if (groot) {
+      const tegel = (l, w) => `<div class="e-tegel"><span class="e-l">${l}</span><span class="e-w">${escapeHtml(w)}</span></div>`;
+      return `<div class="e-pagina">
+        <div class="e-tegels">
+          ${tegel(teller ? "Afgelopen uur" : "Nu", dood ? "--" : fmt(huidig))}
+          ${tegel("Gemiddeld", fmt(sam.gemiddeld))}
+          ${tegel("Piek", fmt(sam.piek))}
+          ${teller ? tegel("Afgelopen 24 uur", fmt(sam.totaal)) : ""}
+        </div>
+        <div class="e-vak">
+          <div class="e-titel">${teller ? "Verbruik per uur, afgelopen 24 uur" : "Vermogen, afgelopen 24 uur"} · ${escapeHtml(a.friendly_name ?? entiteit)}</div>
+          ${grafiek}
+          <div class="e-as">${ticks(5).map((t) => `<span>${t}</span>`).join("")}</div>
+        </div>
+      </div>`;
+    }
+    const sub = teller
+      ? `afgelopen uur${sam.totaal !== null ? ` · 24 u: ${fmt(sam.totaal)}` : ""}`
+      : "nu · afgelopen 24 uur";
+    return `<div class="e-nu"><span class="e-waarde">${dood ? "--" : escapeHtml(fmt(huidig))}</span><span class="e-sub">${escapeHtml(sub)}</span></div>
+      ${grafiek}
+      ${klein ? "" : `<div class="e-as">${ticks(3).map((t) => `<span>${t}</span>`).join("")}</div>`}`;
+  }
+
   /* ------------------------------------------------------------ gedrag */
 
   terugNa_() {
@@ -951,6 +1194,68 @@ export class InfoschermCard extends DacCard {
     // geen veeg en zet de klok niet opnieuw.
     this.mAuto_ = Date.now() + 1200;
     baan.scrollTo({ left: i * baan.clientWidth, behavior: "smooth" });
+  }
+
+  /** Naar mededeling `i` schuiven, met de klok opnieuw. */
+  mededelingNaar_(baan, i) {
+    if (!baan || !baan.clientWidth) return;
+    const n = baan.children.length;
+    const doel = Math.max(0, Math.min(n - 1, i));
+    this.mAuto_ = Date.now() + 1200;
+    baan.scrollTo({ left: doel * baan.clientWidth, behavior: "smooth" });
+    this.mededelingStart_();
+  }
+
+  /**
+   * De baan met een muis of pen slepen. Een vinger hoeft dit niet: daar
+   * scrolt het vak zelf, met snap. Tijdens het slepen staat de snap uit
+   * (anders springt de baan telkens terug); bij het loslaten landt hij op
+   * de dichtstbijzijnde mededeling, of één verder als er genoeg is gesleept.
+   */
+  sleepMededeling_(e, baan) {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const startX = e.clientX;
+    const startLeft = baan.scrollLeft;
+    const startIndex = this.mIndex_(baan);
+    let bewogen = false;
+    const beweeg = (ev) => {
+      const dx = ev.clientX - startX;
+      if (!bewogen && Math.abs(dx) < 4) return;
+      if (!bewogen) {
+        bewogen = true;
+        baan.classList.add("sleept");
+      }
+      baan.scrollLeft = startLeft - dx;
+      ev.preventDefault();
+    };
+    const klaar = (ev) => {
+      window.removeEventListener("pointermove", beweeg, true);
+      window.removeEventListener("pointerup", klaar, true);
+      window.removeEventListener("pointercancel", klaar, true);
+      if (!bewogen) return;
+      const dx = ev.clientX - startX;
+      const breedte = baan.clientWidth || 1;
+      // Meer dan een vijfde van de breedte is een veeg naar de buur; minder
+      // valt terug op waar je was.
+      const doel = Math.abs(dx) > breedte / 5 ? startIndex - Math.sign(dx) : startIndex;
+      baan.classList.remove("sleept");
+      this.mededelingNaar_(baan, doel);
+      // De klik die op het loslaten volgt mag niets openen.
+      const stopKlik = (k) => {
+        k.stopPropagation();
+        k.preventDefault();
+      };
+      baan.addEventListener("click", stopKlik, { capture: true, once: true });
+      setTimeout(() => baan.removeEventListener("click", stopKlik, { capture: true }), 300);
+    };
+    window.addEventListener("pointermove", beweeg, true);
+    window.addEventListener("pointerup", klaar, true);
+    window.addEventListener("pointercancel", klaar, true);
+    this.teardown_.push(() => {
+      window.removeEventListener("pointermove", beweeg, true);
+      window.removeEventListener("pointerup", klaar, true);
+      window.removeEventListener("pointercancel", klaar, true);
+    });
   }
 
   /** "2 van 3" in de kop, en de stip eronder. */
@@ -1124,6 +1429,10 @@ export class InfoschermCard extends DacCard {
       const area = `${blok.y + 1} / ${blok.x + 1} / span ${blok.h} / span ${blok.w}`;
       if (el.style.gridArea !== area) el.style.gridArea = area;
       el.classList.toggle("klein", blok.h === 1);
+      // De maat van het blok bepaalt hoe groot alles erin is (zie de CSS
+      // bij .blok).
+      const b = String(blokSchaal(blok.soort, blok.w, blok.h));
+      if (el.style.getPropertyValue("--b") !== b) el.style.setProperty("--b", b);
       this.paintBlok_(el, blok);
     }
     this.pasAlleBij_();
@@ -1146,6 +1455,8 @@ export class InfoschermCard extends DacCard {
   pasBij_(el) {
     const bi = el.querySelector(".bi");
     if (!bi) return;
+    // Eerst alles terug op de eigen maat, anders meet je de vorige keer.
+    el.style.removeProperty("--pas");
     const onder = () => bi.getBoundingClientRect().bottom - parseFloat(getComputedStyle(bi).paddingBottom);
     // De uurvoorspelling in een laag weerblok: past hij niet, dan weg.
     const uren = bi.querySelector(".uren");
@@ -1156,18 +1467,59 @@ export class InfoschermCard extends DacCard {
     const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .afspraken, .ot, .vj-lijst");
     if (!lijst) return;
     const kinderen = [...lijst.children];
-    const past = () => kinderen.every((kind) => kind.getBoundingClientRect().bottom <= onder() + 1);
     for (const kind of kinderen) kind.hidden = false;
-    // Eerst de gewone tegels; passen die niet, dan de dichte. Pas daarna
-    // valt er iets weg.
-    el.classList.remove("dicht");
-    if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen") && !past()) el.classList.add("dicht");
     let verborgen = 0;
-    for (const kind of kinderen) {
-      if (kind.getBoundingClientRect().bottom > onder() + 1) {
-        kind.hidden = true;
-        verborgen += 1;
+    if (lijst.matches(".ot")) {
+      // De openingstijden zijn geen lijst van tegels. Passen de zeven regels
+      // net niet, dan alles iets kleiner (tot 72%); pas daarna valt er
+      // onderaan iets weg.
+      const laatste = kinderen[kinderen.length - 1];
+      const nodig = laatste ? laatste.getBoundingClientRect().bottom - lijst.getBoundingClientRect().top : 0;
+      const ruimte = onder() - lijst.getBoundingClientRect().top;
+      if (nodig > ruimte && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
+      for (const kind of kinderen) {
+        if (kind.getBoundingClientRect().bottom > onder() + 1) {
+          kind.hidden = true;
+          verborgen += 1;
+        }
       }
+    } else {
+      // Een lijst van tegels: tellen hoeveel rijen er passen, een tikje
+      // kleiner als er dan net een rij bij kan, en de rijen die er staan
+      // over de hoogte uitsmeren (zie pasLijst en de CSS bij .bi > .tegels).
+      //
+      // Meten op de EIGEN maat: zolang de lijst flex: 1 is, met een vaste
+      // hoogte uit het blok, maakt Chrome zijn automatische rijen zo hoog
+      // als er past en niet zo hoog als de inhoud (gemeten op 10 september
+      // 2026: lampen van 17px met een chip van 31px erin). Dus even
+      // flex: none, meten, en daarna terug.
+      lijst.style.gridTemplateRows = "";
+      lijst.style.flex = "0 0 auto";
+      const meet = () => {
+        const stijl = getComputedStyle(lijst);
+        const gap = parseFloat(stijl.rowGap) || 0;
+        const kolommen = stijl.gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+        const hoogte = Math.max(0, ...kinderen.map((k) => k.getBoundingClientRect().height));
+        const beschikbaar = onder() - lijst.getBoundingClientRect().top;
+        return pasLijst({ beschikbaar, hoogte, gap, aantal: kinderen.length, kolommen });
+      };
+      el.classList.remove("dicht");
+      let uit = meet();
+      // Passen de gewone tegels niet allemaal, dan de dichte -- maar alleen
+      // als er dan ook echt meer in gaan.
+      if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen") && uit.tonen < kinderen.length) {
+        el.classList.add("dicht");
+        const dicht = meet();
+        if (dicht.tonen > uit.tonen) uit = dicht;
+        else el.classList.remove("dicht");
+      }
+      lijst.style.flex = "";
+      if (uit.pas < 1) el.style.setProperty("--pas", String(uit.pas));
+      kinderen.forEach((kind, i) => {
+        kind.hidden = i >= uit.tonen;
+      });
+      verborgen = kinderen.length - uit.tonen;
+      if (uit.rijen > 0) lijst.style.gridTemplateRows = `repeat(${uit.rijen}, minmax(0, 1fr))`;
     }
     const meer = Number(el.dataset.meer ?? 0) + verborgen;
     const sub = el.querySelector(".bk-sub");
@@ -1223,6 +1575,10 @@ export class InfoschermCard extends DacCard {
       }
       case "weer": {
         zet(this.htmlWeerNu_() + (blok.h >= 2 ? this.htmlUren_(blok.w >= 3 ? 6 : 4) : ""));
+        break;
+      }
+      case "energie": {
+        zet(this.htmlEnergie_(false, blok.h === 1), "");
         break;
       }
       case "mededeling": {
@@ -1479,6 +1835,10 @@ export class InfoschermCard extends DacCard {
         this.vul_(vak, `<div class="weerpagina">${this.htmlWeerNu_()}${this.htmlUren_(8)}${this.htmlDagen_()}</div>`, false);
         break;
       }
+      case "energie": {
+        this.vul_(vak, this.htmlEnergie_(true), false);
+        break;
+      }
       case "verlichting": {
         const lampen = this.installatie_().verlichting;
         this.vul_(vak, `<div class="lampen kol-3">${lampen.map((l) => this.htmlLamp_(l)).join("")}</div>`, false);
@@ -1511,6 +1871,7 @@ export class InfoschermCard extends DacCard {
 
 const LABELS = {
   weather: "Weerentiteit",
+  energy: "Energiesensor (vermogen of tellerstand)",
   lights: "Lampen en schakelaars op het scherm",
   calendars: "Agenda's (de afspraken van vandaag)",
   kiosk_users: "Kioskaccounts",
@@ -1518,6 +1879,8 @@ const LABELS = {
 
 const HELPERS = {
   weather: "Leeg = geen weer op het scherm.",
+  energy:
+    "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
   lights: "De namen zoals ze op het scherm staan geeft de receptie in het beheer (blok Verlichting), en daar staat ook de schakelaar om ze te tonen.",
   kiosk_users:
     "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren. Alleen een beheerder ziet deze lijst.",
@@ -1560,6 +1923,7 @@ export class InfoschermEditor extends DacEditor {
   schema() {
     const velden = [
       { name: "weather", selector: sel.entity("weather") },
+      { name: "energy", selector: sel.entity("sensor") },
       { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
     ];
@@ -1581,7 +1945,7 @@ export class InfoschermEditor extends DacEditor {
 registerCard(TAG, InfoschermCard, {
   name: "DomotiApp Infoscherm",
   description:
-    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, wie er is, mededelingen, nieuws, verjaardagen en verlichting. De entiteiten kiest u hier; de inhoud komt uit DomotiApp Infoscherm Beheer.",
+    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, energie, wie er is, mededelingen, nieuws, verjaardagen en verlichting. De entiteiten kiest u hier; de inhoud komt uit DomotiApp Infoscherm Beheer.",
   preview: false,
 });
 registerEditor(`${TAG}-editor`, InfoschermEditor);
