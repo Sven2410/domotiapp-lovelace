@@ -8,18 +8,17 @@
  * wie er vandaag is, de mededelingen, het nieuws, de verjaardagen en -- als
  * de receptie dat wil -- de verlichting.
  *
- * DE KAARTCONFIG IS DE INSTALLATIE, DE OPSLAG IS DE INHOUD
+ * DEZE KAART HEEFT GEEN CONFIG; ALLES KOMT UIT DE OPSLAG
  *
- * In ronde 2 had deze kaart geen editor: alles stond in het beheer, ook de
- * entiteiten, in een blok dat alleen een beheerder zag. Op 10 september 2026
- * draaide de eigenaar dat terug: *"installatie helemaal weg, dat moet ik via
- * de GUI editor doen, zoals weer en alle verlichting-entiteiten."* Dus: de
- * INSTALLATEUR kiest de weerentiteit, de lampen, de agenda's en de
- * kioskaccounts in de kaarteditor; al het andere -- namen, mededelingen,
- * openingstijden, de indeling, het logo -- doet de receptie in het beheer, en
- * dat is live. Omdat het beheer de lampen moet kennen (de receptie geeft ze
- * een naam) stuurt de kaart zijn config naar de opslag zodra een beheerder hem
- * ziet (`sync_`); een kioskaccount stuurt niets.
+ * "Het normale infoscherm is gewoon één keer de kaart toevoegen en klaar,
+ * niks instellen" (10 september 2026). De INSTALLATIE -- weerentiteit,
+ * energiesensor, lampen, agenda's, kioskaccounts -- kiest de installateur in
+ * de kaarteditor van het BEHEER (`infoscherm-beheer-card.js`); die kaart
+ * stuurt zijn config naar de opslag zodra een beheerder hem ziet. Al het
+ * andere -- namen, mededelingen, openingstijden, de indeling, het logo -- doet
+ * de receptie in datzelfde beheer, en dat is live. Deze kaart leest alleen.
+ * (In ronde 3 stond de installatie een uitgave lang in de editor van deze
+ * kaart; dat was andersom dan bedoeld.)
  *
  * ÉÉN SCHERM, GEEN TABBLADEN
  *
@@ -51,18 +50,15 @@
  *   dat als eerste terug is na een herstart; vandaar `Herkansing`.
  */
 
-import { DacCard, escapeHtml, registerCard, registerEditor } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacCard, escapeHtml, registerCard } from "../base.js";
 import { resolve } from "../icons.js";
 import { attrsOf, fmtNumber, isOn, localizeState, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import {
   abonneer,
   bestandUrl,
-  haalGebruikers,
   haalStand,
   nogNietGereed,
-  syncInstallatie,
   zetAanwezig,
 } from "../infoscherm-client.js";
 import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
@@ -84,8 +80,10 @@ import {
   isTellerstand,
   isoDatumTijd,
   klok,
+  komendeMededelingen,
   komendeVerjaardagen,
   lijnPad,
+  mededelingPeriode,
   nieuwsLijst,
   openingVandaag,
   openingsRegels,
@@ -94,6 +92,8 @@ import {
   relatieveTijd,
   splitsAanwezig,
   standaardIndeling,
+  verdunReeks,
+  vloeiendPad,
 } from "./infoscherm-logica.js";
 
 const TAG = "domotiapp-infoscherm-card";
@@ -115,19 +115,16 @@ const icoon = (naam) => ICOON[naam] ?? resolve(naam);
 const PAGINA_KOP = {
   aanwezig: { eyebrow: "Wie is er vandaag", titel: "Aanwezig", onder: "Tik op uw naam om u aan of af te melden." },
   nieuws: { eyebrow: "Nieuws", titel: "Wat er speelt", onder: "" },
-  weer: { eyebrow: "Weer", titel: "De komende dagen", onder: "" },
+  weer: { eyebrow: "Weer", titel: "Vandaag en de komende dagen", onder: "" },
   verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
   agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
   energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
+  mededelingen: { eyebrow: "Mededelingen", titel: "Wat er speelt", onder: "" },
 };
-
-/** Wat er in de kaartconfig staat: de installatie. De rest komt uit het beheer. */
-const STANDAARD = { weather: "", energy: "", lights: [], calendars: [], kiosk_users: [] };
 
 /* De afgelopen 24 uur in de energiegrafiek. */
 const ENERGIE_VENSTER = 24;
-const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const css = /* css */ `
   :host { display: block; height: 100%; }
@@ -164,8 +161,8 @@ const css = /* css */ `
   [hidden] { display: none !important; }
 
   /* ------------------------------------------------------------ kop */
-  .kop { display: flex; align-items: center; justify-content: space-between; gap: calc(24px * var(--s)); flex: 0 0 auto; }
-  .merk { display: flex; align-items: center; gap: calc(16px * var(--s)); min-width: 0; }
+  /* Er is geen kop meer boven het raster (ronde 4): logo, klok en datum
+     staan in het welkomblok. Zie .blok.welkom hieronder. */
   /* Het logo volgt zijn eigen verhouding: een lang logo wordt lang, een breed
      logo breed. Alleen zonder beeld (de eerste letter van de naam) is het een
      vierkant. Gemeld op 10 september 2026: "nu is het een vast vierkantje". */
@@ -181,9 +178,9 @@ const css = /* css */ `
   }
   .logo:empty { display: none; }
   .logo img { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
-  .tijd { display: flex; flex-direction: column; align-items: flex-end; flex: 0 0 auto; }
-  .klok { font-size: calc(58px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-  .datum { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); }
+  .w-klok { display: flex; flex-direction: column; flex: 0 0 auto; min-width: 0; }
+  .klok { font-size: calc(48px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .datum { font-size: calc(15px * var(--s)); color: var(--dac-ink-2); margin-top: calc(3px * var(--s)); white-space: nowrap; }
 
   /* ------------------------------------------------------------ pagina's */
   .pagina { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; gap: calc(16px * var(--s)); }
@@ -225,7 +222,10 @@ const css = /* css */ `
     container-type: inline-size;
   }
   .blok > .bk { --s: var(--ss); }
-  .blok.welkom { background: none; border: none; box-shadow: none; justify-content: center; }
+  /* Het welkomblok meet ook zijn hoogte (container-type: size), zodat een
+     laag blok logo, klok en tekst naast elkaar zet en een hoog blok onder
+     elkaar. Een rasterblok heeft zijn maat van het raster, dus dat mag. */
+  .blok.welkom { background: none; border: none; box-shadow: none; justify-content: center; container-type: size; }
   .bk {
     display: flex; align-items: center; gap: calc(10px * var(--s)); flex: 0 0 auto; width: 100%;
     padding: calc(11px * var(--s)) calc(16px * var(--s)); text-align: left; font: inherit; color: inherit;
@@ -261,6 +261,14 @@ const css = /* css */ `
   .blok.dicht .tegels, .blok.dicht .lampen { gap: calc(6px * var(--s)); }
   .blok.klein .persoon, .blok.klein .lamp, .blok.dicht .persoon, .blok.dicht .lamp { min-height: 0; padding: calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
   .blok.klein .avatar, .blok.klein .lamp .chip, .blok.dicht .avatar, .blok.dicht .lamp .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(13px * var(--s)); }
+  /* Eén rij hoog: vier lampen (of personen) in twee rijen van twee, dus
+     een smalle regel per tegel. Gemeld op 10 september 2026 met een blok
+     van 2×1 en "toon 4": "nu passen er maar 2 op." */
+  .blok.klein .lampen, .blok.klein .tegels { gap: calc(4px * var(--s)); }
+  .blok.klein .lampen .lamp, .blok.klein .tegels .persoon { padding: calc(3px * var(--s)) calc(8px * var(--s)); gap: calc(8px * var(--s)); border-radius: var(--dac-radius-sm); }
+  .blok.klein .lampen .lamp .chip, .blok.klein .tegels .avatar { width: calc(22px * var(--s)); height: calc(22px * var(--s)); font-size: calc(14px * var(--s)); border-radius: calc(6px * var(--s)); }
+  .blok.klein .tegels .avatar { font-size: calc(10px * var(--s)); }
+  .blok.klein .lampen .l-naam, .blok.klein .tegels .p-naam { font-size: calc(13px * var(--s)); }
   .blok.klein .lamp .chip, .blok.dicht .lamp .chip { font-size: calc(18px * var(--s)); }
   .blok.klein .p-functie, .blok.klein .p-status, .blok.klein .l-status,
   .blok.dicht .p-functie, .blok.dicht .p-status, .blok.dicht .l-status { display: none; }
@@ -269,16 +277,24 @@ const css = /* css */ `
   .blok.klein .afspraak, .blok.klein .vj { padding: calc(6px * var(--s)) calc(12px * var(--s)); }
   .blok.klein .bericht { padding: calc(6px * var(--s)) calc(10px * var(--s)); }
   .blok.klein .bericht .foto { display: none; }
-  .blok.welkom .bi { padding: 0 calc(4px * var(--s)); justify-content: center; gap: calc(4px * var(--s)); }
+  /* Alles links uitgelijnd: het logo hoort linksboven, ook in een hoog blok
+     (het stond in het midden omdat het vak de hele breedte kreeg). */
+  .blok.welkom .bi { padding: calc(4px * var(--s)) calc(6px * var(--s)); justify-content: center; align-items: flex-start; gap: calc(8px * var(--s)); }
   .leeg { color: var(--dac-ink-3); font-size: calc(16px * var(--s)); padding: calc(10px * var(--s)) 0; }
 
   /* welkom */
-  .welkomtekst { font-size: calc(34px * var(--s)); font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
-  .welkom-onder { font-size: calc(17px * var(--s)); color: var(--dac-ink-2); }
-  .blok.welkom .logo { margin-bottom: calc(6px * var(--s)); }
-  .blok.welkom .bi:has(.logo) { flex-direction: row; align-items: center; gap: calc(18px * var(--s)); }
-  .blok.welkom .bi:has(.logo) .logo { margin: 0; }
-  .blok.welkom .w-tekstvak { display: flex; flex-direction: column; gap: calc(4px * var(--s)); min-width: 0; }
+  .welkomtekst { font-size: calc(30px * var(--s)); font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+  .welkom-onder { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); }
+  .blok.welkom .logo { height: calc(52px * var(--s)); max-width: 100%; }
+  .blok.welkom .logo:not(.beeld) { width: calc(52px * var(--s)); }
+  .blok.welkom .w-tekstvak { display: flex; flex-direction: column; gap: calc(3px * var(--s)); min-width: 0; }
+  /* Breed of laag: logo, klok en tekst naast elkaar, met de tekst rechts. */
+  @container (min-width: 560px), (max-height: 150px) {
+    .blok.welkom .bi { flex-direction: row; align-items: center; gap: calc(28px * var(--s)); }
+    .blok.welkom .w-tekstvak { flex: 1 1 auto; }
+    .blok.welkom .logo { height: calc(64px * var(--s)); max-width: calc(260px * var(--s)); }
+    .blok.welkom .logo:not(.beeld) { width: calc(64px * var(--s)); }
+  }
 
   /* weer */
   .w-nu { display: flex; align-items: center; gap: calc(16px * var(--s)); }
@@ -316,7 +332,11 @@ const css = /* css */ `
   .weerpagina .temp { font-size: calc(64px * var(--s)); }
   .weerpagina .w-tekst { font-size: calc(19px * var(--s)); }
   .weerpagina .uren { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-  .dagen { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: calc(8px * var(--s)); }
+  /* De dagen even breed als de uren erboven, en gecentreerd: zes dagen
+     onder acht uren stonden links uitgelijnd met een gat rechts (gemeld op
+     10 september 2026 met een schermafdruk). */
+  .dagen { display: flex; justify-content: center; gap: calc(8px * var(--s)); }
+  .dagen .dag { flex: 0 0 calc((100% - 7 * 8px * var(--s)) / 8); box-sizing: border-box; }
 
   /* De chip van een lamp. */
   .chip {
@@ -356,6 +376,14 @@ const css = /* css */ `
   .m-stippen span.nu { background-color: var(--tone); }
   .blok.klein .m-stippen { display: none; }
   .blok.klein .m-slide { padding: calc(6px * var(--s)) calc(14px * var(--s)); }
+
+  /* de pagina Mededelingen */
+  .m-pagina { display: flex; flex-direction: column; gap: calc(14px * var(--s)); }
+  .m-lijst { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(340px * var(--s)), 1fr)); gap: calc(12px * var(--s)); align-content: start; }
+  .m-item { padding: calc(16px * var(--s)) calc(20px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); display: flex; flex-direction: column; gap: calc(6px * var(--s)); min-width: 0; }
+  .m-item .m-p { font-size: calc(12px * var(--s)); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tone); }
+  .m-item .m-t { font-size: calc(19px * var(--s)); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .m-kop { padding-top: calc(6px * var(--s)); }
 
   /* openingstijden */
   .ot { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(5px * var(--s)) calc(24px * var(--s)); font-size: calc(15px * var(--s)); }
@@ -510,7 +538,9 @@ const css = /* css */ `
      houdt zijn dikte door vector-effect. De opschriften staan in HTML naast
      en onder het vak, zodat ze niet mee vervormen. */
   .blok.energie .bi { gap: calc(8px * var(--s)); }
-  .e-nu { display: flex; align-items: baseline; gap: calc(10px * var(--s)); flex: 0 0 auto; min-width: 0; flex-wrap: wrap; }
+  /* Alleen het getal, in het midden; "nu · afgelopen 24 uur" is weg
+     (10 september 2026). */
+  .e-nu { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 0; }
   .e-waarde { font-size: calc(36px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .e-sub { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .e-grafiek { position: relative; flex: 1 1 auto; min-height: calc(36px * var(--s)); }
@@ -524,7 +554,7 @@ const css = /* css */ `
   .e-leeg { font-size: calc(14px * var(--s)); color: var(--dac-ink-3); }
   /* Eén rij hoog: getal links, grafiek rechts. */
   .blok.klein.energie .bi { flex-direction: row; align-items: stretch; gap: calc(14px * var(--s)); }
-  .blok.klein .e-nu { flex-direction: column; gap: calc(2px * var(--s)); justify-content: center; }
+  .blok.klein .e-nu { flex: 0 0 auto; padding: 0 calc(6px * var(--s)); }
   .blok.klein .e-waarde { font-size: calc(26px * var(--s)); }
   .blok.klein .e-as, .blok.klein .e-piek { display: none; }
   .blok.klein .e-grafiek { min-height: 0; }
@@ -595,7 +625,6 @@ export class InfoschermCard extends DacCard {
     this.weerEntiteit_ = null;
     this.weerOpzeggen_ = [];
     this.agendaSleutel_ = "";
-    this.laatstGesynct_ = "";
     /* Tot wanneer een scrollbeweging van de mededelingen van onszelf is en
        niet van een vinger; daarna zet een scroll de klok opnieuw. */
     this.mAuto_ = 0;
@@ -605,75 +634,28 @@ export class InfoschermCard extends DacCard {
   }
 
   /**
-   * De installatie: weer, energie, lampen, agenda's en de kioskaccounts. Mag
-   * NOOIT gooien (CLAUDE.md), dus een vreemde waarde wordt gewoon leeg.
+   * Er valt niets in te stellen. Wat er wel in de config staat (een oude
+   * `weather` of `lights` uit ronde 3) wordt genegeerd en nooit een fout:
+   * een kaart mag niet gooien in setConfig (CLAUDE.md).
    */
   validate(config) {
-    return {
-      ...STANDAARD,
-      ...config,
-      weather: typeof config.weather === "string" ? config.weather : "",
-      energy: typeof config.energy === "string" ? config.energy : "",
-      lights: lijstVan(config.lights),
-      calendars: lijstVan(config.calendars),
-      kiosk_users: lijstVan(config.kiosk_users),
-    };
+    return { ...config };
   }
 
-  /**
-   * De installatie zoals de kaart hem gebruikt: de entiteiten uit de
-   * KAARTCONFIG, de lampnamen uit het beheer. Zo tekent de iPad meteen wat de
-   * installateur koos, ook voordat de opslag het weet.
-   */
+  /** De installatie uit de opslag: weer, energie, agenda's, lampen met naam. */
   installatie_() {
-    const c = this.config ?? STANDAARD;
-    const namen = new Map((this.stand_?.installatie?.verlichting ?? []).map((l) => [l.entity, l.naam]));
+    const i = this.stand_?.installatie ?? {};
     return {
-      weer: c.weather || null,
-      energie: c.energy || null,
-      agendas: c.calendars,
-      verlichting: c.lights.map((entity) => ({ entity, naam: namen.get(entity) ?? "" })),
-    };
-  }
-
-  /** De stand met de installatie uit de kaartconfig erin, voor de logica. */
-  standNu_() {
-    return this.stand_ ? { ...this.stand_, installatie: this.installatie_() } : null;
-  }
-
-  /**
-   * De kaartconfig naar de opslag, zodat het beheer de lampen kent en de
-   * server weet welke accounts kiosk zijn. Alleen een beheerder mag dat, en
-   * alleen als er iets afwijkt; dezelfde payload gaat niet twee keer.
-   */
-  async sync_() {
-    if (!this.hass?.connection || !this.stand_ || !this.hass.user?.is_admin) return;
-    const c = this.config;
-    const wens = {
-      weer: c.weather || null,
-      energie: c.energy || null,
-      agendas: c.calendars,
-      verlichting: c.lights,
-      kiosk_gebruikers: c.kiosk_users,
-    };
-    const sleutel = JSON.stringify(wens);
-    const i = this.stand_.installatie ?? {};
-    const nu = JSON.stringify({
       weer: i.weer ?? null,
       energie: i.energie ?? null,
-      agendas: i.agendas ?? [],
-      verlichting: (i.verlichting ?? []).map((l) => l.entity),
-      kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
-    });
-    if (sleutel === nu || sleutel === this.laatstGesynct_) return;
-    this.laatstGesynct_ = sleutel;
-    try {
-      await syncInstallatie(this.hass, wens);
-    } catch {
-      // Een fout hier is geen fout op het scherm: de kaart tekent uit zijn
-      // eigen config. De volgende stand probeert het opnieuw.
-      this.laatstGesynct_ = "";
-    }
+      agendas: Array.isArray(i.agendas) ? i.agendas : [],
+      verlichting: Array.isArray(i.verlichting) ? i.verlichting : [],
+    };
+  }
+
+  /** De stand zoals de logica hem wil, met een installatie die er altijd is. */
+  standNu_() {
+    return this.stand_ ? { ...this.stand_, installatie: this.installatie_() } : null;
   }
 
   watched() {
@@ -699,13 +681,6 @@ export class InfoschermCard extends DacCard {
       </section>`;
     return `
       <div class="scherm">
-        <div class="kop">
-          <div class="merk">
-            <div class="logo"></div>
-          </div>
-          <div class="tijd"><div class="klok">--:--</div><div class="datum"></div></div>
-        </div>
-
         <section class="pagina actief" data-p="welkom"><div class="raster"></div></section>
         ${Object.keys(PAGINA_KOP).map(pagina).join("")}
 
@@ -897,7 +872,6 @@ export class InfoschermCard extends DacCard {
     this.abonneerWeer_();
     this.laadEnergie_();
     this.haalAgenda_();
-    this.sync_();
     this.mededelingStart_();
     this.paint();
   }
@@ -1090,7 +1064,9 @@ export class InfoschermCard extends DacCard {
     const nu = Date.now();
     const reeks = energieReeks(this.energie_.punten, { nu, tellerstand: teller, venster: ENERGIE_VENSTER });
     const sam = energieSamenvatting(reeks);
-    const pad = lijnPad(reeks);
+    // De pagina tekent elke meting; het blok een vloeiende lijn door het
+    // gemiddelde per halfuur, anders is het een kras (10 september 2026).
+    const pad = groot ? lijnPad(reeks) : vloeiendPad(verdunReeks(reeks, 48));
     const st = stateOf(this.hass, entiteit);
     const dood = !st || st.state === "unavailable" || st.state === "unknown";
     const huidig = teller ? sam.nu : Number(st?.state);
@@ -1130,10 +1106,7 @@ export class InfoschermCard extends DacCard {
         </div>
       </div>`;
     }
-    const sub = teller
-      ? `afgelopen uur${sam.totaal !== null ? ` · 24 u: ${fmt(sam.totaal)}` : ""}`
-      : "nu · afgelopen 24 uur";
-    return `<div class="e-nu"><span class="e-waarde">${dood ? "--" : escapeHtml(fmt(huidig))}</span><span class="e-sub">${escapeHtml(sub)}</span></div>
+    return `<div class="e-nu"><span class="e-waarde">${dood ? "--" : escapeHtml(fmt(huidig))}</span></div>
       ${grafiek}
       ${klein ? "" : `<div class="e-as">${ticks(3).map((t) => `<span>${t}</span>`).join("")}</div>`}`;
   }
@@ -1157,7 +1130,7 @@ export class InfoschermCard extends DacCard {
   }
 
   gaNaar_(pagina) {
-    const beschikbaar = paginas(this.standNu_(), this.feeds_);
+    const beschikbaar = paginas(this.standNu_(), this.feeds_, isoDatumTijd(new Date()));
     this.pagina_ = beschikbaar.includes(pagina) ? pagina : "welkom";
     this.paintPaginas_();
     this.paintPagina_(this.pagina_);
@@ -1352,7 +1325,6 @@ export class InfoschermCard extends DacCard {
   paint() {
     if (!this.$(".scherm")) return;
     this.paintUiterlijk_();
-    this.paintKop_();
     this.paintRaster_();
     this.paintPaginas_();
     this.paintPagina_(this.pagina_);
@@ -1366,13 +1338,6 @@ export class InfoschermCard extends DacCard {
     scherm.classList.toggle("licht", s.uiterlijk === "licht");
     scherm.classList.toggle("rond", (s.foto_vorm ?? "rond") === "rond");
     scherm.classList.toggle("stil", s.weer_animatie === false);
-  }
-
-  paintKop_() {
-    const s = this.stand_?.scherm ?? {};
-    // Staat het logo in het welkomblok, dan niet ook nog in de kop.
-    this.paintLogo_(this.$(".kop .logo"), s.welkom_logo ? "" : s.logo ?? "");
-    this.paintKlok_();
   }
 
   /** Het logo in een vak; zonder logo blijft het vak leeg en dus onzichtbaar. */
@@ -1458,10 +1423,18 @@ export class InfoschermCard extends DacCard {
     // Eerst alles terug op de eigen maat, anders meet je de vorige keer.
     el.style.removeProperty("--pas");
     const onder = () => bi.getBoundingClientRect().bottom - parseFloat(getComputedStyle(bi).paddingBottom);
-    // De uurvoorspelling in een laag weerblok: past hij niet, dan weg.
+    // De uurvoorspelling in het weerblok: past hij net niet, dan alles in
+    // het blok iets kleiner (tot 72%) zodat hij erbij past; pas daarna weg.
+    // In een blok van 2×2 viel hij er altijd net af en bleef de onderste
+    // helft leeg; gemeld op 10 september 2026: "bij weer mag er ook wel de
+    // uurverwachting onder, nu is de kaart zo leeg."
     const uren = bi.querySelector(".uren");
     if (uren) {
       uren.hidden = false;
+      const boven = bi.getBoundingClientRect().top + parseFloat(getComputedStyle(bi).paddingTop);
+      const nodig = uren.getBoundingClientRect().bottom - boven;
+      const ruimte = onder() - boven;
+      if (nodig > ruimte + 1 && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
       uren.hidden = uren.getBoundingClientRect().bottom > onder() + 1;
     }
     const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .afspraken, .ot, .vj-lijst");
@@ -1554,8 +1527,9 @@ export class InfoschermCard extends DacCard {
     const kolommen = (w) => (w >= 4 ? "kol-3" : w >= 2 ? "" : "kol-1");
     switch (blok.soort) {
       case "welkom": {
-        // Wat er in het welkomblok staat kiest de receptie: het logo, een
-        // tekst, de regel met de openingstijd -- of alleen een logo.
+        // Het welkomblok draagt sinds ronde 4 ook de klok en de datum; er is
+        // geen kop meer boven het raster. Wat er verder in staat kiest de
+        // receptie: het logo, een tekst, de regel met de openingstijd.
         const p = this.stand_?.praktijk ?? {};
         const s = this.stand_?.scherm ?? {};
         const nu = new Date();
@@ -1565,12 +1539,17 @@ export class InfoschermCard extends DacCard {
           onder = opening.open ? `Vandaag geopend tot ${opening.tot}` : geslotenRegel(p, nu);
         }
         const tekst = s.welkom_tekst ?? "Welkom";
-        const logo = s.welkom_logo && s.logo ? `<div class="logo" data-logo="${escapeHtml(s.logo)}"></div>` : "";
+        const logo = s.logo_verbergen !== true && s.logo ? `<div class="logo" data-logo="${escapeHtml(s.logo)}"></div>` : "";
         const regels = `${tekst ? `<div class="welkomtekst">${escapeHtml(tekst)}</div>` : ""}${onder ? `<div class="welkom-onder">${escapeHtml(onder)}</div>` : ""}`;
-        if (this.vul_(bi, `${logo}${regels ? `<div class="w-tekstvak">${regels}</div>` : ""}`, false)) {
+        // De tijd zelf staat NIET in deze html: die schrijft paintKlok_ elke
+        // minuut in de bestaande elementen, zodat het blok (en het logo erin)
+        // niet elke minuut opnieuw getekend wordt.
+        const klokHtml = `<div class="w-klok"><div class="klok">--:--</div><div class="datum"></div></div>`;
+        if (this.vul_(bi, `${logo}${klokHtml}${regels ? `<div class="w-tekstvak">${regels}</div>` : ""}`, false)) {
           const vak = bi.querySelector(".logo[data-logo]");
           if (vak) this.paintLogo_(vak, vak.dataset.logo);
         }
+        this.paintKlok_();
         break;
       }
       case "weer": {
@@ -1790,7 +1769,7 @@ export class InfoschermCard extends DacCard {
   /* ------------------------------------------------------------ de pagina's */
 
   paintPaginas_() {
-    const lijst = paginas(this.standNu_(), this.feeds_);
+    const lijst = paginas(this.standNu_(), this.feeds_, isoDatumTijd(new Date()));
     if (!lijst.includes(this.pagina_)) this.pagina_ = "welkom";
     for (const sec of this.$$(".pagina")) sec.classList.toggle("actief", sec.dataset.p === this.pagina_);
   }
@@ -1849,6 +1828,27 @@ export class InfoschermCard extends DacCard {
         this.vul_(vak, lijst.length ? `<div class="vj-raster">${lijst.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">Geen verjaardagen.</div>`, false);
         break;
       }
+      case "mededelingen": {
+        // Alle mededelingen die nu gelden, onder elkaar en helemaal
+        // uitgeschreven; daaronder wat er klaarstaat. Gevraagd op
+        // 10 september 2026: "een ander tabblad waar alle meldingen op staan,
+        // overzichtelijk."
+        const nu = isoDatumTijd(new Date());
+        const actief = actieveMededelingen(this.stand_?.mededelingen, nu);
+        const komend = komendeMededelingen(this.stand_?.mededelingen, nu);
+        const item = (m) => `<div class="m-item">${
+          mededelingPeriode(m) ? `<div class="m-p">${escapeHtml(mededelingPeriode(m))}</div>` : ""
+        }<div class="m-t">${escapeHtml(m.tekst)}</div></div>`;
+        this.vul_(
+          vak,
+          `<div class="m-pagina">
+            <div class="m-lijst">${actief.length ? actief.map(item).join("") : `<div class="leeg">Geen mededelingen.</div>`}</div>
+            ${komend.length ? `<div class="eyebrow m-kop">Binnenkort</div><div class="m-lijst">${komend.map(item).join("")}</div>` : ""}
+          </div>`,
+          false
+        );
+        break;
+      }
       case "agenda": {
         const lijst = this.afspraken_;
         this.vul_(vak, lijst.length ? `<div class="afspraken">${lijst.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">Geen afspraken vandaag.</div>`, false);
@@ -1867,87 +1867,13 @@ export class InfoschermCard extends DacCard {
   }
 }
 
-/* ------------------------------------------------------------ editor */
-
-const LABELS = {
-  weather: "Weerentiteit",
-  energy: "Energiesensor (vermogen of tellerstand)",
-  lights: "Lampen en schakelaars op het scherm",
-  calendars: "Agenda's (de afspraken van vandaag)",
-  kiosk_users: "Kioskaccounts",
-};
-
-const HELPERS = {
-  weather: "Leeg = geen weer op het scherm.",
-  energy:
-    "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
-  lights: "De namen zoals ze op het scherm staan geeft de receptie in het beheer (blok Verlichting), en daar staat ook de schakelaar om ze te tonen.",
-  kiosk_users:
-    "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren. Alleen een beheerder ziet deze lijst.",
-};
-
-/**
- * De installatie: wat een installateur eenmalig kiest. Al het andere staat in
- * het beheer. De kioskaccounts komen als keuzelijst uit de gebruikerslijst
- * van Home Assistant, opgehaald zodra de editor een `hass` heeft; een
- * gewone gebruiker mag die lijst niet opvragen en ziet het veld dan niet.
- */
-export class InfoschermEditor extends DacEditor {
-  defaults() {
-    return { ...STANDAARD };
-  }
-
-  gedeeldeVelden() {
-    return [];
-  }
-
-  set hass(hass) {
-    super.hass = hass;
-    if (this.gebruikers_ === undefined && hass?.connection && hass.user?.is_admin) {
-      this.gebruikers_ = null;
-      haalGebruikers(hass)
-        .then((g) => {
-          this.gebruikers_ = (g.gebruikers ?? []).map((u) => ({ value: u.id, label: `${u.naam}${u.is_admin ? " (beheerder)" : ""}` }));
-          this.sync_();
-        })
-        .catch(() => {
-          this.gebruikers_ = [];
-        });
-    }
-  }
-
-  get hass() {
-    return super.hass;
-  }
-
-  schema() {
-    const velden = [
-      { name: "weather", selector: sel.entity("weather") },
-      { name: "energy", selector: sel.entity("sensor") },
-      { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
-      { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
-    ];
-    if (this.gebruikers_?.length) {
-      velden.push({ name: "kiosk_users", selector: { select: { multiple: true, mode: "list", options: this.gebruikers_ } } });
-    }
-    return velden;
-  }
-
-  label(item) {
-    return LABELS[item.name] ?? super.label(item);
-  }
-
-  helper(item) {
-    return HELPERS[item.name];
-  }
-}
+/* Geen editor: er valt niets in te stellen. De installatie staat in de
+   kaarteditor van DomotiApp Infoscherm Beheer. */
 
 registerCard(TAG, InfoschermCard, {
   name: "DomotiApp Infoscherm",
   description:
-    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, energie, wie er is, mededelingen, nieuws, verjaardagen en verlichting. De entiteiten kiest u hier; de inhoud komt uit DomotiApp Infoscherm Beheer.",
+    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, energie, wie er is, mededelingen, nieuws, verjaardagen en verlichting. Toevoegen en klaar; alles komt uit DomotiApp Infoscherm Beheer.",
   preview: false,
 });
-registerEditor(`${TAG}-editor`, InfoschermEditor);
-InfoschermCard.getConfigElement = () => document.createElement(`${TAG}-editor`);
 InfoschermCard.getStubConfig = () => ({});

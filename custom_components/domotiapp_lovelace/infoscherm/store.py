@@ -415,7 +415,7 @@ def leeg_scherm() -> dict[str, Any]:
         "schaal": 1.0,
         "mededeling_interval": 10,
         "welkom_tekst": "Welkom",
-        "welkom_logo": False,
+        "logo_verbergen": False,
         "welkom_onder": True,
     }
 
@@ -451,7 +451,9 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
         "welkom_tekst": _tekst(
             rauw.get("welkom_tekst", standaard["welkom_tekst"]), "welkom_tekst", MAX_KORT
         ),
-        "welkom_logo": bool(rauw.get("welkom_logo", False)),
+        # Ronde 4: het logo staat standaard in het welkomblok (er is geen kop
+        # meer); de oude sleutel welkom_logo (standaard False) vervalt.
+        "logo_verbergen": bool(rauw.get("logo_verbergen", False)),
         "welkom_onder": bool(rauw.get("welkom_onder", True)),
     }
 
@@ -509,16 +511,19 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
 
 
 def standaard_indeling() -> dict[str, Any]:
-    """Zes kolommen bij zes rijen. Welkom bovenlangs, nieuws als hoge kolom
-    rechts, het weer en de openingstijden links, de aanwezigen in het midden."""
+    """Zes kolommen bij zes rijen. Sinds ronde 4 is er geen kop meer boven
+    het raster: het welkomblok linksboven draagt logo, klok en welkomtekst,
+    daaronder het weer en de openingstijden; de aanwezigen in het midden en
+    het nieuws als hoge kolom rechts. Tweeling van standaardIndeling in
+    infoscherm-logica.js."""
     blokken = [
-        ("welkom", 0, 0, 6, 1, 0),
-        ("weer", 0, 1, 2, 2, 0),
-        ("aanwezig", 2, 1, 2, 3, 4),
-        ("nieuws", 4, 1, 2, 5, 3),
-        ("openingstijden", 0, 3, 2, 3, 0),
-        ("mededeling", 2, 4, 2, 1, 0),
-        ("verlichting", 2, 5, 2, 1, 4),
+        ("welkom", 0, 0, 2, 2, 0),
+        ("weer", 0, 2, 2, 2, 0),
+        ("openingstijden", 0, 4, 2, 2, 0),
+        ("aanwezig", 2, 0, 2, 3, 6),
+        ("mededeling", 2, 3, 2, 1, 0),
+        ("verlichting", 2, 4, 2, 2, 4),
+        ("nieuws", 4, 0, 2, 6, 6),
     ]
     return {
         "blokken": [

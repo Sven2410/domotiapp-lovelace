@@ -301,9 +301,12 @@ def test_de_praktijk_is_alleen_nog_de_openingstijden() -> None:
 
 def test_scherm_kent_het_welkomblok_en_de_mededelingentijd_en_geen_nachtstand() -> None:
     """Ronde 3 (NIEUW GEDRAG)."""
-    s = valideer_scherm({"welkom_tekst": "", "welkom_logo": True, "welkom_onder": False, "mededeling_interval": 7, "nachtstand": True})
+    s = valideer_scherm({"welkom_tekst": "", "logo_verbergen": True, "welkom_onder": False, "mededeling_interval": 7, "nachtstand": True})
     assert s["welkom_tekst"] == ""
-    assert s["welkom_logo"] is True
+    assert s["logo_verbergen"] is True
+    # Ronde 4: welkom_logo (oud, standaard uit) telt niet meer; het logo staat er.
+    assert valideer_scherm({"welkom_logo": False})["logo_verbergen"] is False
+    assert "welkom_logo" not in valideer_scherm({"welkom_logo": False})
     assert s["welkom_onder"] is False
     assert s["mededeling_interval"] == 7
     assert "nachtstand" not in s and "nieuws_afbeeldingen" not in s

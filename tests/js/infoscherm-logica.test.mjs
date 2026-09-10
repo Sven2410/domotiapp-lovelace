@@ -516,3 +516,87 @@ describe("energie (ronde 4)", () => {
     assert.equal(blokOntbreekt("energie", { installatie: { energie: "sensor.x" } }, [], "2026-09-10"), null);
   });
 });
+
+/* Ronde 4, tweede bericht (10 september 2026). NIEUW GEDRAG. */
+import {
+  komendeMededelingen,
+  mededelingPeriode,
+  datumTijdKort,
+  verdunReeks,
+  vloeiendPad,
+} from "../../src/cards/infoscherm-logica.js";
+
+describe("de pagina Mededelingen", () => {
+  const lijst = [
+    { tekst: "altijd" },
+    { tekst: "straks", van: "2026-09-20T12:00" },
+    { tekst: "eerder straks", van: "2026-09-15" },
+    { tekst: "voorbij", tot: "2026-09-01" },
+    { tekst: "", van: "2026-09-30" },
+  ];
+
+  it("paginas kent mededelingen zodra er een geldt", () => {
+    assert.ok(paginas({ personen: [], mededelingen: lijst }, [], "2026-09-10T10:00").includes("mededelingen"));
+    assert.ok(!paginas({ personen: [], mededelingen: [{ tekst: "straks", van: "2026-09-20" }] }, [], "2026-09-10T10:00").includes("mededelingen"));
+    // Zonder tijdstip telt elke mededeling.
+    assert.ok(paginas({ personen: [], mededelingen: [{ tekst: "x" }] }, []).includes("mededelingen"));
+  });
+
+  it("komendeMededelingen: alleen wat nog komt, op volgorde, zonder lege", () => {
+    assert.deepEqual(komendeMededelingen(lijst, "2026-09-10T10:00").map((m) => m.tekst), ["eerder straks", "straks"]);
+    assert.deepEqual(komendeMededelingen(lijst, "2026-09-25"), []);
+  });
+
+  it("mededelingPeriode in woorden", () => {
+    assert.equal(mededelingPeriode({ tekst: "x" }), "");
+    assert.equal(mededelingPeriode({ van: "2026-09-20T12:00" }), "vanaf 20 september 12:00");
+    assert.equal(mededelingPeriode({ tot: "2026-09-24" }), "tot en met 24 september");
+    assert.equal(mededelingPeriode({ van: "2026-09-20", tot: "2026-09-24T17:00" }), "20 september t/m 24 september 17:00");
+    assert.equal(datumTijdKort(""), "");
+  });
+});
+
+describe("de vloeiende energielijn", () => {
+  const UUR = 3600000;
+  const nu = new Date(2026, 8, 10, 12, 0).getTime();
+  const punten = [];
+  for (let i = 0; i < 1000; i += 1) punten.push({ t: nu - 24 * UUR + i * 86400, v: 100 + (i % 10) * 20 });
+
+  it("verdunReeks: hooguit n vakken plus de twee randen, en de randen blijven", () => {
+    const r = energieReeks(punten, { nu });
+    const d = verdunReeks(r, 48);
+    assert.equal(d.punten.length, 50);
+    assert.equal(d.punten[0].t, r.van);
+    assert.equal(d.punten[d.punten.length - 1].t, r.tot);
+    assert.equal(d.punten[d.punten.length - 1].v, r.punten[r.punten.length - 1].v);
+    // Het gemiddelde van 100..280 in stappen van 20 is 190.
+    assert.ok(Math.abs(d.punten[10].v - 190) < 15, String(d.punten[10].v));
+  });
+
+  it("verdunReeks zet ook een korte reeks op het gelijke rooster (geen lus), en laat minder dan twee punten met rust", () => {
+    const r = { punten: [{ t: 0, v: 1 }, { t: 5, v: 2 }], van: 0, tot: 10 };
+    const d = verdunReeks(r, 4);
+    assert.deepEqual(d.punten.map((p) => p.t), [0, 1.25, 3.75, 6.25, 8.75, 10]);
+    assert.deepEqual(d.punten.map((p) => p.v), [1, 1, 1, 2, 2, 2]);
+    const een = { punten: [{ t: 0, v: 1 }], van: 0, tot: 10 };
+    assert.equal(verdunReeks(een, 48), een);
+  });
+
+  it("vloeiendPad gaat nooit terug in de tijd", () => {
+    const r = { punten: [{ t: 0, v: 0 }, { t: 1, v: 100 }, { t: 2, v: 0 }, { t: 100, v: 50 }], van: 0, tot: 100 };
+    const xs = vloeiendPad(r, { w: 100, h: 100 }).lijn.match(/[MC ](\d+\.\d),/g).map((m) => Number(m.slice(1, -1)));
+    for (let i = 1; i < xs.length; i += 1) assert.ok(xs[i] >= xs[i - 1] - 0.01, `${xs[i - 1]} -> ${xs[i]}`);
+  });
+
+  it("vloeiendPad: krommen door dezelfde hoekpunten, binnen het vak", () => {
+    const r = { punten: [{ t: 0, v: 0 }, { t: 25, v: 100 }, { t: 50, v: 20 }, { t: 100, v: 60 }], van: 0, tot: 100 };
+    const p = vloeiendPad(r, { w: 100, h: 100 });
+    assert.ok(p.lijn.startsWith("M0.0,100.0 C"));
+    assert.equal((p.lijn.match(/C/g) ?? []).length, 3);
+    assert.ok(p.lijn.endsWith("100.0,43.0"), p.lijn);
+    for (const y of p.lijn.match(/,(-?\d+\.\d)/g).map((m) => Number(m.slice(1)))) assert.ok(y >= 0 && y <= 100, String(y));
+    assert.ok(p.vlak.endsWith("L100.0,100.0 L0.0,100.0 Z"));
+    // Twee punten: geen kromme, gewoon de rechte lijn.
+    assert.ok(vloeiendPad({ punten: [{ t: 0, v: 0 }, { t: 100, v: 1 }], van: 0, tot: 100 }).lijn.startsWith("M0.0"));
+  });
+});
