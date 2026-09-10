@@ -1181,8 +1181,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 10 september 2026 (0.41.0):** 1034 JS-tests en 667 Python-tests,
-alle groen; bundel 801.936 bytes.
+**Tellingen op 10 september 2026 (0.42.0):** 1035 JS-tests en 668 Python-tests,
+alle groen; bundel 802.447 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in

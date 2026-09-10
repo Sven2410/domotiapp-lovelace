@@ -401,11 +401,12 @@ class CameraCard extends DacCard {
       border-radius: var(--dac-radius-sm);
     }
     .filters .opslag .icon, .filters .stil .icon { width: 15px; height: 15px; }
-    /* De schakelaar "meldingen uit": staat hij aan, dan is de bel
-       doorgestreept en draagt de knop het accent -- alleen het icoon, net
-       als overal. Gevraagd op 10 september 2026: "een schakelaar erin, als
-       die aanstaat geeft hij geen pushmeldingen; mooi weggewerkt in de
-       kaart." */
+    /* De belknop: licht op (accent) zolang de meldingen AAN staan, en is
+       gedoofd met een doorgestreepte bel als ze uit staan -- alleen het
+       icoon draagt de toestand, net als overal. Gevraagd op 10 september
+       2026: "een schakelaar erin, als die aanstaat geeft hij geen
+       pushmeldingen; mooi weggewerkt in de kaart", en "het icoon oplichten
+       is aan en niet oplichten is uit." */
     .filters .stil[aria-pressed="true"] {
       color: var(--dac-accent-hi);
       background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
@@ -543,13 +544,18 @@ class CameraCard extends DacCard {
       return;
     }
     const st = stateOf(this.hass, id);
-    const aan = isOn(st);
+    // Staan de MELDINGEN aan? Gewoon: schakelaar uit = meldingen aan;
+    // omgekeerd: schakelaar aan = meldingen aan. Het icoon licht op als de
+    // meldingen aanstaan en is gedoofd (doorgestreepte bel) als ze uit
+    // staan -- "het icoon oplichten is aan en niet oplichten is uit"
+    // (10 september 2026), zoals overal in de familie.
+    const meldingenAan = isOn(st) === !!this.config.snapshot_stil_omgekeerd;
     knop.hidden = false;
-    knop.setAttribute("aria-pressed", String(aan));
-    const tekst = aan ? "Meldingen staan uit; tik om ze weer aan te zetten" : "Meldingen staan aan; tik om ze uit te zetten";
+    knop.setAttribute("aria-pressed", String(meldingenAan));
+    const tekst = meldingenAan ? "Meldingen staan aan; tik om ze uit te zetten" : "Meldingen staan uit; tik om ze weer aan te zetten";
     knop.setAttribute("aria-label", tekst);
     knop.title = tekst;
-    const wens = aan ? "bellOff" : "bell";
+    const wens = meldingenAan ? "bell" : "bellOff";
     if (knop.dataset.icoon !== wens) {
       knop.dataset.icoon = wens;
       knop.innerHTML = resolve(wens);
@@ -2052,6 +2058,7 @@ class CameraEditor extends DacEditor {
           },
           { name: "snapshot_alleen_afwezig", selector: sel.bool() },
           { name: "snapshot_stil", selector: sel.entity(["input_boolean", "switch"]) },
+          ...(c.snapshot_stil ? [{ name: "snapshot_stil_omgekeerd", selector: sel.bool() }] : []),
         ]
       : [];
 
@@ -2146,6 +2153,7 @@ class CameraEditor extends DacEditor {
         snapshot_ontvangers: "Wie krijgt een melding",
         snapshot_alleen_afwezig: "Alleen melden als er niemand thuis is",
         snapshot_stil: "Schakelaar: meldingen uit",
+        snapshot_stil_omgekeerd: "Schakelaar omgekeerd: aan = meldingen aan",
         presets_aan: "Presets en draaien",
       }[s.name] ?? super.label(s)
     );
@@ -2189,6 +2197,8 @@ class CameraEditor extends DacEditor {
         "Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode.",
       snapshot_stil:
         "Een helper (input_boolean) of schakelaar. Staat hij aan, dan gaat er geen melding naar de telefoon; het beeld komt wél in de timeline. De kaart krijgt er een belknop bij in de rij boven de timeline om hem om te zetten, en hij is ook in een automatisering te gebruiken (bijvoorbeeld: aan als de poetsploeg er is).",
+      snapshot_stil_omgekeerd:
+        "Voor een helper die al andersom in gebruik is: aan betekent dan dat de meldingen AAN staan, en uit houdt de telefoon stil. De belknop op de kaart draait mee.",
       verhouding:
         "Standaard volgt de kaart zijn camera, zodat er geen beeld af gaat. Staan er meerdere camerakaarten naast elkaar in een stack, kies dan overal dezelfde verhouding — dan zijn ze even hoog. Er wordt dan wel bijgesneden.",
       presets_aan:

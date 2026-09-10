@@ -359,9 +359,11 @@ class Motor:
                 "Er is iemand thuis; melding voor %s overgeslagen", regel.camera
             )
             return
-        if regel.stil_schakelaar and self._staat_aan(regel.stil_schakelaar):
+        if self._stil(regel):
             _LOGGER.debug(
-                "%s staat aan; melding voor %s overgeslagen", regel.stil_schakelaar, regel.camera
+                "%s houdt de telefoon stil; melding voor %s overgeslagen",
+                regel.stil_schakelaar,
+                regel.camera,
             )
             return
 
@@ -382,9 +384,19 @@ class Motor:
         )
 
     @callback
-    def _staat_aan(self, entity_id: str) -> bool:
-        state = self._hass.states.get(entity_id)
-        return state is not None and state.state == STATE_ON
+    def _stil(self, regel) -> bool:
+        """Houdt de stilschakelaar van deze regel de melding tegen?
+
+        Gewoon: aan = stil. Omgekeerd: uit = stil. Een schakelaar die niet
+        bestaat houdt nooit iets tegen, ook niet omgekeerd -- anders zou een
+        vergeten helper alle meldingen opeten.
+        """
+        if not regel.stil_schakelaar:
+            return False
+        state = self._hass.states.get(regel.stil_schakelaar)
+        if state is None or state.state in ("unavailable", "unknown"):
+            return False
+        return (state.state == STATE_ON) != bool(regel.stil_omgekeerd)
 
     @callback
     def _iemand_thuis(self) -> bool:

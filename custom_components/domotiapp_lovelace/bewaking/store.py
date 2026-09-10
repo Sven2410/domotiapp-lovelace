@@ -85,6 +85,10 @@ class Regel:
     # geen pushmeldingen." Bewust een entiteit en geen vinkje in de opslag:
     # zo kan een automatisering hem ook omzetten.
     stil_schakelaar: str | None = None
+    # Omgekeerd: AAN betekent dan "meldingen aan" en UIT houdt de telefoon
+    # stil. Gevraagd op 10 september 2026: "een optie om de schakelaar te
+    # inverteren, nu is uit aan en aan uit."
+    stil_omgekeerd: bool = False
 
     def als_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -149,6 +153,7 @@ def valideer_regel(rauw: Any) -> Regel:
         diensten=diensten,
         alleen_afwezig=bool(rauw.get("alleen_afwezig", False)),
         stil_schakelaar=stil,
+        stil_omgekeerd=bool(rauw.get("stil_omgekeerd", False)),
     )
 
 
