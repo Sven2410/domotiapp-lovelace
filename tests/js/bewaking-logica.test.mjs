@@ -76,6 +76,13 @@ describe("regelsVoorKaart — NIEUW GEDRAG", () => {
     assert.equal(regel.wachttijd, 0);
     assert.deepEqual(regel.ontvangers, []);
     assert.equal(regel.alleen_afwezig, false);
+    assert.equal(regel.stil_schakelaar, null);
+  });
+
+  it("neemt de stilschakelaar over (10 september 2026), en niets anders dan een tekst", () => {
+    assert.equal(regelsVoorKaart(HASS, { ...BASIS, snapshot_stil: "input_boolean.camera_stil" })[0].stil_schakelaar, "input_boolean.camera_stil");
+    assert.equal(regelsVoorKaart(HASS, { ...BASIS, snapshot_stil: "" })[0].stil_schakelaar, null);
+    assert.equal(regelsVoorKaart(HASS, { ...BASIS, snapshot_stil: 7 })[0].stil_schakelaar, null);
   });
 
   it("neemt de naam per melder over uit de editor", () => {

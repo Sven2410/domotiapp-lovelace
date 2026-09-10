@@ -1086,7 +1086,7 @@ export class InfoschermCard extends DacCard {
             <path class="e-vlak" d="${pad.vlak}"/>
             <path class="e-lijn" d="${pad.lijn}"/>
           </svg>
-          <span class="e-piek">piek ${escapeHtml(fmt(sam.piek))}</span>
+          <span class="e-piek">${escapeHtml(fmt(sam.piek))}</span>
           ${stipTop !== null ? `<span class="e-stip" style="top:${stipTop.toFixed(1)}%"></span>` : ""}
         </div>`
       : `<div class="e-grafiek"><div class="e-leeg">${dood ? "Sensor niet bereikbaar." : "Nog geen geschiedenis."}</div></div>`;

@@ -79,6 +79,12 @@ class Regel:
     # Standaard uit. Snoeit in de praktijk meer meldingen weg dan de
     # rustperiode, maar het is een keuze van de klant.
     alleen_afwezig: bool = False
+    # Een schakelaar (input_boolean of switch) die, zolang hij aanstaat, de
+    # meldingen tegenhoudt; het beeld komt wel in de timeline. Gevraagd op
+    # 10 september 2026: "een schakelaar erin, als die aanstaat geeft hij
+    # geen pushmeldingen." Bewust een entiteit en geen vinkje in de opslag:
+    # zo kan een automatisering hem ook omzetten.
+    stil_schakelaar: str | None = None
 
     def als_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -122,6 +128,12 @@ def valideer_regel(rauw: Any) -> Regel:
         if isinstance(dienst, str) and dienst
     }
 
+    stil = rauw.get("stil_schakelaar") or None
+    if stil is not None and not (
+        isinstance(stil, str) and (stil.startswith("input_boolean.") or stil.startswith("switch."))
+    ):
+        raise RegelFout("'stil_schakelaar' is een input_boolean of switch, zoals input_boolean.camera_stil")
+
     return Regel(
         camera=camera,
         aan=bool(rauw.get("aan", False)),
@@ -136,6 +148,7 @@ def valideer_regel(rauw: Any) -> Regel:
         ontvangers=ontvangers,
         diensten=diensten,
         alleen_afwezig=bool(rauw.get("alleen_afwezig", False)),
+        stil_schakelaar=stil,
     )
 
 

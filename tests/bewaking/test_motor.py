@@ -264,6 +264,47 @@ async def test_alleen_afwezig_meldt_wel_als_er_niemand_thuis_is(
     stuur_melding.assert_awaited_once()
 
 
+async def test_de_stilschakelaar_houdt_de_melding_tegen_maar_niet_het_beeld(
+    hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding, index
+) -> None:
+    """NIEUW GEDRAG (10 september 2026): een schakelaar die aanstaat houdt de
+    telefoon stil; de timeline blijft compleet."""
+    hass.states.async_set("input_boolean.camera_stil", "on")
+    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil")
+
+    await detecteer(hass, MELDER_PERSOON)
+
+    assert len(index().alle()) == 1
+    stuur_melding.assert_not_awaited()
+
+
+async def test_de_stilschakelaar_uit_of_onbekend_laat_de_melding_door(
+    hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding
+) -> None:
+    hass.states.async_set("input_boolean.camera_stil", "off")
+    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil")
+    await detecteer(hass, MELDER_PERSOON)
+    stuur_melding.assert_awaited_once()
+
+    # Een schakelaar die (nog) niet bestaat houdt niets tegen. Een andere
+    # melder, want de eerste zit in zijn rustperiode.
+    stuur_melding.reset_mock()
+    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="switch.bestaat_niet")
+    await detecteer(hass, MELDER_VOERTUIG)
+    stuur_melding.assert_awaited_once()
+
+
+def test_de_stilschakelaar_moet_een_input_boolean_of_switch_zijn() -> None:
+    from custom_components.domotiapp_lovelace.bewaking.store import RegelFout, valideer_regel
+
+    basis = {"camera": "camera.oprit", "melders": ["binary_sensor.x"]}
+    assert valideer_regel({**basis, "stil_schakelaar": "switch.stil"}).stil_schakelaar == "switch.stil"
+    assert valideer_regel({**basis, "stil_schakelaar": ""}).stil_schakelaar is None
+    assert valideer_regel(basis).stil_schakelaar is None
+    with pytest.raises(RegelFout):
+        valideer_regel({**basis, "stil_schakelaar": "light.x"})
+
+
 async def test_een_melder_bij_twee_cameras_levert_van_allebei_een_beeld(
     hass: HomeAssistant, bewaking_op, index
 ) -> None:
