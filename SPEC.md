@@ -2515,16 +2515,19 @@ de beheerkaart wél een kleine kopregel.
 ### 20.4 Opslag en rechten
 
 De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
-staat in de kaartconfig van de schermkaart (`weather`, `lights`, `calendars`,
-`kiosk_users`) en wordt door de kaart naar de opslag gestuurd zodra een
-beheerder hem met die config ziet (`infoscherm/installatie/sync`, alleen
-admin, alleen bij verschil), zodat het beheer de lampen kent en de server de
-kioskaccounts. Onderdelen van de opslag: praktijk (openingstijden en
+staat sinds ronde 4 in de kaartconfig van de BEHEERKAART (`weather`,
+`energy`, `lights`, `calendars`, `kiosk_users`) en wordt door die kaart naar
+de opslag gestuurd zodra een beheerder hem met die config ziet
+(`infoscherm/installatie/sync`, alleen admin, alleen bij verschil, en alleen
+als de config die velden heeft; een beheerkaart zonder laat de opslag met
+rust). De schermkaart heeft geen config: toevoegen en klaar. (In ronde 3
+stond de installatie in de schermkaart; dat was andersom dan bedoeld.) Onderdelen van de opslag: praktijk (openingstijden en
 uitzonderingen; niets anders), personen, mededelingen (tekst, `van` en `tot`
 als datum of datum-met-tijd), verjaardagen (naam, geboortedatum, leeftijd
 tonen), `scherm` (logo, accent, uiterlijk, vorm van de foto's, terugvaltijd,
 weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
-mededeling, en wat er in het welkomblok staat: tekst, logo, openingsregel),
+mededeling, en wat er in het welkomblok staat: tekst, logo verbergen,
+openingsregel),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
 receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
@@ -2537,7 +2540,7 @@ welkomblok. Rechten:
 |---|---|
 | lezen, abonneren, aanwezigheid omzetten, lampen schakelen | iedere ingelogde gebruiker |
 | personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN van de lampen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| de entiteiten (weer, agenda's, lampen) kiezen en kioskgebruikers aanwijzen (in de kaarteditor; de kaart stuurt het door), gebruikerslijst opvragen | admin |
+| de entiteiten (weer, energie, agenda's, lampen) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
 Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
 typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
@@ -2593,15 +2596,20 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   vermogenssensor (W, kW) als getal van nu met een live lijn van de afgelopen
   24 uur; een tellerstand (kWh) als verbruik per uur met het totaal van de
   afgelopen 24 uur. De geschiedenis komt uit de recorder
-  (`history/history_during_period`), de verse waarden uit `hass`. De pagina
-  erachter toont nu, gemiddeld, piek (en totaal) en de grote grafiek. De
-  lijn draagt het accent; de getallen staan in neutrale inkt.
-- Het welkomblok toont wat de receptie kiest: een tekst, het logo (dan niet
-  ook in de kop), en de regel met de openingstijd van vandaag.
+  (`history/history_during_period`), de verse waarden uit `hass`. In het blok
+  is de lijn een vloeiende kromme door het gemiddelde per halfuur; de pagina
+  erachter toont nu, gemiddeld, piek (en totaal) en de grote grafiek met
+  elke meting. De lijn draagt het accent; het getal staat in neutrale inkt.
+- Er is geen kop boven het raster (ronde 4): het welkomblok draagt het logo
+  (linksboven, tenzij verborgen), de klok met de datum, en wat de receptie
+  kiest: een tekst en de regel met de openingstijd van vandaag. Laag of breed
+  staat dat naast elkaar, hoog onder elkaar.
 - De mededelingen zijn een reeks: één tegelijk, met een teller ("2 van 3"),
   die na een instelbare tijd (standaard 10 s) naar de volgende schuift. Een
   veeg op het scherm schuift zelf en zet de klok opnieuw; met een muis is de
-  baan te slepen, en de stippen eronder zijn knoppen. Het vlak heeft de
+  baan te slepen, en de stippen eronder zijn knoppen. Achter de kop zit de
+  pagina Mededelingen: alles wat nu geldt uitgeschreven, met de periode, en
+  daaronder wat er klaarstaat. Het vlak heeft de
   kleur van de andere blokken en geen icoon. Een mededeling geldt vanaf en tot
   een datum of een datum met tijd.
 - Verjaardagen: vandaag eerst, dan op volgorde van hoe lang nog, met de

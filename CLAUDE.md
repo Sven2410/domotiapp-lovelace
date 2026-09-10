@@ -1113,6 +1113,12 @@ die daar niet staan:
    een leeg veld hoort niet in de YAML), dus de keuze valt meteen terug op
    de standaard. Geef zo'n keuze een echte waarde (`geen`).
 
+56. **Een vloeiende kromme door ongelijk verdeelde punten maakt lussen.**
+   Catmull-Rom door vijf metingen binnen een minuut naast een gat van
+   23 uur gaf een krul aan het eind van de energielijn (10 september 2026).
+   Zet de punten eerst op een gelijk rooster (`verdunReeks`) en laat een
+   stuurpunt nooit terug in de tijd gaan (`vloeiendPad`).
+
 ---
 
 ## Projectstand
@@ -1132,7 +1138,7 @@ met **drieëntwintig kaarttypes**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
-| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.38.0 staat de INSTALLATIE -- weer, lampen, agenda's, kioskaccounts -- weer in de kaartconfig en al het andere in het beheer) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
+| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de
@@ -1175,8 +1181,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 10 september 2026 (0.39.0):** 1026 JS-tests en 664 Python-tests,
-alle groen; bundel 794.390 bytes.
+**Tellingen op 10 september 2026 (0.40.0):** 1033 JS-tests en 664 Python-tests,
+alle groen; bundel 799.682 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in

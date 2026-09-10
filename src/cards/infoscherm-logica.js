@@ -80,6 +80,39 @@ export const actieveMededelingen = (lijst, nu) =>
   (lijst ?? []).filter((m) => m.tekst && geldigNu(m, nu));
 
 /**
+ * De mededelingen die nog KOMEN: een `van` in de toekomst. Voor de pagina
+ * Mededelingen (ronde 4), zodat de receptie op het scherm ziet wat er klaar
+ * staat. Op volgorde van `van`.
+ */
+export function komendeMededelingen(lijst, nu) {
+  const moment = nu.length === 10 ? `${nu}T00:00` : nu;
+  return (lijst ?? [])
+    .filter((m) => m.tekst && m.van && (m.van.length === 10 ? `${m.van}T00:00` : m.van) > moment)
+    .sort((a, b) => String(a.van).localeCompare(String(b.van)));
+}
+
+/** "2026-09-20T12:00" of "2026-09-20" -> "20 september 12:00" / "20 september". */
+export function datumTijdKort(iso) {
+  if (!iso) return "";
+  const [datum, tijd] = iso.split("T");
+  return tijd ? `${datumKort(datum)} ${tijd}` : datumKort(datum);
+}
+
+/**
+ * De periode van een mededeling in woorden: "tot en met 20 september",
+ * "vanaf 20 september 12:00", "20 t/m 24 september", of leeg als hij altijd
+ * geldt.
+ */
+export function mededelingPeriode(m) {
+  const van = datumTijdKort(m?.van);
+  const tot = datumTijdKort(m?.tot);
+  if (van && tot) return `${van} t/m ${tot}`;
+  if (van) return `vanaf ${van}`;
+  if (tot) return `tot en met ${tot}`;
+  return "";
+}
+
+/**
  * Het nieuws: alleen nog wat er van buiten komt, nieuwste eerst.
  *
  * Tot 0.37.0 stonden hier de berichten van het pand vóór de feeds. Sinds
@@ -211,9 +244,10 @@ export function verlichtingZichtbaar(stand) {
  * Welke pagina's er achter de koppen zitten. Welkom is het scherm zelf; de
  * rest is er alleen als er iets te tonen valt.
  */
-export function paginas(stand, feeds) {
+export function paginas(stand, feeds, nu = null) {
   const uit = ["welkom"];
   if ((stand?.personen?.length ?? 0) > 0) uit.push("aanwezig");
+  if (nu ? actieveMededelingen(stand?.mededelingen, nu).length > 0 : (stand?.mededelingen?.length ?? 0) > 0) uit.push("mededelingen");
   if ((feeds?.length ?? 0) > 0) uit.push("nieuws");
   if (stand?.installatie?.weer) uit.push("weer");
   if (stand?.installatie?.energie) uit.push("energie");
@@ -322,7 +356,7 @@ export const RIJEN = 6;
 export const BLOK_INFO = {
   welkom: { naam: "Welkom", icoon: "house", pagina: null, aantal: false, maat: [6, 1] },
   weer: { naam: "Weer", icoon: "sun", pagina: "weer", aantal: false, maat: [2, 2] },
-  mededeling: { naam: "Mededelingen", icoon: "bell", pagina: null, aantal: false, maat: [2, 1] },
+  mededeling: { naam: "Mededelingen", icoon: "bell", pagina: "mededelingen", aantal: false, maat: [2, 1] },
   openingstijden: { naam: "Openingstijden", icoon: "clock", pagina: null, aantal: false, maat: [2, 3] },
   aanwezig: { naam: "Aanwezig", icoon: "people", pagina: "aanwezig", aantal: true, maat: [2, 3] },
   nieuws: { naam: "Nieuws", icoon: "news", pagina: "nieuws", aantal: true, maat: [2, 4] },
@@ -401,15 +435,21 @@ export function pasLijst({ beschikbaar, hoogte, gap = 0, aantal, kolommen = 1, m
 
 export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
 
+/**
+ * Sinds ronde 4 is er geen kop meer boven het raster: het welkomblok
+ * linksboven draagt logo, klok en welkomtekst. Gemeld op 10 september 2026:
+ * *"ik heb nu bovenin loze ruimte; ik wil de klok naar links, dat links het
+ * vak is met de klok en logo."*
+ */
 export function standaardIndeling() {
   const blokken = [
-    ["welkom", 0, 0, 6, 1, 0],
-    ["weer", 0, 1, 2, 2, 0],
-    ["aanwezig", 2, 1, 2, 3, 4],
-    ["nieuws", 4, 1, 2, 5, 3],
-    ["openingstijden", 0, 3, 2, 3, 0],
-    ["mededeling", 2, 4, 2, 1, 0],
-    ["verlichting", 2, 5, 2, 1, 4],
+    ["welkom", 0, 0, 2, 2, 0],
+    ["weer", 0, 2, 2, 2, 0],
+    ["openingstijden", 0, 4, 2, 2, 0],
+    ["aanwezig", 2, 0, 2, 3, 6],
+    ["mededeling", 2, 3, 2, 1, 0],
+    ["verlichting", 2, 4, 2, 2, 4],
+    ["nieuws", 4, 0, 2, 6, 6],
   ];
   return {
     blokken: blokken.map(([soort, x, y, w, h, aantal]) => ({ id: `std-${soort}`, soort, x, y, w, h, aantal })),
@@ -604,4 +644,70 @@ export function formatEnergie(waarde, eenheid = "W", decimalen = null) {
   const d = decimalen ?? (Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2);
   const tekst = v.toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d });
   return e ? `${tekst} ${e}` : tekst;
+}
+
+/**
+ * Minder punten: het venster in `n` gelijke vakken, per vak het gemiddelde.
+ * Voor het kleine blok, waar een lijn met elke meting een kras wordt.
+ * Gemeld op 10 september 2026: *"ik vind de lijn te gedetailleerd, maak hem
+ * mooier en vloeiender; bij Alles bekijken mag hij wel zo gedetailleerd."*
+ * Een leeg vak neemt de waarde van het vorige (de sensor meldde niets, dus
+ * hij stond nog zo). Het laatste punt blijft het laatste punt, zodat de
+ * lijn tot "nu" loopt.
+ */
+export function verdunReeks(reeks, n = 48) {
+  const p = reeks?.punten ?? [];
+  // Ook een KORTE reeks gaat op het gelijke rooster: metingen die dicht op
+  // elkaar staan naast een groot gat gaven in de kromme een lus (gemeten op
+  // 10 september 2026 met vijf waarden binnen een minuut). Gelijke stappen
+  // maken de bochten gelijkmatig.
+  if (p.length < 2 || !(reeks.tot > reeks.van)) return reeks;
+  const stap = (reeks.tot - reeks.van) / n;
+  const uit = [];
+  let vorige = p[0].v;
+  for (let i = 0; i < n; i += 1) {
+    const a = reeks.van + i * stap;
+    const b = a + stap;
+    const inVak = p.filter((q) => q.t >= a && q.t < b);
+    const v = inVak.length ? inVak.reduce((s, q) => s + q.v, 0) / inVak.length : vorige;
+    vorige = v;
+    uit.push({ t: a + stap / 2, v: Math.round(v * 1000) / 1000 });
+  }
+  uit.unshift({ t: reeks.van, v: p[0].v });
+  uit.push({ t: reeks.tot, v: p[p.length - 1].v });
+  return { ...reeks, punten: uit };
+}
+
+/**
+ * Als `lijnPad`, maar met een vloeiende kromme door de punten (Catmull-Rom
+ * naar cubische Béziers). De hoekpunten blijven op hun plek; alleen het
+ * stuk ertussen buigt.
+ */
+export function vloeiendPad(reeks, { w = 1000, h = 400, spanning = 0.5 } = {}) {
+  const recht = lijnPad(reeks, { w, h });
+  const p = reeks?.punten ?? [];
+  if (p.length < 3 || !recht.lijn) return recht;
+  const { min, max } = recht;
+  const xy = p.map((q) => [((q.t - reeks.van) / (reeks.tot - reeks.van)) * w, h - ((q.v - min) / (max - min)) * h]);
+  const f = (n) => n.toFixed(1);
+  let d = `M${f(xy[0][0])},${f(xy[0][1])}`;
+  for (let i = 0; i < xy.length - 1; i += 1) {
+    const p0 = xy[i - 1] ?? xy[i];
+    const p1 = xy[i];
+    const p2 = xy[i + 1];
+    const p3 = xy[i + 2] ?? p2;
+    const c1 = [p1[0] + ((p2[0] - p0[0]) / 6) * spanning * 2, p1[1] + ((p2[1] - p0[1]) / 6) * spanning * 2];
+    const c2 = [p2[0] - ((p3[0] - p1[0]) / 6) * spanning * 2, p2[1] - ((p3[1] - p1[1]) / 6) * spanning * 2];
+    // Binnen het vak blijven: een bocht mag niet onder de nullijn duiken, en
+    // niet terug in de tijd (dat geeft een lus).
+    c1[1] = Math.min(h, Math.max(0, c1[1]));
+    c2[1] = Math.min(h, Math.max(0, c2[1]));
+    c1[0] = Math.min(p2[0], Math.max(p1[0], c1[0]));
+    c2[0] = Math.min(p2[0], Math.max(c1[0], c2[0]));
+    d += ` C${f(c1[0])},${f(c1[1])} ${f(c2[0])},${f(c2[1])} ${f(p2[0])},${f(p2[1])}`;
+  }
+  const nul = f(h - ((Math.max(min, 0) - min) / (max - min)) * h);
+  const laatste = xy[xy.length - 1];
+  const vlak = `${d} L${f(laatste[0])},${nul} L${f(xy[0][0])},${nul} Z`;
+  return { lijn: d, vlak, min, max };
 }

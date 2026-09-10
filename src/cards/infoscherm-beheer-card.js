@@ -9,11 +9,17 @@
  * die kan geen dashboard opslaan. Het gaat allemaal naar de serverkant
  * (`infoscherm/`), en elk open scherm krijgt het meteen.
  *
- * De ENTITEITEN (weer, lampen, agenda's) en de kioskaccounts staan hier niet:
- * die kiest de installateur in de kaarteditor van het infoscherm zelf. Tot
- * 0.37.0 zat daar een blok Installatie voor; op 10 september 2026 wilde de
- * eigenaar dat "helemaal weg". De infoschermkaart stuurt zijn config naar de
- * opslag, en zo weet dit beheer welke lampen er zijn.
+ * DE KAARTEDITOR VAN DEZE KAART IS DE INSTALLATIE
+ *
+ * De ENTITEITEN (weer, energie, lampen, agenda's) en de kioskaccounts kiest
+ * de installateur in de kaarteditor van DEZE kaart, en de kaart stuurt die
+ * config naar de opslag zodra een beheerder hem ziet (`sync_`). Het
+ * infoscherm zelf heeft geen config: "één keer de kaart toevoegen en klaar"
+ * (10 september 2026). Tot 0.37.0 zat hier een blok Installatie voor, in
+ * 0.38.0 en 0.39.0 stond het in de editor van het infoscherm; allebei was
+ * niet wat hij bedoelde. Een beheerkaart ZONDER die velden in zijn config
+ * (een tweede beheerkaart voor de receptie, bijvoorbeeld) laat de opslag met
+ * rust.
  *
  * GEEN ha-form
  *
@@ -58,8 +64,10 @@ import {
   abonneer,
   bestandUrl,
   bewaar,
+  haalGebruikers,
   haalStand,
   nogNietGereed,
+  syncInstallatie,
   upload,
   vergeetBestand,
   verwijderBestand,
@@ -108,8 +116,17 @@ const BLOKKEN = [
   { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
 ];
 
+/* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
+const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "calendars", "kiosk_users"];
+const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
+
 const STANDAARD = {
   title: "Infoscherm",
+  weather: "",
+  energy: "",
+  lights: [],
+  calendars: [],
+  kiosk_users: [],
   show_personen: true,
   show_mededelingen: true,
   show_verjaardagen: true,
@@ -330,11 +347,58 @@ export class InfoschermBeheerCard extends DacCard {
   }
 
   validate(config) {
-    return { ...STANDAARD, ...config };
+    // Staat er in de RUWE config iets van de installatie? Alleen dan is deze
+    // kaart de bron ervan (zie sync_). Mag nooit gooien.
+    this.installatieInConfig_ = INSTALLATIE_VELDEN.some((k) => config[k] !== undefined);
+    return {
+      ...STANDAARD,
+      ...config,
+      weather: typeof config.weather === "string" ? config.weather : "",
+      energy: typeof config.energy === "string" ? config.energy : "",
+      lights: lijstVan(config.lights),
+      calendars: lijstVan(config.calendars),
+      kiosk_users: lijstVan(config.kiosk_users),
+    };
   }
 
   watched() {
     return [];
+  }
+
+  /**
+   * De installatie uit de kaartconfig naar de opslag: zo weet het scherm
+   * welke entiteiten er zijn en de server welke accounts kiosk zijn. Alleen
+   * een beheerder mag dat, alleen als deze kaart de velden in zijn config
+   * heeft, en alleen als er iets afwijkt; dezelfde payload gaat niet twee
+   * keer.
+   */
+  async sync_() {
+    if (!this.hass?.connection || !this.stand_ || !this.hass.user?.is_admin || !this.installatieInConfig_) return;
+    const c = this.config;
+    const wens = {
+      weer: c.weather || null,
+      energie: c.energy || null,
+      agendas: c.calendars,
+      verlichting: c.lights,
+      kiosk_gebruikers: c.kiosk_users,
+    };
+    const sleutel = JSON.stringify(wens);
+    const i = this.stand_.installatie ?? {};
+    const nu = JSON.stringify({
+      weer: i.weer ?? null,
+      energie: i.energie ?? null,
+      agendas: i.agendas ?? [],
+      verlichting: (i.verlichting ?? []).map((l) => l.entity),
+      kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
+    });
+    if (sleutel === nu || sleutel === this.laatstGesynct_) return;
+    this.laatstGesynct_ = sleutel;
+    try {
+      await syncInstallatie(this.hass, wens);
+    } catch {
+      // De volgende stand probeert het opnieuw.
+      this.laatstGesynct_ = "";
+    }
   }
 
   getCardSize() {
@@ -470,6 +534,7 @@ export class InfoschermBeheerCard extends DacCard {
   nieuweStand_(stand, alles = false) {
     const eerste = !this.stand_;
     this.stand_ = stand;
+    this.sync_();
     const opnieuw = new Set();
     for (const s of SECTIES) {
       if (this.vuil_.has(s) || this.bezig_.has(s)) {
@@ -800,7 +865,7 @@ export class InfoschermBeheerCard extends DacCard {
       .join("");
     return `
       ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: "Verlichting op het scherm tonen", s: "instellingen" })}
-      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van het infoscherm (bewerkmodus van dat dashboard, knop Bewerken onder het scherm).</div>
+      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart).</div>
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
   }
 
@@ -852,7 +917,7 @@ export class InfoschermBeheerCard extends DacCard {
         <div class="rij twee" style="margin-top: 6px">
           ${this.veld_("Tekst (leeg = geen tekst)", "welkom_tekst", s.welkom_tekst ?? "Welkom", { s: "scherm" })}
           <div class="veld" style="gap: 0">
-            ${this.schakel_("welkom_logo", s.welkom_logo === true, { label: "Logo in het blok (en niet in de kop)", s: "scherm" })}
+            ${this.schakel_("logo_verbergen", s.logo_verbergen === true, { label: "Logo op het scherm verbergen", s: "scherm" })}
             ${this.schakel_("welkom_onder", s.welkom_onder !== false, { label: "Regel met de openingstijd van vandaag", s: "scherm" })}
           </div>
         </div>
@@ -1421,6 +1486,11 @@ export class InfoschermBeheerCard extends DacCard {
 
 const LABELS = {
   title: "Titel",
+  weather: "Weerentiteit",
+  energy: "Energiesensor (vermogen of tellerstand)",
+  lights: "Lampen en schakelaars op het scherm",
+  calendars: "Agenda's (de afspraken van vandaag)",
+  kiosk_users: "Kioskaccounts",
   show_personen: "Blok Medewerkers",
   show_mededelingen: "Blok Mededelingen",
   show_verjaardagen: "Blok Verjaardagen",
@@ -1431,13 +1501,97 @@ const LABELS = {
   open: "Staat open bij het laden",
 };
 
+const HELPERS = {
+  weather: "Leeg = geen weer op het scherm.",
+  energy:
+    "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
+  lights: "De namen zoals ze op het scherm staan geeft de receptie hieronder in het blok Verlichting; daar staat ook de schakelaar om ze te tonen.",
+  kiosk_users:
+    "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren. Alleen een beheerder ziet deze lijst.",
+  show_instellingen:
+    "Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.",
+};
+
+/**
+ * Bovenaan de installatie (wat een installateur eenmalig kiest), daaronder
+ * de kaart zelf. De kioskaccounts komen als keuzelijst uit de
+ * gebruikerslijst van Home Assistant, opgehaald zodra de editor een `hass`
+ * heeft; een gewone gebruiker mag die lijst niet opvragen en ziet het veld
+ * dan niet.
+ *
+ * Staat er in de config nog niets van de installatie (na de update van
+ * 0.39.0, waar hij in het infoscherm stond), dan komt wat er in de opslag
+ * staat als beginwaarde in het formulier: zo hoeft niemand alles opnieuw te
+ * kiezen, en zodra er iets wijzigt gaat het geheel mee de config in.
+ */
 export class InfoschermBeheerEditor extends DacEditor {
   defaults() {
     return { ...STANDAARD };
   }
 
+  setConfig(config) {
+    this.ruwLeeg_ = !INSTALLATIE_VELDEN.some((k) => config?.[k] !== undefined);
+    super.setConfig(config);
+    this.zaai_();
+  }
+
+  set hass(hass) {
+    super.hass = hass;
+    if (this.gebruikers_ === undefined && hass?.connection && hass.user?.is_admin) {
+      this.gebruikers_ = null;
+      haalGebruikers(hass)
+        .then((g) => {
+          this.gebruikers_ = (g.gebruikers ?? []).map((u) => ({ value: u.id, label: `${u.naam}${u.is_admin ? " (beheerder)" : ""}` }));
+          this.sync_();
+        })
+        .catch(() => {
+          this.gebruikers_ = [];
+        });
+    }
+    if (this.zaad_ === undefined && hass?.connection) {
+      this.zaad_ = null;
+      haalStand(hass)
+        .then((r) => {
+          const i = r.stand?.installatie ?? {};
+          this.zaad_ = {
+            weather: i.weer ?? "",
+            energy: i.energie ?? "",
+            lights: (i.verlichting ?? []).map((l) => l.entity),
+            calendars: i.agendas ?? [],
+            kiosk_users: r.stand?.instellingen?.kiosk_gebruikers ?? [],
+          };
+          this.zaai_();
+        })
+        .catch(() => {
+          this.zaad_ = {};
+        });
+    }
+  }
+
+  get hass() {
+    return super.hass;
+  }
+
+  /** De opslag als beginwaarde, alleen als de config zelf nog leeg is. */
+  zaai_() {
+    if (!this.zaad_ || !this.ruwLeeg_ || this.gezaaid_) return;
+    this.gezaaid_ = true;
+    this.config_ = { ...this.config_, ...this.zaad_ };
+    this.sync_();
+  }
+
   schema() {
+    const installatie = [
+      { name: "weather", selector: sel.entity("weather") },
+      { name: "energy", selector: sel.entity("sensor") },
+      { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
+      { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
+    ];
+    if (this.gebruikers_?.length) {
+      installatie.push({ name: "kiosk_users", selector: { select: { multiple: true, mode: "list", options: this.gebruikers_ } } });
+    }
     return [
+      ...installatie,
       { name: "title", selector: sel.text() },
       {
         // "geen" en niet "": een lege waarde wordt uit de config gehaald
@@ -1459,17 +1613,14 @@ export class InfoschermBeheerEditor extends DacEditor {
   }
 
   helper(item) {
-    if (item.name === "show_instellingen") {
-      return "Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.";
-    }
-    return undefined;
+    return HELPERS[item.name];
   }
 }
 
 registerCard(TAG, InfoschermBeheerCard, {
   name: "DomotiApp Infoscherm Beheer",
   description:
-    "Voor de receptie: medewerkers, mededelingen, verjaardagen, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm.",
+    "Voor de receptie: medewerkers, mededelingen, verjaardagen, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm. De installateur kiest hier ook het weer, de energiesensor, de lampen, de agenda's en het kioskaccount.",
   preview: false,
 });
 registerEditor(`${TAG}-editor`, InfoschermBeheerEditor);
