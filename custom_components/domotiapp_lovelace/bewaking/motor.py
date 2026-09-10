@@ -359,6 +359,11 @@ class Motor:
                 "Er is iemand thuis; melding voor %s overgeslagen", regel.camera
             )
             return
+        if regel.stil_schakelaar and self._staat_aan(regel.stil_schakelaar):
+            _LOGGER.debug(
+                "%s staat aan; melding voor %s overgeslagen", regel.stil_schakelaar, regel.camera
+            )
+            return
 
         camera_state = self._hass.states.get(regel.camera)
         camera_naam = (
@@ -375,6 +380,11 @@ class Motor:
             camera=regel.camera,
             melder=beeld.get("melder"),
         )
+
+    @callback
+    def _staat_aan(self, entity_id: str) -> bool:
+        state = self._hass.states.get(entity_id)
+        return state is not None and state.state == STATE_ON
 
     @callback
     def _iemand_thuis(self) -> bool:

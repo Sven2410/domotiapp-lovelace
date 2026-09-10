@@ -394,13 +394,24 @@ class CameraCard extends DacCard {
       .filters .dagmenu button:hover { background: var(--dac-surface); }
     }
 
-    .filters .opslag {
+    .filters .opslag, .filters .stil {
       flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center;
       padding: 0; font: inherit; cursor: pointer; color: var(--dac-ink-2);
       background: var(--dac-surface); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-sm);
     }
-    .filters .opslag .icon { width: 15px; height: 15px; }
+    .filters .opslag .icon, .filters .stil .icon { width: 15px; height: 15px; }
+    /* De schakelaar "meldingen uit": staat hij aan, dan is de bel
+       doorgestreept en draagt de knop het accent -- alleen het icoon, net
+       als overal. Gevraagd op 10 september 2026: "een schakelaar erin, als
+       die aanstaat geeft hij geen pushmeldingen; mooi weggewerkt in de
+       kaart." */
+    .filters .stil[aria-pressed="true"] {
+      color: var(--dac-accent-hi);
+      background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 32%, transparent);
+    }
+    .filters .stil[hidden] { display: none; }
     .filters .rek { flex: 1 1 auto; }
     /* Er staat GEEN teller "13 van 13" naast de dagkiezer. Die stond er wel;
        weggehaald op verzoek, 28 augustus 2026: "dat 25 van de 31 mag wel weg, is
@@ -512,9 +523,37 @@ class CameraCard extends DacCard {
     return [
       ...this.cameras_(),
       c.presets,
+      c.snapshot_stil,
       ...this.melders_().map((m) => m.entity),
       ...(Array.isArray(c.preset_buttons) ? c.preset_buttons : []),
     ].filter(Boolean);
+  }
+
+  /**
+   * De knop "meldingen uit" in de filterrij: alleen als er een schakelaar
+   * gekozen is, en dan met de toestand van die schakelaar erop. De knop
+   * schakelt de entiteit; de serverkant leest hem bij elke melding.
+   */
+  paintStil_() {
+    const knop = this.$(".stil");
+    if (!knop) return;
+    const id = this.config.snapshot_stil;
+    if (!id) {
+      knop.hidden = true;
+      return;
+    }
+    const st = stateOf(this.hass, id);
+    const aan = isOn(st);
+    knop.hidden = false;
+    knop.setAttribute("aria-pressed", String(aan));
+    const tekst = aan ? "Meldingen staan uit; tik om ze weer aan te zetten" : "Meldingen staan aan; tik om ze uit te zetten";
+    knop.setAttribute("aria-label", tekst);
+    knop.title = tekst;
+    const wens = aan ? "bellOff" : "bell";
+    if (knop.dataset.icoon !== wens) {
+      knop.dataset.icoon = wens;
+      knop.innerHTML = resolve(wens);
+    }
   }
 
   /**
@@ -609,6 +648,9 @@ class CameraCard extends DacCard {
               ${resolve("chevronRight")}
             </button>
             <span class="rek"></span>
+            <button type="button" class="stil" aria-pressed="false" aria-label="Meldingen uit" title="Meldingen uit" hidden>
+              ${resolve("bell")}
+            </button>
             <button type="button" class="opslag" aria-label="Alle snapshots">
               ${resolve("storage")}
             </button>
@@ -678,6 +720,11 @@ class CameraCard extends DacCard {
       if (e.target.closest?.(".opslag")) {
         e.stopPropagation();
         this.openArchief_();
+        return;
+      }
+      if (e.target.closest?.(".stil")) {
+        e.stopPropagation();
+        if (this.config.snapshot_stil) this.hass?.callService("homeassistant", "toggle", { entity_id: this.config.snapshot_stil });
         return;
       }
       if (e.target.closest?.(".datum")) {
@@ -1111,6 +1158,7 @@ class CameraCard extends DacCard {
     this.toggleAttribute("dead", Boolean(dood));
 
     this.text(".nm", c.name || nameOf(this.hass, cam, "Camera"));
+    this.paintStil_();
 
     // Zolang de stream omgevallen is: stilstaand beeld. Zie bewaakStream_.
     //
@@ -2003,6 +2051,7 @@ class CameraEditor extends DacEditor {
             selector: { entity: { domain: "person", multiple: true } },
           },
           { name: "snapshot_alleen_afwezig", selector: sel.bool() },
+          { name: "snapshot_stil", selector: sel.entity(["input_boolean", "switch"]) },
         ]
       : [];
 
@@ -2096,6 +2145,7 @@ class CameraEditor extends DacEditor {
         snapshot_wachttijd: "Wachten voor het beeld (seconden)",
         snapshot_ontvangers: "Wie krijgt een melding",
         snapshot_alleen_afwezig: "Alleen melden als er niemand thuis is",
+        snapshot_stil: "Schakelaar: meldingen uit",
         presets_aan: "Presets en draaien",
       }[s.name] ?? super.label(s)
     );
@@ -2137,6 +2187,8 @@ class CameraEditor extends DacEditor {
         "De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje.",
       snapshot_alleen_afwezig:
         "Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode.",
+      snapshot_stil:
+        "Een helper (input_boolean) of schakelaar. Staat hij aan, dan gaat er geen melding naar de telefoon; het beeld komt wél in de timeline. De kaart krijgt er een belknop bij in de rij boven de timeline om hem om te zetten, en hij is ook in een automatisering te gebruiken (bijvoorbeeld: aan als de poetsploeg er is).",
       verhouding:
         "Standaard volgt de kaart zijn camera, zodat er geen beeld af gaat. Staan er meerdere camerakaarten naast elkaar in een stack, kies dan overal dezelfde verhouding — dan zijn ze even hoog. Er wordt dan wel bijgesneden.",
       presets_aan:

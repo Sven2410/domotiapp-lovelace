@@ -676,6 +676,12 @@ export const icons = {
     <path d="M10.2 19.2a2 2 0 0 0 3.6 0"/>
     <path d="M12 5.7V4.2"/>`),
 
+  /* Meldingen uit: dezelfde bel, doorgestreept. */
+  bellOff: draw(`<path d="M17.8 16.6H6.2l1.5-2.3V10a4.3 4.3 0 0 1 8.6 0v4.3z"/>
+    <path d="M10.2 19.2a2 2 0 0 0 3.6 0"/>
+    <path d="M12 5.7V4.2"/>
+    <path d="M4.5 4.5l15 15"/>`),
+
   /* Bijvullen: een druppel die in een vat valt, met de vulstand erin. */
   refill: draw(`<path d="M12 2.8c1.7 2 2.6 3.5 2.6 4.6a2.6 2.6 0 0 1-5.2 0c0-1.1.9-2.6 2.6-4.6z"/>
     <path d="M5.8 11.8h12.4v6.6a2.2 2.2 0 0 1-2.2 2.2H8a2.2 2.2 0 0 1-2.2-2.2z"/>
