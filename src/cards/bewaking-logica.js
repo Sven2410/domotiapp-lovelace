@@ -91,6 +91,7 @@ export function regelsVoorKaart(hass, config) {
       // Een schakelaar die, zolang hij aanstaat, de telefoon stil houdt
       // (10 september 2026). Het beeld komt wel in de timeline.
       stil_schakelaar: typeof config?.snapshot_stil === "string" && config.snapshot_stil ? config.snapshot_stil : null,
+      stil_omgekeerd: !!config?.snapshot_stil_omgekeerd,
     };
   });
 }

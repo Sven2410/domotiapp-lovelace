@@ -294,6 +294,28 @@ async def test_de_stilschakelaar_uit_of_onbekend_laat_de_melding_door(
     stuur_melding.assert_awaited_once()
 
 
+async def test_de_omgekeerde_stilschakelaar_houdt_stil_als_hij_uit_staat(
+    hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding, index
+) -> None:
+    """NIEUW GEDRAG (10 september 2026): "een optie om de schakelaar te
+    inverteren." Uit = stil, aan = melden; onbekend = melden."""
+    hass.states.async_set("input_boolean.camera_stil", "off")
+    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil", stil_omgekeerd=True)
+    await detecteer(hass, MELDER_PERSOON)
+    assert len(index().alle()) == 1
+    stuur_melding.assert_not_awaited()
+
+    hass.states.async_set("input_boolean.camera_stil", "on")
+    await detecteer(hass, MELDER_VOERTUIG)
+    stuur_melding.assert_awaited_once()
+
+    stuur_melding.reset_mock()
+    await herstel(hass, MELDER_PERSOON)
+    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.bestaat_niet", stil_omgekeerd=True, rustperiode=0)
+    await detecteer(hass, MELDER_PERSOON)
+    stuur_melding.assert_awaited_once()
+
+
 def test_de_stilschakelaar_moet_een_input_boolean_of_switch_zijn() -> None:
     from custom_components.domotiapp_lovelace.bewaking.store import RegelFout, valideer_regel
 
