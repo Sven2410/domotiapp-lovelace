@@ -216,6 +216,7 @@ export function paginas(stand, feeds) {
   if ((stand?.personen?.length ?? 0) > 0) uit.push("aanwezig");
   if ((feeds?.length ?? 0) > 0) uit.push("nieuws");
   if (stand?.installatie?.weer) uit.push("weer");
+  if (stand?.installatie?.energie) uit.push("energie");
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
   if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
@@ -328,7 +329,75 @@ export const BLOK_INFO = {
   verlichting: { naam: "Verlichting", icoon: "bulb", pagina: "verlichting", aantal: true, maat: [2, 1] },
   agenda: { naam: "Agenda", icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
   verjaardagen: { naam: "Verjaardagen", icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
+  energie: { naam: "Energie", icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
 };
+
+/**
+ * De blokken die een LIJST tonen (tegels, berichten, lampen, afspraken,
+ * verjaardagen). Die schalen alleen met de breedte: een hoger blok toont
+ * meer, geen groter. Alle andere blokken schalen met allebei.
+ */
+export const LIJSTBLOKKEN = new Set(["aanwezig", "nieuws", "verlichting", "agenda", "verjaardagen"]);
+
+/* De schaal per breedte en per hoogte in rastercellen; 2 cellen is 1. */
+const SCHAAL_BREEDTE = [0, 0.85, 1, 1.12, 1.25, 1.35, 1.45];
+const SCHAAL_HOOGTE = [0, 0.8, 1, 1.15, 1.3, 1.4, 1.5];
+
+/**
+ * Hoe groot alles in een blok is, als factor bovenop de schermschaal.
+ *
+ * Gevraagd op 10 september 2026: *"alles van alle kaarten moet meegeschaald
+ * worden als je ze kleiner en groter maakt."* Een blok van 2×2 is de maat 1;
+ * breder of hoger wordt groter, smaller of lager kleiner. Een lijstblok
+ * volgt alleen zijn breedte (zie `LIJSTBLOKKEN`); de rest het meetkundig
+ * gemiddelde van breedte en hoogte, zodat een welkomblok van 6×1 niet
+ * reusachtig wordt.
+ */
+export function blokSchaal(soort, w, h) {
+  const bw = SCHAAL_BREEDTE[Math.min(KOLOMMEN, Math.max(1, Math.round(w) || 1))];
+  const bh = SCHAAL_HOOGTE[Math.min(RIJEN, Math.max(1, Math.round(h) || 1))];
+  const s = LIJSTBLOKKEN.has(soort) ? bw : Math.sqrt(bw * bh);
+  return Math.round(s * 1000) / 1000;
+}
+
+/**
+ * Hoeveel rijen van een lijst er in een blok passen, en hoe groot ze dan
+ * worden.
+ *
+ * Gemeld op 10 september 2026 met een schermafdruk van het nieuws: zes
+ * berichten met eronder een gat waar bijna een zevende in paste, en "toon"
+ * op tien. *"Maak dan alles dezelfde grootte en passend; in dit geval moeten
+ * er 7 passen."* Dus: eerst tellen hoeveel rijen er op hun eigen maat
+ * passen. Blijft er méér dan een deel van een rij over (`drempel`), dan gaat
+ * alles een tikje kleiner (`pas` < 1) zodat er een rij bij past -- maar
+ * nooit kleiner dan `minPas`. Wat er dan staat wordt over de hoogte
+ * uitgesmeerd: elke rij even hoog, zonder gat onderaan.
+ *
+ * Alles binnen een blok is evenredig met de schaal (elke maat is
+ * `calc(px * var(--s))`), dus een rij van `hoogte` wordt bij `pas` precies
+ * `pas * hoogte` hoog. Daarom is dit een som en geen zoektocht.
+ *
+ * @returns {{rijen: number, tonen: number, pas: number}}
+ */
+export function pasLijst({ beschikbaar, hoogte, gap = 0, aantal, kolommen = 1, minPas = 0.72, drempel = 0.4 }) {
+  if (!aantal || !(hoogte > 0) || !(beschikbaar > 0)) return { rijen: 0, tonen: 0, pas: 1 };
+  const kol = Math.max(1, kolommen);
+  const nodig = Math.ceil(aantal / kol);
+  let rijen = Math.floor((beschikbaar + gap) / (hoogte + gap));
+  let pas = 1;
+  if (rijen < nodig) {
+    const kandidaat = rijen + 1;
+    const per = (beschikbaar - (kandidaat - 1) * gap) / kandidaat;
+    const k = per / hoogte;
+    const over = beschikbaar - rijen * hoogte - Math.max(0, rijen - 1) * gap;
+    if (rijen === 0 || (k >= minPas && over >= drempel * hoogte)) {
+      rijen = kandidaat;
+      pas = Math.min(1, Math.max(rijen === 1 ? 0.5 : minPas, k));
+    }
+  }
+  rijen = Math.min(rijen, nodig);
+  return { rijen, tonen: Math.min(aantal, rijen * kol), pas: Math.round(pas * 1000) / 1000 };
+}
 
 export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
 
@@ -397,6 +466,8 @@ export function blokOntbreekt(soort, stand, feeds, vandaag) {
       return (s.personen?.length ?? 0) > 0 ? null : "Nog geen medewerkers";
     case "nieuws":
       return null;
+    case "energie":
+      return s.installatie?.energie ? null : "Geen energiesensor gekozen (kaartinstellingen van het infoscherm)";
     case "verlichting":
       if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (kaartinstellingen van het infoscherm)";
       return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
@@ -406,4 +477,131 @@ export function blokOntbreekt(soort, stand, feeds, vandaag) {
       return "Onbekend blok";
   }
   // `feeds` doet hier niets: een nieuwsblok zonder nieuws zegt dat zelf.
+}
+
+/* ------------------------------------------------------------ energie */
+
+/**
+ * Is deze sensor een TELLERSTAND (kWh, altijd stijgend) en geen vermogen
+ * (W)? Een tellerstand teken je niet als lijn -- die loopt alleen maar op --
+ * maar als verbruik per uur.
+ */
+export function isTellerstand(attributen) {
+  const a = attributen ?? {};
+  if (a.state_class === "total_increasing" || a.state_class === "total") return true;
+  return /wh$/i.test(String(a.unit_of_measurement ?? "").trim());
+}
+
+/**
+ * De rijen van `history/history_during_period` naar punten `{t, v}` (ms,
+ * getal). Beide vormen van Home Assistant worden gelezen: de volle
+ * (`state`, `last_updated`) en de compacte (`s`, `lu` in seconden). Wat
+ * geen getal is (unavailable, unknown) valt weg.
+ */
+export function energiePunten(rijen) {
+  const uit = [];
+  for (const r of rijen ?? []) {
+    const v = Number(r?.s ?? r?.state);
+    if (!Number.isFinite(v)) continue;
+    const lu = r?.lu ?? r?.last_updated;
+    const t = typeof lu === "number" ? lu * 1000 : Date.parse(lu);
+    if (!Number.isFinite(t)) continue;
+    uit.push({ t, v });
+  }
+  return uit.sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Wat de grafiek tekent.
+ *
+ * Een vermogenssensor: de punten van de afgelopen 24 uur zoals ze zijn, met
+ * `nu` als laatste punt (de lijn loopt tot de rechterrand). Een tellerstand:
+ * het verbruik per uur van de afgelopen 24 uur, één punt per uur, zodat
+ * "verbruik" ook echt verbruik is. `venster` is het aantal uren.
+ *
+ * @returns {{punten: Array<{t:number,v:number}>, van: number, tot: number, perUur: boolean}}
+ */
+export function energieReeks(punten, { nu, tellerstand = false, venster = 24 } = {}) {
+  const tot = nu;
+  const van = tot - venster * 3600000;
+  const alles = (punten ?? []).filter((p) => p.t <= tot);
+  const binnen = alles.filter((p) => p.t >= van - 3600000);
+  if (!tellerstand) {
+    const lijst = binnen.filter((p) => p.t >= van);
+    // Het laatste punt vóór het venster maakt de lijn links compleet, hoe
+    // oud het ook is: een sensor die uren niets meldt is nog steeds die waarde.
+    const ervoor = alles.filter((p) => p.t < van).pop();
+    if (ervoor) lijst.unshift({ t: van, v: ervoor.v });
+    const laatste = lijst[lijst.length - 1];
+    if (laatste && laatste.t < tot) lijst.push({ t: tot, v: laatste.v });
+    return { punten: lijst, van, tot, perUur: false };
+  }
+  // Per uur: het verschil tussen de laatste stand van het uur en die ervoor.
+  const uren = [];
+  const eersteUur = Math.floor(van / 3600000) * 3600000;
+  let vorige = alles.filter((p) => p.t < eersteUur).pop()?.v ?? null;
+  for (let u = eersteUur; u < tot; u += 3600000) {
+    const inUur = binnen.filter((p) => p.t >= u && p.t < u + 3600000);
+    const eind = inUur.length ? inUur[inUur.length - 1].v : null;
+    if (eind !== null && vorige !== null) {
+      // Een teller die terugspringt is gereset: dat uur telt als nul.
+      uren.push({ t: u, v: eind >= vorige ? Math.round((eind - vorige) * 1000) / 1000 : 0 });
+    }
+    if (eind !== null) vorige = eind;
+  }
+  return { punten: uren.filter((p) => p.t >= van), van, tot, perUur: true };
+}
+
+/**
+ * De samenvatting boven de grafiek: nu, gemiddeld, piek, en het totaal van
+ * de reeks (alleen zinvol bij verbruik per uur).
+ */
+export function energieSamenvatting(reeks) {
+  const p = reeks?.punten ?? [];
+  if (!p.length) return { nu: null, gemiddeld: null, piek: null, totaal: null };
+  const waarden = p.map((x) => x.v);
+  const som = waarden.reduce((a, b) => a + b, 0);
+  return {
+    nu: waarden[waarden.length - 1],
+    gemiddeld: som / waarden.length,
+    piek: Math.max(...waarden),
+    totaal: reeks.perUur ? som : null,
+  };
+}
+
+/**
+ * Een SVG-pad voor de lijn en een voor het vlak eronder, in een vak van
+ * `w` bij `h`. Nul staat onderaan (of het minimum, als er negatieve
+ * waarden zijn -- teruglevering), de piek op 5% van de bovenrand.
+ */
+export function lijnPad(reeks, { w = 1000, h = 400 } = {}) {
+  const p = reeks?.punten ?? [];
+  if (p.length < 2 || !(reeks.tot > reeks.van)) return { lijn: "", vlak: "", min: 0, max: 0 };
+  const waarden = p.map((x) => x.v);
+  const min = Math.min(0, ...waarden);
+  const top = Math.max(...waarden);
+  const max = top > min ? min + (top - min) / 0.95 : min + 1;
+  const x = (t) => (((t - reeks.van) / (reeks.tot - reeks.van)) * w).toFixed(1);
+  const y = (v) => (h - ((v - min) / (max - min)) * h).toFixed(1);
+  const lijn = p.map((q, i) => `${i ? "L" : "M"}${x(q.t)},${y(q.v)}`).join(" ");
+  const nul = y(Math.max(min, 0));
+  const vlak = `${lijn} L${x(p[p.length - 1].t)},${nul} L${x(p[0].t)},${nul} Z`;
+  return { lijn, vlak, min, max };
+}
+
+/**
+ * "1,2 kW", "350 W", "0,45 kWh". Watt wordt kilowatt vanaf 1000; een
+ * eenheid die de sensor zelf al in kilo geeft blijft staan.
+ */
+export function formatEnergie(waarde, eenheid = "W", decimalen = null) {
+  if (waarde === null || waarde === undefined || !Number.isFinite(Number(waarde))) return "--";
+  let v = Number(waarde);
+  let e = String(eenheid ?? "").trim();
+  if (/^wh?$/i.test(e) && Math.abs(v) >= 1000) {
+    v /= 1000;
+    e = `k${e}`;
+  }
+  const d = decimalen ?? (Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2);
+  const tekst = v.toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d });
+  return e ? `${tekst} ${e}` : tekst;
 }

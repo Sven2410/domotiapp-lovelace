@@ -19,7 +19,7 @@ tweehonderd namen is nog altijd kleiner dan één foto.
 - `scherm`: wat de receptie over het uiterlijk beslist (logo, accent, licht of
   donker, terugvaltijd, hoe de aanwezigen staan, wat er in het welkomblok
   staat, hoe snel de mededelingen wisselen);
-- `installatie`: de entiteiten (weer, lampen, agenda's). Sinds ronde 3 kiest
+- `installatie`: de entiteiten (weer, energie, lampen, agenda's). Sinds ronde 3 kiest
   de installateur die in de KAARTEDITOR van het infoscherm; de kaart stuurt ze
   hierheen (`async_zet_installatie_van_kaart`) zodat het beheer de lampen kent
   en de receptie hun NAMEN kan wijzigen. Het blok Installatie in het beheer is
@@ -462,7 +462,7 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
 
 
 def leeg_installatie() -> dict[str, Any]:
-    return {"weer": None, "agendas": [], "verlichting": []}
+    return {"weer": None, "energie": None, "agendas": [], "verlichting": []}
 
 
 def valideer_lamp(rauw: Any) -> dict[str, Any]:
@@ -482,6 +482,8 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     if not isinstance(rauw, dict):
         raise InfoFout("'installatie' is een object")
     weer = rauw.get("weer") or None
+    # Ronde 4 (10 september 2026): een energiesensor voor het blok Energie.
+    energie = rauw.get("energie") or None
     lampen = [valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)]
     gezien: set[str] = set()
     uniek = []
@@ -495,6 +497,7 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     ]
     return {
         "weer": _entiteit(weer, "weer", ("weather",)) if weer else None,
+        "energie": _entiteit(energie, "energie", ("sensor",)) if energie else None,
         "agendas": list(dict.fromkeys(agendas)),
         "verlichting": uniek,
     }
@@ -720,6 +723,7 @@ class InfoStore:
             "scherm": dict(self._scherm),
             "installatie": {
                 "weer": self._installatie["weer"],
+                "energie": self._installatie.get("energie"),
                 "agendas": list(self._installatie["agendas"]),
                 "verlichting": [dict(l) for l in self._installatie["verlichting"]],
             },
@@ -799,6 +803,7 @@ class InfoStore:
             namen = {l["entity"]: l["naam"] for l in nieuw["verlichting"]}
             nieuw = {
                 "weer": self._installatie["weer"],
+                "energie": self._installatie.get("energie"),
                 "agendas": list(self._installatie["agendas"]),
                 "verlichting": [
                     {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
@@ -824,6 +829,7 @@ class InfoStore:
         nieuw = valideer_installatie(
             {
                 "weer": rauw.get("weer"),
+                "energie": rauw.get("energie"),
                 "agendas": rauw.get("agendas"),
                 "verlichting": rauw.get("verlichting"),
             }

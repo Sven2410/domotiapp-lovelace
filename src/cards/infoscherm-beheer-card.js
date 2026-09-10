@@ -161,6 +161,23 @@ const css = /* css */ `
   }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
+  /* De keuzelijst van de browser tekent zijn eigen menu, en dat menu nam de
+     doorschijnende achtergrond van het veld over: op een lichte pagina werd
+     het licht, en de opties stonden er grijs in. Gemeld op 10 september
+     2026: "bij de beheerderskaart zie ik nog steeds een licht theme." Een
+     dichte achtergrond en de inkt van de kaart, ook op elke optie. */
+  select { background-color: var(--dac-bg-raise); }
+  select option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
+  /* Een keuze uit twee of drie: geen keuzelijst maar knoppen naast elkaar,
+     in de vormtaal van de kaart. Dan is er ook geen browsermenu meer dat
+     zijn eigen kleuren kiest. */
+  .segment { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: var(--dac-radius-sm); background: var(--dac-surface); border: 1px solid var(--dac-border-hi); min-height: 40px; box-sizing: border-box; }
+  .segment button {
+    flex: 1 1 auto; min-width: 0; padding: 6px 10px; border-radius: 9px; border: 1px solid transparent; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--dac-ink-2); background: none; white-space: nowrap;
+  }
+  .segment button.aan { color: var(--dac-accent-hi); background: var(--dac-accent-soft); border-color: color-mix(in srgb, var(--dac-accent-hi) 40%, transparent); }
+  .segment button:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   input[type="color"] { padding: 2px 4px; width: 56px; }
   input[type="number"] { max-width: 120px; }
   input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--dac-accent-hi); margin: 0; }
@@ -376,7 +393,12 @@ export class InfoschermBeheerCard extends DacCard {
     this.on(card, "focusout", (e) => this.focusWeg_(e));
     this.on(this.$(".file"), "change", (e) => this.bestandGekozen_(e));
 
-    this.open_ = this.open_ ?? this.config.open;
+    // Welk blok er openstaat komt uit de config, maar een klik wint zolang
+    // de config niet verandert. "geen" (Alles dicht) is ook een keuze.
+    if (this.openConfig_ !== this.config.open) {
+      this.openConfig_ = this.config.open;
+      this.open_ = this.config.open && this.config.open !== "geen" ? this.config.open : null;
+    }
     this.haal_();
     this.luister_();
   }
@@ -613,10 +635,16 @@ export class InfoschermBeheerCard extends DacCard {
     } ${aan ? "checked" : ""}><span></span></span>${label ? `<span class="vl">${at(label)}</span>` : ""}</label>`;
   }
 
+  /** Een keuze uit een paar mogelijkheden: knoppen naast elkaar (zie .segment). */
   keuze_(label, naam, waarde, opties, { s } = {}) {
-    return `<div class="veld"><label>${at(label)}</label><select data-veld="${naam}" ${s ? `data-s="${s}"` : ""}>${opties
-      .map(([v, l]) => `<option value="${at(v)}" ${String(v) === String(waarde ?? "") ? "selected" : ""}>${at(l)}</option>`)
-      .join("")}</select></div>`;
+    return `<div class="veld"><label>${at(label)}</label><div class="segment" role="radiogroup" data-veld="${naam}" ${s ? `data-s="${s}"` : ""}>${opties
+      .map(
+        ([v, l]) =>
+          `<button type="button" role="radio" data-actie="segment" data-waarde="${at(v)}" aria-checked="${String(v) === String(waarde ?? "")}" class="${
+            String(v) === String(waarde ?? "") ? "aan" : ""
+          }">${at(l)}</button>`
+      )
+      .join("")}</div></div>`;
   }
 
   /* ------------------------------------------------------------ de blokken */
@@ -772,7 +800,7 @@ export class InfoschermBeheerCard extends DacCard {
       .join("");
     return `
       ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: "Verlichting op het scherm tonen", s: "instellingen" })}
-      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van het infoscherm.</div>
+      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van het infoscherm (bewerkmodus van dat dashboard, knop Bewerken onder het scherm).</div>
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
   }
 
@@ -1147,6 +1175,18 @@ export class InfoschermBeheerCard extends DacCard {
     if (!knop || knop.disabled || knop.tagName === "SELECT") return;
     const blok = knop.closest(".blok")?.dataset.blok;
     const actie = knop.dataset.actie;
+
+    if (actie === "segment") {
+      // Een knop in een keuzegroep: de groep krijgt de waarde en gaat
+      // dezelfde weg als een keuzelijst (zie invoer_).
+      const groep = knop.closest(".segment");
+      for (const b of groep.querySelectorAll("button")) {
+        b.classList.toggle("aan", b === knop);
+        b.setAttribute("aria-checked", String(b === knop));
+      }
+      groep.value = knop.dataset.waarde;
+      return this.invoer_({ target: groep, type: "change" });
+    }
     const i = Number(knop.dataset.i);
     const info = this.blokInfo_(blok);
     const sectie = info?.secties[0];
@@ -1400,10 +1440,14 @@ export class InfoschermBeheerEditor extends DacEditor {
     return [
       { name: "title", selector: sel.text() },
       {
+        // "geen" en niet "": een lege waarde wordt uit de config gehaald
+        // (DacEditor.patch_) en dan stond er meteen weer het eerste blok.
+        // Gemeld op 10 september 2026: "de keuze Alles dicht kan ik niet
+        // selecteren."
         name: "open",
         selector: sel.select([
           ...BLOKKEN.map((b) => ({ value: b.key, label: b.titel })),
-          { value: "", label: "Alles dicht" },
+          { value: "geen", label: "Alles dicht" },
         ]),
       },
       ...BLOKKEN.map((b) => ({ name: `show_${b.key}`, selector: sel.bool() })),

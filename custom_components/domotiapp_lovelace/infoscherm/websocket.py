@@ -12,7 +12,7 @@
 | `infoscherm/scherm/save` | idem (logo, accent, uiterlijk, terugvaltijd, ...) |
 | `infoscherm/indeling/save` | idem (de blokken op het welkomscherm) |
 | `infoscherm/installatie/save` | idem; de ENTITEITEN erin alleen als admin, de lampnamen mag iedereen |
-| `infoscherm/installatie/sync` | alleen admin: de infoschermkaart stuurt zijn kaartconfig (weer, lampen, agenda's, kioskaccounts) |
+| `infoscherm/installatie/sync` | alleen admin: de infoschermkaart stuurt zijn kaartconfig (weer, energie, lampen, agenda's, kioskaccounts) |
 | `infoscherm/instellingen/save` | idem; `kiosk_gebruikers` erin alleen als admin |
 | `infoscherm/bestand/verwijder` | idem |
 | `infoscherm/feeds/ververs` | idem |
