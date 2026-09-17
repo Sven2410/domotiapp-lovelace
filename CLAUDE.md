@@ -475,6 +475,36 @@ De val: `dai:bulb` bevat een dubbele punt en belandt zonder de eigen tak bij
 de tekening in `icons.js`, de plek in `GROEPEN` en de zoekwoorden in `TERMEN`
 (allebei in `editor/icoon-zoek.js`). Lijndikte 1.6, altijd.
 
+### Het energiedashboard van Home Assistant uitlezen
+
+Sinds 0.45.0 leest de energiepagina van het infoscherm het energiedashboard van
+de klant. Drie dingen die gemeten zijn tegen HA 2026.8.1 en die je niet moet
+raden:
+
+1. **`flow_from` en `flow_to` bestaan NIET MEER.** Een grid-aansluiting is
+   sinds 2026.8 een "unified connection" met `stat_energy_from` (import) en
+   `stat_energy_to` (export) op het bronobject zelf, net als bij een batterij.
+   Elk voorbeeld online gebruikt nog de oude vorm, en `energy/save_prefs`
+   antwoordt daarop met een kaal `invalid_format` -- **zonder te zeggen welke
+   sleutel niet deugt.** Dat staat pas in het HA-log. Het echte schema staat in
+   `homeassistant/components/energy/data.py` in de container; lezen kost een
+   minuut, raden kostte drie pogingen. `bronnenUit` in `energie-dashboard.js`
+   leest beide vormen, want een opslag die niet is omgezet heeft de oude.
+
+2. **Gebruik `change` en niet `sum`** uit `recorder/statistics_during_period`.
+   `sum` is de meterstand sinds het begin der tijden; het verschil tussen twee
+   sums geeft bij een teruggezette meter (een nieuwe omvormer, een sensor die
+   opnieuw begint) duizenden negatieve kWh.
+
+3. **Reken tijdvakken op de KALENDER en niet in milliseconden.** Een jaar gaf
+   veertien staven omdat de stap uit het kleinste gat tussen twee rijen werd
+   afgeleid, en februari de kortste maand is: 365 / 28 = 13,04. Een maand is
+   geen vast aantal dagen en een dag geen vast aantal uren.
+
+En een vormregel die eruit volgt: **vul het venster aan met lege tijdvakken.**
+Zonder dat volgt de grafiek alleen de uren waarvan de recorder iets weet, en is
+een dag om 01:00 twee staven van een half scherm breed.
+
 ### Jinja-sjablonen laat je door Home Assistant renderen
 
 `states()`, `is_state()` en de filters zijn Python, dus dat rekenwerk hoort aan
