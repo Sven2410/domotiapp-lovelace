@@ -52,6 +52,34 @@ export function meldInKiezer({ type, name, description, preview = true, document
 }
 
 /**
+ * Zet een badge in de badgekiezer. Ook dat mag meteen.
+ *
+ * Badges zijn sinds Home Assistant 2024.8 een eigen soort met een eigen
+ * register. Het werkt precies als `window.customCards`, met twee verschillen
+ * die op 17 september 2026 tegen HA 2026.8.1 zijn nagemeten:
+ *
+ * - de lijst heet `window.customBadges` en bestaat daar al als lege array;
+ * - wat erin staat verschijnt in de badgekiezer onder het kopje
+ *   **Community-badges**, naast Mushroom Template en Browser Mod.
+ *
+ * Het contract van de badge zelf is dat van een kaart: `setConfig(config)` en
+ * een `hass`-setter. Home Assistant hangt hem in een `hui-badge` binnen
+ * `hui-view-badges`, en die zit in de `hui-view-header` van de view. Ook dat is
+ * gemeten en niet uit documentatie overgenomen.
+ */
+export function meldBadgeInKiezer({ type, name, description, preview = true, documentationURL }) {
+  window.customBadges = window.customBadges ?? [];
+  if (window.customBadges.some((badge) => badge.type === type)) return;
+  window.customBadges.push({
+    type,
+    name: name ?? type,
+    description: description ?? "",
+    preview,
+    documentationURL: documentationURL ?? "https://github.com/Sven2410/domotiapp-lovelace",
+  });
+}
+
+/**
  * Start de wachtlus. Eén keer, aan het eind van de entry.
  *
  * Draait op modulescope en mag daarom nooit gooien: een fout hier zou de rest

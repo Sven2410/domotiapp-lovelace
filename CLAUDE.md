@@ -429,6 +429,57 @@ mediakaart heeft een veld *Speakers om mee te groeperen*, en leeg laten valt
 terug op het label. Sinds 0.16.1 valt een ALGEMENE mediaspeler daar niet op
 terug maar op zijn eigen speakerlijst.
 
+### Badges zijn iets anders dan kaarten
+
+Sinds 0.43.0 zit er ook een **badge** in de bundel: `domotiapp-template-badge`,
+de pil die in de kop van een view staat. Het contract is dat van een kaart --
+`setConfig` en een `hass`-setter -- maar hij meldt zich in een ANDER register,
+en dat verschil geeft geen enkele fout als je het verkeerd hebt. Een badge die
+in `window.customCards` belandt verschijnt netjes in de KAARTkiezer, is daar
+niet te gebruiken, en ontbreekt in de badgekiezer.
+
+Gemeten tegen HA 2026.8.1 op 17 september 2026, niet uit documentatie:
+
+| Wat | Waar |
+|---|---|
+| Het register | `window.customBadges` (bestaat daar al als lege array) |
+| Het type in de config | `custom:<tag>`, net als bij een kaart |
+| Waar HA hem hangt | `hui-badge` -> `hui-view-badges` -> `hui-view-header` |
+| De maten van HA's eigen badge | 36px hoog, radius 18px, padding `0 12px`, gap 8px |
+
+Die 36px is geen smaak: een badge van ons staat in dezelfde rij als een van
+Home Assistant, en twee pixels verschil is een badge die uit de rij loopt.
+Registreren gaat met `registerBadge()` uit `base.js`; de wachtlus is dezelfde
+als voor kaarten, want valkuil 1 geldt hier net zo goed.
+
+### Jinja-sjablonen laat je door Home Assistant renderen
+
+`states()`, `is_state()` en de filters zijn Python, dus dat rekenwerk hoort aan
+de serverkant. Het WS-commando is `render_template`, en het is een abonnement:
+
+```
+{type: "render_template", template: "...", variables: {...}, report_errors: true}
+  ->  {result: "Aan", listeners: {entities: ["light.x"], all: false, time: false}}
+```
+
+Drie dingen die gemeten zijn en die het bruikbaar maken:
+
+1. **Home Assistant volgt zelf waar het sjabloon van afhangt** en stuurt vanzelf
+   een nieuwe waarde. Niets pollen, niets abonneren op entiteiten. Een sjabloon
+   met `{{ now() }}` tikt dus ook zonder eigen timer.
+2. **`variables` werkt.** Daarmee is de YAML van een mushroom-template-badge
+   letterlijk over te nemen: daar staat `{% set s = states(entity) %}`, met
+   `entity` uit de config.
+3. **`report_errors: true` laat een kapot sjabloon terugkomen als
+   `{error, level}`** in plaats van het abonnement om te laten vallen. Dat is
+   noodzaak en geen luxe: in een editor is elk sjabloon halverwege elke zin
+   ongeldig.
+
+De laag eromheen staat in `src/sjabloon.js`. Let op valkuil 23 -- een set
+sjablonen moet zijn abonnementen VASTHOUDEN zolang sjabloon en variabelen niet
+veranderen, anders zegt de editor bij elke toetsaanslag alles op en knippert de
+badge leeg.
+
 ### Twee dingen die met opzet zijn weggehaald
 
 - **De knopkaart bestaat niet meer.** `custom:domotiapp-button-card` is opgegaan
@@ -1129,7 +1180,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **drieëntwintig kaarttypes**:
+met **drieëntwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -1139,6 +1190,7 @@ met **drieëntwintig kaarttypes**:
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
+| Kop van de view | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; achtergrond en rand kunnen er helemaal af) |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de
