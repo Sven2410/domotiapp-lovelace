@@ -1223,6 +1223,30 @@ die daar niet staan:
    Zet de punten eerst op een gelijk rooster (`verdunReeks`) en laat een
    stuurpunt nooit terug in de tijd gaan (`vloeiendPad`).
 
+57. **`ShowWindow(h, SW_RESTORE)` haalt het Chrome-venster uit de maximale
+   stand, en dan is je hele meting van daarvoor onbruikbaar.** Dat is de
+   handeling uit valkuil 40 om een verborgen tabblad naar voren te halen, en hij
+   werkt: `visibilityState` werd `visible` en `hasFocus()` werd `true`. Maar het
+   venster ging van 1920 naar 958 CSS-pixels breed, de view werd één kolom, en
+   elke `getBoundingClientRect()` van vóór dat moment wees naar een andere plek
+   dan waar het element nu stond. Meet `innerWidth` en de rechthoeken dus
+   OPNIEUW na het naar voren halen, en reken de schaalfactor van de schermafdruk
+   daar ook opnieuw uit (valkuil 47). Op 17 september 2026 klopte de eerste
+   klikcoördinaat daardoor 400px niet.
+
+58. **Een badge is voor de EIGENAAR geen kaart, en dat kost een ronde.** De
+   terugknop is in 0.44.0 als badge gebouwd op een vraag waarin
+   `mushroom-chips-card` stond -- en dat is een kaart. Hij zocht hem twee keer
+   in de kaartkiezer en vond hem niet. Het verschil is niet alleen waar hij in
+   de kiezer staat: een badge kan **alleen in de kop van een view** staan, en
+   een bubble-card-pop-up heeft geen kop. Bouw je iets dat in een pop-up hoort
+   te kunnen staan, dan is het een kaart. Sinds 0.46.0 is de terugknop allebei,
+   met gedeeld gedrag in `badges/badge-logica.js`.
+
+   En als hij een kaart van ons niet kan vinden: **de kaartkiezer opent op het
+   tabblad "Per entiteit"**, en een kaart zonder entiteit staat daar nooit bij.
+   Hij staat op "Per kaart".
+
 ---
 
 ## Projectstand
@@ -1237,13 +1261,13 @@ met **drieëntwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
-| Kop en indeling | header, separator, **navbalk**, **tabbladen** |
+| Kop en indeling | header, separator, **navbalk**, **tabbladen**, **terug** (een chip die naar een vast pad gaat of een stap terug; ook in een pop-up, waar een badge niet kan staan) |
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
-| Kop van de view | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af |
+| Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de
