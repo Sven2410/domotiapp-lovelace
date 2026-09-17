@@ -52,7 +52,7 @@
 
 import { DacCard, escapeHtml, registerCard } from "../base.js";
 import { resolve } from "../icons.js";
-import { attrsOf, fmtNumber, isOn, localizeState, stateOf } from "../ha.js";
+import { attrsOf, fmtNumber, isOn, localizeState, shortDate, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import {
   abonneer,
@@ -62,6 +62,22 @@ import {
   zetAanwezig,
 } from "../infoscherm-client.js";
 import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
+import { afvalKomend, afvalLijst, afvalWanneer } from "./infoscherm-afval.js";
+import {
+  ROLLEN,
+  bronnenUit,
+  heeftBronnen,
+  kosten as energieKosten,
+  samenvatting as energieSam,
+  staafLabel,
+  statistiekIds,
+  staven,
+  toonGeld,
+  toonWaarde,
+  vastePrijzen,
+  venster as energieVenster,
+  vensterNaam,
+} from "./energie-dashboard.js";
 import {
   BLOK_INFO,
   actieveMededelingen,
@@ -121,6 +137,7 @@ const PAGINA_KOP = {
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
   energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
   mededelingen: { eyebrow: "Mededelingen", titel: "Wat er speelt", onder: "" },
+  afval: { eyebrow: "Afval", titel: "Wanneer moet wat aan straat", onder: "" },
 };
 
 /* De afgelopen 24 uur in de energiegrafiek. */
@@ -567,6 +584,116 @@ const css = /* css */ `
   .e-tegel .e-w { font-size: calc(30px * var(--s)); font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .e-pagina .e-vak { flex: 1 1 auto; min-height: calc(200px * var(--s)); display: flex; flex-direction: column; gap: calc(8px * var(--s)); padding: calc(18px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); }
   .e-pagina .e-grafiek { min-height: calc(160px * var(--s)); }
+  /* ---- de afvalkalender ----
+     De KLEUR is hier de bak, en dat is de enige plek op dit scherm waar kleur
+     iets anders doet dan het accent dragen -- precies zoals op de afvalkaart:
+     grijs naast groen naast oranje is de enige manier om te zien welke er
+     woensdag aan straat moet. */
+  .af { display: flex; flex-direction: column; gap: calc(8px * var(--s)); height: 100%; min-height: 0; }
+  .af-eerst {
+    display: flex; align-items: center; gap: calc(12px * var(--s)); flex: 0 0 auto;
+    padding: calc(10px * var(--s)) calc(14px * var(--s));
+    border-radius: var(--dac-radius);
+    background: color-mix(in srgb, var(--bak) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bak) 34%, transparent);
+  }
+  .af-eerst .af-ico {
+    width: calc(38px * var(--s)); height: calc(38px * var(--s)); flex: 0 0 auto;
+    display: grid; place-items: center; border-radius: var(--dac-radius-sm);
+    color: var(--bak); background: color-mix(in srgb, var(--bak) 18%, transparent);
+  }
+  .af-eerst .af-ico svg { width: calc(21px * var(--s)); height: calc(21px * var(--s)); }
+  .af-eerst .af-t { min-width: 0; flex: 1 1 auto; }
+  .af-eerst .af-n { font-size: calc(19px * var(--s)); font-weight: 600; letter-spacing: -.02em; }
+  .af-eerst .af-w { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); }
+  .af-eerst .af-d { font-size: calc(19px * var(--s)); font-weight: 600; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+
+  .af-lijst { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  .af-rij {
+    display: grid; grid-template-columns: calc(11px * var(--s)) 1fr auto;
+    gap: calc(12px * var(--s)); align-items: center;
+    padding: calc(6px * var(--s)) calc(2px * var(--s)); font-size: calc(15px * var(--s));
+  }
+  .af-rij + .af-rij { border-top: 1px solid var(--dac-border); }
+  .af-rij i { width: calc(11px * var(--s)); height: calc(11px * var(--s)); border-radius: calc(3px * var(--s)); background: var(--bak); }
+  .af-rij .af-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .af-rij .af-w { color: var(--dac-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .af-rij[data-stil="true"] { opacity: .45; }
+
+  /* De pagina: dezelfde rijen, groter, met de datum voluit. */
+  .af-pagina { display: flex; flex-direction: column; gap: calc(14px * var(--s)); }
+  .af-pagina .af-rij { font-size: calc(19px * var(--s)); padding: calc(11px * var(--s)) calc(2px * var(--s)); }
+  .af-pagina .af-eerst { padding: calc(16px * var(--s)) calc(18px * var(--s)); }
+  .af-pagina .af-eerst .af-n { font-size: calc(26px * var(--s)); }
+  .af-pagina .af-uitleg { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); }
+
+  /* ---- de energiepagina uit het energiedashboard van Home Assistant ----
+     Gevraagd op 17 september 2026: een heel overzicht van de historie, uit de
+     ingestelde waarden van het energiedashboard. Wat hieronder staat is dus
+     niet de vorm van een sensor maar die van een dashboard: een periodekiezer,
+     staven per tijdvak, en de bronnen met hun totaal. */
+  .ed { display: flex; flex-direction: column; gap: calc(16px * var(--s)); height: 100%; min-height: 0; }
+  .ed-balk { display: flex; align-items: center; gap: calc(10px * var(--s)); flex: 0 0 auto; flex-wrap: wrap; }
+  .ed-per { display: flex; gap: calc(4px * var(--s)); padding: calc(4px * var(--s)); background: rgba(255,255,255,.05); border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill); }
+  .ed-per button {
+    padding: calc(7px * var(--s)) calc(16px * var(--s)); cursor: pointer; border: 0; background: none;
+    border-radius: var(--dac-radius-pill); font: inherit; font-size: calc(14px * var(--s));
+    font-weight: 500; color: var(--dac-ink-3); white-space: nowrap;
+  }
+  .ed-per button[aria-pressed="true"] { color: var(--tone); background: color-mix(in srgb, var(--tone) 16%, transparent); }
+  .ed-stap { display: flex; align-items: center; gap: calc(6px * var(--s)); margin-left: auto; }
+  .ed-stap button {
+    width: calc(36px * var(--s)); height: calc(36px * var(--s)); display: grid; place-items: center;
+    cursor: pointer; padding: 0; color: var(--dac-ink-2); background: var(--dac-surface);
+    border: 1px solid var(--dac-border); border-radius: var(--dac-radius-sm);
+  }
+  .ed-stap button[disabled] { opacity: .35; cursor: default; }
+  .ed-stap button svg { width: calc(17px * var(--s)); height: calc(17px * var(--s)); }
+  .ed-stap .ed-wanneer { font-size: calc(16px * var(--s)); font-weight: 600; min-width: calc(150px * var(--s)); text-align: center; }
+
+  .ed-tegels { display: grid; gap: calc(10px * var(--s)); grid-template-columns: repeat(auto-fit, minmax(calc(150px * var(--s)), 1fr)); flex: 0 0 auto; }
+  .ed-tegel {
+    display: flex; flex-direction: column; gap: calc(2px * var(--s)); padding: calc(14px * var(--s));
+    background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
+    border-left: calc(4px * var(--s)) solid var(--rol, var(--dac-ink-3));
+  }
+  .ed-tegel .ed-l { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ed-tegel .ed-w { font-size: calc(26px * var(--s)); font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .ed-tegel .ed-b { font-size: calc(12px * var(--s)); color: var(--dac-ink-3); }
+
+  .ed-vak {
+    flex: 1 1 auto; min-height: calc(200px * var(--s)); display: flex; flex-direction: column;
+    gap: calc(10px * var(--s)); padding: calc(18px * var(--s));
+    background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
+  }
+  .ed-kop { display: flex; align-items: baseline; gap: calc(14px * var(--s)); flex: 0 0 auto; flex-wrap: wrap; }
+  .ed-kop .ed-titel { font-size: calc(14px * var(--s)); color: var(--dac-ink-2); }
+  .ed-legenda { display: flex; gap: calc(14px * var(--s)); flex-wrap: wrap; margin-left: auto; }
+  .ed-legenda span { display: inline-flex; align-items: center; gap: calc(6px * var(--s)); font-size: calc(12.5px * var(--s)); color: var(--dac-ink-2); }
+  .ed-legenda i { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: calc(3px * var(--s)); background: var(--rol); }
+
+  /* De staven. Geen SVG maar echte elementen: ze moeten meeschalen met --s,
+     en een titel dragen die je op een tablet kunt aantikken. */
+  .ed-staven { flex: 1 1 auto; min-height: calc(120px * var(--s)); display: flex; align-items: flex-end; gap: calc(2px * var(--s)); }
+  .ed-staaf { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: calc(1px * var(--s)); }
+  .ed-staaf i { display: block; width: 100%; background: var(--rol); border-radius: calc(2px * var(--s)) calc(2px * var(--s)) 0 0; min-height: 0; }
+  .ed-staaf i + i { border-radius: 0; }
+  .ed-as { display: flex; gap: calc(2px * var(--s)); flex: 0 0 auto; }
+  .ed-as span {
+    flex: 1 1 0; min-width: 0; text-align: center; font-size: calc(11px * var(--s));
+    color: var(--dac-ink-3); font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden;
+  }
+  .ed-leeg { flex: 1 1 auto; display: grid; place-items: center; font-size: calc(15px * var(--s)); color: var(--dac-ink-3); text-align: center; }
+
+  .ed-bronnen { display: flex; flex-direction: column; gap: calc(6px * var(--s)); flex: 0 0 auto; }
+  .ed-bron { display: grid; grid-template-columns: calc(10px * var(--s)) 1fr auto; gap: calc(12px * var(--s)); align-items: center; font-size: calc(15px * var(--s)); padding: calc(4px * var(--s)) 0; }
+  .ed-bron + .ed-bron { border-top: 1px solid var(--dac-border); }
+  .ed-bron i { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: calc(3px * var(--s)); background: var(--rol); }
+  .ed-bron .ed-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dac-ink-2); }
+  .ed-bron .ed-v { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ed-voet { font-size: calc(12px * var(--s)); color: var(--dac-ink-3); flex: 0 0 auto; }
+
   .e-pagina .e-titel { font-size: calc(14px * var(--s)); color: var(--dac-ink-2); flex: 0 0 auto; }
 
   /* ------------------------------------------------------------ lagen */
@@ -616,6 +743,10 @@ export class InfoschermCard extends DacCard {
     this.dagen_ = [];
     this.afspraken_ = [];
     this.herkansing_ = new Herkansing(() => this.haal_());
+    // Een eigen herkansing voor het energiedashboard: `energy/get_prefs` en de
+    // recorder zijn na een herstart even niet bereikbaar (valkuil 28), en dat
+    // mag het ophalen van de rest niet ophouden.
+    this.dashHerkansing_ = new Herkansing(() => this.dashProbeer_(true));
     this.verbinding_ = new Verbindingswacht();
     this.fout_ = null;
     /* De laatst gewenste HTML per vak, zodat een herschildering niets
@@ -631,6 +762,15 @@ export class InfoschermCard extends DacCard {
     /* De energiesensor: de punten van de afgelopen dag uit de recorder, met
        de live waarden erachteraan. */
     this.energie_ = { entiteit: null, punten: [], geladen: 0 };
+    // Het energiedashboard van Home Assistant. `prefs` komt er eenmaal in;
+    // `stats` hoort bij precies een venster, en `sleutel` zegt welk -- zonder
+    // dat zou een antwoord dat te laat binnenkomt de grafiek van een ANDERE
+    // periode overschrijven, en dat zie je niet: het zijn allebei staven.
+    this.dash_ = {
+      prefs: null, bronnen: [], prijzen: {},
+      stats: {}, sleutel: "", bezig: false, gehaald: 0, fout: null,
+      periode: "dag", offset: 0,
+    };
   }
 
   /**
@@ -649,6 +789,7 @@ export class InfoschermCard extends DacCard {
       weer: i.weer ?? null,
       energie: i.energie ?? null,
       agendas: Array.isArray(i.agendas) ? i.agendas : [],
+      afval: Array.isArray(i.afval) ? i.afval : [],
       verlichting: Array.isArray(i.verlichting) ? i.verlichting : [],
     };
   }
@@ -732,6 +873,10 @@ export class InfoschermCard extends DacCard {
       if (stip) return this.mededelingNaar_(stip.closest(".blok")?.querySelector(".m-baan"), [...stip.parentElement.children].indexOf(stip));
       const kop = doel.closest(".bk[data-pagina]");
       if (kop) return this.gaNaar_(kop.dataset.pagina);
+      const per = doel.closest(".ed-per button[data-per]");
+      if (per) return this.dashNaar_({ periode: per.dataset.per });
+      const stap = doel.closest(".ed-stap button[data-stap]");
+      if (stap && !stap.disabled) return this.dashNaar_({ stap: Number(stap.dataset.stap) });
       if (doel.closest(".terug")) return this.gaNaar_("welkom");
       if (doel.closest(".detail .sluit")) return this.sluitBericht_();
       const persoon = doel.closest(".persoon[data-id]");
@@ -809,6 +954,7 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => clearInterval(energie));
 
     this.teardown_.push(() => this.herkansing_.stop());
+    this.teardown_.push(() => this.dashHerkansing_.stop());
     this.teardown_.push(() => this.zegWeerOp_());
 
     this.haal_();
@@ -855,6 +1001,10 @@ export class InfoschermCard extends DacCard {
       this.fout_ = null;
       this.herkansing_.herstel();
       this.nieuweStand_(r.stand);
+      // Of er een energiedashboard is bepaalt of het energieblok mag bestaan
+      // (zie blokOntbreekt). Dat moet dus bekend zijn vóór het eerste raster,
+      // en niet pas als iemand op de pagina tikt.
+      this.dashProbeer_();
     } catch (fout) {
       if (nogNietGereed(fout)) {
         this.herkansing_.plan();
@@ -1032,6 +1182,278 @@ export class InfoschermCard extends DacCard {
     this.paintPagina_("energie");
   }
 
+  /* --------------------------------------- het energiedashboard van HA */
+
+  /**
+   * Het energiedashboard ophalen: eerst de voorkeuren, dan de cijfers.
+   *
+   * Eén ingang, want de twee horen bij elkaar en de herkansing moet ze allebei
+   * opnieuw doen. `nogNietGereed` wordt hier afgevangen en niet doorgegeven:
+   * na een herstart van Home Assistant bestaan `energy/get_prefs` en de
+   * recorder even nog niet (valkuil 28), en dat hoort een nieuwe poging op te
+   * leveren en geen fout op het scherm.
+   */
+  async dashProbeer_(forceer = false) {
+    if (!this.hass?.connection?.sendMessagePromise) return;
+    const had = this.heeftDashboard_();
+    try {
+      await this.laadDashPrefs_();
+      if (this.heeftDashboard_() !== had) this.paintRaster_();
+      // De cijfers alleen als iemand ernaar kijkt, of als het blok ze nodig
+      // heeft omdat er geen losse sensor is.
+      if (this.pagina_ === "energie" || !this.installatie_().energie) {
+        await this.laadDashStats_(forceer);
+        this.paintRaster_();
+      }
+      this.dashHerkansing_.herstel();
+    } catch (e) {
+      if (nogNietGereed(e)) {
+        this.dashHerkansing_.plan();
+        return;
+      }
+      this.dash_.fout = "Het energiedashboard is niet te lezen.";
+      this.paintPagina_("energie");
+    }
+  }
+
+  /** Is er een energiedashboard ingesteld waar we iets mee kunnen? */
+  heeftDashboard_() {
+    return heeftBronnen(this.dash_.bronnen);
+  }
+
+  /**
+   * De voorkeuren van het energiedashboard, eenmalig.
+   *
+   * `not_found` betekent: de klant heeft geen energiedashboard ingesteld. Dat
+   * is geen fout maar een antwoord, en de pagina valt dan terug op de sensor
+   * uit de kaartconfig.
+   */
+  async laadDashPrefs_() {
+    if (this.dash_.prefs || !this.hass?.connection?.sendMessagePromise) return;
+    try {
+      const prefs = await this.hass.connection.sendMessagePromise({ type: "energy/get_prefs" });
+      this.dash_.prefs = prefs ?? {};
+      this.dash_.bronnen = bronnenUit(prefs);
+      this.dash_.prijzen = vastePrijzen(prefs);
+    } catch (e) {
+      // Na een herstart bestaat het commando even nog niet (valkuil 28); dan
+      // komt de herkansing er later op terug.
+      if (nogNietGereed(e)) throw e;
+      this.dash_.prefs = {};
+      this.dash_.bronnen = [];
+      this.dash_.fout = e?.code === "not_found" ? null : "Het energiedashboard is niet te lezen.";
+    }
+  }
+
+  /**
+   * De statistieken voor het venster dat nu open staat.
+   *
+   * De sleutel is periode + offset + de bronnen: verandert er niets, dan wordt
+   * er niets opgehaald. Dat is niet alleen zuinig -- de pagina wordt elke keer
+   * opnieuw getekend als er in huis iets verandert, en zonder deze toets zou
+   * dat elke keer een vraag aan de recorder zijn.
+   */
+  async laadDashStats_(forceer = false) {
+    await this.laadDashPrefs_();
+    if (!this.heeftDashboard_() || !this.hass?.connection?.sendMessagePromise) return;
+
+    const d = this.dash_;
+    const ids = statistiekIds(d.bronnen);
+    const v = energieVenster(d.periode, d.offset);
+    const sleutel = `${d.periode}|${d.offset}|${ids.join(",")}`;
+    if (!forceer && sleutel === d.sleutel && d.gehaald) return;
+    if (d.bezig) return;
+
+    d.bezig = true;
+    try {
+      const r = await this.hass.connection.sendMessagePromise({
+        type: "recorder/statistics_during_period",
+        start_time: v.van.toISOString(),
+        end_time: v.tot.toISOString(),
+        statistic_ids: ids,
+        period: v.periode,
+        types: ["change"],
+      });
+      // Tussen vragen en antwoorden kan er op een andere knop getikt zijn.
+      const nogSteeds = `${this.dash_.periode}|${this.dash_.offset}|${statistiekIds(this.dash_.bronnen).join(",")}`;
+      if (nogSteeds !== sleutel) return;
+      d.stats = r ?? {};
+      d.sleutel = sleutel;
+      d.gehaald = Date.now();
+      d.fout = null;
+    } catch (e) {
+      if (nogNietGereed(e)) throw e;
+      d.fout = "De geschiedenis is niet op te halen.";
+    } finally {
+      d.bezig = false;
+    }
+    this.paintPagina_("energie");
+  }
+
+  /** Een andere periode of een stap terug in de tijd. */
+  dashNaar_({ periode, stap }) {
+    const d = this.dash_;
+    if (periode && periode !== d.periode) {
+      d.periode = periode;
+      d.offset = 0;
+    }
+    if (stap) d.offset = Math.min(0, d.offset + stap);
+    d.gehaald = 0;
+    this.paintPagina_("energie");
+    this.leeft_();
+    this.dashProbeer_(true);
+  }
+
+  /**
+   * De pagina: het energiedashboard van de klant over het gekozen venster.
+   *
+   * Vier periodes, de bronnen als tegels, een staafgrafiek per tijdvak en de
+   * bronnen uitgeschreven. Alles komt uit `energy/get_prefs` -- er valt hier
+   * niets te kiezen en niets in te stellen, want de klant heeft dat al gedaan.
+   */
+  htmlDashboard_() {
+    const d = this.dash_;
+    const v = energieVenster(d.periode, d.offset);
+    const sam = energieSam(d.bronnen, d.stats);
+    const rijen = staven(d.bronnen, d.stats, v);
+    const geld = energieKosten(d.bronnen, d.stats, d.prijzen);
+
+    const knop = (sleutel, naam) =>
+      `<button type="button" data-per="${sleutel}" aria-pressed="${d.periode === sleutel}">${naam}</button>`;
+
+    // Welke rollen staan er in deze grafiek? Alleen wat er echt is, anders
+    // staat er een legenda met vier kleuren waarvan er twee nergens voorkomen.
+    const rollenInBeeld = [];
+    for (const rol of ["zon", "accu_uit", "verbruik", "teruglevering", "accu_in"]) {
+      if (rijen.some((r) => (r.rollen[rol] ?? 0) > 0)) rollenInBeeld.push(rol);
+    }
+    // Gestapeld: wat er BINNENKOMT staat op elkaar. Teruglevering en laden
+    // gaan eruit en horen daar niet bij opgeteld te worden -- dat zou een dag
+    // met veel zon als een dag met veel verbruik laten lezen.
+    const inRollen = rollenInBeeld.filter((r) => ROLLEN[r]?.teken === 1);
+    const hoogste = Math.max(
+      0.001,
+      ...rijen.map((r) => inRollen.reduce((som, rol) => som + (r.rollen[rol] ?? 0), 0)),
+    );
+
+    const grafiek = rijen.length
+      ? `<div class="ed-staven">
+          ${rijen.map((r) => {
+            const stukken = inRollen
+              .map((rol) => {
+                const w = r.rollen[rol] ?? 0;
+                if (w <= 0) return "";
+                return `<i style="--rol:${ROLLEN[rol].tone};height:${((w / hoogste) * 100).toFixed(2)}%"></i>`;
+              })
+              .reverse()
+              .join("");
+            const titel = inRollen
+              .filter((rol) => (r.rollen[rol] ?? 0) > 0)
+              .map((rol) => `${ROLLEN[rol].naam}: ${toonWaarde(r.rollen[rol])}`)
+              .join(" · ");
+            return `<span class="ed-staaf" title="${escapeHtml(titel)}">${stukken}</span>`;
+          }).join("")}
+        </div>
+        <div class="ed-as">${rijen.map((r) => `<span>${escapeHtml(staafLabel(r.start, d.periode))}</span>`).join("")}</div>`
+      : `<div class="ed-leeg">${escapeHtml(d.fout ?? (d.bezig ? "Bezig met ophalen…" : "Geen gegevens in deze periode."))}</div>`;
+
+    const tegel = (label, waarde, rol, bij) =>
+      `<div class="ed-tegel" style="--rol:${ROLLEN[rol]?.tone ?? "var(--dac-ink-3)"}">
+        <span class="ed-l">${escapeHtml(label)}</span>
+        <span class="ed-w">${escapeHtml(waarde)}</span>
+        ${bij ? `<span class="ed-b">${escapeHtml(bij)}</span>` : ""}
+      </div>`;
+
+    const tegels = [
+      tegel("Van het net", toonWaarde(sam.netIn), "verbruik",
+        sam.zelfvoorzienend !== null ? `${100 - sam.zelfvoorzienend}% van het verbruik` : ""),
+      sam.zon > 0 ? tegel("Opgewekt", toonWaarde(sam.zon), "zon",
+        sam.eigen > 0 ? `${toonWaarde(sam.eigen)} zelf gebruikt` : "") : "",
+      sam.netUit > 0 ? tegel("Teruggeleverd", toonWaarde(sam.netUit), "teruglevering", "") : "",
+      sam.accuUit > 0 || sam.accuIn > 0
+        ? tegel("Uit de accu", toonWaarde(sam.accuUit), "accu_uit", `${toonWaarde(sam.accuIn)} geladen`) : "",
+      sam.gas > 0 ? tegel("Gas", toonWaarde(sam.gas, "m³"), "gas", "") : "",
+      sam.water > 0 ? tegel("Water", toonWaarde(sam.water, "m³"), "water", "") : "",
+      geld.bedrag > 0
+        ? tegel("Kosten", toonGeld(geld.bedrag), "apparaat", geld.compleet ? "bij de ingestelde prijs" : "schatting, niet alles heeft een prijs")
+        : "",
+    ].filter(Boolean).join("");
+
+    // De bronnen uitgeschreven, met de apparaten erbij. Dat is het stuk waar
+    // "waar gaat het heen" staat, en dat is waar iemand voor doorklikt.
+    const perBron = d.bronnen
+      .map((b) => {
+        const rijenVoorBron = d.stats?.[b.statistiek] ?? [];
+        let som = 0;
+        for (const r of rijenVoorBron) som += Number(r?.change) || 0;
+        return { ...b, waarde: Math.max(0, Math.round(som * 1000) / 1000) };
+      })
+      .filter((b) => b.waarde > 0)
+      .sort((a, b) => b.waarde - a.waarde);
+
+    const eenheidVan = (rol) => (rol === "gas" || rol === "water" ? "m³" : "kWh");
+
+    return `<div class="ed">
+      <div class="ed-balk">
+        <div class="ed-per">
+          ${knop("dag", "Dag")}${knop("week", "Week")}${knop("maand", "Maand")}${knop("jaar", "Jaar")}
+        </div>
+        <div class="ed-stap">
+          <button type="button" data-stap="-1" aria-label="Vorige periode">${resolve("chevronLeft")}</button>
+          <span class="ed-wanneer">${escapeHtml(vensterNaam(d.periode, d.offset))}</span>
+          <button type="button" data-stap="1" aria-label="Volgende periode"${d.offset >= 0 ? " disabled" : ""}>${resolve("chevronRight")}</button>
+        </div>
+      </div>
+
+      <div class="ed-tegels">${tegels}</div>
+
+      <div class="ed-vak">
+        <div class="ed-kop">
+          <span class="ed-titel">Verbruik per ${{ dag: "uur", week: "dag", maand: "dag", jaar: "maand" }[d.periode]}</span>
+          <span class="ed-legenda">
+            ${rollenInBeeld.map((rol) => `<span><i style="--rol:${ROLLEN[rol].tone}"></i>${escapeHtml(ROLLEN[rol].naam)}</span>`).join("")}
+          </span>
+        </div>
+        ${grafiek}
+      </div>
+
+      ${perBron.length ? `<div class="ed-bronnen">
+        ${perBron.map((b) => `<div class="ed-bron" style="--rol:${ROLLEN[b.rol]?.tone ?? "var(--dac-ink-3)"}">
+          <i></i><span class="ed-n">${escapeHtml(b.naam)}</span>
+          <span class="ed-v">${escapeHtml(toonWaarde(b.waarde, eenheidVan(b.rol)))}</span>
+        </div>`).join("")}
+      </div>` : ""}
+
+      <div class="ed-voet">Uit het energiedashboard van Home Assistant.</div>
+    </div>`;
+  }
+
+  /**
+   * Het energieblok zonder losse sensor: het verbruik van vandaag.
+   *
+   * Zo klein mogelijk gehouden. Het blok is een aanwijzing dat er iets te zien
+   * is; de pagina erachter is het overzicht.
+   */
+  htmlEnergieBlokDash_() {
+    const d = this.dash_;
+    // Het blok toont de DAG, ook als de pagina op een andere periode staat.
+    const vandaag = d.periode === "dag" && d.offset === 0;
+    const sam = vandaag ? energieSam(d.bronnen, d.stats) : null;
+    if (!sam || (!d.gehaald && !sam.verbruikt)) {
+      return `<div class="e-nu"><span class="e-waarde">--</span></div>`;
+    }
+    const regel = (label, waarde, rol) =>
+      `<div class="ed-bron" style="--rol:${ROLLEN[rol].tone}"><i></i>` +
+      `<span class="ed-n">${escapeHtml(label)}</span>` +
+      `<span class="ed-v">${escapeHtml(waarde)}</span></div>`;
+    return `<div class="e-nu"><span class="e-waarde">${escapeHtml(toonWaarde(sam.verbruikt))}</span></div>
+      <div class="ed-bronnen">
+        ${regel("Van het net", toonWaarde(sam.netIn), "verbruik")}
+        ${sam.zon > 0 ? regel("Opgewekt", toonWaarde(sam.zon), "zon") : ""}
+        ${sam.gas > 0 ? regel("Gas", toonWaarde(sam.gas, "m³"), "gas") : ""}
+      </div>`;
+  }
+
   /** De huidige waarde van de sensor achter de reeks, als hij nieuwer is. */
   energieLive_() {
     const e = this.energie_;
@@ -1056,7 +1478,10 @@ export class InfoschermCard extends DacCard {
    */
   htmlEnergie_(groot = false, klein = false) {
     const entiteit = this.installatie_().energie;
-    if (!entiteit) return "";
+    // Geen losse sensor maar wel een energiedashboard: dan toont het blok het
+    // verbruik van vandaag. De grafiek is er niet -- daarvoor is de pagina --
+    // maar een blok dat je kunt aantikken hoort iets te zeggen.
+    if (!entiteit) return this.heeftDashboard_() ? this.htmlEnergieBlokDash_() : "";
     this.energieLive_();
     const a = attrsOf(this.hass, entiteit);
     const eenheid = a.unit_of_measurement ?? "W";
@@ -1135,6 +1560,10 @@ export class InfoschermCard extends DacCard {
     this.paintPaginas_();
     this.paintPagina_(this.pagina_);
     this.$(`.p-inhoud[data-p="${this.pagina_}"]`)?.scrollTo?.(0, 0);
+    // De geschiedenis wordt pas opgehaald als je hem opvraagt: het is een
+    // vraag aan de recorder over maanden aan statistieken, en die hoort niet
+    // te draaien voor een scherm dat op Welkom staat.
+    if (this.pagina_ === "energie") this.dashProbeer_();
     // Terug op Welkom: de blokken opnieuw passend maken. Terwijl een pagina
     // openstond was het raster `display: none`, en een meting daar zet ALLES
     // op verborgen (elke tegel staat dan "onder de rand" van een vak van nul
@@ -1371,7 +1800,7 @@ export class InfoschermCard extends DacCard {
     const wens = new Map();
     for (const blok of indeling.blokken) {
       if (!BLOK_INFO[blok.soort]) continue;
-      if (blokOntbreekt(blok.soort, stand, this.feeds_, nu)) continue;
+      if (blokOntbreekt(blok.soort, stand, this.feeds_, nu, { energieDashboard: this.heeftDashboard_() })) continue;
       wens.set(blok.id, blok);
     }
     // Blokken die weg zijn: weg. Blokken die er nog niet zijn: erbij.
@@ -1654,9 +2083,97 @@ export class InfoschermCard extends DacCard {
         );
         break;
       }
+      case "afval": {
+        const lijst = this.afvalLijst_();
+        const komend = afvalKomend(lijst);
+        if (!komend.length) {
+          zet(`<div class="leeg">Geen ophaaldata gevonden.</div>`, "");
+          break;
+        }
+        const [eerst, ...rest] = komend;
+        // De eerstvolgende krijgt het vlak; de rest is een rij. Dat is dezelfde
+        // vorm als op de afvalkaart, en om dezelfde reden: je wilt in één
+        // oogopslag zien wat er MORGEN uit moet, niet vier gelijke vakjes.
+        zet(
+          `<div class="af">
+            ${this.htmlAfvalEerst_(eerst)}
+            ${rest.length ? `<div class="af-lijst">${rest.map((r) => this.htmlAfvalRij_(r)).join("")}</div>` : ""}
+          </div>`,
+          "",
+        );
+        break;
+      }
       default:
         zet("");
     }
+  }
+
+  /* ------------------------------------------------------------ afval */
+
+  /**
+   * De bakken, uit de sensoren die de installateur koos.
+   *
+   * De naam komt uit Home Assistant en wordt samen met de andere ingekort: wat
+   * elke bak in zijn naam deelt ("Afval ", "Mijn gemeente ") is geen
+   * informatie. Zie afval-namen.js -- dezelfde behandeling als op de kaart.
+   */
+  afvalLijst_() {
+    const ids = this.installatie_().afval ?? [];
+    if (!ids.length) return [];
+    return afvalLijst(
+      ids,
+      (id) => stateOf(this.hass, id),
+      (id) => attrsOf(this.hass, id).friendly_name ?? id,
+    );
+  }
+
+  /**
+   * De kleur van een bak.
+   *
+   * Hier draagt de kleur de IDENTITEIT van de fractie en niet het accent van
+   * het scherm. Dat is de uitzondering die op de afvalkaart ook geldt: grijs
+   * naast groen naast oranje is het enige waaraan je ziet welke bak er
+   * woensdag uit moet. Op naam, want de sensor zegt het niet.
+   */
+  afvalKleur_(naam) {
+    const n = String(naam ?? "").toLowerCase();
+    if (/gft|groen|tuin|organisch/.test(n)) return "#3e8a3e";
+    if (/pmd|plastic|verpakking|blik|drank/.test(n)) return "#d99a1e";
+    if (/papier|karton|oud ?papier/.test(n)) return "#2f6fc4";
+    if (/textiel|kleding/.test(n)) return "#9b59b6";
+    if (/kerst|boom/.test(n)) return "#2e7d4f";
+    if (/glas/.test(n)) return "#2aa198";
+    return "#7b7b74";
+  }
+
+  /** De eerstvolgende bak, met het vlak eromheen. */
+  htmlAfvalEerst_(rij) {
+    if (!rij) return "";
+    const dagen = rij.dagen ?? 0;
+    const groot = dagen === 0 ? "vandaag" : dagen === 1 ? "morgen" : String(dagen);
+    const onder = dagen > 1 ? "dagen" : "";
+    // Rechts staat "morgen"; links hoort dan de DATUM te staan en niet nog een
+    // keer hetzelfde woord. Bij een bak die verder weg is zegt relativeDay al
+    // een dag met een datum, en dan is dat precies goed.
+    const regel = dagen <= 1 && rij.datum ? shortDate(rij.datum) : afvalWanneer(rij);
+    return `<div class="af-eerst" style="--bak:${this.afvalKleur_(rij.naam)}">
+      <span class="af-ico">${resolve("bin")}</span>
+      <span class="af-t">
+        <span class="af-n">${escapeHtml(rij.naam)}</span>
+        <span class="af-w">${escapeHtml(regel)}</span>
+      </span>
+      <span class="af-d">${escapeHtml(groot)}${onder ? ` <span class="af-w">${onder}</span>` : ""}</span>
+    </div>`;
+  }
+
+  /** Een gewone regel in de lijst. */
+  htmlAfvalRij_(rij, voluit = false) {
+    const ver = (rij.dagen ?? 0) > 21;
+    return `<div class="af-rij" data-stil="${ver}" style="--bak:${this.afvalKleur_(rij.naam)}">
+      <i></i>
+      <span class="af-n">${escapeHtml(rij.naam)}</span>
+      <span class="af-w">${escapeHtml(afvalWanneer(rij))}${voluit && rij.dagen > 1 ? ` · over ${rij.dagen} dagen` : ""}</span>
+    </div>`;
   }
 
   /* ------------------------------------------------------------ stukjes html */
@@ -1815,7 +2332,11 @@ export class InfoschermCard extends DacCard {
         break;
       }
       case "energie": {
-        this.vul_(vak, this.htmlEnergie_(true), false);
+        // Het energiedashboard van de klant wint van de losse sensor: het weet
+        // wat een aansluiting is, wat zon is en wat er is teruggeleverd, en de
+        // klant heeft dat zelf ingesteld. Is er geen dashboard, dan blijft het
+        // de sensor uit de kaartconfig.
+        this.vul_(vak, this.heeftDashboard_() ? this.htmlDashboard_() : this.htmlEnergie_(true), false);
         break;
       }
       case "verlichting": {
@@ -1852,6 +2373,20 @@ export class InfoschermCard extends DacCard {
       case "agenda": {
         const lijst = this.afspraken_;
         this.vul_(vak, lijst.length ? `<div class="afspraken">${lijst.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">Geen afspraken vandaag.</div>`, false);
+        break;
+      }
+      case "afval": {
+        const lijst = this.afvalLijst_();
+        const komend = afvalKomend(lijst);
+        const rest = lijst.filter((r) => r.reden);
+        const html = komend.length
+          ? `<div class="af-pagina">
+              ${this.htmlAfvalEerst_(komend[0])}
+              ${komend.length > 1 ? `<div class="af-lijst">${komend.slice(1).map((r) => this.htmlAfvalRij_(r, true)).join("")}</div>` : ""}
+              ${rest.length ? `<div class="af-uitleg">${rest.map((r) => `${escapeHtml(r.naam)}: ${escapeHtml(r.reden)}`).join(" · ")}</div>` : ""}
+            </div>`
+          : `<div class="leeg">Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>`;
+        this.vul_(vak, html, false);
         break;
       }
       default:

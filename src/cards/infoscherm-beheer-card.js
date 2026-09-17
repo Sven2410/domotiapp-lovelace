@@ -117,7 +117,7 @@ const BLOKKEN = [
 ];
 
 /* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
-const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "calendars", "kiosk_users"];
+const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "calendars", "waste", "kiosk_users"];
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const STANDAARD = {
@@ -126,6 +126,7 @@ const STANDAARD = {
   energy: "",
   lights: [],
   calendars: [],
+  waste: [],
   kiosk_users: [],
   show_personen: true,
   show_mededelingen: true,
@@ -357,6 +358,7 @@ export class InfoschermBeheerCard extends DacCard {
       energy: typeof config.energy === "string" ? config.energy : "",
       lights: lijstVan(config.lights),
       calendars: lijstVan(config.calendars),
+      waste: lijstVan(config.waste),
       kiosk_users: lijstVan(config.kiosk_users),
     };
   }
@@ -379,6 +381,7 @@ export class InfoschermBeheerCard extends DacCard {
       weer: c.weather || null,
       energie: c.energy || null,
       agendas: c.calendars,
+      afval: c.waste,
       verlichting: c.lights,
       kiosk_gebruikers: c.kiosk_users,
     };
@@ -388,6 +391,7 @@ export class InfoschermBeheerCard extends DacCard {
       weer: i.weer ?? null,
       energie: i.energie ?? null,
       agendas: i.agendas ?? [],
+      afval: i.afval ?? [],
       verlichting: (i.verlichting ?? []).map((l) => l.entity),
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
@@ -1586,6 +1590,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       { name: "energy", selector: sel.entity("sensor") },
       { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
+      { name: "waste", selector: { entity: { multiple: true, domain: "sensor" } } },
     ];
     if (this.gebruikers_?.length) {
       installatie.push({ name: "kiosk_users", selector: { select: { multiple: true, mode: "list", options: this.gebruikers_ } } });

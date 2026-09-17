@@ -251,6 +251,7 @@ export function paginas(stand, feeds, nu = null) {
   if ((feeds?.length ?? 0) > 0) uit.push("nieuws");
   if (stand?.installatie?.weer) uit.push("weer");
   if (stand?.installatie?.energie) uit.push("energie");
+  if ((stand?.installatie?.afval?.length ?? 0) > 0) uit.push("afval");
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
   if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
@@ -364,6 +365,7 @@ export const BLOK_INFO = {
   agenda: { naam: "Agenda", icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
   verjaardagen: { naam: "Verjaardagen", icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
   energie: { naam: "Energie", icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
+  afval: { naam: "Afvalkalender", icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
 };
 
 /**
@@ -487,9 +489,15 @@ export function vrijePlek(blokken, w, h) {
  * `vandaag` mag ook een datum met tijd zijn (`isoDatumTijd`), voor
  * mededelingen met een tijdstip.
  *
+ * `extra.energieDashboard` komt van de KAART en niet uit de opslag: of er een
+ * energiedashboard in Home Assistant staat is iets dat de client weet
+ * (`energy/get_prefs`) en de server niet. Sinds 17 september 2026 is een losse
+ * energiesensor daarom niet meer verplicht -- een klant die zijn
+ * energiedashboard heeft ingevuld heeft alles wat het blok nodig heeft.
+ *
  * @returns {string|null} null als het zichtbaar is, anders waarom niet
  */
-export function blokOntbreekt(soort, stand, feeds, vandaag) {
+export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
   const s = stand ?? {};
   switch (soort) {
     case "welkom":
@@ -507,12 +515,17 @@ export function blokOntbreekt(soort, stand, feeds, vandaag) {
     case "nieuws":
       return null;
     case "energie":
-      return s.installatie?.energie ? null : "Geen energiesensor gekozen (kaartinstellingen van het infoscherm)";
+      if (s.installatie?.energie || extra.energieDashboard) return null;
+      return "Geen energiesensor gekozen, en geen energiedashboard in Home Assistant";
     case "verlichting":
       if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (kaartinstellingen van het infoscherm)";
       return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
     case "agenda":
       return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
+    case "afval":
+      return (s.installatie?.afval?.length ?? 0) > 0
+        ? null
+        : "Geen afvalsensoren gekozen (kaartinstellingen van het infoscherm)";
     default:
       return "Onbekend blok";
   }

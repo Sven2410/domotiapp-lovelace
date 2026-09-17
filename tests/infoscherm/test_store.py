@@ -342,6 +342,39 @@ async def test_oud_nieuws_van_het_pand_wordt_een_mededeling(hass: HomeAssistant,
     assert "nieuws" not in hass_storage["domotiapp_lovelace.infoscherm"]["data"]
 
 
+async def test_de_afvalsensoren_horen_bij_de_installatie(hass: HomeAssistant) -> None:
+    """Ronde 5 (NIEUW GEDRAG): de afvalkalender leest sensoren die de
+    installateur kiest, net als de lampen en de agenda's.
+
+    Op de code van voor deze ronde valt deze test om: 'afval' bestond niet en
+    kwam niet in het snapshot.
+    """
+    store = InfoStore(hass)
+    r = await store.async_zet_installatie_van_kaart(
+        {
+            "weer": None,
+            "energie": None,
+            "agendas": [],
+            "afval": ["sensor.gft", "sensor.rest", "sensor.gft"],
+            "verlichting": [],
+        }
+    )
+    # Dubbele sensoren tellen een keer: twee gelijke bakken in een rij van vier
+    # is geen kalender maar een fout die je pas op het scherm ziet.
+    assert r["installatie"]["afval"] == ["sensor.gft", "sensor.rest"]
+    assert store.snapshot()["installatie"]["afval"] == ["sensor.gft", "sensor.rest"]
+
+
+async def test_alleen_sensoren_mogen_afval_zijn(hass: HomeAssistant) -> None:
+    """Een light of een calendar in de afvallijst is een vergissing, en die
+    hoort geweigerd te worden en niet stil te blijven staan."""
+    store = InfoStore(hass)
+    with pytest.raises(InfoFout):
+        await store.async_zet_installatie(
+            {"afval": ["light.a"]}, mag_entiteiten_wijzigen=True
+        )
+
+
 async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAssistant) -> None:
     """Ronde 3 (NIEUW GEDRAG): de entiteiten komen uit de kaartconfig; de
     lampnamen zijn van de receptie en blijven staan."""
@@ -358,6 +391,10 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         "weer": "weather.thuis",
         "energie": "sensor.verbruik",
         "agendas": ["calendar.x"],
+        # Ronde 5 (17 september 2026): de afvalsensoren horen bij de installatie.
+        # Een kaart die het veld niet meestuurt krijgt een lege lijst en niet een
+        # ontbrekende sleutel -- het scherm leest hem onvoorwaardelijk.
+        "afval": [],
         "verlichting": [{"entity": "light.b", "naam": ""}, {"entity": "light.a", "naam": "Wachtkamer"}],
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
