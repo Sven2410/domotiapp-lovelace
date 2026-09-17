@@ -25,7 +25,7 @@
 import { baseCss, sheet, tokens } from "./theme.js";
 import { entitiesChanged } from "./ha.js";
 import { gemetenRijen, volgRaster } from "./rasterhoogte.js";
-import { meldAan, meldInKiezer } from "./registratie.js";
+import { meldAan, meldBadgeInKiezer, meldInKiezer } from "./registratie.js";
 
 const hostCss = /* css */ `
   :host {
@@ -378,6 +378,18 @@ export class DacCard extends HTMLElement {
 export function registerCard(tag, cls, { name, description, preview = true } = {}) {
   meldAan(tag, cls);
   meldInKiezer({ type: tag, name, description, preview });
+}
+
+/**
+ * Meld een BADGE aan bij de badgekiezer en zet hem in dezelfde wachtrij.
+ *
+ * Een badge is geen kaart -- hij staat in de kop van de view en niet in het
+ * raster -- maar het contract is hetzelfde en de registratieval (valkuil 1) ook.
+ * Daarom dezelfde wachtrij en hier alleen een ander register.
+ */
+export function registerBadge(tag, cls, { name, description, preview = true } = {}) {
+  meldAan(tag, cls);
+  meldBadgeInKiezer({ type: tag, name, description, preview });
 }
 
 /** Register an editor element. Same deferred registration. */
