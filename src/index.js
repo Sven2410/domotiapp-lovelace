@@ -32,6 +32,7 @@ export const VERSION = __CARD_VERSION__;
 
 import "./cards/header-card.js";
 import "./cards/separator-card.js";
+import "./cards/terug-card.js";
 import "./cards/light-card.js";
 import "./cards/climate-card.js";
 import "./cards/hvac-card.js";
