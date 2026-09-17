@@ -23,7 +23,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { heeftAanUit, icoonBron, kleurnaam } from "../../src/badges/badge-logica.js";
+import { heeftAanUit, icoonBron, kleurnaam, terugDoel } from "../../src/badges/badge-logica.js";
 
 describe("icoonBron", () => {
   it("gebruikt wat de kiezer schreef", () => {
@@ -111,5 +111,37 @@ describe("kleurnaam", () => {
     assert.equal(kleurnaam("   "), "");
     assert.equal(kleurnaam(undefined), "");
     assert.equal(kleurnaam(null), "");
+  });
+});
+
+describe("terugDoel", () => {
+  it("gaat naar het pad als er een staat", () => {
+    assert.deepEqual(terugDoel({ path: "/dashboard/thuis" }), {
+      soort: "pad",
+      pad: "/dashboard/thuis",
+    });
+  });
+
+  it("neemt ook een pop-uppad", () => {
+    // Een pad dat met # begint opent een bubble-card-pop-up op de huidige view
+    // in plaats van de pagina te herladen; dat regelt runAction.
+    assert.deepEqual(terugDoel({ path: "#alarm" }), { soort: "pad", pad: "#alarm" });
+  });
+
+  it("gaat een stap terug als er geen pad is", () => {
+    assert.deepEqual(terugDoel({}), { soort: "geschiedenis" });
+    assert.deepEqual(terugDoel({ path: "" }), { soort: "geschiedenis" });
+    assert.deepEqual(terugDoel(null), { soort: "geschiedenis" });
+  });
+
+  it("ziet een veld met alleen witruimte als leeg", () => {
+    // Een pad dat je leegmaakt houdt in ha-form makkelijk een spatie over. Dan
+    // zou navigeren naar " " de view leeggooien in plaats van terug te gaan.
+    assert.deepEqual(terugDoel({ path: "   " }), { soort: "geschiedenis" });
+    assert.deepEqual(terugDoel({ path: "\n" }), { soort: "geschiedenis" });
+  });
+
+  it("haalt de witruimte van een echt pad af", () => {
+    assert.deepEqual(terugDoel({ path: "  /thuis \n" }), { soort: "pad", pad: "/thuis" });
   });
 });

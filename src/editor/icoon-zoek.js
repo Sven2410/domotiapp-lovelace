@@ -31,6 +31,7 @@ export const GROEPEN = [
   ["Kamers", ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "eettafel", "kitchen", "shower", "toilet", "desk", "speelkamer", "garage", "storage"]],
   ["Buiten", ["tree", "parasol", "veranda", "fence", "gate", "sun", "awning", "gras", "kruiden", "car", "beach"]],
   ["Rolluiken", ["shutter", "shutterOpen", "awning", "gate", "gateOpen", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
+  ["Navigatie", ["arrowLeft", "arrowRight", "arrowUp", "arrowDown", "chevronLeft", "chevronRight", "chevronDown", "house", "grid", "close"]],
   ["Licht en stroom", ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
   ["Personen", ["person", "people", "away", "dier"]],
   ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "van", "washer", "dishwasher", "koelkast", "oven", "magnetron", "printer", "printer3d", "fan", "airco", "radio", "boiler"]],
@@ -40,7 +41,7 @@ export const GROEPEN = [
   ["Auto en tanken", ["car", "petrol", "diesel", "gas", "fuelStation", "raceCar", "plug"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
   ["Weermetingen", ["humidity", "lux", "windSpeed", "rainfall", "weatherCode", "forecast", "weatherStation", "rainRadar", "pollenradar", "uv", "pressure", "thermo"]],
-  ["Status", ["shield", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "handmatig", "close", "clock", "gaugeArrow", "bell", "bellOff", "pressure", "refill", "sleep", "siren", "sirenOff", "homeStatus"]],
+  ["Status", ["shield", "alarmOff", "alarmPartial", "alarmOn", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "handmatig", "close", "clock", "gaugeArrow", "bell", "bellOff", "pressure", "refill", "sleep", "siren", "sirenOff", "homeStatus"]],
   ["Cijfers", ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
   ["Sport en vrije tijd", ["football", "sports", "dumbbell", "raceCar", "beach"]],
   ["Overig", ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil", "domotitech"]],
@@ -234,6 +235,20 @@ export const TERMEN = {
   leaf: ["blad", "groen", "eco", "duurzaam", "plant", "natuur", "besparen", "tuin"],
   keuzelijst: ["keuzelijst", "keuze", "lijst", "modus", "stand", "programma", "dropdown", "select", "kiezen", "opties"],
   cog: ["instellingen", "tandwiel", "beheer", "settings", "configuratie", "opties", "systeem"],
+
+  /* Navigatie. "terug" staat voorop bij de pijl naar links, want dat is
+     waarvoor je hem zoekt. */
+  arrowLeft: ["terug", "pijl links", "links", "vorige", "back", "arrow left"],
+  arrowRight: ["verder", "pijl rechts", "rechts", "volgende", "next", "arrow right"],
+  chevronLeft: ["pijltje links", "links", "terug", "inklappen", "chevron left"],
+
+  /* De drie standen van een alarmsysteem. De Nederlandse woorden staan voorop
+     omdat dat is wat er op de badge komt te staan; "armed_away" en
+     "armed_custom_bypass" staan erbij omdat dat de toestanden zijn die je in
+     het sjabloon uitschrijft, en dan is dat het woord dat je in je hoofd hebt. */
+  alarmOff: ["alarm uit", "alarm uitgeschakeld", "uitgeschakeld", "ontwapend", "disarmed", "alarm", "beveiliging", "shield"],
+  alarmPartial: ["alarm deels", "deelinschakeling", "1e schil", "eerste schil", "thuis", "nachtstand", "armed home", "armed_custom_bypass", "bypass", "alarm", "beveiliging"],
+  alarmOn: ["alarm aan", "alarm ingeschakeld", "volledig aan", "ingeschakeld", "armed", "armed_away", "afwezig", "alarm", "beveiliging"],
   dots: ["meer", "drie puntjes", "menu", "opties", "extra", "overig", "more"],
   plus: ["plus", "meer", "erbij", "toevoegen", "hoger", "omhoog", "add"],
   minus: ["min", "minder", "eraf", "lager", "verwijderen", "omlaag"],

@@ -83,6 +83,20 @@ class DomotiappTemplateBadge extends DacCard {
       box-shadow: var(--dac-shadow);
       cursor: pointer; font: inherit; color: inherit;
       max-width: 100%;
+      /* LINKS, en dat moet er expliciet staan.
+         Dit is een <button>, en de useragent-stijl van Chrome geeft die
+         text-align: center. De onderste regel is meestal de breedste en valt
+         daardoor niet op, maar de bovenste is kort en stond dus gecentreerd --
+         wat er op een dashboard uitziet als rechts uitgelijnd. Gemeld op
+         17 september 2026 met een schermafdruk: "de bovenste titel moet links
+         uitgelijnd worden. Nu is dat rechts uitgelijnd."
+
+         Waarom het een <button> BLIJFT (valkuil 43 zegt div role=button): die
+         valkuil gaat over -webkit-line-clamp en hoogte in een button, en dat
+         staat hier niet. Wat een echte button wél geeft en een div niet, is dat
+         Enter en spatie hem bedienen. Dat is meer waard dan het vermijden van
+         deze ene regel. */
+      text-align: left;
       transition: background 200ms ease, border-color 200ms ease, transform 160ms ease;
       -webkit-tap-highlight-color: transparent;
     }
@@ -406,7 +420,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       content:
         "De dikke regel eronder: wat er op dit moment aan de hand is. Hier hoort het sjabloon, bijvoorbeeld {% if is_state(entity, 'on') %}Rook!{% else %}Geen rook{% endif %}.",
       icon_template:
-        "Alleen invullen als het icoon per toestand moet verschillen, bijvoorbeeld {% if is_state(entity,'on') %}mdi:fire{% else %}mdi:fire-off{% endif %}. Staat hier iets, dan wint het van het gekozen icoon hierboven. Laat het leeg om gewoon te kiezen.",
+        "Alleen invullen als het icoon per toestand moet verschillen. Onze eigen iconen heten dai:, die van Home Assistant mdi: — bijvoorbeeld {% if is_state(entity,'on') %}dai:alarmOn{% else %}dai:alarmOff{% endif %}. De naam die je nodig hebt staat onder het icoon in de kiezer hierboven. Staat hier iets, dan wint het van het gekozen icoon.",
       tone:
         "Leeg laten is het beste: dan volgt het icoon vanzelf de toestand. Wil je het sturen, zet er dan goed, let op of kritiek in — of een sjabloon dat dat uitrekent, voor een melder die rood hoort te worden.",
       hold_action: "Wat er gebeurt als je hem ingedrukt houdt. Laat op Geen actie staan als je niets wilt.",

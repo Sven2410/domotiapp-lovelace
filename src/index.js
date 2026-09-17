@@ -55,6 +55,7 @@ import "./alarm/alarm-card.js";
 // Geen kaart maar een BADGE: hij staat in de kop van de view en meldt zich in
 // `window.customBadges`. Zie registratie.js voor het gemeten verschil.
 import "./badges/template-badge.js";
+import "./badges/terug-badge.js";
 // Het bevestigingsscherm. Geen kaart, maar wel altijd nodig: `runAction` vraagt
 // het aan zodra een actie `confirmation` draagt. Zie de kop van vraag.js.
 import "./vraag.js";
