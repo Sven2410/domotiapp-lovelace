@@ -60,6 +60,7 @@ from .const import (
     BLOK_SOORTEN,
     DAGEN,
     KOLOMMEN,
+    MAX_AFVAL,
     MAX_AGENDAS,
     MAX_BESTANDEN,
     MAX_BLOKKEN,
@@ -464,7 +465,7 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
 
 
 def leeg_installatie() -> dict[str, Any]:
-    return {"weer": None, "energie": None, "agendas": [], "verlichting": []}
+    return {"weer": None, "energie": None, "agendas": [], "verlichting": [], "afval": []}
 
 
 def valideer_lamp(rauw: Any) -> dict[str, Any]:
@@ -497,11 +498,21 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
         _entiteit(a, "agendas", ("calendar",))
         for a in _lijst(rauw.get("agendas"), "agendas", MAX_AGENDAS)
     ]
+    # Ronde 5 (17 september 2026): de afvalkalender. De sensoren staan hier en
+    # niet in het beheer, want het zijn ENTITEITEN -- die kiest de installateur,
+    # net als de lampen en de agenda's. Wat de receptie erover te zeggen heeft
+    # (staat het blok op het scherm, hoe heet een bak) gaat via de indeling en
+    # de naam van de sensor zelf.
+    afval = [
+        _entiteit(a, "afval", ("sensor",))
+        for a in _lijst(rauw.get("afval"), "afval", MAX_AFVAL)
+    ]
     return {
         "weer": _entiteit(weer, "weer", ("weather",)) if weer else None,
         "energie": _entiteit(energie, "energie", ("sensor",)) if energie else None,
         "agendas": list(dict.fromkeys(agendas)),
         "verlichting": uniek,
+        "afval": list(dict.fromkeys(afval)),
     }
 
 
@@ -730,6 +741,7 @@ class InfoStore:
                 "weer": self._installatie["weer"],
                 "energie": self._installatie.get("energie"),
                 "agendas": list(self._installatie["agendas"]),
+                "afval": list(self._installatie.get("afval", [])),
                 "verlichting": [dict(l) for l in self._installatie["verlichting"]],
             },
             "indeling": {"blokken": [dict(b) for b in self._indeling["blokken"]]},
@@ -810,6 +822,7 @@ class InfoStore:
                 "weer": self._installatie["weer"],
                 "energie": self._installatie.get("energie"),
                 "agendas": list(self._installatie["agendas"]),
+                "afval": list(self._installatie.get("afval", [])),
                 "verlichting": [
                     {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
                     for l in self._installatie["verlichting"]
@@ -836,6 +849,7 @@ class InfoStore:
                 "weer": rauw.get("weer"),
                 "energie": rauw.get("energie"),
                 "agendas": rauw.get("agendas"),
+                "afval": rauw.get("afval"),
                 "verlichting": rauw.get("verlichting"),
             }
         )

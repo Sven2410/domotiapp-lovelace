@@ -2516,7 +2516,7 @@ de beheerkaart wél een kleine kopregel.
 
 De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
 staat sinds ronde 4 in de kaartconfig van de BEHEERKAART (`weather`,
-`energy`, `lights`, `calendars`, `kiosk_users`) en wordt door die kaart naar
+`energy`, `lights`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
 de opslag gestuurd zodra een beheerder hem met die config ziet
 (`infoscherm/installatie/sync`, alleen admin, alleen bij verschil, en alleen
 als de config die velden heeft; een beheerkaart zonder laat de opslag met
@@ -2529,7 +2529,7 @@ weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
 mededeling, en wat er in het welkomblok staat: tekst, logo verbergen,
 openingsregel),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
-receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
+receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
 (verlichting tonen, feeds, kioskaccounts) en de lijst van bestanden. Een
 opslag van vóór ronde 3 wordt bij het laden eenmalig bijgewerkt: berichten van
@@ -2576,7 +2576,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
   met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
-  nieuws, verlichting, agenda, verjaardagen) op de plek en maat uit
+  nieuws, verlichting, agenda, verjaardagen, afval) op de plek en maat uit
   `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
   Een blok met een pagina erachter heeft een kop die een knop is ("Alles
   bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
@@ -2597,9 +2597,34 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   24 uur; een tellerstand (kWh) als verbruik per uur met het totaal van de
   afgelopen 24 uur. De geschiedenis komt uit de recorder
   (`history/history_during_period`), de verse waarden uit `hass`. In het blok
-  is de lijn een vloeiende kromme door het gemiddelde per halfuur; de pagina
-  erachter toont nu, gemiddeld, piek (en totaal) en de grote grafiek met
-  elke meting. De lijn draagt het accent; het getal staat in neutrale inkt.
+  is de lijn een vloeiende kromme door het gemiddelde per halfuur. De lijn
+  draagt het accent; het getal staat in neutrale inkt.
+- **De PAGINA achter Energie is sinds ronde 5 het energiedashboard van Home
+  Assistant zelf** (17 september 2026, op verzoek van de eigenaar: *"als je op
+  de energie klikt dat hij een heel overzicht laat zien van de historie en
+  geschiedenis etc. Dit moet hij van de ingestelde waardes halen van HA
+  energydashboard"*). De bronnen komen uit `energy/get_prefs` en de cijfers uit
+  `recorder/statistics_during_period` met `types: ["change"]`. Vier periodes
+  (dag, week, maand, jaar) met stappen terug in de tijd; per periode de
+  totalen per bron als tegel, een gestapelde staafgrafiek per tijdvak en de
+  bronnen uitgeschreven. Het venster wordt aangevuld met lege tijdvakken, zodat
+  een dag altijd 24 staven heeft en de grafiek niet gedurende de dag versmalt.
+  Is er GEEN energiedashboard, dan blijft de pagina de sensor uit de
+  kaartconfig tonen; is er geen sensor maar wel een dashboard, dan toont het
+  blok het verbruik van vandaag. Kosten worden alleen getoond voor bronnen met
+  een vaste prijs in de voorkeuren, en het scherm zegt erbij dat het een
+  schatting is als niet alles een prijs heeft.
+- **Het blok Afvalkalender** (ronde 5, 17 september 2026: *"Ook wil ik een
+  afvalkalender tablat hebben zodat de beheerder die ook kan toevoegen op het
+  kiosk scherm"*) leest afvalsensoren uit de INSTALLATIE (`afval` in de
+  kaartconfig van het beheer, ten hoogste tien, alleen `sensor`). De datum komt
+  op dezelfde manier uit de sensor als op de afvalkaart: de toestand en dan de
+  attributen `date`, `next_date` en `Year_month_day_date`. De eerstvolgende bak
+  krijgt een vlak in de kleur van zijn fractie, de rest een regel met een stip;
+  wat voorbij is of geen datum heeft blijft staan met de reden erbij. De KLEUR
+  draagt hier de fractie en niet het accent -- dezelfde uitzondering als op de
+  afvalkaart, en om dezelfde reden. Achter de kop zit een pagina met alles en
+  de datum voluit.
 - Er is geen kop boven het raster (ronde 4): het welkomblok draagt het logo
   (linksboven, tenzij verborgen), de klok met de datum, en wat de receptie
   kiest: een tekst en de regel met de openingstijd van vandaag. Laag of breed

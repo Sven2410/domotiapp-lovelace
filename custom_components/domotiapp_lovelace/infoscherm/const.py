@@ -69,6 +69,9 @@ MAX_UITZONDERINGEN: Final = 100
 
 MAX_LAMPEN: Final = 40
 MAX_AGENDAS: Final = 10
+# Afvalsensoren voor de afvalkalender. Tien is ruim: een gemeente kent er
+# doorgaans vier tot zes (rest, gft, papier, pmd, kerstboom, textiel).
+MAX_AFVAL: Final = 10
 MAX_BLOKKEN: Final = 12
 
 MAX_KORT: Final = 120
@@ -99,6 +102,9 @@ BLOK_SOORTEN: Final = (
     "agenda",
     "verjaardagen",
     "energie",
+    # Ronde 5 (17 september 2026): de afvalkalender, op verzoek van de eigenaar
+    # ("zodat de beheerder die ook kan toevoegen op het kiosk scherm").
+    "afval",
 )
 AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 
