@@ -452,6 +452,29 @@ Home Assistant, en twee pixels verschil is een badge die uit de rij loopt.
 Registreren gaat met `registerBadge()` uit `base.js`; de wachtlus is dezelfde
 als voor kaarten, want valkuil 1 geldt hier net zo goed.
 
+### Iconen: `dai:` is van ons, `mdi:` is van Home Assistant
+
+`resolve()` in `icons.js` kent drie vormen, en de VOLGORDE luistert nauw:
+
+| Vorm | Wat je krijgt |
+|---|---|
+| `bulb` | onze tekening |
+| `dai:bulb` | hetzelfde, maar expliciet |
+| `mdi:fire` | die van HA, via `<ha-icon>` |
+
+Een kale naam werkte altijd al. `dai:` is er sinds 0.44.0 bij omdat je op een
+BADGE de naam met de hand in een sjabloon typt, en er dan geen kiezer is die
+laat zien wat er bestaat -- de eigenaar concludeerde daaruit terecht dat onze
+iconen daar niet konden. De kiezer zet die naam nu onder elk icoon, klaar om
+over te typen.
+
+De val: `dai:bulb` bevat een dubbele punt en belandt zonder de eigen tak bij
+`<ha-icon icon="dai:bulb">`. Die tekent NIETS, zonder fout en zonder log.
+
+**Een icoon toevoegen is drie plekken**, en de test valt als je er een vergeet:
+de tekening in `icons.js`, de plek in `GROEPEN` en de zoekwoorden in `TERMEN`
+(allebei in `editor/icoon-zoek.js`). Lijndikte 1.6, altijd.
+
 ### Jinja-sjablonen laat je door Home Assistant renderen
 
 `states()`, `is_state()` en de filters zijn Python, dus dat rekenwerk hoort aan
@@ -1190,7 +1213,7 @@ met **drieëntwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
-| Kop van de view | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; achtergrond en rand kunnen er helemaal af) |
+| Kop van de view | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de

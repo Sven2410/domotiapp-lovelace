@@ -97,3 +97,21 @@ export function icoonBron(config) {
   if (sjabloon) return sjabloon;
   return config?.icon ?? "";
 }
+
+/**
+ * Waar de terugknop heen gaat.
+ *
+ * Twee uitkomsten, en het verschil zit in één lege string -- precies het soort
+ * ding dat je in een browser niet ziet misgaan, want allebei de gevallen doen
+ * IETS. Een knop die naar de voorpagina springt terwijl je een stap terug
+ * verwachtte ziet er niet stuk uit.
+ *
+ * Leeg (of alleen witruimte) betekent: één stap terug in de geschiedenis, net
+ * als de back-chip van Mushroom. Dat is met opzet het gedrag zonder
+ * configuratie -- "terug" betekent voor de meeste mensen "waar ik vandaan
+ * kwam".
+ */
+export function terugDoel(config) {
+  const pad = String(config?.path ?? "").trim();
+  return pad ? { soort: "pad", pad } : { soort: "geschiedenis" };
+}

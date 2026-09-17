@@ -20,7 +20,7 @@
  * `gaugeArrow` zijn duidelijk zodra er "begane grond" en "meter" onder staat.
  */
 
-import { icons, resolve } from "../icons.js";
+import { DAI, icons, resolve } from "../icons.js";
 import { sheet } from "../theme.js";
 import { tokens } from "../theme.js";
 import { meldAan } from "../registratie.js";
@@ -319,10 +319,18 @@ class DacIconPicker extends HTMLElement {
       : this.auto
         ? "Automatisch"
         : "Kies een icoon";
+    // Onder de naam staat sinds 0.44.0 de `dai:`-vorm en niet de kale sleutel.
+    //
+    // Dat is geen versiering. Op de badge is het icoon een SJABLOON, en daar
+    // typ je de naam met de hand -- er is geen kiezer die laat zien wat er
+    // bestaat. De eigenaar concludeerde daaruit dat onze eigen iconen daar niet
+    // konden ("werkt nu alleen met de MDI icons van HA"). Het werkte wel, maar
+    // er was geen manier om dat te weten. Nu staat hier de tekst die je
+    // letterlijk in je sjabloon kunt overtypen, naast `mdi:fire` van HA.
     this.$(".who small").textContent = v
-      ? v.includes(":")
+      ? v.includes(":") && !v.startsWith(DAI)
         ? "Home Assistant-icoon"
-        : `DomotiApp-icoon -- ${v}`
+        : `DomotiApp-icoon -- ${v.startsWith(DAI) ? v : DAI + v}`
       : this.auto
         ? "Past zich aan de entiteit aan"
         : "Nog niets gekozen";
