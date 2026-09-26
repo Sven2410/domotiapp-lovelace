@@ -25,6 +25,16 @@
  * De rangorde van wat er in de statusregel komt -- draait verslaat een
  * klepsensor die achterloopt, een open klep verslaat "klaar om te starten" --
  * staat in `vaatwasser-logica.js`, met tests eronder.
+ *
+ * DE GEPLANDE START
+ *
+ * Sinds 0.47.0 zegt de kaart wanneer een energiebeheerder hem gaat starten:
+ * "Start om 14:00" in plaats van "Klaar om te starten". De sensor komt uit het
+ * veld Geplande start, of -- leeg gelaten -- van DomotiApp Coach, die hem
+ * vindbaar maakt via de schakelaar onder Slimme sturing. Dat moment verandert
+ * niet, maar de WOORDEN wel: om middernacht wordt "morgen" vandaag, en na het
+ * moment zelf hoort de tekst weg te gaan. Daarom tikt de kaart op die twee
+ * momenten zelf een keer; zie `planTik_`.
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -39,7 +49,9 @@ import {
   draait,
   drukOproep,
   restMinuten,
+  startMoment,
   toestand,
+  vindStartSensor,
   voortgangPct,
 } from "./vaatwasser-logica.js";
 
@@ -231,6 +243,7 @@ class DishwasherCard extends DacCard {
     return [
       this.config.status,
       this.config.remaining,
+      this.startSensor_(),
       this.config.progress,
       this.config.program,
       this.config.door,
@@ -305,6 +318,58 @@ class DishwasherCard extends DacCard {
     });
 
     this.teardown_.push(volgRaster(this.$(".card")));
+    this.teardown_.push(() => {
+      clearTimeout(this.tik_);
+      this.tik_ = null;
+    });
+  }
+
+  /**
+   * De sensor met de geplande start: het veld, of die van DomotiApp Coach.
+   *
+   * Zoeken is een ronde langs ALLE entiteiten, en `watched()` draait bij elke
+   * wijziging in het huis. Daarom wordt een vondst vastgehouden zolang hij nog
+   * bij de schakelaar hoort, en wordt er zonder vondst hooguit eens per halve
+   * minuut opnieuw gezocht -- de coach kan na de kaart opstarten.
+   */
+  startSensor_() {
+    const c = this.config;
+    if (c?.planned_start) return c.planned_start;
+    const states = this.hass_?.states;
+    if (!c?.smart || !states) return "";
+    if (this.gevonden_ && states[this.gevonden_]?.attributes?.release_switch === c.smart) {
+      return this.gevonden_;
+    }
+    const nu = Date.now();
+    if (this.gezochtVoor_ === c.smart && nu - this.gezochtOm_ < 30_000) return this.gevonden_;
+    this.gezochtVoor_ = c.smart;
+    this.gezochtOm_ = nu;
+    this.gevonden_ = vindStartSensor(states, c.smart);
+    return this.gevonden_;
+  }
+
+  /**
+   * Nog een keer tekenen als de woorden gaan verschuiven.
+   *
+   * Twee momenten: middernacht, waar "morgen om 02:00" "om 02:00" wordt, en
+   * net na de geplande start zelf, waar de tekst weg moet als de machine niet
+   * is gaan draaien. Hooguit een uur vooruit, zodat een laptop die heeft
+   * geslapen niet op een verlopen wekker blijft wachten.
+   */
+  planTik_(start) {
+    clearTimeout(this.tik_);
+    this.tik_ = null;
+    if (!start) return;
+    const nu = new Date();
+    const middernacht = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1, 0, 0, 1);
+    const wacht = Math.min(+middernacht, +start + 61_000) - +nu;
+    this.tik_ = setTimeout(
+      () => {
+        this.tik_ = null;
+        if (this.hass_ && this.isConnected) this.paint();
+      },
+      Math.max(1_000, Math.min(wacht, 3_600_000))
+    );
   }
 
   moreInfo_(entityId) {
@@ -328,8 +393,10 @@ class DishwasherCard extends DacCard {
     const deur = stateOf(this.hass, c.door);
     const rest = restMinuten(stateOf(this.hass, c.remaining));
     const pct = voortgangPct(stateOf(this.hass, c.progress));
+    const start = startMoment(stateOf(this.hass, this.startSensor_()));
 
-    const nu = toestand({ status, deur, rest, pct });
+    const nu = toestand({ status, deur, rest, pct, start });
+    this.planTik_(start);
     const loopt = draait(status);
 
     this.toggleAttribute("draait", loopt);
@@ -469,6 +536,7 @@ class DishwasherEditor extends DacEditor {
       { name: "name", selector: sel.text() },
       { name: "status", selector: sel.entity(["sensor", "binary_sensor"]) },
       { name: "remaining", selector: sel.entity(["sensor"]) },
+      { name: "planned_start", selector: sel.entity(["sensor", "input_datetime", "datetime", "time"]) },
       { name: "progress", selector: sel.entity(["sensor", "number"]) },
       { name: "program", selector: sel.entity(["select", "input_select"]) },
       { name: "start", selector: sel.entity(["button", "input_button", "script", "switch", "automation"]) },
@@ -484,6 +552,7 @@ class DishwasherEditor extends DacEditor {
         name: "Naam",
         status: "Statussensor",
         remaining: "Resterende tijd",
+        planned_start: "Geplande start",
         progress: "Voortgang (0-100%)",
         program: "Programmakeuze",
         start: "Start / pauze",
@@ -499,6 +568,8 @@ class DishwasherEditor extends DacEditor {
       status: "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf.",
       remaining:
         "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
+      planned_start:
+        "Het moment waarop een energiebeheerder hem straks start. Op de kaart staat dan 'Start om 14:00'. Leeg laten: de kaart zoekt zelf de sensor van DomotiApp Coach bij de schakelaar onder Slimme sturing.",
       progress:
         "Zonder deze sensor is er geen stand, en schuift er een streepje heen en weer zolang hij draait.",
       program: "Een keuzelijst met de programma's. Verschijnt als uitklaplijst op de kaart.",

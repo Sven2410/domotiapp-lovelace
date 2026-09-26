@@ -154,6 +154,113 @@ export function voortgangPct(st) {
 /** Staat de klep open? */
 export const klepOpen = (st) => Boolean(st) && st.state === "on";
 
+/*
+ * DE GEPLANDE START
+ *
+ * Een energiebeheerder -- bij de eigenaar is dat DomotiApp Coach -- zet de
+ * vaatwasser aan op het goedkoopste moment, en meldt dat moment in een sensor.
+ * Op 26 september 2026 werd de vaatwasser thuis om 12:16 vrijgegeven, plande de
+ * coach 14:00, en ging hij om 13:12 met de hand aan: op de kaart stond nergens
+ * dat er een plan was.
+ *
+ * De sensor van de coach draagt een TIJDSTIP zolang hij wacht, en staat op
+ * `unknown` zodra hij draait of niet meer vrijgegeven is. Andere systemen doen
+ * het met een `input_datetime` of een kale klok; alle drie worden gelezen.
+ */
+
+/** Hoe ver een gepland moment voorbij mag zijn voordat het niet meer telt. */
+const START_MARGE_MS = 60_000;
+
+/**
+ * Het moment waarop hij straks start, als `Date`, of null.
+ *
+ * Een moment dat al voorbij is telt niet: dan is het plan uitgevoerd of
+ * vervallen, en "Start om 14:00" om kwart over drie is een leugen. Er zit een
+ * minuut marge op, zodat de tekst niet wegvalt in de seconden tussen het
+ * startsein en de statussensor die "draait" meldt.
+ *
+ * Een kale klok ("02:00") is vandaag, of morgen als dat al voorbij is -- een
+ * nachtelijke start wordt 's avonds gepland.
+ *
+ * @param {object|null} st de state van de sensor
+ * @param {Date} nu wordt meegegeven zodat de test niet van de klok afhangt
+ */
+export function startMoment(st, nu = new Date()) {
+  if (!st) return null;
+  const s = String(st.state ?? "").trim();
+  if (!s || s === "unknown" || s === "unavailable") return null;
+
+  // Een datum met tijd. Met zone (de coach, `datetime`) is het één moment;
+  // zonder zone (`input_datetime`) is het lokale tijd, en dat is precies hoe
+  // een ISO-tekst met een T erin en zonder zone gelezen wordt.
+  const vol = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}:\d{2}.*)$/);
+  if (vol) {
+    const d = new Date(`${vol[1]}T${vol[2].padStart(5, "0")}`);
+    if (Number.isNaN(+d)) return null;
+    return +d < +nu - START_MARGE_MS ? null : d;
+  }
+
+  const klok = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (klok) {
+    const u = Number(klok[1]);
+    const m = Number(klok[2]);
+    if (u > 23 || m > 59) return null;
+    const d = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), u, m);
+    if (+d < +nu - START_MARGE_MS) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  return null;
+}
+
+const DAGEN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+/** Het aantal kalenderdagen tussen twee momenten, in lokale tijd. */
+const dagenTussen = (van, tot) =>
+  Math.round(
+    (new Date(tot.getFullYear(), tot.getMonth(), tot.getDate()) -
+      new Date(van.getFullYear(), van.getMonth(), van.getDate())) /
+      86_400_000
+  );
+
+/**
+ * Dat moment als iets wat een mens zegt: "Start om 14:00".
+ *
+ * Vandaag zonder dag, morgen als "morgen", binnen een week met de naam van de
+ * dag en daarna met een datum. Op de KALENDER gerekend en niet in uren: om
+ * 23:00 is 02:00 morgen, ook al is het maar drie uur.
+ */
+export function startTekst(moment, nu = new Date()) {
+  if (!moment) return "";
+  const klok = `${String(moment.getHours()).padStart(2, "0")}:${String(moment.getMinutes()).padStart(2, "0")}`;
+  const dagen = dagenTussen(nu, moment);
+  if (dagen <= 0) return `Start om ${klok}`;
+  if (dagen === 1) return `Start morgen om ${klok}`;
+  if (dagen < 7) return `Start ${DAGEN[moment.getDay()]} om ${klok}`;
+  return `Start ${moment.getDate()} ${MAANDEN[moment.getMonth()]} om ${klok}`;
+}
+
+/**
+ * De startsensor van DomotiApp Coach bij deze vrijgaveschakelaar, of "".
+ *
+ * De coach zet de schakelaar waarmee je de vaatwasser vrijgeeft in het
+ * attribuut `release_switch` van zijn sensor, juist zodat een kaart die de
+ * schakelaar al kent -- hier het veld Slimme sturing -- de sensor zelf kan
+ * vinden. Zo werkt de kaart thuis zonder dat er iets ingevuld hoeft te worden;
+ * het veld Geplande start gaat voor.
+ *
+ * @param {object} states `hass.states`
+ * @param {string} schakelaar de entiteit uit het veld Slimme sturing
+ */
+export function vindStartSensor(states, schakelaar) {
+  if (!states || !schakelaar) return "";
+  const ids = Object.keys(states)
+    .filter((id) => id.startsWith("sensor.") && states[id]?.attributes?.release_switch === schakelaar)
+    .sort();
+  return ids[0] ?? "";
+}
+
 /**
  * Loopt er een programma?
  *
@@ -176,10 +283,16 @@ export const bezig = (soort) =>
  *      dan achter op de werkelijkheid.
  *   2. Een open klep verslaat "klaar om te starten": hij gaat zo niet starten.
  *   3. Een fout verslaat de rest van de rusttoestanden.
+ *   4. Een geplande start verslaat "klaar om te starten" en "uit", maar een
+ *      open klep blijft erbij staan: daarmee gaat het plan straks mis.
+ *      "Programma klaar" en "Niet bereikbaar" winnen van het plan -- de vaat
+ *      is schoon, of de machine is weg, en dat is het nieuws.
  *
+ * @param {Date|null} [start] het geplande startmoment uit `startMoment`
+ * @param {Date} [nu]
  * @returns {{soort: string, tekst: string, tone: string, waarschuwing: string}}
  */
-export function toestand({ status, deur, rest, pct } = {}) {
+export function toestand({ status, deur, rest, pct, start = null, nu = new Date() } = {}) {
   const soort = soortVan(status?.state);
   const open = klepOpen(deur);
 
@@ -210,12 +323,17 @@ export function toestand({ status, deur, rest, pct } = {}) {
   }
 
   if (soort === SOORT.UITGESTELD) {
-    return {
-      soort,
-      tekst: rest != null ? `Start over ${restTekst(rest).replace(/^nog /, "")}` : "Uitgestelde start",
-      tone: "accent",
-      waarschuwing: open ? "Klep open" : "",
-    };
+    // Een klokmoment uit de sensor gaat voor een aftelling van de machine:
+    // "Start om 14:00" is wat je wilt weten, "over 2 u 13 min" moet je
+    // uitrekenen.
+    let tekst = "Uitgestelde start";
+    if (start) tekst = startTekst(start, nu);
+    else if (rest != null) tekst = `Start over ${restTekst(rest).replace(/^nog /, "")}`;
+    return { soort, tekst, tone: "accent", waarschuwing: open ? "Klep open" : "" };
+  }
+
+  if (start && (soort === SOORT.KLAAR || soort === SOORT.UIT)) {
+    return { soort, tekst: startTekst(start, nu), tone: "accent", waarschuwing: open ? "Klep open" : "" };
   }
 
   if (open) {
