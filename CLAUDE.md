@@ -1247,6 +1247,17 @@ die daar niet staan:
    tabblad "Per entiteit"**, en een kaart zonder entiteit staat daar nooit bij.
    Hij staat op "Per kaart".
 
+59. **Chrome naar voren halen steelt de toetsaanslagen van de eigenaar.** Het
+   trucje uit valkuil 40 (`SetForegroundWindow` plus `^{TAB}`) werkt, maar het
+   neemt de focus weg uit het venster waar hij op dat moment in typt. Op
+   26 september 2026 zag de capture-luisteraar daarna `.`, spatie, `Z`, `I`, `e`
+   op `body` binnenkomen voordat er door de meting iets getypt was, en de `e`
+   opende de entiteitenzoeker van Home Assistant. Zet daarom een
+   `keydown`-luisteraar op `window` VOORDAT je klikt, lees het logboek na
+   afloop helemaal (niet alleen je eigen aanslagen), en meld het hem als er
+   vreemde aanslagen tussen staan: wat hij typte is dan niet aangekomen waar hij
+   dacht.
+
 ---
 
 ## Projectstand
