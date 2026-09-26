@@ -452,6 +452,43 @@ Home Assistant, en twee pixels verschil is een badge die uit de rij loopt.
 Registreren gaat met `registerBadge()` uit `base.js`; de wachtlus is dezelfde
 als voor kaarten, want valkuil 1 geldt hier net zo goed.
 
+### De meldingenkaart: de server leest de dashboards zelf
+
+Sinds 0.48.0 verstuurt de integratie herinneringen (`meldingen/`), en de
+instellingen daarvan staan in een KAART. Om 07:30 heeft niemand een dashboard
+open, dus de server moet ze kennen. De camerakaart schrijft zijn instellingen
+naar de server als hij getekend wordt; dat gaat mis met dezelfde kaart op twee
+dashboards (ze overschrijven elkaar om de beurt). De meldingen doen het daarom
+andersom:
+
+| Wat | Hoe |
+|---|---|
+| waar de instellingen vandaan komen | `hass.data[LOVELACE_DATA].dashboards`, per dashboard `async_load(False)`, door de hele boom gezocht naar `custom:domotiapp-meldingen-card` (ook in stapels en pop-ups) |
+| wanneer er gelezen wordt | bij het opstarten, bij `lovelace_updated`, elk uur, en vlak voor het versturen |
+| welke kaarten één melding zijn | gelijke `id`, standaard de soort (`afval`); personen worden samengevoegd |
+| wat de server zelf bewaart | alleen wie er aan staat, "staat buiten" en "vandaag al verstuurd" |
+
+`LOVELACE_DATA` is interne Home Assistant. `tests/meldingen/test_kaarten.py`
+draait daarom tegen de echte Lovelace; verschuift het bij een update, dan valt
+die test in CI om.
+
+**Versturen gaat via de notify-DIENST (`notify.mobile_app_...`), niet via de
+notify-entiteit.** Beide bestaan in 2026.8 (`MobileAppNotifyEntity` naast de
+legacy `BaseNotificationService`), maar `notify.send_message` neemt alleen een
+titel en een tekst. Een `tag` (de ochtendmelding vervangt die van de avond) en
+een knop in de melding ("Staat buiten") kunnen alleen via `data` op de dienst.
+De telefoon wordt bij de persoon gezocht met `bewaking/meldingen.dienst_voor`,
+net als bij de camera; `diensten:` in de YAML is de uitweg voor wie het anders
+wil.
+
+**Een tik op "Staat buiten"** komt binnen als `mobile_app_notification_action`
+met `action: DOMOTIAPP_AFVAL_BUITEN|<id>|<ophaaldag>`. De persoon komt uit
+`event.context.user_id` tegen `person.attributes.user_id`.
+
+**Testen zonder telefoon:** zet in de YAML `diensten: {person.dev:
+notify.persistent_notification}`. Dan komt de melding als melding in Home
+Assistant zelf binnen, met precies de titel en tekst die een telefoon krijgt.
+
 ### Iconen: `dai:` is van ons, `mdi:` is van Home Assistant
 
 `resolve()` in `icons.js` kent drie vormen, en de VOLGORDE luistert nauw:
@@ -1268,7 +1305,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **drieëntwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **vierentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -1276,6 +1313,7 @@ met **drieëntwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
+| Herinneringen | **meldingen** (per persoon een schakelaar; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |

@@ -46,6 +46,7 @@ import "./cards/waste-card.js";
 import "./cards/navbar-card.js";
 import "./cards/tabs-card.js";
 import "./cards/dishwasher-card.js";
+import "./cards/meldingen-card.js";
 import "./cards/printer-card.js";
 import "./cards/auto-card.js";
 import "./cards/camera-card.js";
