@@ -76,6 +76,7 @@ import {
   isUit,
   knoppenVoor,
   mediaIcoon,
+  rijenVoor,
   shuffleAan,
   volgendeHerhaling,
   volumePct,
@@ -807,7 +808,7 @@ class MediaCard extends DacCard {
   getCardSize() {
     if (this.config?.layout === "groot") return 8;
     const st = stateOf(this.hass, this.config?.entity);
-    return 1 + (volumeVoor(st).length ? 1 : 0) + (extraVoor(st).length ? 1 : 0);
+    return rijenVoor(this.config, st, stateOf(this.hass, geluidsSpeler(this.config)));
   }
 
   getGridOptions() {

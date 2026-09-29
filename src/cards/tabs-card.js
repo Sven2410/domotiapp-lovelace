@@ -401,6 +401,15 @@ class TabsCard extends DacCard {
         el.preview = inVoorbeeld;
         el.config = kaart;
         pasIndelingToe(el, kaart?.grid_options);
+        // Een kaart die een ander aantal rijen is gaan tekenen dan hij opgaf,
+        // zegt dat met `card-updated` (zie vraagOpnieuw in rasterhoogte.js).
+        // In een sectie vangt Home Assistant dat op; dit raster is van ons,
+        // dus hier doen wij het. Doorlaten hoeft niet: wordt de tab daardoor
+        // hoger, dan meldt deze kaart dat zelf.
+        el.addEventListener("card-updated", (e) => {
+          e.stopPropagation();
+          this.herijkIndeling_();
+        });
         return el;
       });
       this.kinderen_.set(i, elementen);
