@@ -565,19 +565,41 @@ export function energiePunten(rijen) {
 }
 
 /**
+ * Vandaag, van middernacht tot middernacht, in de tijdzone van het scherm.
+ *
+ * Gevraagd op 29 september 2026: de energiegrafiek *"vanaf middernacht"* en niet
+ * de afgelopen 24 uur. Met de `Date`-constructor en niet met `nu - uren`: op de
+ * dag dat de klok verzet wordt heeft een dag 23 of 25 uur, en dan hoort de as
+ * nog steeds om middernacht te beginnen en te eindigen.
+ *
+ * @returns {{van: number, tot: number}}
+ */
+export function dagVenster(nu) {
+  const d = new Date(nu);
+  const van = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const tot = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+  return { van, tot };
+}
+
+/**
  * Wat de grafiek tekent.
  *
- * Een vermogenssensor: de punten van de afgelopen 24 uur zoals ze zijn, met
- * `nu` als laatste punt (de lijn loopt tot de rechterrand). Een tellerstand:
- * het verbruik per uur van de afgelopen 24 uur, één punt per uur, zodat
- * "verbruik" ook echt verbruik is. `venster` is het aantal uren.
+ * Een vermogenssensor: de punten van het venster zoals ze zijn, met `nu` als
+ * laatste punt. Een tellerstand: het verbruik per uur, één punt per uur, zodat
+ * "verbruik" ook echt verbruik is.
  *
- * @returns {{punten: Array<{t:number,v:number}>, van: number, tot: number, perUur: boolean}}
+ * Het venster is `van` tot `tot`, en de lijn loopt tot `nu`. Zonder `van` en
+ * `tot` is het de afgelopen `venster` uur tot nu -- zo werkte de grafiek tot
+ * 0.53.0. Sindsdien geeft de kaart vandaag mee (`dagVenster`): de as loopt van
+ * middernacht tot middernacht en de lijn stopt waar het nu is, zoals het
+ * energiedashboard van Home Assistant het ook tekent.
+ *
+ * @returns {{punten: Array<{t:number,v:number}>, van: number, tot: number, nu: number, perUur: boolean}}
  */
-export function energieReeks(punten, { nu, tellerstand = false, venster = 24 } = {}) {
-  const tot = nu;
-  const van = tot - venster * 3600000;
-  const alles = (punten ?? []).filter((p) => p.t <= tot);
+export function energieReeks(punten, { nu, tellerstand = false, venster = 24, van: vanaf, tot: asEind } = {}) {
+  const van = Number.isFinite(vanaf) ? vanaf : nu - venster * 3600000;
+  const tot = Number.isFinite(asEind) ? asEind : nu;
+  const alles = (punten ?? []).filter((p) => p.t <= nu);
   const binnen = alles.filter((p) => p.t >= van - 3600000);
   if (!tellerstand) {
     const lijst = binnen.filter((p) => p.t >= van);
@@ -586,14 +608,14 @@ export function energieReeks(punten, { nu, tellerstand = false, venster = 24 } =
     const ervoor = alles.filter((p) => p.t < van).pop();
     if (ervoor) lijst.unshift({ t: van, v: ervoor.v });
     const laatste = lijst[lijst.length - 1];
-    if (laatste && laatste.t < tot) lijst.push({ t: tot, v: laatste.v });
-    return { punten: lijst, van, tot, perUur: false };
+    if (laatste && laatste.t < nu) lijst.push({ t: nu, v: laatste.v });
+    return { punten: lijst, van, tot, nu, perUur: false };
   }
   // Per uur: het verschil tussen de laatste stand van het uur en die ervoor.
   const uren = [];
   const eersteUur = Math.floor(van / 3600000) * 3600000;
   let vorige = alles.filter((p) => p.t < eersteUur).pop()?.v ?? null;
-  for (let u = eersteUur; u < tot; u += 3600000) {
+  for (let u = eersteUur; u < nu; u += 3600000) {
     const inUur = binnen.filter((p) => p.t >= u && p.t < u + 3600000);
     const eind = inUur.length ? inUur[inUur.length - 1].v : null;
     if (eind !== null && vorige !== null) {
@@ -602,7 +624,7 @@ export function energieReeks(punten, { nu, tellerstand = false, venster = 24 } =
     }
     if (eind !== null) vorige = eind;
   }
-  return { punten: uren.filter((p) => p.t >= van), van, tot, perUur: true };
+  return { punten: uren.filter((p) => p.t >= van), van, tot, nu, perUur: true };
 }
 
 /**
@@ -676,18 +698,23 @@ export function verdunReeks(reeks, n = 48) {
   // maken de bochten gelijkmatig.
   if (p.length < 2 || !(reeks.tot > reeks.van)) return reeks;
   const stap = (reeks.tot - reeks.van) / n;
+  // Alleen vakjes tot NU. Loopt de as tot middernacht (sinds 0.53.0), dan zou
+  // een leeg vakje na nu de vorige waarde erven en de lijn vlak doortrekken tot
+  // het eind van de dag -- een voorspelling die niemand gedaan heeft.
+  const eind = Math.min(Number.isFinite(reeks.nu) ? reeks.nu : reeks.tot, reeks.tot);
   const uit = [];
   let vorige = p[0].v;
   for (let i = 0; i < n; i += 1) {
     const a = reeks.van + i * stap;
-    const b = a + stap;
+    if (a >= eind) break;
+    const b = Math.min(a + stap, eind);
     const inVak = p.filter((q) => q.t >= a && q.t < b);
     const v = inVak.length ? inVak.reduce((s, q) => s + q.v, 0) / inVak.length : vorige;
     vorige = v;
-    uit.push({ t: a + stap / 2, v: Math.round(v * 1000) / 1000 });
+    uit.push({ t: (a + b) / 2, v: Math.round(v * 1000) / 1000 });
   }
   uit.unshift({ t: reeks.van, v: p[0].v });
-  uit.push({ t: reeks.tot, v: p[p.length - 1].v });
+  uit.push({ t: eind, v: p[p.length - 1].v });
   return { ...reeks, punten: uit };
 }
 

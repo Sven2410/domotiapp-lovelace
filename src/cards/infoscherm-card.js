@@ -87,6 +87,7 @@ import {
   dagKort,
   datumLang,
   energiePunten,
+  dagVenster,
   energieReeks,
   energieSamenvatting,
   formatEnergie,
@@ -140,7 +141,9 @@ const PAGINA_KOP = {
   afval: { eyebrow: "Afval", titel: "Wanneer moet wat aan straat", onder: "" },
 };
 
-/* De afgelopen 24 uur in de energiegrafiek. */
+/* Zoveel uur aan metingen houdt de kaart vast: vandaag, plus de meting van
+   vóór middernacht die de lijn links compleet maakt. De grafiek zelf toont
+   sinds 0.53.0 VANDAAG, van middernacht tot middernacht (dagVenster). */
 const ENERGIE_VENSTER = 24;
 
 const css = /* css */ `
@@ -566,7 +569,7 @@ const css = /* css */ `
   .e-grafiek .e-lijn { fill: none; stroke: var(--tone); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .e-grafiek .e-nul { stroke: var(--dac-border-hi); stroke-width: 1px; vector-effect: non-scaling-stroke; }
   .e-grafiek .e-piek { position: absolute; left: 0; top: 0; font-size: calc(11px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; pointer-events: none; }
-  .e-grafiek .e-stip { position: absolute; right: 0; width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; background: var(--tone); border: 2px solid var(--dac-bg-raise); transform: translate(50%, -50%); box-sizing: content-box; }
+  .e-grafiek .e-stip { position: absolute; left: 100%; width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; background: var(--tone); border: 2px solid var(--dac-bg-raise); transform: translate(-50%, -50%); box-sizing: content-box; }
   .e-as { display: flex; justify-content: space-between; flex: 0 0 auto; font-size: calc(11px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
   .e-leeg { font-size: calc(14px * var(--s)); color: var(--dac-ink-3); }
   /* Eén rij hoog: getal links, grafiek rechts. */
@@ -1159,7 +1162,9 @@ export class InfoschermCard extends DacCard {
     if (entiteit !== this.energie_.entiteit) this.energie_ = { entiteit, punten: [], geladen: 0 };
     if (!entiteit || !this.hass?.connection?.sendMessagePromise) return;
     const eind = new Date();
-    const start = new Date(eind.getTime() - (ENERGIE_VENSTER + 1) * 3600000);
+    // Vanaf een uur vóór middernacht: de laatste meting van gisteren is de
+    // waarde waarmee de lijn om 00:00 begint.
+    const start = new Date(dagVenster(eind.getTime()).van - 3600000);
     try {
       const r = await this.hass.connection.sendMessagePromise({
         type: "history/history_during_period",
@@ -1473,8 +1478,9 @@ export class InfoschermCard extends DacCard {
 
   /**
    * Het energieblok (of, met `groot`, de pagina). Een vermogenssensor geeft
-   * de lijn van de afgelopen 24 uur en het getal van nu; een tellerstand
-   * (kWh) het verbruik per uur, met het totaal van de dag.
+   * de lijn van vandaag en het getal van nu; een tellerstand (kWh) het
+   * verbruik per uur, met het totaal van vandaag. De as loopt van middernacht
+   * tot middernacht, de lijn tot nu -- gevraagd op 29 september 2026.
    */
   htmlEnergie_(groot = false, klein = false) {
     const entiteit = this.installatie_().energie;
@@ -1487,7 +1493,8 @@ export class InfoschermCard extends DacCard {
     const eenheid = a.unit_of_measurement ?? "W";
     const teller = isTellerstand(a);
     const nu = Date.now();
-    const reeks = energieReeks(this.energie_.punten, { nu, tellerstand: teller, venster: ENERGIE_VENSTER });
+    const dag = dagVenster(nu);
+    const reeks = energieReeks(this.energie_.punten, { nu, tellerstand: teller, van: dag.van, tot: dag.tot });
     const sam = energieSamenvatting(reeks);
     // De pagina tekent elke meting; het blok een vloeiende lijn door het
     // gemiddelde per halfuur, anders is het een kras (10 september 2026).
@@ -1498,10 +1505,15 @@ export class InfoschermCard extends DacCard {
     const fmt = (v) => formatEnergie(v, eenheid);
     const laatste = reeks.punten[reeks.punten.length - 1];
     const stipTop = laatste && pad.max > pad.min ? (1 - (laatste.v - pad.min) / (pad.max - pad.min)) * 100 : null;
+    // Het stipje staat op NU, en dat is sinds de as tot middernacht loopt niet
+    // meer de rechterrand.
+    const stipLinks = laatste ? ((laatste.t - reeks.van) / (reeks.tot - reeks.van)) * 100 : 100;
     const ticks = (n) => {
       const uit = [];
       for (let i = 0; i < n; i += 1) uit.push(klok(new Date(reeks.van + ((reeks.tot - reeks.van) * i) / (n - 1))));
-      uit[n - 1] = "nu";
+      // Het eind van de as is de volgende middernacht, en die heet op een
+      // klok 00:00. Onder een grafiek van één dag leest 24:00 als het eind.
+      uit[n - 1] = "24:00";
       return uit;
     };
     const grafiek = pad.lijn
@@ -1512,7 +1524,7 @@ export class InfoschermCard extends DacCard {
             <path class="e-lijn" d="${pad.lijn}"/>
           </svg>
           <span class="e-piek">${escapeHtml(fmt(sam.piek))}</span>
-          ${stipTop !== null ? `<span class="e-stip" style="top:${stipTop.toFixed(1)}%"></span>` : ""}
+          ${stipTop !== null ? `<span class="e-stip" style="top:${stipTop.toFixed(1)}%;left:${stipLinks.toFixed(2)}%"></span>` : ""}
         </div>`
       : `<div class="e-grafiek"><div class="e-leeg">${dood ? "Sensor niet bereikbaar." : "Nog geen geschiedenis."}</div></div>`;
     if (groot) {
@@ -1522,10 +1534,10 @@ export class InfoschermCard extends DacCard {
           ${tegel(teller ? "Afgelopen uur" : "Nu", dood ? "--" : fmt(huidig))}
           ${tegel("Gemiddeld", fmt(sam.gemiddeld))}
           ${tegel("Piek", fmt(sam.piek))}
-          ${teller ? tegel("Afgelopen 24 uur", fmt(sam.totaal)) : ""}
+          ${teller ? tegel("Vandaag", fmt(sam.totaal)) : ""}
         </div>
         <div class="e-vak">
-          <div class="e-titel">${teller ? "Verbruik per uur, afgelopen 24 uur" : "Vermogen, afgelopen 24 uur"} · ${escapeHtml(a.friendly_name ?? entiteit)}</div>
+          <div class="e-titel">${teller ? "Verbruik per uur, vandaag" : "Vermogen vandaag"} · ${escapeHtml(a.friendly_name ?? entiteit)}</div>
           ${grafiek}
           <div class="e-as">${ticks(5).map((t) => `<span>${t}</span>`).join("")}</div>
         </div>
