@@ -36,6 +36,7 @@ import {
   getoondeStand,
   isOmgekeerd,
   isPoort,
+  kaartHoogte,
   keerPositie,
   knopTekst,
   standaardIconen,
@@ -298,8 +299,13 @@ class CoverCard extends DacCard {
   /** Elke rolluikregel is 40px, plus de rand van de kaart en een eventuele schuif. */
   rows_() {
     const list = this.config?.covers ?? [];
-    const pos = list.some((c) => can(stateOf(this.hass, c.entity), F.SET_POSITION));
-    return rowsFor(12 + Math.max(1, list.length) * 42 + (pos ? 30 : 0));
+    return rowsFor(
+      kaartHoogte({
+        aantal: list.length,
+        kanPositie: list.some((c) => can(stateOf(this.hass, c.entity), F.SET_POSITION)),
+        toonPositie: this.config?.show_position,
+      })
+    );
   }
 
   getCardSize() {
