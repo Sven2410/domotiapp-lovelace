@@ -120,3 +120,17 @@ export function statusTekst({ dood, state, positie, toon = true }) {
   if (state === "closed") return "Dicht";
   return "";
 }
+
+/**
+ * De hoogte van de kaart in pixels, vóór hij op de rasterrijen valt.
+ *
+ * Een rolluikregel is 40px (+2 rand), de kaart zelf 12, en de schuif eronder
+ * 30. Die schuif telt alleen mee als hij er ook STAAT: het rolluik moet een
+ * positie kunnen zetten, en `show_position` mag niet uit staan. Stond alleen
+ * het eerste in de som, dan kreeg een kaart met de schuif uit toch twee rijen,
+ * met een lege helft eronder (gevonden op 30 september 2026 in het demohuis).
+ */
+export function kaartHoogte({ aantal, kanPositie, toonPositie = true }) {
+  const schuif = Boolean(kanPositie) && toonPositie !== false;
+  return 12 + Math.max(1, aantal) * 42 + (schuif ? 30 : 0);
+}
