@@ -824,6 +824,18 @@ die daar niet staan:
    ```
    Daarna pas meten, en de sha256 vergelijken met het bestand op schijf.
 
+   **Maar een gelijke sha256 bewijst niet dat die code DRAAIT.** Op
+   29 september 2026 was de sha256 van een verse fetch gelijk aan schijf, terwijl
+   de pagina nog de vorige versie draaide: de server geeft bij ELKE `?v=` het
+   bestand dat nu op schijf staat, dus een nieuwe fetch meet de server, niet de
+   module die al geladen is. Het herladen van de config entry was stil mislukt
+   (401, verlopen token in `c.auth.accessToken`). Controleer daarom ook de
+   `?v=` in `performance.getEntriesByType("resource")` tegen de eerste twaalf
+   tekens van de hash op schijf, of kijk of een nieuwe methode bestaat
+   (`customElements.get(tag).prototype.nieuweMethode`). En herlaad de entry
+   met `hass.callApi("POST", "config/config_entries/entry/<id>/reload")`: die
+   haalt zelf een vers token.
+
 16. **Geen backticks in een CSS-commentaar.** Sinds 28 augustus 2026 draait
    `check:css` bij ELKE `npm run build`, want die dag ging het opnieuw mis en de
    bewaker was simpelweg niet gedraaid -- bouwen en controleren waren twee

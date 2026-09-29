@@ -360,3 +360,43 @@ export function opslaanKan(concept, speakerselectie) {
   }
   return magOpslaan(concept).ok;
 }
+
+/**
+ * Maak een tekst vergelijkbaar: kleine letters, zonder accenten.
+ *
+ * "Café" en "cafe" zijn voor wie zoekt hetzelfde woord, en een Nederlands
+ * huishouden heeft er genoeg van: "Één persoonskamer", "Crème lamp".
+ */
+const vergelijkbaar = (tekst) =>
+  String(tekst ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+/**
+ * De lampen of speakers die bij deze zoekterm passen.
+ *
+ * Gevraagd op 29 september 2026: *"ik wil bij de wakeuplight ook kunnen zoeken
+ * op naam nu heb ik bij een ander huishouden heel veel lampen entitien in een
+ * scroll menu. Ook bij de speaker selecteren"*.
+ *
+ * Elk woord moet ergens in de naam of het entity_id staan, in willekeurige
+ * volgorde: "slaap plafond" vindt "Plafond slaapkamer". Wat met de zoekterm
+ * BEGINT komt bovenaan; verder blijft de volgorde van de lijst staan, want die
+ * komt al gesorteerd uit de integratie.
+ *
+ * @param {{entity_id: string, name?: string}[]} lijst
+ * @param {string} term
+ */
+export function zoekEntiteiten(lijst, term) {
+  const alle = Array.isArray(lijst) ? lijst : [];
+  const woorden = vergelijkbaar(term).split(/\s+/).filter(Boolean);
+  if (!woorden.length) return [...alle];
+  const passend = alle.filter((e) => {
+    const hooiberg = `${vergelijkbaar(e?.name)} ${vergelijkbaar(e?.entity_id)}`;
+    return woorden.every((w) => hooiberg.includes(w));
+  });
+  const begin = vergelijkbaar(term).trim();
+  const vooraan = (e) => vergelijkbaar(e?.name).startsWith(begin);
+  return [...passend.filter(vooraan), ...passend.filter((e) => !vooraan(e))];
+}
