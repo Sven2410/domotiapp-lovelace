@@ -1340,6 +1340,21 @@ die daar niet staan:
    vreemde aanslagen tussen staan: wat hij typte is dan niet aangekomen waar hij
    dacht.
 
+60. **Stuur NOOIT een toets voordat je gecontroleerd hebt dat Chrome vooraan
+   staat, en controleer dat vóór ELKE toets.** Op 29 september 2026 ging het
+   zo: `SetForegroundWindow` op het Chrome-venster lukte niet, want de eigenaar
+   had **Fortnite** vooraan staan (een spel houdt de voorgrond vast). Het script
+   keek alleen of het DOEL al vooraan stond, en stuurde anders `^{TAB}` -- dertig
+   keer, allemaal naar het spel. Zijn Chrome bleef onaangeroerd; zijn spel kreeg
+   dertig keer Ctrl+Tab.
+
+   De regel is dus: na `SetForegroundWindow` de titel van
+   `GetForegroundWindow()` lezen, en alleen als die op `- Google Chrome` eindigt
+   een toets sturen; in de lus opnieuw, vóór elke aanslag. Staat er iets anders
+   vooraan, dan STOPPEN en het hem vragen -- ook als hij eerder zei "haal jij het
+   naar voren". Dat was toestemming voor Chrome, niet voor wat er toevallig
+   vooraan staat.
+
 ---
 
 ## Projectstand
