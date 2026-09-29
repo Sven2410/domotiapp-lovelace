@@ -143,6 +143,16 @@ moet. Ook daar staat geen Automatisch en geen Accent: één vakje dat de
 systeemkleurkiezer opent, een veld voor wie liever typt, en Wissen. Leeg =
 de kaart kiest zelf.
 
+De tweede uitzondering is de **badge** (sinds 0.51.0), en ook daar is de kleur
+geen identiteit maar STATUS: een verbruik dat te hoog is, een alarm dat aanstaat.
+Hij vroeg er zelf om op 29 september 2026: *"bij die badges kan ik de kleur niet
+instellen (...) Alarm badge ook. Uitgeschakeld en ingeschakeld en
+deelingeschakeld ook de kleuren in kunnen vullen."* Het is een KEUZELIJST met
+vaste namen (`KLEUREN` in `badges/badge-logica.js`: blauw, groen, geel, oranje,
+rood, lampkleur, grijs), geen vrije kiezer, en "Automatisch" is blauw -- *"Alle
+andere dingen gewoon blauw tenzij anders aangegeven in de GUI."* Een apparaat dat
+uit staat blijft ook op de badge gedempt.
+
 **Een `tone` die al in een config staat blijft gewoon getekend**, en een oude
 paletnaam houdt zijn eigen vakje met de Nederlandse naam erbij. Hem stil
 verbergen zou betekenen dat een dashboard een kleur draagt die nergens meer te
@@ -1336,7 +1346,7 @@ met **vierentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
-| Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
+| Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
 met inzoomen, presets en een draaikruis, een timeline met snapshots die de

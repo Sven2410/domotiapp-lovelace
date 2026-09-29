@@ -46,12 +46,26 @@
  * geen van beide.
  */
 
-import { DacCard, registerBadge, registerEditor, toneValue } from "../base.js";
-import { DacEditor, section, sel } from "../editor/base.js";
+import { DacCard, registerBadge, registerEditor } from "../base.js";
+import { DacEditor, row, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
-import { bindActions, defaultTapAction, isOn, lightTone, runAction, stateOf } from "../ha.js";
+import { bindActions, defaultTapAction, isOn, lightTone, localizeState, runAction, stateOf } from "../ha.js";
 import { SjabloonSet, isSjabloon } from "../sjabloon.js";
-import { heeftAanUit, icoonBron, kleurnaam, lampenAan } from "./badge-logica.js";
+import {
+  KLEUREN,
+  SOORT_STANDAARD,
+  alarmKleur,
+  alarmStand,
+  badgeSoort,
+  energieBand,
+  energieKleur,
+  heeftAanUit,
+  icoonBron,
+  kleurCss,
+  lampKleur,
+  lampenAan,
+  vermogen,
+} from "./badge-logica.js";
 
 const BADGE_TYPE = "domotiapp-template-badge";
 const EDITOR_TYPE = "domotiapp-template-badge-editor";
@@ -65,6 +79,21 @@ const EDITOR_TYPE = "domotiapp-template-badge-editor";
  * kleur hieronder.
  */
 const SJABLOONVELDEN = ["icon", "content", "label", "tone"];
+
+/**
+ * Waar de kleur vandaan komt, zoals `icoonBron` het doet voor het icoon.
+ *
+ * Een sjabloon in `tone_template` gaat voor, daarna de keuze in de lijst
+ * (`tone`), en als laatste `color` -- de sleutel van Mushroom. Zijn badges
+ * kwamen daarvandaan, en de belofte was dat de YAML over te nemen is met alleen
+ * een andere `type:`. Tot 0.51.0 las deze badge `color` niet, en dan werd een
+ * overgenomen kleur stil blauw: *"DIe kleur dinges werkt nu niet namelijk"*.
+ */
+const kleurBron = (c) => {
+  const sjabloon = String(c?.tone_template ?? "").trim();
+  if (sjabloon) return sjabloon;
+  return c?.tone ?? c?.color ?? "";
+};
 
 class DomotiappTemplateBadge extends DacCard {
   static css = /* css */ `
@@ -196,7 +225,7 @@ class DomotiappTemplateBadge extends DacCard {
     // De lampenteller let op ALLE lampen, ook de uitgesloten en de groepen:
     // een lamp die erbij komt of van groep wisselt, moet de telling ook
     // bijwerken. Goedkoop -- het is een vergelijking per lamp op identiteit.
-    if (this.config?.light_counter) {
+    if (badgeSoort(this.config) === "lights") {
       for (const id of Object.keys(this.hass?.states ?? {})) {
         if (id.startsWith("light.")) ids.push(id);
       }
@@ -206,7 +235,7 @@ class DomotiappTemplateBadge extends DacCard {
 
   /** De lampen die aan staan, als de lampenteller aan staat; anders null. */
   lampen_() {
-    if (!this.config?.light_counter) return null;
+    if (badgeSoort(this.config) !== "lights") return null;
     return lampenAan(this.hass?.states, this.config.light_exclude);
   }
 
@@ -260,35 +289,70 @@ class DomotiappTemplateBadge extends DacCard {
   /**
    * Welke kleur het icoon draagt.
    *
-   * Drie lagen, in deze volgorde:
+   * Sinds 0.51.0, op zijn vraag van 29 september 2026: *"Alle andere dingen
+   * gewoon blauw tenzij anders aangegeven in de GUI"*.
    *
-   * 1. Wat het `tone`-veld zegt. Dat mag een sjabloon zijn, en dat is precies
-   *    waar het voor is: een rookmelder die rook ziet hoort rood te zijn, en
-   *    dat weet alleen het sjabloon. Er staat bewust GEEN kleurkiezer in de
-   *    editor -- zie de vormregels in CLAUDE.md: kleur is op deze kaarten
-   *    identiteit en geen keuze. Een sjabloon dat een status uitrekent is iets
-   *    anders dan een vakje waaruit je een kleur mag prikken.
-   * 2. Een lamp draagt de kleur die hij maakt, net als op elke andere kaart.
-   * 3. Anders: aan is het accent, uit is gedempt, en zonder entiteit is het
-   *    neutrale inkt. Een badge die er hetzelfde uitziet of het apparaat aan of
-   *    uit staat, is kapot -- dat is dezelfde regel als op de knoppen.
+   * 1. Energie en alarm: de kleur van de band of de stand. Daar zijn die
+   *    soorten voor, en een kleur in het algemene veld zou ze overschrijven.
+   * 2. Wat er in de GUI gekozen is (`tone`), of een sjabloon (`tone_template`),
+   *    of `color` uit een overgenomen Mushroom-badge. Een rookmelder die rook
+   *    ziet hoort rood te zijn, en dat weet alleen het sjabloon.
+   * 3. De lampenteller: de kleur van de verlichting die brandt.
+   * 4. Een lamp: de kleur die hij maakt.
+   * 5. Anders BLAUW. Behalve een apparaat dat UIT staat: dat is gedempt. Een
+   *    badge die er hetzelfde uitziet of het apparaat aan of uit staat, is
+   *    kapot -- dezelfde vormregel als op de knoppen.
    */
-  toon_() {
-    const gevraagd = kleurnaam(this.sjablonen_.waarde("tone", this.config.tone));
-    if (gevraagd) return toneValue(gevraagd, "accent");
+  toon_(uitkomst) {
+    const c = this.config;
+    const soort = badgeSoort(c);
+    const DEMP = "var(--dac-ink-3)";
+    const BLAUW = "var(--dac-accent-hi)";
 
-    // De lampenteller: het accent zodra er één lamp aan staat, gedempt als het
-    // donker is. Dezelfde regel als bij punt 3 hieronder.
+    if (soort === "energy") return kleurCss(energieKleur(uitkomst?.band, c)) ?? DEMP;
+    if (soort === "alarm") return uitkomst?.stand ? kleurCss(alarmKleur(uitkomst.stand, c)) ?? BLAUW : BLAUW;
+
+    const gevraagd = kleurCss(this.sjablonen_.waarde("tone", kleurBron(c)));
     const lampen = this.lampen_();
-    if (lampen) return lampen.length ? "var(--dac-accent-hi)" : "var(--dac-ink-3)";
+    if (lampen) {
+      if (!lampen.length) return DEMP;
+      return gevraagd ?? lampKleur(this.hass?.states, lampen) ?? "var(--dac-lit)";
+    }
+    if (gevraagd) return gevraagd;
 
-    const id = this.config.entity;
+    const id = c.entity;
     const st = stateOf(this.hass, id);
-    if (!st) return "var(--dac-ink-2)";
-    if (id.startsWith("light.")) return lightTone(st);
+    if (!st) return BLAUW;
+    if (id.startsWith("light.")) return isOn(st) ? lightTone(st) ?? "var(--dac-lit)" : DEMP;
     // Buiten de aan/uit-domeinen zegt "aan" niets -- zie badge-logica.js.
-    if (!heeftAanUit(id)) return "var(--dac-ink-2)";
-    return isOn(st) ? "var(--dac-accent-hi)" : "var(--dac-ink-3)";
+    if (!heeftAanUit(id)) return BLAUW;
+    return isOn(st) ? BLAUW : DEMP;
+  }
+
+  /**
+   * Wat een energie- of alarmbadge nu zegt: tekst, icoon, en waar de kleur
+   * vandaan komt. Null voor de andere soorten.
+   */
+  uitkomst_() {
+    const c = this.config;
+    const soort = badgeSoort(c);
+    const st = stateOf(this.hass, c.entity);
+    if (soort === "energy") {
+      const v = vermogen(st);
+      if (!v) return { tekst: st ? localizeState(this.hass, st) : "Geen sensor", band: null, icoon: "bolt" };
+      return { tekst: v.tekst, band: energieBand(v.watt, c), icoon: "bolt" };
+    }
+    if (soort === "alarm") {
+      if (!st) return { tekst: "Geen entiteit", stand: null, icoon: "shield" };
+      const { waarde, stand } = alarmStand(st, c);
+      // Een attribuut dat niet bestaat gaf een lege regel, en dan zie je niet
+      // dat je je vergist hebt in de naam. Gevonden in de editor op
+      // 29 september 2026 met "arm mode".
+      if (c.alarm_attribute && !waarde) return { tekst: "Attribuut ontbreekt", stand: null, icoon: "shield" };
+      const ruw = c.alarm_attribute ? waarde : localizeState(this.hass, st);
+      return { tekst: stand?.tekst ?? ruw, stand, icoon: stand?.icoon ?? "shield", ruw: waarde };
+    }
+    return null;
   }
 
   paint() {
@@ -299,10 +363,15 @@ class DomotiappTemplateBadge extends DacCard {
     // andere dingen zijn waar een badge naar vraagt zonder ze te kunnen weten.
     const velden = Object.fromEntries(SJABLOONVELDEN.map((naam) => [naam, c[naam]]));
     velden.icon = icoonBron(c);
-    // Met de lampenteller aan is de onderste regel het aantal. Een sjabloon dat
-    // er nog van vroeger in staat, hoeft dan geen abonnement meer te hebben.
+    velden.tone = kleurBron(c);
+    // Bij een lampenteller, energie of alarm is de onderste regel van de soort
+    // zelf. Een sjabloon dat er nog van vroeger in staat, hoeft dan geen
+    // abonnement meer te hebben; bij energie en alarm de kleur ook niet.
+    const soort = badgeSoort(c);
     const lampen = this.lampen_();
-    if (lampen) delete velden.content;
+    const uitkomst = this.uitkomst_();
+    if (soort) delete velden.content;
+    if (uitkomst) delete velden.tone;
     this.sjablonen_.zet(this.hass, velden, {
       entity: c.entity ?? "",
       user: this.hass?.user?.name ?? "",
@@ -316,7 +385,9 @@ class DomotiappTemplateBadge extends DacCard {
       ? "Sjabloonfout"
       : lampen
         ? String(lampen.length)
-        : this.sjablonen_.waarde("content", c.content);
+        : uitkomst
+          ? uitkomst.tekst
+          : this.sjablonen_.waarde("content", c.content);
 
     this.text(".label", label);
     this.text(".content", content);
@@ -326,20 +397,24 @@ class DomotiappTemplateBadge extends DacCard {
       ? fouten.join("\n")
       : lampen?.length
         ? lampen.map((id) => this.hass.states[id]?.attributes?.friendly_name ?? id).join("\n")
-        : (c.label ?? "");
+        : uitkomst?.ruw && uitkomst.ruw !== uitkomst.tekst
+          ? `${uitkomst.tekst} (${uitkomst.ruw})`
+          : (c.label ?? "");
 
     // Eén regel of twee: dat bepaalt hoe groot het label staat.
     const regels = (label ? 1 : 0) + (content ? 1 : 0);
     this.setAttribute("regels", String(regels));
 
-    this.$(".badge").style.setProperty("--tone", this.toon_());
+    this.$(".badge").style.setProperty("--tone", this.toon_(uitkomst));
 
     // Het icoon. Een lege waarde betekent geen icoon, en dat is een geldige
     // keuze -- een badge met alleen een getal erin is een badge.
     const ico = this.$(".ico");
     const wens = fouten.length
       ? "warning"
-      : this.sjablonen_.waarde("icon", icoonBron(c)) || (lampen ? "bulb" : "");
+      : this.sjablonen_.waarde("icon", icoonBron(c)) ||
+        (lampen ? "bulb" : "") ||
+        (uitkomst?.icoon ?? "");
     if (ico.dataset.icon !== wens) {
       ico.dataset.icon = wens;
       ico.innerHTML = wens ? resolve(wens) : "";
@@ -382,23 +457,53 @@ class DomotiappTemplateBadge extends DacCard {
 
 /* ================================== editor ================================ */
 
+/** De keuzelijst "Soort badge". Geen lege waarde: die is niet te kiezen (valkuil 55). */
+const SOORT_KEUZES = [
+  { value: "tekst", label: "Eigen tekst (sjablonen)" },
+  { value: "lights", label: "Lampenteller" },
+  { value: "energy", label: "Energie" },
+  { value: "alarm", label: "Alarm" },
+];
+
+/** Een kleurlijst, met "Automatisch" erbij waar dat iets betekent. */
+const kleurKeuzes = ({ automatisch = false, extra = "" } = {}) => [
+  ...(automatisch ? [{ value: "auto", label: "Automatisch" }] : []),
+  ...KLEUREN.map(([value, label]) => ({ value, label })),
+  // Een kleur die er al stond maar niet in de lijst staat (een #hex, een oude
+  // naam) houdt zijn eigen regel. Hem stil laten vallen zou betekenen dat de
+  // badge een kleur draagt die nergens te zien is -- de vormregel over een oude
+  // `tone` in CLAUDE.md.
+  ...(extra ? [{ value: extra, label: extra }] : []),
+];
+
+/** Welke keuze uit de lijst hoort bij deze kleur, of de kleur zelf. */
+const naarKeuze = (waarde) => {
+  const css = kleurCss(waarde);
+  if (!css) return waarde;
+  const keuze = KLEUREN.find(([sleutel]) => kleurCss(sleutel) === css);
+  return keuze ? keuze[0] : waarde;
+};
+
+const IN_LIJST = new Set(["auto", ...KLEUREN.map(([k]) => k)]);
+
 class DomotiappTemplateBadgeEditor extends DacEditor {
   defaults() {
     return { tap_action: { action: "more-info" } };
   }
 
   /**
-   * Jinja in `icon` hoort in het sjabloonveld te staan, niet in de kiezer.
+   * Wat er in de YAML staat, in de vorm die de editor toont.
    *
-   * Een icoonkiezer met `{% if is_state(entity,'on') %}mdi:fire{% endif %}` in
-   * zijn waarde toont een leeg vakje en een onleesbaar bijschrift. De YAML van
-   * de eigenaar ziet er precies zo uit, dus hij wordt hier -- alleen voor de
-   * WEERGAVE -- naar het juiste veld getild.
+   * Alleen voor de WEERGAVE; `setConfig` stuurt geen `config-changed`, dus een
+   * dashboard dat alleen geopend wordt om te kijken verandert niet. Zodra hij
+   * iets verzet, wordt de nette vorm weggeschreven (zie `serialize`).
    *
-   * De config zelf blijft onaangeraakt tot er iets gewijzigd wordt: `setConfig`
-   * stuurt geen `config-changed`, dus een dashboard dat alleen geopend wordt om
-   * te kijken verandert niet. Zodra hij wél iets verzet, wordt de nette vorm
-   * weggeschreven.
+   * - Jinja in `icon` hoort in het sjabloonveld, niet in de kiezer. De YAML van
+   *   de eigenaar zag er zo uit.
+   * - `light_counter: true` uit 0.49.0 is de soort Lampenteller.
+   * - De kleur: een sjabloon gaat naar het sjabloonveld, een naam naar de keuze
+   *   uit de lijst die dezelfde kleur geeft (`goed` wordt Groen, `red` wordt
+   *   Rood), en `color` van Mushroom telt mee als er niets anders staat.
    */
   setConfig(config) {
     const c = { ...config };
@@ -406,6 +511,19 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       c.icon_template = c.icon;
       delete c.icon;
     }
+
+    c.mode = badgeSoort(c) || "tekst";
+    delete c.light_counter;
+
+    if (c.tone === undefined && !String(c.tone_template ?? "").trim() && c.color !== undefined) {
+      c.tone = c.color;
+    }
+    delete c.color;
+    if (isSjabloon(c.tone) && !String(c.tone_template ?? "").trim()) {
+      c.tone_template = c.tone;
+      delete c.tone;
+    }
+    c.tone = c.tone ? naarKeuze(c.tone) : "auto";
     super.setConfig(c);
   }
 
@@ -420,50 +538,126 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
   }
 
   /**
-   * De lampenteller aanzetten vult ook de kop en het icoon in.
+   * Een andere soort kiezen vult in wat die soort nodig heeft.
    *
    * In de EDITOR en niet in de badge, en dat is met opzet. Zou de badge zelf
    * "Lampen aan" tonen bij een leeg label, dan kon je dat label nooit meer
    * weghalen: een leeg veld wordt uit de config geschrapt (valkuil 55), en dan
    * is leeg niet te onderscheiden van nooit ingevuld. Zo staat het er één keer
-   * in, zichtbaar in het veld, en mag je het daarna gewoon wissen.
+   * in, zichtbaar in het veld, en mag je het daarna gewoon aanpassen.
+   *
+   * Kop en icoon worden alleen vervangen als ze leeg zijn of nog de standaard
+   * van de vorige soort dragen: wie "Verbruik thuis" typte, houdt dat.
    */
   patch_(patch, replace = false) {
-    if (patch?.light_counter === true && !this.config_?.light_counter) {
-      patch = { ...patch };
-      const straks = replace ? patch : { ...this.config_, ...patch };
-      if (!straks.label) patch.label = "Lampen aan";
-      if (!straks.icon && !straks.icon_template) patch.icon = "bulb";
+    const straks = replace ? { ...patch } : { ...this.config_, ...patch };
+    const voor = badgeSoort(this.config_);
+    const na = badgeSoort(straks);
+    if (na !== voor) {
+      patch = replace ? straks : { ...patch };
+      const oud = SOORT_STANDAARD[voor] ?? {};
+      const nieuw = SOORT_STANDAARD[na] ?? {};
+      for (const sleutel of ["label", "icon"]) {
+        if (sleutel === "icon" && String(straks.icon_template ?? "").trim()) continue;
+        if (!straks[sleutel] || straks[sleutel] === oud[sleutel]) patch[sleutel] = nieuw[sleutel];
+      }
+      for (const [sleutel, waarde] of Object.entries(nieuw)) {
+        if (sleutel !== "label" && sleutel !== "icon" && straks[sleutel] === undefined) patch[sleutel] = waarde;
+      }
     }
     super.patch_(patch, replace);
   }
 
+  /**
+   * Wat er in de YAML komt: alleen wat iets betekent.
+   *
+   * "Eigen tekst" en "Automatisch" zijn wat er gebeurt als er niets staat, dus
+   * die schrijven niets weg. `light_counter` en `color` zijn opgegaan in `mode`
+   * en `tone`.
+   */
+  serialize(config) {
+    const uit = { ...config };
+    if (!SOORT_KEUZES.some((k) => k.value === uit.mode) || uit.mode === "tekst") delete uit.mode;
+    if (uit.tone === "auto") delete uit.tone;
+    delete uit.light_counter;
+    delete uit.color;
+    return uit;
+  }
+
   schema() {
-    const teller = Boolean(this.config_?.light_counter);
+    const c = this.config_ ?? {};
+    const soort = badgeSoort(c);
+    const kleur = (naam) => ({
+      name: naam,
+      selector: sel.select(kleurKeuzes({ extra: IN_LIJST.has(c[naam]) ? "" : c[naam] ?? "" })),
+    });
+
+    const blok = {
+      // Eén keuzelijst en daaronder het blok van die soort -- de vorm die hij
+      // op 28 augustus 2026 voor de presets van de camera vroeg (valkuil 33).
+      lights: [
+        section(
+          "Niet meetellen",
+          "mdi:lightbulb-off-outline",
+          [{ name: "light_exclude", selector: { entity: { domain: "light", multiple: true } } }],
+          true
+        ),
+      ],
+      // Getal en kleur naast elkaar ZONDER hulptekst eronder: `ha-form` lijnt
+      // de cellen van een rij bovenlangs uit, en een hulptekst van twee regels
+      // naast een van één zet ze scheef (valkuil 39). De uitleg staat daarom
+      // bij de sensor erboven.
+      energy: [
+        section(
+          "Energie",
+          "mdi:flash",
+          [
+            { name: "entity", selector: sel.entity(["sensor"]) },
+            row({ name: "energy_green_max", selector: sel.number(-1000000, 1000000, 1) }, kleur("energy_color_low")),
+            row({ name: "energy_orange_max", selector: sel.number(-1000000, 1000000, 1) }, kleur("energy_color_mid")),
+            kleur("energy_color_high"),
+          ],
+          true
+        ),
+      ],
+      alarm: [
+        section(
+          "Alarm",
+          "mdi:shield-home-outline",
+          [
+            { name: "entity", selector: sel.entity() },
+            { name: "alarm_attribute", selector: sel.text() },
+            row({ name: "alarm_disarmed", selector: sel.text() }, kleur("alarm_disarmed_color")),
+            row({ name: "alarm_partial", selector: sel.text() }, kleur("alarm_partial_color")),
+            row({ name: "alarm_armed", selector: sel.text() }, kleur("alarm_armed_color")),
+          ],
+          true
+        ),
+      ],
+    }[soort] ?? [];
+
+    // De kleur van het icoon kiest de soort zelf bij energie en alarm; een
+    // algemene kleur zou die overschrijven en hoort er dan niet te staan.
+    const eigenKleur = soort !== "energy" && soort !== "alarm";
+
     return [
-      // Eén vinkje, en daaronder het blok met de uitzonderingen -- de vorm die
-      // hij op 28 augustus 2026 voor de presets van de camera vroeg (valkuil
-      // 33 en de vormregels in CLAUDE.md). Hij staat bovenaan omdat hij bepaalt
-      // WAT de badge is; de velden eronder volgen daaruit.
-      { name: "light_counter", selector: sel.bool() },
-      ...(teller
+      { name: "mode", selector: sel.select(SOORT_KEUZES) },
+      ...blok,
+      ...(soort ? [] : [{ name: "entity", selector: sel.entity() }]),
+      { name: "label", selector: sel.multiline() },
+      ...(soort ? [] : [{ name: "content", selector: sel.multiline() }]),
+      { name: "icon_template", selector: sel.multiline() },
+      ...(eigenKleur
         ? [
-            section(
-              "Niet meetellen",
-              "mdi:lightbulb-off-outline",
-              [{ name: "light_exclude", selector: { entity: { domain: "light", multiple: true } } }],
-              true,
-            ),
+            {
+              name: "tone",
+              selector: sel.select(
+                kleurKeuzes({ automatisch: true, extra: IN_LIJST.has(c.tone) ? "" : c.tone ?? "" })
+              ),
+            },
+            { name: "tone_template", selector: sel.multiline() },
           ]
         : []),
-      // Een teller wijst niet naar één ding en heeft geen eigen onderste regel:
-      // die twee velden zouden iets beloven dat niet gebeurt. Wat erin staat
-      // blijft bewaard, voor als het vinkje er weer af gaat.
-      ...(teller ? [] : [{ name: "entity", selector: sel.entity() }]),
-      { name: "label", selector: sel.multiline() },
-      ...(teller ? [] : [{ name: "content", selector: sel.multiline() }]),
-      { name: "icon_template", selector: sel.multiline() },
-      { name: "tone", selector: sel.text() },
       { name: "tap_action", selector: sel.action("more-info") },
       { name: "hold_action", selector: sel.action("none") },
     ];
@@ -472,13 +666,30 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
   label(s) {
     return (
       {
-        light_counter: "Lampenteller",
+        mode: "Soort badge",
         light_exclude: "Lampen die hij overslaat",
-        entity: "Entiteit (optioneel)",
+        entity: badgeSoort(this.config_) === "energy"
+          ? "Vermogen"
+          : badgeSoort(this.config_) === "alarm"
+            ? "Alarm"
+            : "Entiteit (optioneel)",
+        energy_green_max: "Tot en met (W)",
+        energy_color_low: "Kleur",
+        energy_orange_max: "Daarna tot en met (W)",
+        energy_color_mid: "Kleur",
+        energy_color_high: "Kleur daarboven",
+        alarm_attribute: "Status uit een attribuut (optioneel)",
+        alarm_disarmed: "Uitgeschakeld bij",
+        alarm_disarmed_color: "Kleur",
+        alarm_partial: "Deels ingeschakeld bij",
+        alarm_partial_color: "Kleur",
+        alarm_armed: "Ingeschakeld bij",
+        alarm_armed_color: "Kleur",
         label: "Bovenste regel",
         content: "Onderste regel",
         icon_template: "Icoon via een sjabloon (optioneel)",
         tone: "Kleur van het icoon",
+        tone_template: "Kleur via een sjabloon (optioneel)",
         tap_action: "Bij tikken",
         hold_action: "Bij vasthouden",
       }[s.name] ?? super.label(s)
@@ -486,13 +697,20 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
   }
 
   helper(s) {
+    const soort = badgeSoort(this.config_);
     return {
-      light_counter:
-        "Telt de lampen die aan staan. De onderste regel wordt dan het aantal, en het icoon licht op zodra er één brandt. Lichtgroepen telt hij niet mee, anders telt een lamp in een groep dubbel.",
+      mode:
+        "Eigen tekst: jij bepaalt wat er staat, met sjablonen. Lampenteller: het aantal lampen dat aan staat. Energie: een vermogen met een kleur per grens. Alarm: de stand van je alarm met een kleur per stand.",
       light_exclude:
-        "Bijvoorbeeld een nachtlampje dat altijd brandt, of een lamp in de schuur die niet bij het huis hoort.",
+        "Bijvoorbeeld een nachtlampje dat altijd brandt. Lichtgroepen telt hij sowieso niet mee, anders telt een lamp in een groep dubbel.",
       entity:
-        "Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven.",
+        soort === "energy"
+          ? "De sensor met het vermogen, in W of kW. De grenzen hieronder zijn in watt: tot en met de eerste grens krijgt de eerste kleur (terugleveren ook), tot en met de tweede de tweede, en daarboven de derde."
+          : soort === "alarm"
+            ? "Het alarm. Vul hieronder bij elke stand in welke status daarbij hoort; meerdere mogen, met een komma ertussen. Hoofdletters maken niet uit."
+            : "Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven.",
+      alarm_attribute:
+        "Leeg laten: de toestand van het alarm zelf (disarmed, armed_away...). Staat de status bij jouw alarm in een attribuut, zet hier de naam van dat attribuut.",
       label:
         "De kleine regel bovenin, bijvoorbeeld Alarm of Vaatwasser. Mag een sjabloon zijn.",
       content:
@@ -500,7 +718,11 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       icon_template:
         "Alleen invullen als het icoon per toestand moet verschillen. Onze eigen iconen heten dai:, die van Home Assistant mdi: — bijvoorbeeld {% if is_state(entity,'on') %}dai:alarmOn{% else %}dai:alarmOff{% endif %}. De naam die je nodig hebt staat onder het icoon in de kiezer hierboven. Staat hier iets, dan wint het van het gekozen icoon.",
       tone:
-        "Leeg laten is het beste: dan volgt het icoon vanzelf de toestand. Wil je het sturen, zet er dan goed, let op of kritiek in — of een sjabloon dat dat uitrekent, voor een melder die rood hoort te worden.",
+        soort === "lights"
+          ? "Automatisch: de kleur van de lampen die branden, en grijs als alles uit is."
+          : "Automatisch: blauw, en gedempt als het apparaat uit staat. Een lamp krijgt de kleur die hij maakt.",
+      tone_template:
+        "Voor een kleur die meebeweegt, bijvoorbeeld {% if is_state(entity, 'on') %}rood{% else %}groen{% endif %}. Kent de namen uit de lijst hierboven, en ook red, orange, amber en #ff8800. Staat hier iets, dan wint het van de keuze erboven.",
       hold_action: "Wat er gebeurt als je hem ingedrukt houdt. Laat op Geen actie staan als je niets wilt.",
     }[s.name];
   }
