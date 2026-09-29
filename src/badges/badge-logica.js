@@ -115,3 +115,45 @@ export function terugDoel(config) {
   const pad = String(config?.path ?? "").trim();
   return pad ? { soort: "pad", pad } : { soort: "geschiedenis" };
 }
+
+/**
+ * Is dit een lamp die uit andere lampen bestaat?
+ *
+ * Twee soorten, en allebei tellen ze een lamp dubbel als je ze meeneemt: een
+ * lichtgroep van Home Assistant draagt zijn leden in `entity_id`, en een kamer
+ * of zone van Hue is een eigen lamp met `is_hue_group`. Zet je in de
+ * woonkamer drie spots aan, dan zijn er drie lampen aan -- en niet vier omdat
+ * de groep "Woonkamer" ook aan staat.
+ */
+export const isLampgroep = (st) =>
+  Array.isArray(st?.attributes?.entity_id) || st?.attributes?.is_hue_group === true;
+
+/**
+ * De lampen die de lampenteller meetelt: aan, geen groep, niet uitgesloten.
+ *
+ * Gevraagd op 29 september 2026: *"Ik wil daar een optie kunnen aanvinken in
+ * de GUI van dat het een light counter is. En dat ik dan verlichting kan
+ * uitsluiten dat hij niet moet meenemen."* Zijn oude badge deed dit met
+ * `states.light | selectattr('state','eq','on') | list | count`, en die telde
+ * de groepen gewoon mee.
+ *
+ * Alleen `on` telt. Een lamp die `unavailable` is, staat niet aan; dat is ook
+ * wat het sjabloon deed.
+ *
+ * @param {Record<string, object>} states `hass.states`
+ * @param {string[]} [uitsluiten] de lampen die hij overslaat
+ * @returns {string[]} de entity_id's, gesorteerd
+ */
+export function lampenAan(states, uitsluiten = []) {
+  const weg = new Set(Array.isArray(uitsluiten) ? uitsluiten : []);
+  return Object.values(states ?? {})
+    .filter(
+      (st) =>
+        String(st?.entity_id ?? "").startsWith("light.") &&
+        st.state === "on" &&
+        !weg.has(st.entity_id) &&
+        !isLampgroep(st),
+    )
+    .map((st) => st.entity_id)
+    .sort();
+}

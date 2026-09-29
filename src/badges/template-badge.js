@@ -47,11 +47,11 @@
  */
 
 import { DacCard, registerBadge, registerEditor, toneValue } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacEditor, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, defaultTapAction, isOn, lightTone, runAction, stateOf } from "../ha.js";
 import { SjabloonSet, isSjabloon } from "../sjabloon.js";
-import { heeftAanUit, icoonBron, kleurnaam } from "./badge-logica.js";
+import { heeftAanUit, icoonBron, kleurnaam, lampenAan } from "./badge-logica.js";
 
 const BADGE_TYPE = "domotiapp-template-badge";
 const EDITOR_TYPE = "domotiapp-template-badge-editor";
@@ -192,7 +192,22 @@ class DomotiappTemplateBadge extends DacCard {
    * niet bij -- ze zouden de badge twee keer laten tekenen bij elke wijziging.
    */
   watched() {
-    return this.config?.entity ? [this.config.entity] : [];
+    const ids = this.config?.entity ? [this.config.entity] : [];
+    // De lampenteller let op ALLE lampen, ook de uitgesloten en de groepen:
+    // een lamp die erbij komt of van groep wisselt, moet de telling ook
+    // bijwerken. Goedkoop -- het is een vergelijking per lamp op identiteit.
+    if (this.config?.light_counter) {
+      for (const id of Object.keys(this.hass?.states ?? {})) {
+        if (id.startsWith("light.")) ids.push(id);
+      }
+    }
+    return ids;
+  }
+
+  /** De lampen die aan staan, als de lampenteller aan staat; anders null. */
+  lampen_() {
+    if (!this.config?.light_counter) return null;
+    return lampenAan(this.hass?.states, this.config.light_exclude);
   }
 
   template() {
@@ -262,6 +277,11 @@ class DomotiappTemplateBadge extends DacCard {
     const gevraagd = kleurnaam(this.sjablonen_.waarde("tone", this.config.tone));
     if (gevraagd) return toneValue(gevraagd, "accent");
 
+    // De lampenteller: het accent zodra er één lamp aan staat, gedempt als het
+    // donker is. Dezelfde regel als bij punt 3 hieronder.
+    const lampen = this.lampen_();
+    if (lampen) return lampen.length ? "var(--dac-accent-hi)" : "var(--dac-ink-3)";
+
     const id = this.config.entity;
     const st = stateOf(this.hass, id);
     if (!st) return "var(--dac-ink-2)";
@@ -279,6 +299,10 @@ class DomotiappTemplateBadge extends DacCard {
     // andere dingen zijn waar een badge naar vraagt zonder ze te kunnen weten.
     const velden = Object.fromEntries(SJABLOONVELDEN.map((naam) => [naam, c[naam]]));
     velden.icon = icoonBron(c);
+    // Met de lampenteller aan is de onderste regel het aantal. Een sjabloon dat
+    // er nog van vroeger in staat, hoeft dan geen abonnement meer te hebben.
+    const lampen = this.lampen_();
+    if (lampen) delete velden.content;
     this.sjablonen_.zet(this.hass, velden, {
       entity: c.entity ?? "",
       user: this.hass?.user?.name ?? "",
@@ -290,11 +314,19 @@ class DomotiappTemplateBadge extends DacCard {
     const label = this.sjablonen_.waarde("label", c.label);
     const content = fouten.length
       ? "Sjabloonfout"
-      : this.sjablonen_.waarde("content", c.content);
+      : lampen
+        ? String(lampen.length)
+        : this.sjablonen_.waarde("content", c.content);
 
     this.text(".label", label);
     this.text(".content", content);
-    this.$(".badge").title = fouten.length ? fouten.join("\n") : (c.label ?? "");
+    // Bij de lampenteller zegt de tooltip WELKE lampen het zijn. Een getal in de
+    // kop van de view roept meteen de vraag op welke er dan nog branden.
+    this.$(".badge").title = fouten.length
+      ? fouten.join("\n")
+      : lampen?.length
+        ? lampen.map((id) => this.hass.states[id]?.attributes?.friendly_name ?? id).join("\n")
+        : (c.label ?? "");
 
     // Eén regel of twee: dat bepaalt hoe groot het label staat.
     const regels = (label ? 1 : 0) + (content ? 1 : 0);
@@ -305,7 +337,9 @@ class DomotiappTemplateBadge extends DacCard {
     // Het icoon. Een lege waarde betekent geen icoon, en dat is een geldige
     // keuze -- een badge met alleen een getal erin is een badge.
     const ico = this.$(".ico");
-    const wens = fouten.length ? "warning" : this.sjablonen_.waarde("icon", icoonBron(c));
+    const wens = fouten.length
+      ? "warning"
+      : this.sjablonen_.waarde("icon", icoonBron(c)) || (lampen ? "bulb" : "");
     if (ico.dataset.icon !== wens) {
       ico.dataset.icon = wens;
       ico.innerHTML = wens ? resolve(wens) : "";
@@ -385,11 +419,49 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
     return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "shield", auto: false }];
   }
 
+  /**
+   * De lampenteller aanzetten vult ook de kop en het icoon in.
+   *
+   * In de EDITOR en niet in de badge, en dat is met opzet. Zou de badge zelf
+   * "Lampen aan" tonen bij een leeg label, dan kon je dat label nooit meer
+   * weghalen: een leeg veld wordt uit de config geschrapt (valkuil 55), en dan
+   * is leeg niet te onderscheiden van nooit ingevuld. Zo staat het er één keer
+   * in, zichtbaar in het veld, en mag je het daarna gewoon wissen.
+   */
+  patch_(patch, replace = false) {
+    if (patch?.light_counter === true && !this.config_?.light_counter) {
+      patch = { ...patch };
+      const straks = replace ? patch : { ...this.config_, ...patch };
+      if (!straks.label) patch.label = "Lampen aan";
+      if (!straks.icon && !straks.icon_template) patch.icon = "bulb";
+    }
+    super.patch_(patch, replace);
+  }
+
   schema() {
+    const teller = Boolean(this.config_?.light_counter);
     return [
-      { name: "entity", selector: sel.entity() },
+      // Eén vinkje, en daaronder het blok met de uitzonderingen -- de vorm die
+      // hij op 28 augustus 2026 voor de presets van de camera vroeg (valkuil
+      // 33 en de vormregels in CLAUDE.md). Hij staat bovenaan omdat hij bepaalt
+      // WAT de badge is; de velden eronder volgen daaruit.
+      { name: "light_counter", selector: sel.bool() },
+      ...(teller
+        ? [
+            section(
+              "Niet meetellen",
+              "mdi:lightbulb-off-outline",
+              [{ name: "light_exclude", selector: { entity: { domain: "light", multiple: true } } }],
+              true,
+            ),
+          ]
+        : []),
+      // Een teller wijst niet naar één ding en heeft geen eigen onderste regel:
+      // die twee velden zouden iets beloven dat niet gebeurt. Wat erin staat
+      // blijft bewaard, voor als het vinkje er weer af gaat.
+      ...(teller ? [] : [{ name: "entity", selector: sel.entity() }]),
       { name: "label", selector: sel.multiline() },
-      { name: "content", selector: sel.multiline() },
+      ...(teller ? [] : [{ name: "content", selector: sel.multiline() }]),
       { name: "icon_template", selector: sel.multiline() },
       { name: "tone", selector: sel.text() },
       { name: "tap_action", selector: sel.action("more-info") },
@@ -400,6 +472,8 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
   label(s) {
     return (
       {
+        light_counter: "Lampenteller",
+        light_exclude: "Lampen die hij overslaat",
         entity: "Entiteit (optioneel)",
         label: "Bovenste regel",
         content: "Onderste regel",
@@ -413,6 +487,10 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
 
   helper(s) {
     return {
+      light_counter:
+        "Telt de lampen die aan staan. De onderste regel wordt dan het aantal, en het icoon licht op zodra er één brandt. Lichtgroepen telt hij niet mee, anders telt een lamp in een groep dubbel.",
+      light_exclude:
+        "Bijvoorbeeld een nachtlampje dat altijd brandt, of een lamp in de schuur die niet bij het huis hoort.",
       entity:
         "Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven.",
       label:
