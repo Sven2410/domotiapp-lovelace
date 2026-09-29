@@ -39,13 +39,30 @@ gedrag. `van` was daar "nu min 24 uur" (`1790598600000` in plaats van middernach
 24-uursreeks slagen nog: zonder `van` en `tot` rekent `energieReeks` zoals
 eerst. Hele suite: **1254 JS-tests groen**, en alle CI-controles lokaal groen.
 
-**In de browser: NIET gedaan.** Zie hieronder.
+**In de browser**, na zijn "breng alles uit test alles" (29 september 2026,
+21:05). Draaiende bundel gecontroleerd op de `?v=` (`9f4b5c4e9798`, gelijk aan
+schijf). Het testtabblad was het actieve tabblad in zijn venster en werd
+zichtbaar zonder dat er één toets verstuurd is (toetsenlogboek: 0 aanslagen).
+Energiesensor `sensor.power_consumption` (demo, 100 W):
+
+| | gemeten |
+|---|---|
+| energieblok op het welkomscherm | de lijn loopt tot het stipje, en daarna is het vak leeg |
+| positie van het stipje | midden op **87,85%** van de grafiek; 21:05 van 24:00 is **87,85%** |
+| "Alles bekijken" (echte klik) | opent in de testinstance de pagina van het energiedashboard (die toonde al vandaag, 00-23) |
+| sensorpagina in het groot (`htmlEnergie_(true)`, echte gegevens) | titel "Vermogen vandaag", as 00:00 · 06:00 · 12:00 · 18:00 · 24:00, stipje op 87,92% (21:06) |
+| blok met as | 00:00 · 12:00 · 24:00 |
+| kWh-teller (`sensor.total_energy_kwh`, tijdelijk) | titel "Verbruik per uur, vandaag", tegel **Vandaag 62,0 kWh** (het energiedashboard zei 61,0 kWh voor vandaag); daarna teruggezet |
+
+De sensorpagina in het groot verschijnt alleen als er GEEN energiedashboard is;
+in de testinstance is er een, dus die is uit de tekenfunctie van de kaart zelf
+gelezen en niet via een klik.
 
 ## Wat niet lukte
 
-- **De schermcontrole.** Het infoscherm tekent niets in een verborgen tabblad
-  (het meet zijn eigen maat met een ResizeObserver), en het tabblad naar voren
-  halen ging mis: de eigenaar had **Fortnite** vooraan staan, `SetForegroundWindow`
+- **De eerste poging tot een schermcontrole ging mis.** Het infoscherm tekent
+  niets in een verborgen tabblad (het meet zijn eigen maat met een
+  ResizeObserver), en bij het naar voren halen van het tabblad: de eigenaar had **Fortnite** vooraan staan, `SetForegroundWindow`
   lukte daardoor niet, en het script stuurde zijn 30 keer Ctrl+Tab naar het
   spel in plaats van naar Chrome. Direct gestopt en gemeld; zijn Chrome bleef
   onaangeroerd. Nieuwe **valkuil 60** in CLAUDE.md: nooit een toets sturen
