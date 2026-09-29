@@ -42,6 +42,7 @@ import {
   nieuwConcept,
   opslaanKan,
   wisselDag,
+  zoekEntiteiten,
   zomertijdWaarschuwing,
 } from "./editorlogica.js";
 import { vormtaal } from "../scene/vormtaal.js";
@@ -73,6 +74,9 @@ const ICOON_INFO =
 const ICOON_ZOEK =
   "M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z";
 // mdi:timer-sand, zolang de zoekopdracht loopt.
+// mdi:chevron-down en -up: het keuzeveld zegt of zijn lijst open is.
+const ICOON_NEER = "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z";
+const ICOON_OP = "M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z";
 const ICOON_BEZIG =
   "M6,2H18V8H18V8L14,12L18,16V16H18V22H6V16H6V16L10,12L6,8V8H6V2M16,16.5L12,12.5L8,16.5V20H16V16.5M12,11.5L16,7.5V4H8V7.5L12,11.5Z";
 
@@ -90,6 +94,8 @@ export class DomotiappAlarmEditor extends LitElement {
     _melding: { state: true },
     _speelt: { state: true },
     _bezig: { state: true },
+    _kiest: { state: true },
+    _filter: { state: true },
   };
 
   constructor() {
@@ -102,11 +108,22 @@ export class DomotiappAlarmEditor extends LitElement {
     this._melding = null;
     this._speelt = false;
     this._bezig = false;
+    this._kiest = null;
+    this._filter = "";
     this._afmeldenVoorbeeld = null;
     this._opEscape = (event) => {
-      if (event.key === "Escape") {
-        this._annuleren();
+      if (event.key !== "Escape") {
+        return;
       }
+      // Staat een zoeklijst open, dan sluit Escape die en niet de hele wekker.
+      // Wie in een lijst van zestig lampen typt en zich bedenkt, verwacht niet
+      // dat zijn tijd, dagen en geluid weg zijn.
+      if (this._kiest) {
+        event.stopPropagation();
+        this._openKiezer(null);
+        return;
+      }
+      this._annuleren();
     };
   }
 
@@ -611,6 +628,57 @@ export class DomotiappAlarmEditor extends LitElement {
       margin-left: auto;
       white-space: nowrap;
     }
+    /* --- het keuzeveld met zoeken (speaker en wake-up light) ---
+
+       Het was een select-element, en met zestig lampen is dat een scrollmenu waarin
+       je je lamp zoekt door te lezen. Gevraagd op 29 september 2026: "ik wil
+       bij de wakeuplight ook kunnen zoeken op naam (...) Ook bij de speaker
+       selecteren". Het veld ziet eruit als de andere velden (het zit in een
+       .vak); de lijst eronder is dezelfde als die van het geluid. */
+    .vak .keuze {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0;
+      border: 0;
+      margin: 0;
+      background: transparent;
+      color: var(--dac-ink);
+      font-family: inherit;
+      font-size: 13.5px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .keuze .naam {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .keuze .naam.leeg {
+      color: var(--dac-ink-2);
+    }
+    .keuze .icoon {
+      flex: 0 0 auto;
+    }
+    .zoekvak {
+      margin-top: 8px;
+    }
+    /* Het entity_id naast de naam: bij drie lampen die "Plafond" heten is dat
+       het verschil. Het mag krimpen, de naam gaat voor. */
+    .treffer .id {
+      margin-left: auto;
+      max-width: 45%;
+      flex: 0 1 auto;
+      color: var(--dac-ink-2);
+      font-size: 10.5px;
+    }
+    .treffer[aria-selected="true"] {
+      background: color-mix(in srgb, var(--domotiapp-accent) 22%, transparent);
+    }
     .gekozen {
       display: flex;
       align-items: center;
@@ -649,6 +717,105 @@ export class DomotiappAlarmEditor extends LitElement {
     }
   `,
   ];
+
+  /**
+   * Open of sluit de zoeklijst van een keuzeveld (`"speaker"`, `"lamp"` of null).
+   *
+   * Openen zet de focus in het zoekveld: wie een lijst van zestig lampen
+   * opent, wil typen. Het filter begint leeg, zodat de hele lijst te zien is.
+   */
+  _openKiezer(soort) {
+    this._kiest = soort;
+    this._filter = "";
+    if (soort) {
+      this.updateComplete.then(() => this.renderRoot?.querySelector(".zoekkeuze")?.focus());
+    }
+  }
+
+  /**
+   * Een keuzeveld met zoeken, in plaats van een select-element.
+   *
+   * @param {object} o
+   * @param {"speaker"|"lamp"} o.soort
+   * @param {string} o.id           het id waar het label naar wijst
+   * @param {Array} o.lijst         `{entity_id, name}` uit de integratie
+   * @param {string} o.gekozen      het entity_id dat nu gekozen is, of ""
+   * @param {string} o.leeg         wat er staat als er niets gekozen is
+   * @param {string} o.zoektekst    de placeholder van het zoekveld
+   * @param {string} [o.geen]       een keuze "niets", voor wat optioneel is
+   * @param {(id: string) => void} o.kies
+   */
+  _kiezer({ soort, id, lijst, gekozen, leeg, zoektekst, geen, kies }) {
+    const open = this._kiest === soort;
+    const naam = lijst.find((e) => e.entity_id === gekozen)?.name ?? gekozen;
+    const treffers = open ? zoekEntiteiten(lijst, this._filter) : [];
+    const kiesEnSluit = (waarde) => {
+      kies(waarde);
+      this._openKiezer(null);
+    };
+    return html`
+      <div class="vak">
+        <button
+          class="keuze"
+          id=${id}
+          type="button"
+          aria-expanded=${open ? "true" : "false"}
+          @click=${() => this._openKiezer(open ? null : soort)}
+        >
+          <span class="naam ${gekozen ? "" : "leeg"}">${gekozen ? naam : leeg}</span>
+          ${this._svg(open ? ICOON_OP : ICOON_NEER)}
+        </button>
+      </div>
+      ${open
+        ? html`<div class="vak zoekvak">
+              <input
+                class="zoekkeuze"
+                type="search"
+                .value=${this._filter}
+                placeholder=${zoektekst}
+                aria-label=${zoektekst}
+                @input=${(e) => {
+                  this._filter = e.target.value;
+                }}
+                @keydown=${(e) => {
+                  // Enter kiest de bovenste treffer: wie typt, wil niet ook nog mikken.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (treffers[0]) kiesEnSluit(treffers[0].entity_id);
+                  }
+                }}
+              />
+            </div>
+            <div class="treffers" role="listbox" aria-label=${zoektekst}>
+              ${geen && !this._filter.trim()
+                ? html`<button
+                    class="treffer"
+                    type="button"
+                    role="option"
+                    aria-selected=${gekozen ? "false" : "true"}
+                    @click=${() => kiesEnSluit("")}
+                  >
+                    <span>${geen}</span>
+                  </button>`
+                : nothing}
+              ${treffers.length === 0
+                ? html`<div class="treffer">Niets gevonden.</div>`
+                : treffers.map(
+                    (e) => html`<button
+                      class="treffer"
+                      type="button"
+                      role="option"
+                      aria-selected=${e.entity_id === gekozen ? "true" : "false"}
+                      @click=${() => kiesEnSluit(e.entity_id)}
+                    >
+                      <span>${e.name}</span>
+                      <span class="id">${e.entity_id}</span>
+                    </button>`,
+                  )}
+            </div>`
+        : nothing}
+    `;
+  }
 
   _svg(pad) {
     return html`<svg class="icoon" viewBox="0 0 24 24" aria-hidden="true">
@@ -730,20 +897,15 @@ export class DomotiappAlarmEditor extends LitElement {
         <label class="veld" for="speaker">Speaker</label>
         ${speakerMelding
           ? html`<div class="uitleg">${this._svg(ICOON_INFO)}<span>${speakerMelding}</span></div>`
-          : html`<div class="vak">
-              <select
-                id="speaker"
-                .value=${c.speaker}
-                @change=${(e) => this._zet({ speaker: e.target.value })}
-              >
-                <option value="">Kies een speaker…</option>
-                ${(speakers?.entities ?? []).map(
-                  (s) => html`<option value=${s.entity_id} ?selected=${s.entity_id === c.speaker}>
-                    ${s.name}
-                  </option>`,
-                )}
-              </select>
-            </div>`}
+          : this._kiezer({
+              soort: "speaker",
+              id: "speaker",
+              lijst: speakers?.entities ?? [],
+              gekozen: c.speaker,
+              leeg: "Kies een speaker…",
+              zoektekst: "Zoek een speaker op naam",
+              kies: (waarde) => this._zet({ speaker: waarde }),
+            })}
       </div>
 
       <div class="blok">
@@ -840,30 +1002,24 @@ export class DomotiappAlarmEditor extends LitElement {
         ${lampMelding
           ? html`<div class="uitleg">${this._svg(ICOON_INFO)}<span>${lampMelding}</span></div>`
           : html`
-              <div class="vak">
-                <select
-                  id="lamp"
-                  @change=${(e) =>
-                    this._zet({
-                      light: e.target.value
-                        ? {
-                            entity_id: e.target.value,
-                            brightness_pct: c.light?.brightness_pct ?? STANDAARD_HELDERHEID_PCT,
-                          }
-                        : null,
-                    })}
-                >
-                  <option value="">Geen lamp</option>
-                  ${(lampen?.entities ?? []).map(
-                    (l) => html`<option
-                      value=${l.entity_id}
-                      ?selected=${l.entity_id === c.light?.entity_id}
-                    >
-                      ${l.name}
-                    </option>`,
-                  )}
-                </select>
-              </div>
+              ${this._kiezer({
+                soort: "lamp",
+                id: "lamp",
+                lijst: lampen?.entities ?? [],
+                gekozen: c.light?.entity_id ?? "",
+                leeg: "Geen lamp",
+                zoektekst: "Zoek een lamp op naam",
+                geen: "Geen lamp",
+                kies: (waarde) =>
+                  this._zet({
+                    light: waarde
+                      ? {
+                          entity_id: waarde,
+                          brightness_pct: c.light?.brightness_pct ?? STANDAARD_HELDERHEID_PCT,
+                        }
+                      : null,
+                  }),
+              })}
               ${c.light
                 ? html`<label class="veld" style="margin-top:10px" for="helderheid">
                       Helderheid: ${c.light.brightness_pct}%

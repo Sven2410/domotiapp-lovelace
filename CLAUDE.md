@@ -388,6 +388,7 @@ npm run build              # bundelt src/ -> custom_components/.../frontend/
 npm run verify             # faalt als de gecommitte bundel afwijkt van de bron
 npm run check:registratie  # bewaakt de registratieregel (zie valkuil 1)
 npm run check:css          # hover op aanraakschermen + backticks in CSS (14, 16)
+npm run check:controls     # elk select-element in de wekkereditor in een .vak
 npm test                   # JS-unittests (node --test), geen jsdom
 ```
 
@@ -399,8 +400,10 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/dev/domotiapp-lovelace:/app" -w /app \
   python:3.14-slim sh -c "pip install -q -r requirements-test.txt && python -m pytest -q"
 ```
 
-CI draait alle drie: bundelvergelijking + registratieregel, JS-tests,
-Python-tests.
+CI draait bundelvergelijking, registratieregel, `check:controls`, `check:css`,
+de JS-tests en de Python-tests. **Draai ze vóór een PR allemaal lokaal**: op
+29 september 2026 viel `check:controls` in CI om omdat hij niet in dit rijtje
+stond -- hij telt `<select` in de bron, ook in een commentaar.
 
 ---
 
@@ -823,6 +826,18 @@ die daar niet staan:
    for (const n of await caches.keys()) await caches.delete(n);
    ```
    Daarna pas meten, en de sha256 vergelijken met het bestand op schijf.
+
+   **Maar een gelijke sha256 bewijst niet dat die code DRAAIT.** Op
+   29 september 2026 was de sha256 van een verse fetch gelijk aan schijf, terwijl
+   de pagina nog de vorige versie draaide: de server geeft bij ELKE `?v=` het
+   bestand dat nu op schijf staat, dus een nieuwe fetch meet de server, niet de
+   module die al geladen is. Het herladen van de config entry was stil mislukt
+   (401, verlopen token in `c.auth.accessToken`). Controleer daarom ook de
+   `?v=` in `performance.getEntriesByType("resource")` tegen de eerste twaalf
+   tekens van de hash op schijf, of kijk of een nieuwe methode bestaat
+   (`customElements.get(tag).prototype.nieuweMethode`). En herlaad de entry
+   met `hass.callApi("POST", "config/config_entries/entry/<id>/reload")`: die
+   haalt zelf een vers token.
 
 16. **Geen backticks in een CSS-commentaar.** Sinds 28 augustus 2026 draait
    `check:css` bij ELKE `npm run build`, want die dag ging het opnieuw mis en de
