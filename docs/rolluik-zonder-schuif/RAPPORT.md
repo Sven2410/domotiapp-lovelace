@@ -81,7 +81,7 @@ npm run check:registratie  OK
 npm run check:controls     OK
 npm run check:css          OK
 npm test                   1258 van 1258 groen
-pytest (Docker)            zie de PR
+pytest (Docker)            726 van 726 groen
 ```
 
 ## Samenvatting
