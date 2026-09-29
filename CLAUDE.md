@@ -1355,6 +1355,32 @@ die daar niet staan:
    naar voren". Dat was toestemming voor Chrome, niet voor wat er toevallig
    vooraan staat.
 
+   En kijk eerst WAT er vooraan staat voordat je iets naar voren haalt. Op
+   30 september 2026 stond het Chrome-venster met het tabblad er al; lezen van
+   `GetForegroundWindow()` (zonder één toets) was genoeg om dat te zien.
+
+61. **De browsertool kapt lange uitvoer af, dus haal grote gegevens er via Home
+   Assistant uit.** Een `javascript_tool`-antwoord houdt na een paar duizend
+   tekens op (`[TRUNCATED]`), en alles wat op een token of een query string lijkt
+   wordt geblokkeerd (valkuil 5). Wat wél werkt: in de pagina
+   `hassConnection.conn.sendMessagePromise({type: "frontend/set_user_data", key,
+   value})`, en daarna in Python over de websocket `frontend/get_user_data`
+   lezen. Zo zijn op 29 september 2026 honderden CSS-variabelen, een opname van
+   alle WS-verzoeken van de kaarten en de vertalingen van HA naar buiten
+   gekomen, zonder ze in het gesprek te plakken.
+
+   Een opname van wat kaarten aan de server vragen maak je door
+   `conn.sendMessagePromise` en `conn.subscribeMessage` in de pagina te omwikkelen
+   en daarna elke pop-up te openen: de kaarten in een Bubble-pop-up vragen pas
+   iets als hij opengaat.
+
+62. **Python op Windows schrijft Windows-regeleindes.** `open(p, "w")` maakt van
+   elke `\n` een `\r\n`; wie zo een bronbestand bewerkt, verandert ongemerkt elke
+   regel (Git waarschuwt met "CRLF will be replaced by LF"). Schrijf met
+   `newline="\n"`, of lees en schrijf binair. En `re.sub` met een Windows-pad in
+   de VERVANGING geeft `bad escape \d`: gebruik daar een vervangfunctie, of de
+   Edit-tool (hetzelfde soort val als valkuil 13).
+
 ---
 
 ## Projectstand
@@ -1419,8 +1445,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 10 september 2026 (0.42.0):** 1035 JS-tests en 668 Python-tests,
-alle groen; bundel 802.447 bytes.
+**Tellingen op 30 september 2026 (0.53.1):** 1258 JS-tests en 726 Python-tests,
+alle groen; bundel 885.320 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in
