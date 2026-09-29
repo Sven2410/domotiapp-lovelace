@@ -42,6 +42,7 @@ import {
   nieuwConcept,
   opslaanKan,
   wisselDag,
+  naamVan,
   zoekEntiteiten,
   zomertijdWaarschuwing,
 } from "./editorlogica.js";
@@ -667,15 +668,6 @@ export class DomotiappAlarmEditor extends LitElement {
     .zoekvak {
       margin-top: 8px;
     }
-    /* Het entity_id naast de naam: bij drie lampen die "Plafond" heten is dat
-       het verschil. Het mag krimpen, de naam gaat voor. */
-    .treffer .id {
-      margin-left: auto;
-      max-width: 45%;
-      flex: 0 1 auto;
-      color: var(--dac-ink-2);
-      font-size: 10.5px;
-    }
     .treffer[aria-selected="true"] {
       background: color-mix(in srgb, var(--domotiapp-accent) 22%, transparent);
     }
@@ -747,7 +739,8 @@ export class DomotiappAlarmEditor extends LitElement {
    */
   _kiezer({ soort, id, lijst, gekozen, leeg, zoektekst, geen, kies }) {
     const open = this._kiest === soort;
-    const naam = lijst.find((e) => e.entity_id === gekozen)?.name ?? gekozen;
+    const keuze = lijst.find((e) => e.entity_id === gekozen);
+    const naam = keuze ? naamVan(keuze) : gekozen;
     const treffers = open ? zoekEntiteiten(lijst, this._filter) : [];
     const kiesEnSluit = (waarde) => {
       kies(waarde);
@@ -808,8 +801,7 @@ export class DomotiappAlarmEditor extends LitElement {
                       aria-selected=${e.entity_id === gekozen ? "true" : "false"}
                       @click=${() => kiesEnSluit(e.entity_id)}
                     >
-                      <span>${e.name}</span>
-                      <span class="id">${e.entity_id}</span>
+                      <span>${naamVan(e)}</span>
                     </button>`,
                   )}
             </div>`

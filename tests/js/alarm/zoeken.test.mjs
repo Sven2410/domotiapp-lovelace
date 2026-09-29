@@ -49,13 +49,17 @@ describe("zoekEntiteiten() — NIEUW GEDRAG", () => {
     assert.deepEqual(zoek(LAMPEN, "café"), ["light.cafe_hoek"]);
   });
 
-  it("vindt ook op het entity_id, voor een lamp met een nietszeggende naam", () => {
-    assert.deepEqual(zoek(LAMPEN, "hue_color"), ["light.hue_color_lamp_7"]);
+  it("zoekt alleen op de naam die je ziet, niet op het entity_id — NIEUW GEDRAG (0.52.1)", () => {
+    // "ik wil niet de entiteit naam zien alleen de friendly name". Wat je niet
+    // ziet, hoort ook niet te bepalen wat er in de lijst staat.
+    assert.deepEqual(zoek(LAMPEN, "hue_color"), []);
+    assert.deepEqual(zoek(LAMPEN, "leeslamp"), ["light.hue_color_lamp_7"]);
   });
 
   it("niets gevonden is een lege lijst, en een kapotte lijst ook", () => {
     assert.deepEqual(zoek(LAMPEN, "garage"), []);
     assert.deepEqual(zoek(undefined, "x"), []);
+    // Zonder naam is het entity_id de naam: een lege regel is niet te kiezen.
     assert.deepEqual(zoek([{ entity_id: "light.x" }], "light"), ["light.x"]);
   });
 });
