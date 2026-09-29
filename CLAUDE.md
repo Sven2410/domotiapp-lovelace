@@ -887,6 +887,16 @@ die daar niet staan:
    precies dat: de service worker en de caches wissen, tabblad sluiten, vers
    tabblad. Daarna bouwde alles weer.
 
+   **Derde bijstelling, 29 september 2026: kijk eerst of het tabblad VERBORGEN
+   is.** Na het wissen van de service worker bouwde geen enkele view meer, ook
+   "Thuis" niet, ook niet in een vers tabblad en ook niet na
+   `docker restart ha-lovelace`. `visibilityState` was `hidden`. Zodra het
+   tabblad zichtbaar werd, stond de view er binnen een tel: 1 view, 3 secties,
+   2 badges. Een eerste lading in een verborgen tabblad gaat soms wel goed, dus
+   dat het eerder die dag wél bouwde zegt niets. Staat `visibilityState` op
+   `hidden`, haal het tabblad dan eerst naar voren (of vraag het hem) voordat je
+   iets anders probeert.
+
    **En hoe je in vijf minuten weet dat het niet aan je kaart ligt.** Deze fout
    is die dag drie keer verkeerd gediagnosticeerd (de nieuwe config, de
    sections-view, de kaart zelf). Twee toetsen die het meteen uitwijzen:
