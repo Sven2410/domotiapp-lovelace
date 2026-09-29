@@ -380,10 +380,16 @@ const vergelijkbaar = (tekst) =>
  * op naam nu heb ik bij een ander huishouden heel veel lampen entitien in een
  * scroll menu. Ook bij de speaker selecteren"*.
  *
- * Elk woord moet ergens in de naam of het entity_id staan, in willekeurige
- * volgorde: "slaap plafond" vindt "Plafond slaapkamer". Wat met de zoekterm
- * BEGINT komt bovenaan; verder blijft de volgorde van de lijst staan, want die
- * komt al gesorteerd uit de integratie.
+ * Elk woord moet ergens in de NAAM staan, in willekeurige volgorde: "slaap
+ * plafond" vindt "Plafond slaapkamer". Wat met de zoekterm BEGINT komt
+ * bovenaan; verder blijft de volgorde van de lijst staan, want die komt al
+ * gesorteerd uit de integratie.
+ *
+ * Alleen de naam, en niet het entity_id. In 0.52.0 zocht hij op allebei en
+ * stond het entity_id naast de naam; de eigenaar wilde dat niet zien (*"ik wil
+ * niet de entiteit naam zien alleen de friendly name"*). Wie het entity_id niet
+ * ziet, snapt ook niet waarom "sven" de lamp "Bureaulamp" vindt -- omdat die
+ * `light.bureaulamp_sven_switch_0` heet. Zoeken en zien horen gelijk op te gaan.
  *
  * @param {{entity_id: string, name?: string}[]} lijst
  * @param {string} term
@@ -393,10 +399,16 @@ export function zoekEntiteiten(lijst, term) {
   const woorden = vergelijkbaar(term).split(/\s+/).filter(Boolean);
   if (!woorden.length) return [...alle];
   const passend = alle.filter((e) => {
-    const hooiberg = `${vergelijkbaar(e?.name)} ${vergelijkbaar(e?.entity_id)}`;
-    return woorden.every((w) => hooiberg.includes(w));
+    const naam = vergelijkbaar(naamVan(e));
+    return woorden.every((w) => naam.includes(w));
   });
   const begin = vergelijkbaar(term).trim();
-  const vooraan = (e) => vergelijkbaar(e?.name).startsWith(begin);
+  const vooraan = (e) => vergelijkbaar(naamVan(e)).startsWith(begin);
   return [...passend.filter(vooraan), ...passend.filter((e) => !vooraan(e))];
 }
+
+/**
+ * De naam die de lijst toont: de friendly name. Alleen als die er niet is het
+ * entity_id, want een regel zonder tekst is niet te kiezen.
+ */
+export const naamVan = (e) => e?.name || e?.entity_id || "";
