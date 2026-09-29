@@ -14,7 +14,7 @@ import { LitElement, css, html, nothing } from "lit";
 
 import { resolve } from "../icons.js";
 import { vormtaal } from "./vormtaal.js";
-import { gemetenRijen, meetRaster, volgRaster } from "../rasterhoogte.js";
+import { meetRaster, opgegevenRijen, volgRaster } from "../rasterhoogte.js";
 
 import { bouwServiceOproepen, voerUit } from "./apply-scene.js";
 import { meldingNieuweLampen, nieuweLampen } from "./lamp-besturing.js";
@@ -286,7 +286,7 @@ class DomotiappSceneCard extends LitElement {
     // De ondergrens is gemeten -- zie gemetenRijen in rasterhoogte.js. Zonder
     // dat mag het vak kleiner gesleept worden dan de inhoud en schildert de
     // kaart over zijn buurman heen.
-    const rijen = gemetenRijen(this.renderRoot?.querySelector?.(".card")) ?? 1;
+    const rijen = opgegevenRijen(this.renderRoot?.querySelector?.(".card"), 1);
     return { rows: "auto", columns: "full", min_columns: 6, min_rows: rijen };
   }
 

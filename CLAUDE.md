@@ -744,9 +744,18 @@ die daar niet staan:
    kunnen groeien op `rows: "auto"` en duwt `src/rasterhoogte.js` hun inhoud op
    naar 56, 120, 184 of 248. Twee dingen die daarbij gemeten zijn op
    20 augustus 2026:
-   - Home Assistant vraagt `getGridOptions()` **alleen opnieuw bij een nieuwe
-     `hass`**. Niet op `ll-rebuild`, `card-updated`, `iron-resize` of een
-     venster-resize -- alle vier geprobeerd, teller bleef staan.
+   - Home Assistant vraagt `getGridOptions()` **niet uit zichzelf opnieuw**
+     als een kaart van hoogte verandert: alleen bij een nieuwe `hass`, en niet
+     op `ll-rebuild`, `iron-resize` of een venster-resize. **Wél op een
+     `card-updated` die vanaf de KAART zelf opborrelt** (`bubbles` en
+     `composed`): elke sectie hangt daar een luisteraar voor aan zijn
+     `hui-card`. Dat stond hier eerst ook als "werkt niet", en dat lag aan de
+     meting. Sinds 0.48.1 doet `meetRaster` dat zelf, maar alleen als Home
+     Assistant een ander aantal rijen hoorde dan er nu gemeten is
+     (`opgegevenRijen`, `loopAchter` en `vraagOpnieuw` in `rasterhoogte.js`).
+     Zonder dat liep een tv-kaart in een pop-up over de separator eronder: de
+     kaart was gemeten terwijl hij dicht was, en er kwam na het openen geen
+     `hass` meer. Zie `docs/kaart-over-de-separator/RAPPORT.md`.
    - Een `ResizeObserver` meldt **niets** als een kind op `display: none` gaat.
      De kleurstrips van een lamp die uitging verdwenen wel, maar de kaart bleef
      op 120px staan. Daarom roept elke kaart `meetRaster()` zelf aan in

@@ -70,7 +70,7 @@ import {
   subtitel,
 } from "./weergave.js";
 import { vormtaal } from "../scene/vormtaal.js";
-import { gemetenRijen, meetRaster, volgRaster } from "../rasterhoogte.js";
+import { meetRaster, opgegevenRijen, volgRaster } from "../rasterhoogte.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -167,7 +167,7 @@ class DomotiappAlarmCard extends LitElement {
    */
   getGridOptions() {
     // De ondergrens is gemeten -- zie gemetenRijen in rasterhoogte.js.
-    const rijen = gemetenRijen(this.renderRoot?.querySelector?.(".card")) ?? 1;
+    const rijen = opgegevenRijen(this.renderRoot?.querySelector?.(".card"), 1);
     return { rows: "auto", columns: 12, min_columns: 6, min_rows: rijen };
   }
 

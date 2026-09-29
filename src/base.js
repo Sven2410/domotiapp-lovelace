@@ -24,7 +24,7 @@
 
 import { baseCss, sheet, tokens } from "./theme.js";
 import { entitiesChanged } from "./ha.js";
-import { gemetenRijen, volgRaster } from "./rasterhoogte.js";
+import { opgegevenRijen, volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldBadgeInKiezer, meldInKiezer } from "./registratie.js";
 
 const hostCss = /* css */ `
@@ -355,11 +355,12 @@ export class DacCard extends HTMLElement {
    * Zie `gemetenRijen` in rasterhoogte.js voor waarom dit moet: zonder eerlijke
    * ondergrens mag iemand het vak kleiner slepen dan de inhoud, en dan schildert
    * de kaart over zijn buurman heen. De schatting is er voor de allereerste
-   * aanroep, vóór de eerste meting; Home Assistant vraagt het bij de volgende
-   * `hass` opnieuw en dan klopt het getal.
+   * aanroep, vóór de eerste meting. Klopt die schatting niet, dan laat
+   * `meetRaster` Home Assistant het meteen opnieuw vragen -- zie
+   * `opgegevenRijen` in rasterhoogte.js.
    */
   minRijen_(selector = ".card", schatting = 1) {
-    return gemetenRijen(this.$(selector)) ?? schatting;
+    return opgegevenRijen(this.$(selector), schatting);
   }
 }
 

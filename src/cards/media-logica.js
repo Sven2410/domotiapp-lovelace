@@ -213,6 +213,44 @@ export function bronVoor(st, { tonen = true } = {}) {
 }
 
 /**
+ * Hoeveel rasterrijen de rijvorm naar schatting inneemt, vóórdat hij gemeten is.
+ *
+ * Een SCHATTING: de echte ondergrens is de meting (`opgegevenRijen` in
+ * rasterhoogte.js). Maar Home Assistant vraagt vaak al vóór die meting, en wat
+ * hij dan hoort bepaalt het vak waar de kaart eerst in staat.
+ *
+ * Dezelfde voorwaarden als `paintVolume_` en `paintExtra_`, en dat is geen
+ * toeval. De schatting die hier stond keek alleen naar het volume van de
+ * speler zelf. Een tv-ontvanger met een soundbar eronder (`volume_entity`)
+ * of met zenders (de bronknop staat op de volumeregel) kreeg zo één rij te
+ * weinig -- en dat is precies de kaart van de schermafdruk van
+ * 29 september 2026.
+ *
+ * Drie regels is 184px, en dat blijft het met de speakerbalk erbij: de regels
+ * zijn 40 + 30 + 30 met 7px ertussen en 14px binnenmarge, samen 128; de balk
+ * maakt er 167 van. Vandaar de bovengrens van drie.
+ *
+ * @param {object} config de kaartconfig
+ * @param {object|null} st de speler
+ * @param {object|null} [gst] de geluidsentiteit, als die er apart is
+ */
+export function rijenVoor(config, st, gst = st) {
+  const dood = !st || st.state === "unavailable";
+  const volume = config?.show_volume === false || dood ? [] : volumeVoor(gst);
+  const bron = dood ? null : bronVoor(st, { tonen: config?.show_source !== false });
+  const extra =
+    dood || config?.show_controls === false
+      ? []
+      : extraVoor(st, {
+          zoeken: config?.show_search !== false,
+          sleep: config?.sleep_timer === true,
+        });
+  const regels =
+    1 + (volume.length || bron ? 1 : 0) + (extra.length ? 1 : 0) + (config?.speaker_select ? 1 : 0);
+  return Math.min(3, regels);
+}
+
+/**
  * Wat er onder de naam staat.
  *
  * Een titel met een artiest erachter als het muziek is, de zender als het

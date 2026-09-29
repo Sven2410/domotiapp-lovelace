@@ -19,12 +19,13 @@
  * woorden in `scene-card.js` en `alarm-card.js`, en het is de reden dat die twee
  * `"auto"` opgeven.
  *
- * Bovendien vraagt Home Assistant `getGridOptions()` alleen opnieuw als de kaart
- * een nieuwe `hass` krijgt. Op 20 augustus 2026 gemeten: bij een
+ * Bovendien vraagt Home Assistant `getGridOptions()` niet uit zichzelf opnieuw
+ * als de kaart van hoogte verandert. Op 20 augustus 2026 gemeten: bij een
  * toestandswijziging wél (teller ging 0 -> 1 -> 2), maar op `ll-rebuild`,
- * `card-updated`, `iron-resize` en een venster-resize géén. Een kaart die
- * hoger wordt zonder toestandswijziging -- een foutmelding, een icoon dat
- * inlaadt -- kan zijn eigen rijaantal dus niet corrigeren.
+ * `iron-resize` en een venster-resize géén. Een `card-updated` stond toen ook in
+ * dat rijtje, maar dat bleek op 29 september 2026 aan de meting te liggen: van
+ * de kaart zelf afgevuurd, met `bubbles` en `composed`, doet hij het wél. Zie
+ * `vraagOpnieuw` hieronder.
  *
  * ## Wat dit bestand doet
  *
@@ -100,6 +101,68 @@ export function meetRaster(vak, pogingen = 4) {
   const doel = `${stabielDoel(vak, opRaster(px))}px`;
   if (vak.style.getPropertyValue("--dac-raster") === doel) return;
   vak.style.setProperty("--dac-raster", doel);
+  if (loopAchter(vak)) vraagOpnieuw(vak);
+}
+
+/**
+ * Het aantal rijen dat Home Assistant het laatst van dit vak heeft gehoord.
+ *
+ * Een `WeakMap` en geen eigenschap op het element, net als de geschiedenis
+ * hieronder: gaat de kaart weg, dan gaat dit mee.
+ */
+const opgegeven = new WeakMap();
+
+/**
+ * De ondergrens die een kaart aan Home Assistant opgeeft: gemeten als dat kan,
+ * anders de schatting van de kaart zelf. En onthoud wat er is opgegeven.
+ *
+ * Dat onthouden is het hele punt. Home Assistant vraagt `getGridOptions()` op
+ * wanneer HIJ wil, en dat is vaak vóórdat de kaart zijn inhoud heeft gemeten.
+ * Gemeld op 29 september 2026 met een schermafdruk: een tv-kaart met een
+ * volumeregel en een bronknop, en de separator eronder dwars over die regels
+ * heen. Nagespeeld: de kaart gaf bij het opbouwen zijn schatting op (2 rijen),
+ * `grid_options: {rows: 1}` werd daarop geklemd tot een vak van 120px, en de
+ * kaart tekende daarna 184px. De gemeten 3 stond klaar, maar er werd niet meer
+ * naar gevraagd.
+ */
+export function opgegevenRijen(vak, schatting = 1) {
+  const rijen = gemetenRijen(vak) ?? schatting;
+  if (vak && typeof vak === "object") opgegeven.set(vak, rijen);
+  return rijen;
+}
+
+/**
+ * Heeft Home Assistant een ANDER aantal rijen gehoord dan er nu gemeten is?
+ *
+ * Alleen dan hoort hij het opnieuw te vragen. Een vak waar nooit naar gevraagd
+ * is, loopt nergens achter: dat is een kaart in een masonry-view of een stapel,
+ * waar Home Assistant geen rijen klemt. Daar een seintje geven zou juist kwaad
+ * doen -- de masonry-view herverdeelt dan zijn kolommen, en elke kaart die
+ * verhuist (een camerabeeld) begint opnieuw.
+ */
+export function loopAchter(vak) {
+  if (!opgegeven.has(vak)) return false;
+  const nu = gemetenRijen(vak);
+  return nu !== null && nu !== opgegeven.get(vak);
+}
+
+/**
+ * Laat Home Assistant de rasteropties van deze kaart opnieuw ophalen.
+ *
+ * Elke sectie hangt aan elke `hui-card` een luisteraar op `card-updated`, en
+ * die tekent de sectie opnieuw -- met een verse `getGridOptions()` voor elke
+ * kaart erin. Onze kaart is een gewoon kind van die `hui-card` (die heeft geen
+ * eigen shadow root), dus een gebeurtenis die opborrelt komt er vanzelf langs.
+ * `composed` voor het geval het vak dieper zit dan de eerste shadow root.
+ *
+ * Gemeten op 29 september 2026 in de testinstance: vak 120px en kaart 184px
+ * vóór het seintje, vak 184px en de separator 64px lager erna, met twee
+ * aanroepen van `getGridOptions()` in dat halve seconde.
+ */
+export function vraagOpnieuw(vak) {
+  const host = vak?.getRootNode?.()?.host;
+  if (typeof host?.dispatchEvent !== "function") return;
+  host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
 }
 
 /**
