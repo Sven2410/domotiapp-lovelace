@@ -89,6 +89,14 @@ Het toetsenlogboek bevat alleen mijn eigen aanslagen.
   daar mogelijk typt, heb ik niet gedaan. Zijn Chrome-venster toont nog het
   testtabblad; één keer Ctrl+Shift+Tab daarin brengt het zijne terug.
 
+- **CI viel eerst om** op `check:controls`: die telt `<select` in de bron,
+  ook in commentaar, en ik had in twee commentaarregels "in plaats van een
+  <select>" geschreven. Herschreven, en alle zes de CI-controles lokaal
+  gedraaid. Omdat één van die regels in een CSS-sjabloon staat, veranderde de
+  bundel daardoor met 6 bytes (`0421ec…` gemeten, `6b2d3c…` uitgebracht); alleen
+  die commentaartekst verschilt. `check:controls` staat nu ook in *Commando's*
+  in CLAUDE.md.
+
 ## Aannames
 
 - Dat zoeken op het entity_id ook mag. Hij vroeg "op naam", maar bij een lamp

@@ -388,6 +388,7 @@ npm run build              # bundelt src/ -> custom_components/.../frontend/
 npm run verify             # faalt als de gecommitte bundel afwijkt van de bron
 npm run check:registratie  # bewaakt de registratieregel (zie valkuil 1)
 npm run check:css          # hover op aanraakschermen + backticks in CSS (14, 16)
+npm run check:controls     # elk select-element in de wekkereditor in een .vak
 npm test                   # JS-unittests (node --test), geen jsdom
 ```
 
@@ -399,8 +400,10 @@ MSYS_NO_PATHCONV=1 docker run --rm -v "C:/dev/domotiapp-lovelace:/app" -w /app \
   python:3.14-slim sh -c "pip install -q -r requirements-test.txt && python -m pytest -q"
 ```
 
-CI draait alle drie: bundelvergelijking + registratieregel, JS-tests,
-Python-tests.
+CI draait bundelvergelijking, registratieregel, `check:controls`, `check:css`,
+de JS-tests en de Python-tests. **Draai ze vóór een PR allemaal lokaal**: op
+29 september 2026 viel `check:controls` in CI om omdat hij niet in dit rijtje
+stond -- hij telt `<select` in de bron, ook in een commentaar.
 
 ---
 

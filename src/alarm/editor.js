@@ -630,7 +630,7 @@ export class DomotiappAlarmEditor extends LitElement {
     }
     /* --- het keuzeveld met zoeken (speaker en wake-up light) ---
 
-       Het was een <select>, en met zestig lampen is dat een scrollmenu waarin
+       Het was een select-element, en met zestig lampen is dat een scrollmenu waarin
        je je lamp zoekt door te lezen. Gevraagd op 29 september 2026: "ik wil
        bij de wakeuplight ook kunnen zoeken op naam (...) Ook bij de speaker
        selecteren". Het veld ziet eruit als de andere velden (het zit in een
@@ -733,7 +733,7 @@ export class DomotiappAlarmEditor extends LitElement {
   }
 
   /**
-   * Een keuzeveld met zoeken, in plaats van een <select>.
+   * Een keuzeveld met zoeken, in plaats van een select-element.
    *
    * @param {object} o
    * @param {"speaker"|"lamp"} o.soort
