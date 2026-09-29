@@ -466,6 +466,7 @@ andersom:
 | waar de instellingen vandaan komen | `hass.data[LOVELACE_DATA].dashboards`, per dashboard `async_load(False)`, door de hele boom gezocht naar `custom:domotiapp-meldingen-card` (ook in stapels en pop-ups) |
 | wanneer er gelezen wordt | bij het opstarten, bij `lovelace_updated`, elk uur, en vlak voor het versturen |
 | welke kaarten één melding zijn | gelijke `id`, standaard de soort (`afval`); personen worden samengevoegd |
+| welke soorten er op een kaart aan staan | `afval: true/false`; zonder die sleutel is de kaart van vóór 0.50.0 en wint `soort` (standaard afval). **Deze regel staat twee keer**, als `soortAan` in `meldingen-logica.js` en `soort_aan` in `kaarten.py`, en ze moeten gelijk blijven: wat de kaart als aan toont, hoort de server te versturen |
 | wat de server zelf bewaart | alleen wie er aan staat, "staat buiten" en "vandaag al verstuurd" |
 
 `LOVELACE_DATA` is interne Home Assistant. `tests/meldingen/test_kaarten.py`
@@ -1332,7 +1333,7 @@ met **vierentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
-| Herinneringen | **meldingen** (per persoon een schakelaar; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
+| Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera** |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
