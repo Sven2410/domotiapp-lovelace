@@ -39,7 +39,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 
 from .afval import tijd_geldig
-from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORTEN, STANDAARD_TIJD
+from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, STANDAARD_TIJD
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,11 +85,28 @@ def zoek_kaarten(knoop: Any) -> list[dict[str, Any]]:
     return gevonden
 
 
+def soort_aan(kaart: dict[str, Any], soort: str) -> bool:
+    """Staat deze soort aan op deze kaart?
+
+    Sinds 0.50.0 is de kaart algemeen en heeft elke soort een eigen schakelaar:
+    `afval: true`. Staat die er niet, dan is de kaart van daarvoor, toen hij
+    één soort WAS -- en die stond in `soort`, met afval als standaard. Precies
+    zo leest `soortAan` in meldingen-logica.js het, en dat moet gelijk blijven:
+    wat de kaart als aan toont, hoort hier verstuurd te worden.
+    """
+    waarde = kaart.get(soort)
+    if isinstance(waarde, bool):
+        return waarde
+    return str(kaart.get("soort") or SOORT_AFVAL) == soort
+
+
 def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
-    """Een melding uit één kaartconfig, of None als hij niets kan versturen."""
-    soort = str(kaart.get("soort") or SOORTEN[0])
-    if soort not in SOORTEN:
+    """De afvalmelding uit één kaartconfig, of None als die daar niet aan staat."""
+    soort = SOORT_AFVAL
+    if not soort_aan(kaart, soort):
         return None
+    # Onder dit id staat al opgeslagen wie er aan en uit staat, dus het blijft
+    # wat het was: `id` uit de config, of anders de soort.
     ident = str(kaart.get("id") or soort).strip() or soort
 
     sensoren: dict[str, str] = {}

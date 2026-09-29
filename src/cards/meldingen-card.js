@@ -1,90 +1,114 @@
 /**
- * DomotiApp Meldingen: per persoon een schakelaar voor een herinnering.
+ * DomotiApp Meldingen: de personen van het huis, en per persoon een potlood.
  *
- * Gevraagd op 26 september 2026, met een schermafdruk van zijn eigen versie:
- * een kop "Afval notificaties" en vijf rijen met een naam en een schakelaar,
- * elk aan een eigen `input_boolean`, en daarachter een automatisering die om
- * 07:30 en 19:30 naar vijf vaste telefoons stuurde. *"Dat is eigenlijk voor
- * elke afval meldingen hetzelfde."*
+ * ## Hoe hij zo geworden is
  *
- * WAT DE KAART DOET EN WAT NIET
+ * In 0.48.0 (26 september 2026) was dit een afvalkaart: een kop "Afvalmeldingen"
+ * met wat er opgehaald werd, en per persoon een schakelaar. Dezelfde avond
+ * vroeg de eigenaar het algemener: *"Ik wil een algemeen meldingen scherm zoals
+ * je nu hebt bij afvalmeldingen. Maar als je op het potlootje klikt daar staat
+ * nu een schakelaar dus dat moet veranderen in potlootje, Dat hij dan een pop
+ * up opent van die persoon en dat je dan vinkjes kan aan en uit zetten. (...)
+ * Afvalmeldingen met het icon moet dan bovenaan ook weg. Dus puur een kaart met
+ * de personen en het potlootje."*
+ *
+ * Dus sinds 0.50.0:
+ *
+ * - de kaart toont ALLEEN de personen, met per persoon een potlood;
+ * - het potlood (of de hele rij) opent `meldingen-scherm.js`: die persoon, met
+ *   per soort melding een vinkje;
+ * - welke soorten er zijn, staat in de editor: per soort een schakelaar met de
+ *   instellingen eronder. Voorlopig is er één, Afval.
+ *
+ * ## Wat de kaart doet en wat niet
  *
  * De kaart VERSTUURT niets. Dat doet de integratie (`meldingen/` aan de
  * serverkant), die de instellingen van deze kaart zelf uit de opgeslagen
- * dashboards leest. De kaart laat zien wie er aan staat, zet dat om, en zegt
- * in de kop wat er komt. Daardoor zijn er geen helpers meer nodig: wie je
- * toevoegt, staat aan.
+ * dashboards leest. De kaart laat zien wie er iets krijgt en zet dat om.
  *
- * WAAROM EEN PERSOON EN GEEN TELEFOON
+ * ## Waarom een persoon en geen telefoon
  *
  * Zelfde afspraak als bij de camera: `notify.mobile_app_iphone_van_sven` is
- * geen naam die iemand onthoudt, en hij verandert zodra de telefoon anders
- * gaat heten. De serverkant zoekt de telefoon bij de persoon. Vindt hij er
- * geen, dan zegt de rij dat -- anders krijgt iemand stil geen melding en ziet
- * niemand waarom.
+ * geen naam die iemand onthoudt, en hij verandert zodra de telefoon anders gaat
+ * heten. De serverkant zoekt de telefoon bij de persoon. Vindt hij er geen, dan
+ * staat dat op de rij -- anders krijgt iemand stil niets en ziet niemand waarom.
  *
- * DE SOORT
+ * ## Oude kaarten
  *
- * Voorlopig alleen Afval. De keuzelijst staat er toch, omdat de eigenaar hem
- * zo vroeg: de kaart is bedoeld voor meer soorten herinneringen, en wie er
- * straks een tweede kiest hoeft geen andere kaart te zoeken.
+ * Een config van vóór 0.50.0 heeft `soort: afval` en geen `afval: true`. Die
+ * blijft gewoon afval versturen: zie `soortAan` in meldingen-logica.js, en
+ * `soort_aan` in kaarten.py aan de serverkant.
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacEditor, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { nameOf, pictureOf, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
-import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
-import { kopRegel, meldingId, personenUit, staatAan } from "./meldingen-logica.js";
-
-/** Per soort de naam in de kop en het icoon, als de config zwijgt. */
-const SOORT = {
-  afval: { naam: "Afvalmeldingen", icoon: "bin" },
-};
+import {
+  afvalRegel,
+  krijgtIets,
+  meldingId,
+  personenUit,
+  soortAan,
+  soortenVan,
+  staatAan,
+} from "./meldingen-logica.js";
+import { meldingenScherm, toonMeldingenScherm } from "./meldingen-scherm.js";
 
 class MeldingenCard extends DacCard {
   static css = /* css */ `
     :host { display: block; }
     *, *::before, *::after { box-sizing: border-box; }
 
+    /* 7px en niet 8: een rij is 40, de rand van .surface 2, en dan past één
+       persoon precies op één rasterrij van 56. Met 8 werd dat 58, en
+       rasterhoogte.js rondt dat af naar 120 -- een kaart met één persoon was dan
+       twee rijen hoog. In 0.48.0 viel dat niet op, want toen stond er altijd een
+       kop boven. Zelfde maat als de mediakaart. */
     .card {
       min-height: var(--dac-raster, 56px);
-      padding: 8px 12px;
+      padding: 7px 12px;
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
 
-    .kop, .rij { display: flex; align-items: center; gap: 11px; min-height: 40px; }
+    .rij {
+      display: flex; align-items: center; gap: 11px; min-height: 40px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
     .chip { width: 40px; height: 40px; flex: 0 0 auto; }
     .chip .icon { width: 20px; height: 20px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
-    .nm, .pn {
+    .pn {
       font-size: 13.5px; font-weight: 500; line-height: 1.25;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .st, .ps {
-      font-size: 11.5px; line-height: 1.25; color: var(--dac-ink-2);
+    .ps {
+      font-size: 11.5px; line-height: 1.25; color: var(--dac-warn);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .ps { color: var(--dac-warn); }
     [hidden] { display: none !important; }
 
-    .lijst { display: flex; flex-direction: column; gap: 8px; }
-    .rij { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-
-    /* Alleen het icoon draagt de toestand. Een foto dimt als hij uit staat;
-       een icoon kleurt mee met het accent. */
+    /* Alleen het icoon draagt de toestand: een foto dimt als deze persoon niets
+       krijgt, een icoon kleurt mee met het accent. */
     .rij[data-aan="false"] .chip.pic img { opacity: .45; filter: grayscale(1); }
     .rij[data-aan="false"] .pn { color: var(--dac-ink-2); }
 
-    /* Tot de server geantwoord heeft, weet de kaart niet hoe het staat. Dan
-       liever een stille schakelaar dan een die straks omspringt. */
-    .card.laden .toggle { opacity: .4; pointer-events: none; }
-
-    ${toggleCss}
+    /* Het potlood. Rond en stil: hij is een ingang, geen toestand. */
+    .potlood {
+      width: 34px; height: 34px; flex: 0 0 auto; padding: 0; cursor: pointer;
+      display: grid; place-items: center; border-radius: var(--dac-radius-pill);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      color: var(--dac-ink-2); font: inherit;
+      transition: background 160ms ease, color 160ms ease;
+    }
+    @media (hover: hover) {
+      .potlood:hover { background: var(--dac-surface-hi); color: var(--dac-ink); }
+    }
+    .potlood .icon { width: 16px; height: 16px; }
 
     :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
   `;
@@ -92,21 +116,25 @@ class MeldingenCard extends DacCard {
   constructor() {
     super();
     this.verbinding_ = new Verbindingswacht();
-    this.stand_ = null;
+    /** Per soort de stand die de server stuurde. */
+    this.standen_ = {};
   }
 
   validate(config) {
-    const c = { soort: "afval", ...config };
+    const c = { ...config };
     c.personen = personenUit(c);
-    const mist = [];
-    if (!c.afval_vandaag && !c.afval_morgen) mist.push("de afvalsensor voor vandaag of morgen");
-    if (!c.personen.length) mist.push("minstens één persoon");
-    if (mist.length) c[INCOMPLETE] = `Kies ${mist.join(" en ")}.`;
+    if (!c.personen.length) c[INCOMPLETE] = "Kies minstens één persoon.";
     return c;
   }
 
+  /** De soorten op deze kaart, als `{id, naam, icoon}`. */
+  soorten_() {
+    return soortenVan(this.config);
+  }
+
   watched() {
-    return [this.config.afval_vandaag, this.config.afval_morgen, ...this.config.personen].filter(Boolean);
+    const c = this.config;
+    return [...(soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : []), ...c.personen].filter(Boolean);
   }
 
   template() {
@@ -118,44 +146,35 @@ class MeldingenCard extends DacCard {
         <div class="rij" data-p="${escapeHtml(p)}" data-aan="true">
           <span class="chip"></span>
           <span class="txt"><span class="pn"></span><span class="ps" hidden></span></span>
-          ${toggleHtml({ label: "Meldingen aan of uit" })}
+          <button class="potlood" type="button">${resolve("pencil")}</button>
         </div>`
       )
       .join("");
-    return `
-      <div class="card surface laden" style="--tone:${TONES.accent}">
-        <div class="kop">
-          <span class="chip kopchip"></span>
-          <span class="txt"><span class="nm"></span><span class="st" hidden></span></span>
-        </div>
-        <div class="lijst">${rijen}</div>
-      </div>`;
+    return `<div class="card surface" style="--tone:${TONES.accent}">${rijen}</div>`;
   }
 
   wire() {
     for (const rij of this.$$(".rij")) {
-      const persoon = rij.dataset.p;
-      const schakelaar = rij.querySelector(".toggle");
-      this.teardown_.push(
-        bindToggle(schakelaar, {
-          value: () => staatAan(this.stand_, persoon),
-          set: (aan) => this.zet_(persoon, aan),
-          disabled: () => !this.stand_,
-        })
-      );
-      // De hele rij is een knop: een schakelaar van 46 pixels is op een
-      // telefoon een klein doel, en er is op deze rij niets anders te doen.
-      this.on(rij, "click", () => {
-        if (this.stand_) this.zet_(persoon, !staatAan(this.stand_, persoon));
-      });
+      // De hele rij opent de pop-up, niet alleen het potlood: een knop van 34
+      // pixels is op een telefoon een klein doel, en er is op deze rij niets
+      // anders te doen. Het potlood zegt dát er iets achter zit.
+      this.on(rij, "click", () => toonMeldingenScherm(this, rij.dataset.p));
     }
 
     this.herkansing_ = new Herkansing(() => this.luister_());
     this.teardown_.push(() => this.herkansing_.stop());
     this.teardown_.push(volgRaster(this.$(".card")));
     this.luistert_ = false;
+    this.geabonneerd_ = new Set();
     this.teardown_.push(() => {
       this.luistert_ = false;
+      this.geabonneerd_ = new Set();
+      this.standen_ = {};
+      // Staat de pop-up open voor deze kaart en wordt die net opnieuw
+      // opgebouwd (een wijziging in de editor), dan klopt wat erin staat niet
+      // meer.
+      const scherm = meldingenScherm();
+      if (scherm?.isVan(this)) scherm.sluit();
     });
     this.luister_();
   }
@@ -176,7 +195,7 @@ class MeldingenCard extends DacCard {
   }
 
   /**
-   * Abonneer op de stand van deze melding.
+   * Abonneer op de stand van elke soort op deze kaart.
    *
    * Zegt niet op als het element nog niet in het document hangt: Home
    * Assistant zet `hass` voordat de kaart in de view hangt (valkuil 42). Een
@@ -190,15 +209,22 @@ class MeldingenCard extends DacCard {
       dood = true;
     });
     try {
-      const opzeggen = await this.hass.connection.subscribeMessage(
-        (stand) => {
-          this.stand_ = stand;
-          this.paint();
-        },
-        { type: "domotiapp_lovelace/meldingen/subscribe", melding: meldingId(this.config) }
-      );
-      if (dood) opzeggen();
-      else
+      for (const soort of this.soorten_()) {
+        // Een herkansing na een halve mislukking abonneert niet dubbel op wat
+        // al liep: twee abonnementen geven elke wijziging twee keer (valkuil 7).
+        if (this.geabonneerd_.has(soort.id)) continue;
+        const opzeggen = await this.hass.connection.subscribeMessage(
+          (stand) => {
+            this.standen_ = { ...this.standen_, [soort.id]: stand };
+            this.paint();
+          },
+          { type: "domotiapp_lovelace/meldingen/subscribe", melding: meldingId(this.config, soort.id) }
+        );
+        if (dood) {
+          opzeggen();
+          return;
+        }
+        this.geabonneerd_.add(soort.id);
         this.teardown_.push(() => {
           try {
             opzeggen();
@@ -206,6 +232,7 @@ class MeldingenCard extends DacCard {
             // De verbinding is al weg.
           }
         });
+      }
       this.herkansing_.herstel();
     } catch (fout) {
       this.luistert_ = false;
@@ -215,58 +242,77 @@ class MeldingenCard extends DacCard {
     }
   }
 
-  zet_(persoon, aan) {
-    if (!this.stand_ || !this.hass?.connection) return;
-    const vorig = this.stand_;
-    // Meteen laten zien; de server bevestigt het via het abonnement.
-    this.stand_ = { ...vorig, aan: { ...(vorig.aan ?? {}), [persoon]: aan } };
+  /**
+   * Zet één soort voor één persoon aan of uit. De pop-up roept dit aan.
+   *
+   * Meteen laten zien; de server bevestigt het via het abonnement, en bij een
+   * fout springt het terug.
+   */
+  zet(soort, persoon, aan) {
+    const vorig = this.standen_[soort];
+    if (!vorig || !this.hass?.connection) return;
+    this.standen_ = { ...this.standen_, [soort]: { ...vorig, aan: { ...(vorig.aan ?? {}), [persoon]: aan } } };
     this.paint();
     this.hass.connection
       .sendMessagePromise({
         type: "domotiapp_lovelace/meldingen/aan",
-        melding: meldingId(this.config),
+        melding: meldingId(this.config, soort),
         persoon,
         aan,
       })
       .catch((fout) => {
         console.warn("DomotiApp Meldingen: omzetten mislukte", fout);
-        this.stand_ = vorig;
+        this.standen_ = { ...this.standen_, [soort]: vorig };
         this.paint();
       });
   }
 
-  paint() {
+  /** Heeft deze persoon GEEN telefoon, volgens de server? Null = onbekend. */
+  zonderTelefoon_(persoon) {
+    const stand = Object.values(this.standen_).find((s) => s?.telefoons);
+    if (!stand) return null;
+    return !stand.telefoons[persoon];
+  }
+
+  /** Wat de pop-up voor deze persoon laat zien. Zie meldingen-scherm.js. */
+  inhoud(persoon) {
+    const naam = nameOf(this.hass, persoon);
+    return {
+      naam,
+      foto: pictureOf(this.hass, persoon),
+      storing: this.zonderTelefoon_(persoon)
+        ? `Geen telefoon gevonden. Zonder de app van Home Assistant krijgt ${voornaam(naam)} niets, ook niet met een vinkje.`
+        : null,
+      soorten: this.soorten_().map((soort) => {
+        const stand = this.standen_[soort.id];
+        return {
+          ...soort,
+          aan: staatAan(stand, persoon),
+          laden: !stand,
+          regel: soort.id === "afval" ? this.afvalRegel_(stand) : "",
+        };
+      }),
+    };
+  }
+
+  afvalRegel_(stand) {
     const c = this.config;
-    const soort = SOORT[c.soort] ?? SOORT.afval;
-    const stand = this.stand_;
-    this.$(".card").classList.toggle("laden", !stand);
-
-    const kopchip = this.$(".kopchip");
-    const icoon = c.icon || soort.icoon;
-    if (kopchip.dataset.icon !== icoon) {
-      kopchip.dataset.icon = icoon;
-      kopchip.innerHTML = resolve(icoon, soort.icoon);
-    }
-    this.text(".nm", c.name || soort.naam);
-
     const door = stand?.buiten?.door;
-    let regel = kopRegel({
+    return afvalRegel({
+      config: c,
+      stand,
       vandaag: stateOf(this.hass, c.afval_vandaag)?.state,
       morgen: stateOf(this.hass, c.afval_morgen)?.state,
-      tijdMorgen: c.tijd_morgen || "19:30",
-      buiten: stand?.buiten,
       door: door ? voornaam(nameOf(this.hass, door)) : "",
     });
-    // De server kent de kaart pas als het dashboard is opgeslagen. In de
-    // editor is dat het eerste wat je wilt weten.
-    if (stand && !stand.bekend) regel = "Actief zodra het dashboard is opgeslagen";
-    const st = this.$(".st");
-    st.hidden = !regel;
-    this.text(st, regel);
+  }
+
+  paint() {
+    const soorten = this.soorten_().map((s) => s.id);
 
     for (const rij of this.$$(".rij")) {
       const p = rij.dataset.p;
-      const aan = staatAan(stand, p);
+      const aan = krijgtIets(this.standen_, soorten, p);
       rij.dataset.aan = String(aan);
 
       const chip = rij.querySelector(".chip");
@@ -283,16 +329,19 @@ class MeldingenCard extends DacCard {
       this.text(rij.querySelector(".pn"), naam);
 
       // Alleen iets zeggen als er iets mis is: een persoon zonder telefoon.
+      // Dat is een storing en geen status, dus hij blijft altijd staan.
       const ps = rij.querySelector(".ps");
-      const zonder = Boolean(stand?.telefoons) && !stand.telefoons[p];
+      const zonder = this.zonderTelefoon_(p) === true;
       ps.hidden = !zonder;
       this.text(ps, zonder ? "Geen telefoon gevonden" : "");
 
-      const schakelaar = rij.querySelector(".toggle");
-      setToggle(schakelaar, aan);
-      schakelaar.style.setProperty("--tone", TONES.accent);
-      schakelaar.setAttribute("aria-label", `Meldingen voor ${naam} ${aan ? "uitzetten" : "aanzetten"}`);
+      rij.querySelector(".potlood").setAttribute("aria-label", `Meldingen van ${naam} instellen`);
     }
+
+    // Staat de pop-up open voor deze kaart, dan hoort die mee te bewegen: een
+    // vinkje dat op een andere telefoon wordt omgezet, en "staat buiten".
+    const scherm = meldingenScherm();
+    if (scherm?.isVan(this)) scherm.teken();
 
     meetRaster(this.$(".card"));
   }
@@ -300,7 +349,7 @@ class MeldingenCard extends DacCard {
   /* ------------------------------------------------- Lovelace-afspraken */
 
   getCardSize() {
-    return 1 + (this.config?.personen?.length ?? 1);
+    return this.config?.personen?.length || 1;
   }
 
   getGridOptions() {
@@ -308,7 +357,7 @@ class MeldingenCard extends DacCard {
       columns: 12,
       rows: "auto",
       min_columns: 6,
-      min_rows: this.minRijen_(".card", 1 + (this.config?.personen?.length ?? 1)),
+      min_rows: this.minRijen_(".card", this.config?.personen?.length || 1),
     };
   }
 
@@ -318,11 +367,15 @@ class MeldingenCard extends DacCard {
 
   static getStubConfig(hass, entities) {
     const zoek = (patroon) => entities?.find((e) => e.startsWith("sensor.") && patroon.test(e)) ?? "";
+    const morgen = zoek(/afval.*morgen|morgen.*afval|waste.*tomorrow/i);
+    const vandaag = zoek(/afval.*vandaag|vandaag.*afval|waste.*today/i);
     return {
-      soort: "afval",
-      afval_vandaag: zoek(/afval.*vandaag|vandaag.*afval|waste.*today/i),
-      afval_morgen: zoek(/afval.*morgen|morgen.*afval|waste.*tomorrow/i),
       personen: (entities ?? []).filter((e) => e.startsWith("person.")).slice(0, 6),
+      // Altijd uitgeschreven: een kaart zonder `afval` is voor de server een
+      // kaart van vóór 0.50.0, en die was afval.
+      afval: Boolean(morgen || vandaag),
+      ...(morgen ? { afval_morgen: morgen } : {}),
+      ...(vandaag ? { afval_vandaag: vandaag } : {}),
     };
   }
 }
@@ -332,43 +385,73 @@ const voornaam = (naam) => String(naam ?? "").trim().split(/\s+/)[0] ?? "";
 
 class MeldingenEditor extends DacEditor {
   defaults() {
-    return { soort: "afval", tijd_morgen: "19:30:00", tijd_vandaag: "07:30:00" };
+    return { tijd_morgen: "19:30:00", tijd_vandaag: "07:30:00" };
   }
 
-  pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "bin", auto: false }];
+  /**
+   * Een kaart van vóór 0.50.0 heeft `soort: afval` en geen `afval`-schakelaar.
+   *
+   * Voor de WEERGAVE wordt dat een schakelaar die aan staat, anders zou een
+   * werkende afvalkaart in de editor een schakelaar tonen die uit staat. De
+   * config zelf verandert pas als er iets gewijzigd wordt; dan komt `afval`
+   * erin en gaat `soort` eruit, want die zegt dan niets meer.
+   */
+  setConfig(config) {
+    const c = { ...config };
+    if (typeof c.afval !== "boolean") c.afval = soortAan(config, "afval");
+    delete c.soort;
+    super.setConfig(c);
   }
 
   schema() {
+    const afval = Boolean(this.config_?.afval);
     return [
-      { name: "soort", selector: sel.select([{ value: "afval", label: "Afval" }]) },
-      { name: "name", selector: sel.text() },
-      { name: "afval_morgen", selector: sel.entity(["sensor"]) },
-      { name: "tijd_morgen", selector: { time: {} } },
-      { name: "afval_vandaag", selector: sel.entity(["sensor"]) },
-      { name: "tijd_vandaag", selector: { time: {} } },
       { name: "personen", selector: { entity: { domain: "person", multiple: true } } },
+      // Per soort een schakelaar, en daaronder het blok met zijn instellingen
+      // -- de vorm die hij op 28 augustus 2026 voor de presets van de camera
+      // vroeg (zie de vormregels in CLAUDE.md). Een volgende soort is een
+      // volgend paar.
+      { name: "afval", selector: sel.bool() },
+      ...(afval
+        ? [
+            // Niet nog eens "Afvalmeldingen": dat staat al op de schakelaar er
+            // vlak boven, en twee keer hetzelfde woord onder elkaar leest als
+            // een dubbele regel. Gezien in de editor op 29 september 2026.
+            section(
+              "Sensoren en tijden",
+              "mdi:trash-can-outline",
+              [
+                { name: "afval_morgen", selector: sel.entity(["sensor"]) },
+                { name: "tijd_morgen", selector: { time: {} } },
+                { name: "afval_vandaag", selector: sel.entity(["sensor"]) },
+                { name: "tijd_vandaag", selector: { time: {} } },
+              ],
+              true
+            ),
+          ]
+        : []),
     ];
   }
 
   label(s) {
     return (
       {
-        soort: "Soort melding",
-        name: "Titel",
+        personen: "Personen",
+        afval: "Afvalmeldingen",
         afval_morgen: "Afval morgen",
         tijd_morgen: "Melding de avond ervoor",
         afval_vandaag: "Afval vandaag",
         tijd_vandaag: "Melding op de dag zelf",
-        personen: "Personen",
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      soort: "Voorlopig alleen Afval.",
-      name: "Leeg laten: Afvalmeldingen.",
+      personen:
+        "Wie er op de kaart staat. Met het potlood kiest ieder zelf welke meldingen hij krijgt. De telefoon wordt bij de persoon gezocht (de app van Home Assistant); vindt de kaart er geen, dan staat dat op de rij.",
+      afval:
+        "Een herinnering om de container buiten te zetten: de avond ervoor en de ochtend zelf, met een knop 'Staat buiten' in de melding.",
       afval_morgen:
         "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen. Leeg laten: geen melding de avond ervoor.",
       tijd_morgen: "Standaard 19:30.",
@@ -376,8 +459,6 @@ class MeldingenEditor extends DacEditor {
         "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf.",
       tijd_vandaag:
         "Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte.",
-      personen:
-        "Wie een melding krijgt. De telefoon wordt bij de persoon gezocht (de companion-app); vindt de kaart er geen, dan staat dat op de rij. Op de kaart zet ieder zijn eigen meldingen aan of uit.",
     }[s.name];
   }
 }
@@ -386,7 +467,7 @@ registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
   name: "DomotiApp Meldingen",
   description:
-    "Herinneringen naar de telefoon, met per persoon een schakelaar. Voorlopig: afval, de avond ervoor en de ochtend zelf.",
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Voorlopig: afval.",
 });
 
 export { MeldingenCard };

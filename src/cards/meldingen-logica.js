@@ -109,5 +109,79 @@ export function personenUit(config) {
   return [...new Set(lijst.filter((p) => typeof p === "string" && p.startsWith("person.")))];
 }
 
-/** Het id waaronder de server deze melding kent. Zie `melding_uit` in kaarten.py. */
-export const meldingId = (config) => String(config?.id || config?.soort || "afval").trim() || "afval";
+/**
+ * De soorten meldingen, in de volgorde waarin ze in de pop-up staan.
+ *
+ * Voorlopig één. De kaart is sinds 0.50.0 ALGEMEEN: hij toont de personen, en
+ * wat iemand kan krijgen staat in de pop-up achter het potlood. Gevraagd op
+ * 26 september 2026: *"Nu staat daar alleen afval meldingen dan maar in de
+ * toekomst moeten er meerdere dingen bij komen."* Een nieuwe soort is een regel
+ * hier, een schakelaar in de editor, en de serverkant die hem verstuurt.
+ */
+export const SOORTEN = [{ id: "afval", naam: "Afvalmeldingen", icoon: "bin" }];
+
+/**
+ * Staat deze soort aan op deze kaart?
+ *
+ * Een `true` of `false` onder de naam van de soort beslist. Staat die er niet,
+ * dan is de kaart van vóór 0.50.0: toen WAS hij één soort, en die stond in
+ * `soort` -- met afval als standaard. Zo leest `soort_aan` in kaarten.py het ook,
+ * en dat moet gelijk blijven: wat de kaart als aan toont, hoort de server te
+ * versturen.
+ */
+export function soortAan(config, soort) {
+  const waarde = config?.[soort];
+  if (typeof waarde === "boolean") return waarde;
+  return String(config?.soort || "afval") === soort;
+}
+
+/** De soorten die op deze kaart aan staan. */
+export const soortenVan = (config) => SOORTEN.filter((s) => soortAan(config, s.id));
+
+/**
+ * Het id waaronder de server de melding van deze soort kent.
+ *
+ * Voor afval is dat `id` uit de config of anders "afval", zoals het altijd was:
+ * onder die naam staat bij hem al opgeslagen wie er aan en uit staat. Zie
+ * `melding_uit` in kaarten.py.
+ */
+export const meldingId = (config, soort = "afval") =>
+  soort === "afval" ? String(config?.id || "").trim() || "afval" : soort;
+
+/**
+ * Krijgt deze persoon iets van deze kaart?
+ *
+ * Voor het icoon op de rij: alleen het icoon draagt de toestand. Staat er geen
+ * enkele soort aan op de kaart, dan krijgt niemand iets -- en dat hoort de rij
+ * ook te zeggen.
+ *
+ * @param {Record<string, object>} standen per soort de stand van de server
+ * @param {string[]} soorten de soorten op deze kaart
+ * @param {string} persoon
+ */
+export function krijgtIets(standen, soorten, persoon) {
+  return soorten.some((soort) => staatAan(standen?.[soort], persoon));
+}
+
+/**
+ * De regel onder een soort in de pop-up: wat er komt, of wat er ontbreekt.
+ *
+ * Voor afval is dat dezelfde regel die eerst in de kop van de kaart stond
+ * (`kopRegel`), en anders de tijden -- zodat er altijd staat WANNEER de melding
+ * komt. Kent de server de kaart nog niet, dan staat dat er: in de editor is dat
+ * het eerste wat je wilt weten.
+ */
+export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date() } = {}) {
+  if (stand && !stand.bekend) return "Actief zodra het dashboard is opgeslagen";
+  if (!config?.afval_vandaag && !config?.afval_morgen) return "Nog geen afvalsensor gekozen";
+  const tijdMorgen = tijdKort(config.tijd_morgen) || "19:30";
+  const tijdVandaag = tijdKort(config.tijd_vandaag) || "07:30";
+  const wat = kopRegel({ vandaag, morgen, tijdMorgen, buiten: stand?.buiten, door, nu });
+  if (wat) return wat;
+  const momenten = [
+    config.afval_morgen ? `de avond ervoor om ${tijdMorgen}` : "",
+    config.afval_vandaag ? `de ochtend zelf om ${tijdVandaag}` : "",
+  ].filter(Boolean);
+  const zin = momenten.join(" en ");
+  return zin[0].toUpperCase() + zin.slice(1);
+}

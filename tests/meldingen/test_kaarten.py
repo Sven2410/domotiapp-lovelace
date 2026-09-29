@@ -70,3 +70,53 @@ async def test_leest_de_echte_lovelace(hass: HomeAssistant) -> None:
     assert list(gelezen) == ["afval"]
     assert gelezen["afval"].personen == [SVEN, LIEKE]
     assert gelezen["afval"].diensten == {SVEN: "test_sven", LIEKE: "test_lieke"}
+
+
+# ---------------------------------------------------------------------------
+# 0.50.0: de kaart is algemeen, en elke soort heeft een eigen schakelaar.
+# ---------------------------------------------------------------------------
+
+
+def test_afval_uit_op_de_kaart_verstuurt_niets() -> None:
+    """NIEUW GEDRAG. De schakelaar Afvalmeldingen uit = geen afvalmelding.
+
+    Op de code van vóór 0.50.0 kende de kaart geen schakelaar: hij WAS afval, en
+    deze kaart leverde dus gewoon een melding op.
+    """
+    kaart = {**KAART, "afval": False}
+    assert kaarten.melding_uit(kaart) is None
+    assert kaarten.voeg_samen([("telefoon", kaart)]) == {}
+
+
+def test_afval_aan_zonder_soort() -> None:
+    """NIEUW GEDRAG. Een nieuwe kaart schrijft `afval: true` en geen `soort`."""
+    kaart = {k: v for k, v in KAART.items() if k != "soort"}
+    melding = kaarten.melding_uit({**kaart, "afval": True})
+    assert melding is not None
+    assert melding.id == "afval"
+    assert melding.soort == "afval"
+
+
+def test_een_eigen_id_blijft_het_id() -> None:
+    """REGRESSIEWACHT. Onder het id staat opgeslagen wie er aan staat."""
+    assert kaarten.melding_uit({**KAART, "afval": True, "id": "tweede-adres"}).id == "tweede-adres"
+
+
+def test_een_kaart_van_voor_de_schakelaar_blijft_afval() -> None:
+    """REGRESSIEWACHT. `soort: afval` zonder `afval`: dat is een kaart uit 0.48.0.
+
+    Zo staat hij bij de eigenaar in zijn dashboard. Die moet na de update
+    gewoon blijven versturen, onder hetzelfde id.
+    """
+    assert kaarten.melding_uit({**KAART, "soort": "afval"}).id == "afval"
+    zonder_soort = {k: v for k, v in KAART.items() if k != "soort"}
+    assert kaarten.melding_uit(zonder_soort).id == "afval"
+
+
+def test_soort_aan_leest_zoals_de_kaart() -> None:
+    """NIEUW GEDRAG. Dezelfde regel als `soortAan` in meldingen-logica.js."""
+    assert kaarten.soort_aan({"afval": True}, "afval") is True
+    assert kaarten.soort_aan({"afval": False, "soort": "afval"}, "afval") is False
+    assert kaarten.soort_aan({"soort": "afval"}, "afval") is True
+    assert kaarten.soort_aan({}, "afval") is True
+    assert kaarten.soort_aan({"soort": "wasmachine"}, "afval") is False
