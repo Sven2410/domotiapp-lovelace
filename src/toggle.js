@@ -154,22 +154,22 @@ export const toggleCss = /* css */ `
     flex: 0 0 auto; position: relative; margin-left: auto;
     width: 46px; height: 26px; padding: 0; cursor: pointer;
     border-radius: var(--dac-radius-pill);
-    background: rgba(255, 255, 255, .08);
+    background: rgba(var(--dac-tint), .08);
     border: 1px solid var(--dac-border);
     touch-action: pan-y; -webkit-tap-highlight-color: transparent;
     transition: background 200ms ease, border-color 200ms ease;
   }
   .toggle .knob {
     position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-    border-radius: 50%; background: var(--dac-ink-2); pointer-events: none;
+    border-radius: 50%; background: var(--dac-knob-uit); box-shadow: var(--dac-knob-schaduw); pointer-events: none;
     transform: translateX(var(--knob, 0px));
     transition: transform 220ms cubic-bezier(.3, .8, .4, 1), background 200ms ease;
   }
   .toggle[aria-checked="true"] {
-    background: color-mix(in srgb, var(--tone) 28%, transparent);
-    border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+    background: color-mix(in srgb, var(--tone) var(--dac-spoor-aan), transparent);
+    border-color: color-mix(in srgb, var(--tone) var(--dac-spoor-rand), transparent);
   }
-  .toggle[aria-checked="true"] .knob { --knob: ${REIS}px; background: var(--dac-ink); }
+  .toggle[aria-checked="true"] .knob { --knob: ${REIS}px; background: var(--dac-knob); }
   .toggle.dragging .knob { transition: none; }
   @media (hover: hover) { .toggle:hover { border-color: var(--dac-border-hi); } }
 `;

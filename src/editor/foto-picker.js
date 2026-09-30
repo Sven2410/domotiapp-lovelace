@@ -28,11 +28,13 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { keurBestand, serveerUrl } from "./foto-logica.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host { ${tokens} display: block; font-family: var(--dac-font); color: var(--dac-ink); }
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -94,6 +96,9 @@ class FotoPicker extends HTMLElement {
   }
 
   connectedCallback() {
+    // Deze kiezer staat in een dialoog van Home Assistant zelf, en die volgt
+    // het thema van Home Assistant, niet de instelling van de integratie.
+    volgThema(this, { alleenMeten: true });
     if (!this.gebouwd_) this.bouw_();
     this.teken_();
   }

@@ -161,8 +161,8 @@ class NavbarCard extends DacCard {
          pil. Een balk met een andere ronding dan de kaarten erboven leest als
          iets dat er niet bij hoort -- gemeld op 26 augustus 2026. */
       border-radius: var(--dac-radius);
-      box-shadow: 0 20px 44px -20px rgba(0, 0, 0, .92),
-                  0 1px 0 rgba(255, 255, 255, .04) inset;
+      box-shadow: 0 20px 44px -20px rgba(0, 0, 0, calc(.92 * var(--dac-diepte))),
+                  0 1px 0 rgba(var(--dac-tint), .04) inset;
       /* Achter een halfdoorzichtige balk hoort iets te bewegen, anders is hij
          gewoon donkergrijs. Valt vanzelf weg waar de browser het niet kan. */
       backdrop-filter: blur(16px) saturate(140%);
@@ -266,7 +266,7 @@ class NavbarCard extends DacCard {
       background: color-mix(in srgb, var(--dac-bg-raise) 96%, transparent);
       border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius);
-      box-shadow: 0 24px 52px -20px rgba(0, 0, 0, .94);
+      box-shadow: 0 24px 52px -20px rgba(0, 0, 0, calc(.94 * var(--dac-diepte)));
       backdrop-filter: blur(16px) saturate(140%);
       -webkit-backdrop-filter: blur(16px) saturate(140%);
     }

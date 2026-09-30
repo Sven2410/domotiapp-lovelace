@@ -7,6 +7,11 @@
  * dashboard and a tile in the Coach panel look like they came from one hand.
  * If a value changes there, change it here in the same commit.
  *
+ * Sinds 0.54.0 staat hier MEER dan bij de Coach: een lichte set (lichtTokens)
+ * en een handvol tokens die tussen donker en licht omkeren. De Coach heeft
+ * alleen een donker paneel. De donkere waarden die ze delen zijn nog steeds
+ * letterlijk dezelfde, en dat bewaakt tests/js/thema-contrast.test.mjs.
+ *
  * The energy-stream hues were searched against the #12120f card surface under
  * the categorical rules (OKLCH lightness band, chroma floor, all-pairs CVD
  * separation, normal-vision floor and contrast). Do not swap them without
@@ -81,6 +86,147 @@ export const tokens = /* css */ `
   /* One row height for every interactive card in the family, so a column of
      mixed cards lines up instead of stepping. */
   --dac-row-h:         56px;
+
+  /* ---- Wat er tussen donker en licht OMKEERT --------------------------------
+   *
+   * Tot 0.54.0 stonden deze waarden los in de kaarten, als wit op een paar
+   * procent. Op een donkere kaart is dat een tint; op een witte achtergrond is
+   * wit op vijf procent niets. Ze staan nu hier, met in donker precies de
+   * waarde die er stond, zodat het lichte thema ze kan omkeren zonder dat er
+   * in donker een pixel verschuift.
+   *
+   * --dac-tint is een kale r, g, b: de kleur waarmee een vlak zich van zijn
+   * ondergrond afzet. Gebruik: rgba(var(--dac-tint), .05). */
+  --dac-tint:          255, 255, 255;
+
+  /* Wat de browser zelf tekent: keuzelijsten, tijdvelden, schuifbalken. */
+  --dac-scheme:        dark;
+
+  /* Tekst op een vlak in de accentkleur. Op het diepe accent is dat lichte
+     inkt; op het heldere accent donkere, want wit op #198fd9 haalt 3,4:1. */
+  --dac-on-accent:     #e8e4de;
+  --dac-on-accent-hi:  #0c0c0a;
+
+  /* Het waas achter een scherm dat over de pagina ligt. */
+  --dac-scrim:         color-mix(in srgb, #000 58%, transparent);
+
+  /* Hoe zwaar een slagschaduw onder iets ZWEVENDS is (de navbalk, een menu,
+     een vraag). Een factor en geen kleur: elke plek houdt zijn eigen maat en
+     vermenigvuldigt zijn alfa hiermee. Op wit is dezelfde schaduw een vlek. */
+  --dac-diepte:        1;
+
+  /* De schuifschakelaar. In donker is de knop inkt op een getint spoor; in
+     licht een witte knop met een schaduwtje, zoals een schakelaar op een licht
+     scherm eruit hoort te zien. */
+  --dac-knob:          var(--dac-ink);
+  --dac-knob-uit:      var(--dac-ink-2);
+  --dac-knob-schaduw:  none;
+  --dac-spoor-aan:     28%;
+  --dac-spoor-rand:    55%;
+
+  /* Een DICHT invoerveld: het tijdveld en de keuzelijsten van de wekker. Dicht
+     en niet doorschijnend, omdat de browser het uitklappaneel van een
+     keuzelijst met deze kleur tekent. Tot 0.54.0 was dit de kaartkleur van
+     het thema van Home Assistant (#1c1c1c in het standaardthema); een vaste
+     waarde, zodat het veld leesbaar blijft als onze instelling en het thema
+     van Home Assistant het niet eens zijn. */
+  --dac-veld:          #1b1b19;
+`;
+
+/**
+ * Het lichte thema: dezelfde namen, andere waarden.
+ *
+ * GEEN OMGEKEERD DONKER. Een donkere kaart zet zich af door LICHTER te zijn dan
+ * zijn ondergrond, een lichte door een tikje donkerder: op een witte pagina is
+ * de kaart een zachtgrijs vlak met een haarlijn, en alles wat erin ligt stapelt
+ * daar nog een tint bovenop. De inkt is bijna zwart met een warme zweem, net
+ * zoals de lichte inkt geen zuiver wit is.
+ *
+ * WAAR DE WAARDEN VANDAAN KOMEN
+ *
+ * Vlak, rand en inkt zijn die van het infoscherm, dat sinds 0.36.0 een lichte
+ * uitvoering heeft en bij een klant op een iPad hangt. De inktladder is een
+ * stap zwaarder gezet (68% en 50% in plaats van 66% en 42%): het infoscherm
+ * heeft grote letters, een kaart van 56 pixels niet. De grond (wat een scherm
+ * dat over de pagina ligt als achtergrond krijgt) is lichter dan daar, zodat
+ * hij op een witte pagina niet als een beige vlak afsteekt.
+ *
+ * Accent, status en lampgeel zijn DONKERDER dan in donker. Het heldere accent
+ * (#198fd9) haalt op een lichte kaart 3,1:1 en de lamp (#f5c451) 1,5:1 -- op
+ * donker zijn dat de kleuren die het best lezen, op wit de slechtste. De
+ * waarden hieronder zijn uitgerekend tegen het lichte kaartvlak op wit; de
+ * toets staat in tests/js/thema-contrast.test.mjs.
+ *
+ * De zes identiteitskleuren (zon, huis, net, apparaten) zijn NIET aangepast.
+ * Die zijn als set doorgezocht op onderlinge afstand, en die afstand verandert
+ * niet van de achtergrond. Ze staan daarom niet in deze lijst.
+ */
+export const lichtTokens = /* css */ `
+  --dac-bg:            #f6f5f2;
+  --dac-bg-raise:      #ffffff;
+  --dac-surface:       rgba(20, 20, 10, 0.045);
+  --dac-surface-hi:    rgba(20, 20, 10, 0.080);
+  --dac-border:        rgba(20, 20, 10, 0.11);
+  --dac-border-hi:     rgba(20, 20, 10, 0.22);
+
+  --dac-ink:           #1a1a17;
+  --dac-ink-2:         rgba(26, 26, 23, 0.68);
+  --dac-ink-3:         rgba(26, 26, 23, 0.50);
+
+  --dac-accent:        #026fa1;
+  --dac-accent-hi:     #0672a8;
+  --dac-accent-soft:   rgba(2, 111, 161, 0.12);
+  --dac-accent-glow:   rgba(2, 111, 161, 0.22);
+
+  --dac-good:          #0b850b;
+  --dac-warn:          #b07400;
+  --dac-bad:           #c62f2f;
+
+  --dac-lit:           #c98d00;
+
+  /* Op wit is er geen haarlijn bovenlangs nodig: de rand doet het werk. */
+  --dac-shadow:        none;
+
+  --dac-tint:          20, 20, 10;
+  --dac-scheme:        light;
+
+  --dac-on-accent:     #ffffff;
+  --dac-on-accent-hi:  #ffffff;
+
+  --dac-scrim:         rgba(20, 20, 10, 0.34);
+  --dac-diepte:        0.3;
+
+  --dac-knob:          #ffffff;
+  --dac-knob-uit:      #ffffff;
+  --dac-knob-schaduw:  0 1px 2px rgba(20, 20, 10, 0.30);
+  --dac-spoor-aan:     82%;
+  --dac-spoor-rand:    82%;
+
+  --dac-veld:          #ffffff;
+`;
+
+/**
+ * Wat elk element van de familie naast zijn tokens nodig heeft om het thema te
+ * volgen. Zet dit ACHTER het eigen :host-blok.
+ *
+ * DE MEETPROP
+ *
+ * Of het dashboard licht of donker is, lezen we af aan de tekstkleur van het
+ * thema van Home Assistant. Die staat in --primary-text-color, maar daar kan
+ * van alles in staan: een naam (white), een var(), een color-mix(). Wie dat als
+ * tekst uitleest moet de halve CSS-kleurensyntaxis nabouwen. Dus laten we de
+ * browser het werk doen: de variabele gaat in een echte kleureigenschap, en
+ * getComputedStyle geeft die terug als rgb(). column-rule-color is gekozen
+ * omdat hij niet erft en buiten een kolommenindeling niets tekent.
+ *
+ * Zie thema.js voor wie dit uitleest en thema-logica.js voor de beslissing.
+ */
+export const themaCss = /* css */ `
+  :host {
+    column-rule-color: var(--primary-text-color, transparent);
+    color-scheme: var(--dac-scheme);
+  }
+  :host([dac-thema="licht"]) { ${lichtTokens} }
 `;
 
 /** Styles every card in the family shares. */
@@ -133,7 +279,7 @@ export const baseCss = /* css */ `
      vorm klopt met de iconen ernaast. */
   .chip.pic {
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(var(--dac-tint), 0.06);
     border-color: var(--dac-border);
   }
   .chip.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }

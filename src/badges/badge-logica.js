@@ -13,6 +13,8 @@
  * (valkuil 27 in CLAUDE.md).
  */
 
+import { lampkleurVoor } from "../thema-logica.js";
+
 /**
  * De kleurnamen in het Nederlands, want dat is wat er in het veld getypt wordt.
  *
@@ -267,14 +269,18 @@ export function lampenAan(states, uitsluiten = []) {
  *
  * @param {Record<string, object>} states `hass.states`
  * @param {string[]} ids de lampen die meetellen
+ * @param {boolean} [licht] draagt de badge het lichte thema? Dan komt de
+ *   kleur er donkerder uit, of niet als hij te dicht bij wit ligt (zie
+ *   `lampkleurVoor` in thema-logica.js)
  */
-export function lampKleur(states, ids) {
+export function lampKleur(states, ids, licht = false) {
   const kleuren = (ids ?? [])
     .map((id) => states?.[id]?.attributes?.rgb_color)
     .filter((rgb) => Array.isArray(rgb) && rgb.length >= 3 && rgb.slice(0, 3).every(Number.isFinite));
   if (!kleuren.length) return null;
   const gem = [0, 1, 2].map((i) => Math.round(kleuren.reduce((n, rgb) => n + rgb[i], 0) / kleuren.length));
-  return `rgb(${gem.join(",")})`;
+  const kleur = lampkleurVoor(gem, licht);
+  return kleur ? `rgb(${kleur.join(",")})` : null;
 }
 
 /* ============================ soorten badges ============================ */

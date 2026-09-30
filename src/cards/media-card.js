@@ -144,7 +144,7 @@ class MediaCard extends DacCard {
     .chip .icon, .chip ha-icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
     /* Een speler die uit staat is stil, net als een lamp die uit is. */
     .top[data-on="false"] .chip {
-      color: var(--dac-ink-3); background: rgba(255,255,255,.05); border-color: var(--dac-border);
+      color: var(--dac-ink-3); background: rgba(var(--dac-tint), .05); border-color: var(--dac-border);
     }
     .top[data-on="true"] .chip {
       box-shadow: 0 0 14px -2px color-mix(in srgb, var(--tone) 55%, transparent);

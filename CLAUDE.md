@@ -219,6 +219,74 @@ gebruiken datzelfde font, anders liegen ze over uitlijning en regellengte.
 **Waarom dit alles:** hij bouwt een merk (DomotiTech / DomotiApp) en wil dat een
 dashboard als één product leest, niet als zes HACS-kaarten naast elkaar.
 
+### Licht en donker
+
+Sinds 0.54.0 is er een licht thema. Gevraagd op 30 september 2026: *"kan je er
+ook nog een light theme van maken? (...) En dan als we de integratie toevoegen
+dat je de optie krijgt of light of dark theme of heb je een andere oplossing?"*,
+en erachteraan: *"dus met een witte achtergrond moet alles ook mooi zijn"*.
+
+De andere oplossing is dat de kaart het zelf ziet. Er is één keuze bij de
+integratie (bij het toevoegen, en daarna onder Configureren → Uiterlijk):
+**Automatisch**, **Licht** of **Donker**. Automatisch is de standaard, ook voor
+wie al geïnstalleerd had.
+
+| Wat | Waar |
+|---|---|
+| de twee tokensets | `tokens` en `lichtTokens` in `src/theme.js` |
+| de beslissing (zonder DOM, getoetst) | `src/thema-logica.js` |
+| meten, het attribuut zetten, de instelling ophalen | `src/thema.js` |
+| het attribuut op elke kaart | `dac-thema="licht"` of `"donker"` op de host |
+| de instelling op de server | `entry.options["thema"]`, doorgegeven door de lader (`loader.py`) |
+
+**Automatisch leest NIET `hass.themes.darkMode`.** Zie valkuil 63: dat is `false`
+voor zijn eigen thema, dat donker is. De kaart meet de tekstkleur van het thema
+(`--primary-text-color`, via een meetprop in `themaCss`): lichte tekst is een
+donker dashboard.
+
+**Het lichte thema is geen omgekeerd donker.** Een donkere kaart is lichter dan
+zijn ondergrond, een lichte een tikje donkerder: zachtgrijs op wit, met een
+haarlijn. Accent, status en lampgeel zijn in licht DONKERDER (het heldere accent
+haalt op een lichte kaart 3,1:1, het lampgeel 1,5:1); de contrasten staan als
+toets in `tests/js/thema-contrast.test.mjs`. De zes identiteitskleuren zijn
+niet aangepast.
+
+Vijf regels voor elke kaart die je schrijft of aanraakt. De eerste twee bewaakt
+`check:css` (bewaker 5), de rest niet:
+
+1. **Geen `rgba(255, 255, 255, ...)` als tint.** Dat is `rgba(var(--dac-tint),
+   ...)`; de tint keert om in licht. Wit over een BEELD of een gekleurd vlak
+   mag wel, en staat geteld in de bewaker.
+2. **Geen vast `color-scheme`.** Een invoerveld krijgt `var(--dac-scheme)`.
+3. **Een slagschaduw onder iets zwevends vermenigvuldigt zijn alfa met
+   `--dac-diepte`**: `rgba(0,0,0,calc(.7 * var(--dac-diepte)))`. Op wit is
+   dezelfde schaduw een vlek.
+4. **Tekst op een accentvlak is `--dac-on-accent` of `--dac-on-accent-hi`**,
+   nooit `--dac-ink`: die is in licht donker.
+5. **Een lampkleur gaat door `lampkleurCss(rgb, this.licht_, color_mode)`** (of
+   `lightTone(st, this.licht_)`). Een lamp die wit licht maakt krijgt in licht
+   het lampgeel; een gekleurde lamp wordt donkerder tot hij te zien is.
+
+Wat GEEN `DacCard` is moet het thema zelf volgen: `themaCss` in zijn stijlblad
+en `volgThema(this)`. Een scherm dat aan `document.body` hangt doet dat in zijn
+`open()`; een lit-element krijgt `MetThema(LitElement)` uit
+`src/scene/vormtaal.js`. **Een kiezer in een dialoog van Home Assistant zelf
+volgt met `{ alleenMeten: true }`**: die dialoog heeft het thema van Home
+Assistant, wat onze instelling ook zegt.
+
+**Het infoscherm doet niet mee** (`static volgtThema = false`). Dat hangt aan
+een muur en heeft zijn eigen keuze Uiterlijk in het beheer.
+
+**Licht of Donker vastzetten maakt de kaart niet dicht.** De kaartvlakken blijven
+doorschijnend, dus op een pagina van de andere soort zijn ze niet te lezen. Dat
+is met opzet: vastzetten is er voor een dashboard met een foto als achtergrond,
+en daar hoort de foto door de kaart heen te blijven komen.
+
+**De tokens van de Coach zijn hier niet meer letterlijk dezelfde.** De donkere
+waarden wel; de lichte set en de tokens die omkeren (`--dac-tint`,
+`--dac-scheme`, `--dac-diepte`, `--dac-on-accent*`, `--dac-knob*`, `--dac-veld`)
+bestaan alleen hier. Krijgt de Coach een licht thema, neem ze dan daar over.
+
 ---
 
 ## Distributie via HACS
@@ -379,6 +447,22 @@ uit de resourcelijst gehaald.
 Het testdashboard heet **`kaart-test`**. De view `navbalk` is de werkbank: die
 wordt per ronde opnieuw ingericht via `lovelace/config/save`.
 
+Sinds 30 september 2026 staat er ook een view **`thema`** in: 36 kaarten, van
+elk type minstens één, om licht en donker naast elkaar te zetten. Hij leunt op
+een paar nagebootste toestanden (`sensor.test_gft`, `sensor.test_printer_status`,
+`binary_sensor.test_rook` en zo) die met `POST /api/states/<id>` gezet zijn en
+een herstart van de container niet overleven; de kaarten tonen dan "niet
+bereikbaar", en dat is geen fout van de kaart.
+
+In `.ha-dev-config/themes/kopo.yaml` staat het thema van de eigenaar (niet in
+git). Home Assistant omzetten gaat zonder dialoog, vanuit de pagina:
+
+```js
+document.querySelector("home-assistant").dispatchEvent(new CustomEvent("settheme",
+  { detail: { theme: "KOPO" }, bubbles: true, composed: true }));   // zijn thema
+// { theme: "default", dark: false } is het lichte standaardthema, dark: true het donkere
+```
+
 ---
 
 ## Commando's
@@ -387,7 +471,7 @@ wordt per ronde opnieuw ingericht via `lovelace/config/save`.
 npm run build              # bundelt src/ -> custom_components/.../frontend/
 npm run verify             # faalt als de gecommitte bundel afwijkt van de bron
 npm run check:registratie  # bewaakt de registratieregel (zie valkuil 1)
-npm run check:css          # hover op aanraakschermen + backticks in CSS (14, 16)
+npm run check:css          # hover, backticks in CSS, kleuren die alleen in donker kloppen
 npm run check:controls     # elk select-element in de wekkereditor in een .vak
 npm test                   # JS-unittests (node --test), geen jsdom
 ```
@@ -418,6 +502,21 @@ Start een sessie gerust in een oude map — het werk gebeurt alsnog hier.
 **De laadroute is die van de wekker.** Een lader onder `/api/` met een VASTE URL
 die de bundelhash in zijn *antwoord* geeft. Een gehashte URL rechtstreeks in
 `index.html` overleeft HA's service worker niet. Zie ook valkuil 2 en 15.
+
+**Configureren begint met een menu** (sinds 0.54.0): *Uiterlijk* en *Opgeslagen
+scenes opruimen*. De config flow vraagt bij het toevoegen om het thema. Dat
+wijkt af van de letter van SPEC 15.2 en 19 (lege config flow, options flow
+alleen als opruimoverzicht), op zijn verzoek; `SPEC.md` is er niet op
+aangepast. Twee dingen die daarbij horen:
+
+- **`async_create_entry` van een options flow VERVANGT de options.** De
+  opruimstap sloot af met `data={}`, en dat zou de themakeuze wissen bij elke
+  kamer die wordt opgeruimd. Elke stap die afsluit geeft de bestaande options
+  mee terug.
+- **Een gewijzigde keuze herlaadt de integratie niet.** Een update-listener zet
+  alleen de waarde die de lader doorgeeft; de kaarten halen de lader zelf
+  opnieuw op (als er een in beeld komt, als de pagina zichtbaar wordt, en elke
+  vijf minuten).
 
 **De wekkerkant is een subpakket** `alarm/`, met `alarm_`-voorvoegsels op zijn
 `hass.data`-sleutels — beide kanten hadden een `store` en een `ws_registered`.
@@ -1381,6 +1480,53 @@ die daar niet staan:
    de VERVANGING geeft `bad escape \d`: gebruik daar een vervangfunctie, of de
    Edit-tool (hetzelfde soort val als valkuil 13).
 
+63. **`hass.themes.darkMode` zegt niet of het dashboard donker is.** Home
+   Assistant zet hem op `false` voor ELK gekozen thema zonder `modes:`, ook als
+   dat thema zwart is met witte letters. Gemeten op 30 september 2026 met het
+   thema van de eigenaar in de testinstance:
+
+   ```
+   thema KOPO      darkMode false   heeft modes: nee   --primary-text-color #FFF
+   ```
+
+   Wie `darkMode` volgt zet op zijn donkere dashboard lichte kaarten neer. Lees
+   de tekstkleur van het thema; en doe dat niet met `getPropertyValue` (daar
+   kan `white`, een `var()` of een `color-mix()` in staan) maar door de
+   variabele in een echte kleureigenschap te zetten en `getComputedStyle` te
+   vragen: die geeft altijd `rgb()`. Zie `themaCss` in `theme.js`.
+
+64. **Een dubbele backslash in een script dat je via de Bash-tool aan `node`
+   voert, komt als GEEN backslash aan.** Valkuil 13, in een nieuwe vorm: een
+   heredoc met een aangehaalde eindmarkering zou niets mogen opeten, en toch
+   werd `\\s*` in een sjabloonliteral `s*`, en `\\b` een BACKSPACE-teken in
+   het bestand. Het gevolg op 30 september 2026: een regex in `check-css.mjs`
+   die niet compileerde, en een zoektekst met `\\n` die "niet gevonden" gaf
+   in een bestand waar hij gewoon in stond. Een ENKELE backslash (voor een
+   dollarteken of een backtick in een sjabloonliteral) komt wel goed door.
+   Staat er een dubbele in wat je wilt schrijven, schrijf het script dan eerst
+   met de Write-tool naar de kladmap en voer dat uit, of gebruik de Edit-tool.
+   Hetzelfde geldt voor een script waarin zelf een heredoc-markering als tekst
+   voorkomt: dat gaf `unexpected EOF`.
+
+65. **`git checkout -- <bestand>` zet NIET terug naar hoe het net was, maar
+   naar de laatste commit.** Bij het aantonen dat een bewaker vangt is een
+   bronbestand even stukgemaakt en daarna met `git checkout --` "hersteld";
+   dat gooide ook de vier wijzigingen van die ronde in dat bestand weg, omdat
+   er nog niets gecommit was. Er stond toevallig een kopie. Maak voor zo'n
+   proef een kopie en zet DIE terug, of doe de proef in een worktree.
+
+66. **Een schermafdruk lukt ook in een verborgen tabblad, en een view bouwt
+   daar ook, maar traag en niet altijd.** Op 30 september 2026 stond het
+   testtabblad de hele ronde op `hidden` (de eigenaar werkte in een ander
+   venster, en valkuil 60 zegt: afblijven). Wat werkte: schermafdrukken, echte
+   kliks (`isTrusted: true`), de dialogen van de config flow en de options
+   flow. Wat niet werkte: een view van 36 kaarten was na een harde herlading
+   een halve minuut leeg en soms langer; het driepuntsmenu van een integratie
+   ging niet open; en een `setTimeout`-lus van 45 tellen liet de browsertool op
+   zijn tijdslimiet lopen. Wat hielp: naar een kleine view laden en dan op het
+   tabblad van de grote klikken (navigeren binnen de pagina), en wachten met
+   `computer wait` in plaats van met een lus in de pagina.
+
 ---
 
 ## Projectstand
@@ -1445,8 +1591,8 @@ De vijf rondes ervoor, dezelfde dag: **0.11.0** (`docs/feedback-26-augustus/`),
 (`docs/kolomkoppen-beeld-en-tien-iconen/`). Die laatste is als enige zonder
 browser uitgebracht, en is met deze ronde alsnog nagelopen.
 
-**Tellingen op 30 september 2026 (0.53.1):** 1258 JS-tests en 726 Python-tests,
-alle groen; bundel 885.320 bytes.
+**Tellingen op 30 september 2026 (0.54.0):** 1322 JS-tests en 737 Python-tests,
+alle groen; bundel 893.983 bytes.
 
 **De releaseverhalen hierboven lopen tot 0.17.0 en zijn niet bijgewerkt.** Dat
 is met opzet: de lopende stand hoort in

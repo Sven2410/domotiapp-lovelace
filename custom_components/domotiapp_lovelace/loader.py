@@ -64,7 +64,20 @@ Drie eigenschappen die daarbij horen, en ze zijn alle drie nodig:
 `requires_auth = False`, net als het statische pad waar de bundel zelf op staat:
 een `<script>`-tag stuurt geen bearer-token mee, en de bundel is toch al
 openbaar. Er staat geen enkel gegeven van de gebruiker in dit antwoord — alleen
-een hash die uit een bestand in de installatie komt.
+een hash die uit een bestand in de installatie komt, en sinds 0.54.0 de keuze
+licht, donker of automatisch.
+
+## Het thema reist mee (0.54.0)
+
+De keuze voor een licht of donker thema staat bij de integratie, en de kaarten
+moeten hem kennen VOORDAT ze zich tekenen: een donkere kaart die een tel later
+licht wordt is een flits op elk dashboard, bij elke paginalading. Een
+WebSocket-commando is daarvoor te laat (dat bestaat pas als de config entry is
+opgezet), en de lader is er precies op tijd: hij draait vóór de bundel. Dus zet
+hij de keuze in een globale en importeert daarna pas.
+
+De bundel haalt dit antwoord ook zelf op (`src/thema.js`), om een gewijzigde
+keuze op te pikken zonder dat de pagina herladen hoeft te worden.
 """
 
 from __future__ import annotations
@@ -74,7 +87,16 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 
-from .const import CARD_URL_PATH, DATA_LOADER_REGISTERED, DOMAIN, LOADER_URL_PATH
+from .const import (
+    CARD_URL_PATH,
+    DATA_LOADER_REGISTERED,
+    DATA_THEMA,
+    DOMAIN,
+    LOADER_URL_PATH,
+    THEMA_AUTO,
+    THEMA_GLOBALE,
+    THEMAS,
+)
 
 
 class KaartLaderView(HomeAssistantView):
@@ -103,9 +125,15 @@ class KaartLaderView(HomeAssistantView):
         # Bestaat deze route, dan bestaat de hash. Weggehaald in plaats van er een
         # test bij te verzinnen (valkuil 34, derde rij).
         hash_nu = self._hass.data[DOMAIN][DATA_LOADER_REGISTERED]
+        thema = self._hass.data[DOMAIN].get(DATA_THEMA, THEMA_AUTO)
 
         return web.Response(
-            text=f'import("{CARD_URL_PATH}?v={hash_nu}");\n',
+            # De globale EERST: de import hieronder start de bundel, en die
+            # leest hem bij het laden.
+            text=(
+                f'globalThis.{THEMA_GLOBALE}="{thema}";\n'
+                f'import("{CARD_URL_PATH}?v={hash_nu}");\n'
+            ),
             content_type="text/javascript",
             headers={
                 # De service worker cachet /api/ al niet; dit sluit de
@@ -114,6 +142,17 @@ class KaartLaderView(HomeAssistantView):
                 "Cache-Control": "no-store, must-revalidate",
             },
         )
+
+
+def zet_thema(hass: HomeAssistant, thema: str | None) -> str:
+    """Leg vast welk thema de lader doorgeeft. Geeft terug wat het werd.
+
+    Alles wat geen bekende keuze is wordt `auto`. De waarde gaat letterlijk een
+    stuk JavaScript in, dus hier komt niets doorheen dat niet in `THEMAS` staat.
+    """
+    keuze = thema if thema in THEMAS else THEMA_AUTO
+    hass.data.setdefault(DOMAIN, {})[DATA_THEMA] = keuze
+    return keuze
 
 
 def async_registreer(hass: HomeAssistant, bundel_hash: str) -> None:

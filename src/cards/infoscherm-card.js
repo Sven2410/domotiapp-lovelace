@@ -173,6 +173,7 @@ const css = /* css */ `
     --dac-border: rgba(20, 20, 10, 0.10); --dac-border-hi: rgba(20, 20, 10, 0.2);
     --dac-ink: #1a1a17; --dac-ink-2: rgba(26, 26, 23, 0.66); --dac-ink-3: rgba(26, 26, 23, 0.42);
     --dac-shadow: none;
+    --dac-tint: 20, 20, 10;
   }
 
   .icon { width: 1em; height: 1em; display: block; }
@@ -637,7 +638,7 @@ const css = /* css */ `
      staven per tijdvak, en de bronnen met hun totaal. */
   .ed { display: flex; flex-direction: column; gap: calc(16px * var(--s)); height: 100%; min-height: 0; }
   .ed-balk { display: flex; align-items: center; gap: calc(10px * var(--s)); flex: 0 0 auto; flex-wrap: wrap; }
-  .ed-per { display: flex; gap: calc(4px * var(--s)); padding: calc(4px * var(--s)); background: rgba(255,255,255,.05); border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill); }
+  .ed-per { display: flex; gap: calc(4px * var(--s)); padding: calc(4px * var(--s)); background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill); }
   .ed-per button {
     padding: calc(7px * var(--s)) calc(16px * var(--s)); cursor: pointer; border: 0; background: none;
     border-radius: var(--dac-radius-pill); font: inherit; font-size: calc(14px * var(--s));
@@ -736,6 +737,11 @@ const css = /* css */ `
 
 export class InfoschermCard extends DacCard {
   static css = css;
+
+  /* Dit scherm heeft zijn eigen keuze Uiterlijk (in het beheer) en volgt het
+     thema van de integratie dus niet: het hangt aan een muur, niet op een
+     dashboard. Zie `volgtThema` in base.js. */
+  static volgtThema = false;
 
   constructor() {
     super();

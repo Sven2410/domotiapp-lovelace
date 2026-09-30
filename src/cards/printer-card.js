@@ -186,7 +186,7 @@ class PrinterCard extends DacCard {
     .tegel {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 5px; min-width: 0;
-      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-sm);
     }
     .tegel .w {
@@ -211,7 +211,7 @@ class PrinterCard extends DacCard {
     .tray {
       display: flex; align-items: center; gap: 6px; min-width: 0;
       padding: 5px 7px; border-radius: var(--dac-radius-sm);
-      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
     }
     .tray .vlak {
       width: 15px; height: 15px; flex: 0 0 auto; border-radius: 4px;

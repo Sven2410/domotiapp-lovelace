@@ -1,12 +1,21 @@
 """Config flow en options flow voor DomotiApp Lovelace.
 
-De config flow is bewust leeg: één bevestigingsstap zonder invoervelden, zodat
-de integratie via de UI toe te voegen is. Er valt niets in te stellen.
+De config flow heeft één stap met één keuze: het **thema** van de kaarten
+(automatisch, licht of donker). Tot 0.54.0 was die stap leeg; de eigenaar vroeg
+op 30 september 2026 om een licht thema, met de keuze bij het toevoegen van de
+integratie. De keuze staat in de `options` van de entry, zodat hij achteraf te
+verzetten is zonder de integratie opnieuw toe te voegen.
 
-De **options flow** is het opruimoverzicht (SPEC 15). Dat is geen
-instellingenscherm — er is niets in te stellen — maar de enige plek waar een
-admin opgeslagen scenes van een light group kan weggooien. Twee stappen: een
-keuzelijst en een bevestiging.
+De **options flow** begint met een menu: *Uiterlijk* (dezelfde keuze, achteraf)
+en *Opgeslagen scenes opruimen* (SPEC 15). Dat laatste is de enige plek waar
+een admin opgeslagen scenes van een light group kan weggooien. Twee stappen:
+een keuzelijst en een bevestiging.
+
+**Dit wijkt af van de letter van SPEC 15.2 en 19**, die een lege config flow en
+een options flow met alleen het opruimoverzicht beschrijven. De opruimstappen
+zelf zijn ongewijzigd; er staat een menu voor, en de eerste stap heet `scenes`
+in plaats van `init`. Zo stond het ook in 0.5.0, toen er een stap Alarmcode
+naast stond. Zie `docs/licht-thema/RAPPORT.md`.
 
 Twee dingen die deze flow niet zelf doet, en dat is met opzet:
 
@@ -43,29 +52,63 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .const import DATA_STORE, DOMAIN
+from .const import CONF_THEMA, DATA_STORE, DOMAIN, THEMA_AUTO, THEMAS
 from .store import StoreUnusableError
 
 CONF_GROEP = "groep"
 CONF_BEVESTIGD = "bevestigd"
 
 
+def _thema_schema(huidig: str) -> vol.Schema:
+    """De keuze automatisch, licht of donker, als drie keuzerondjes.
+
+    Een lijst en geen uitklapmenu: het zijn er drie, en dan zie je ze liever
+    alle drie staan dan dat je eerst moet tikken om te weten wat er te kiezen
+    valt. De namen komen uit `selector.thema.options` in de vertalingen.
+    """
+    return vol.Schema(
+        {
+            vol.Required(CONF_THEMA, default=huidig): SelectSelector(
+                SelectSelectorConfig(
+                    options=list(THEMAS),
+                    mode=SelectSelectorMode.LIST,
+                    translation_key=CONF_THEMA,
+                )
+            )
+        }
+    )
+
+
+def _als_thema(waarde: Any) -> str:
+    """Een bekende keuze, of `auto`."""
+    return waarde if waarde in THEMAS else THEMA_AUTO
+
+
 class DomotiappSceneConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Lege flow — er valt niets te configureren."""
+    """Eén stap, één keuze: het thema van de kaarten."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Bevestigingsstap zonder velden."""
+        """Kies automatisch, licht of donker; automatisch staat voor."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
         if user_input is None:
-            return self.async_show_form(step_id="user")
+            return self.async_show_form(
+                step_id="user", data_schema=_thema_schema(THEMA_AUTO)
+            )
 
-        return self.async_create_entry(title="DomotiApp Lovelace", data={})
+        # In `options` en niet in `data`: dit is een voorkeur die achteraf te
+        # verzetten is (Configureren), geen gegeven waar de integratie op
+        # draait.
+        return self.async_create_entry(
+            title="DomotiApp Lovelace",
+            data={},
+            options={CONF_THEMA: _als_thema(user_input.get(CONF_THEMA))},
+        )
 
     @staticmethod
     @callback
@@ -75,16 +118,56 @@ class DomotiappSceneConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class DomotiappSceneOptionsFlow(OptionsFlow):
-    """Het opruimoverzicht: kies een groep, bevestig, verwijder (SPEC 15.2)."""
+    """Configureren: het uiterlijk, of het opruimoverzicht (SPEC 15.2)."""
 
     def __init__(self) -> None:
         self._gekozen: str | None = None
 
     # ----------------------------------------------------------------------
-    # Stap init — de keuzelijst
+    # Stap init — het menu
     # ----------------------------------------------------------------------
 
     async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Twee dingen vallen er te doen: het thema kiezen, of opruimen."""
+        return self.async_show_menu(
+            step_id="init", menu_options=["uiterlijk", "scenes"]
+        )
+
+    # ----------------------------------------------------------------------
+    # Stap uiterlijk — licht, donker of automatisch
+    # ----------------------------------------------------------------------
+
+    async def async_step_uiterlijk(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Dezelfde keuze als bij het toevoegen, met de huidige voorgevuld.
+
+        Een entry van vóór 0.54.0 heeft de keuze niet; die staat dan op
+        automatisch, want dat is ook wat de kaarten zonder keuze doen.
+        """
+        huidig = _als_thema(self.config_entry.options.get(CONF_THEMA))
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="uiterlijk", data_schema=_thema_schema(huidig)
+            )
+
+        # De rest van de options blijft staan: `async_create_entry` VERVANGT ze.
+        return self.async_create_entry(
+            title="",
+            data={
+                **self.config_entry.options,
+                CONF_THEMA: _als_thema(user_input.get(CONF_THEMA)),
+            },
+        )
+
+    # ----------------------------------------------------------------------
+    # Stap scenes — de keuzelijst
+    # ----------------------------------------------------------------------
+
+    async def async_step_scenes(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Toon alle opgeslagen groepen, of meld dat er niets is."""
@@ -117,7 +200,7 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
         ]
 
         return self.async_show_form(
-            step_id="init",
+            step_id="scenes",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_GROEP): SelectSelector(
@@ -172,7 +255,10 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
         # (SPEC 11.4): één functie, twee aanroepers.
         await store.async_delete_group(self._gekozen)
 
-        return self.async_create_entry(title="", data={})
+        # De options gaan ongewijzigd terug. Hier stond `data={}`, en dat was
+        # goed zolang er geen options waren; nu zou het de themakeuze wissen
+        # bij elke kamer die wordt opgeruimd.
+        return self.async_create_entry(title="", data=dict(self.config_entry.options))
 
     def _label(self, groep: dict[str, Any]) -> str:
         """Het label van deze groep, met de naam die HA er nu voor kent."""

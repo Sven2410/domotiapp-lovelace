@@ -26,11 +26,13 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens, baseCss } from "../theme.js";
+import { sheet, tokens, themaCss, baseCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { stateOf } from "../ha.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9999;
@@ -189,6 +191,9 @@ class BronKiezer extends HTMLElement {
   }
 
   open(hass, entityId, naam) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     this.hass = hass;
     this.entity_ = entityId;
     this.naam_ = naam;

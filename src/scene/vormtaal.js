@@ -13,9 +13,11 @@
 
 import { css, unsafeCSS } from "lit";
 
-import { baseCss, tokens } from "../theme.js";
+import { baseCss, themaCss, tokens } from "../theme.js";
+import { meetOpnieuw, volgThema } from "../thema.js";
 
 export const vormtaal = css`
+  ${unsafeCSS(themaCss)}
   :host {
     ${unsafeCSS(tokens)}
     font-family: var(--dac-font);
@@ -24,3 +26,39 @@ export const vormtaal = css`
   }
   ${unsafeCSS(baseCss)}
 `;
+
+/**
+ * Laat een lit-element het lichte of donkere thema volgen.
+ *
+ * Hetzelfde als wat `DacCard` in base.js voor de andere kaarten doet: het
+ * attribuut `dac-thema` zetten zodra het element in de pagina hangt, en
+ * opnieuw meten als Home Assistant van thema wisselt.
+ *
+ * `alleenMeten` is voor een editor in een dialoog van Home Assistant zelf.
+ * Die dialoog volgt het thema van Home Assistant en niet onze instelling.
+ */
+export const MetThema = (Basis, opties) =>
+  class extends Basis {
+    connectedCallback() {
+      super.connectedCallback();
+      this._themaLos = volgThema(this, opties);
+    }
+
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      this._themaLos?.();
+      this._themaLos = null;
+    }
+
+    // `update` en niet `updated`: de kaarten overschrijven `updated` zonder
+    // de basisklasse aan te roepen, en dan zou dit stil niet draaien.
+    update(gewijzigd) {
+      super.update(gewijzigd);
+      const oud = gewijzigd?.get?.("hass");
+      if (oud && oud.themes !== this.hass?.themes) meetOpnieuw(this);
+    }
+
+    themaGewisseld_() {
+      this.requestUpdate();
+    }
+  };

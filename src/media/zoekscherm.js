@@ -29,7 +29,8 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens, baseCss } from "../theme.js";
+import { sheet, tokens, themaCss, baseCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { bindActions, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
@@ -78,6 +79,7 @@ function ondertitel(t) {
 }
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9999;
@@ -238,7 +240,7 @@ const css = /* css */ `
   .tr .hoes {
     flex: 0 0 auto; width: 52px; height: 52px; border-radius: 9px; overflow: hidden;
     display: grid; place-items: center;
-    background: rgba(255,255,255,.05); border: 1px solid var(--dac-border);
+    background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border);
     color: var(--dac-ink-3);
   }
   .tr .hoes img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -255,7 +257,7 @@ const css = /* css */ `
   .tr .soort {
     align-self: flex-start; margin-top: 2px; padding: 1px 7px; border-radius: var(--dac-radius-pill);
     font-size: 10px; letter-spacing: .04em; text-transform: none;
-    background: rgba(255,255,255,.06); color: var(--dac-ink-3);
+    background: rgba(var(--dac-tint), .06); color: var(--dac-ink-3);
   }
 
   /* ------------------------------------------------------------ meldingen */
@@ -399,7 +401,7 @@ const css = /* css */ `
     border-radius: var(--dac-radius-pill); font-size: 14px; font-weight: 500;
     color: var(--dac-ink); background: var(--dac-bg-raise);
     border: 1px solid var(--dac-border-hi);
-    box-shadow: 0 18px 40px -18px rgba(0,0,0,.9);
+    box-shadow: 0 18px 40px -18px rgba(0,0,0,calc(.9 * var(--dac-diepte)));
     animation: op 180ms ease;
   }
   .toast[hidden] { display: none; }
@@ -441,7 +443,7 @@ const css = /* css */ `
   .menu {
     position: fixed; z-index: 2; min-width: 190px; padding: 6px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
-    border-radius: var(--dac-radius-sm); box-shadow: 0 24px 48px -20px rgba(0,0,0,.9);
+    border-radius: var(--dac-radius-sm); box-shadow: 0 24px 48px -20px rgba(0,0,0,calc(.9 * var(--dac-diepte)));
     display: flex; flex-direction: column;
     /* Scrollen, en dat is geen luxe: "Aan welke lijst?" toont alle bewerkbare
        afspeellijsten, en dat zijn er bij de eigenaar twintig. Zonder dit liep
@@ -499,6 +501,9 @@ class MediaBrowser extends HTMLElement {
    * @param {string} naam
    */
   open(hass, entityId, naam, { radioModus = false, speakers = null } = {}) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     this.hass = hass;
     this.entity_ = entityId;
     this.naam_ = naam;

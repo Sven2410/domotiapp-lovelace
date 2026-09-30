@@ -36,11 +36,13 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { alsGrootte, dagLabel, perDag } from "./camera-filters.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9990;
@@ -172,6 +174,9 @@ class CameraArchief extends HTMLElement {
    * @param {string} [opts.beeld] open meteen dit ene beeld groot, zonder lijst
    */
   open(opts) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     this.opts_ = opts;
     this.beelden_ = opts.beelden ?? [];
     if (!this.gebouwd_) this.bouw_();

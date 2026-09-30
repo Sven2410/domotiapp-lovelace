@@ -154,7 +154,7 @@ export const sliderCss = /* css */ `
   }
   .slider .track {
     position: absolute; inset: 0; border-radius: 10px;
-    background: var(--strip, rgba(255,255,255,.075)); overflow: hidden;
+    background: var(--strip, rgba(var(--dac-tint), .075)); overflow: hidden;
   }
   .slider .fill {
     position: absolute; inset: 0 auto 0 0; width: var(--v, 0%);

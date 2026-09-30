@@ -170,7 +170,7 @@ class DishwasherCard extends DacCard {
     .keuze {
       flex: 1 1 auto; min-width: 0;
       font: inherit; font-size: 13px; line-height: 1.2;
-      color: var(--dac-ink); color-scheme: dark;
+      color: var(--dac-ink); color-scheme: var(--dac-scheme);
       background-color: var(--dac-bg-raise);
       border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
       padding: 7px 10px; cursor: pointer;
@@ -179,7 +179,7 @@ class DishwasherCard extends DacCard {
     @media (hover: hover) { .keuze:hover { border-color: var(--dac-border-hi); } }
     .keuze:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
     .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
-    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
+    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-on-accent); }
 
     .knop {
       flex: 1 1 0; min-width: 0;

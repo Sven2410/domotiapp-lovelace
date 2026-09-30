@@ -175,7 +175,7 @@ const css = /* css */ `
   input[type="text"], input[type="url"], input[type="date"], input[type="datetime-local"], input[type="time"], input[type="number"], input[type="color"], textarea, select {
     font: inherit; font-size: 14px; color: var(--dac-ink); background: var(--dac-surface);
     border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm); padding: 8px 10px;
-    min-height: 40px; width: 100%; min-width: 0; color-scheme: dark;
+    min-height: 40px; width: 100%; min-width: 0; color-scheme: var(--dac-scheme);
   }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
@@ -206,7 +206,7 @@ const css = /* css */ `
   .schakel { position: relative; width: 44px; height: 24px; flex: 0 0 auto; }
   .schakel input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
   .schakel span { position: absolute; inset: 0; border-radius: 999px; background: var(--dac-border-hi); transition: background 120ms; }
-  .schakel span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--dac-ink); transition: transform 120ms; }
+  .schakel span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--dac-knob); box-shadow: var(--dac-knob-schaduw); transition: transform 120ms; }
   .schakel input:checked + span { background: var(--dac-accent-hi); }
   .schakel input:checked + span::after { transform: translateX(20px); }
 
@@ -242,7 +242,7 @@ const css = /* css */ `
      Gevraagd op 10 september 2026: "drag en drop ipv pijltjes". */
   .greep { width: 28px; height: 44px; display: grid; place-items: center; color: var(--dac-ink-3); cursor: grab; touch-action: none; border-radius: 6px; }
   .greep .icon { font-size: 20px; }
-  .item.sleept { opacity: 0.9; border: 1px solid var(--dac-accent-hi); box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: grabbing; position: relative; z-index: 2; }
+  .item.sleept { opacity: 0.9; border: 1px solid var(--dac-accent-hi); box-shadow: 0 8px 24px rgba(0,0,0,calc(.35 * var(--dac-diepte))); cursor: grabbing; position: relative; z-index: 2; }
   .item.sleept .greep { cursor: grabbing; }
   .avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-size: 14px; font-weight: 700; color: var(--dac-ink-3); background: var(--dac-surface-hi); border: 1px solid var(--dac-border); cursor: pointer; }
   .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -285,7 +285,7 @@ const css = /* css */ `
     border-radius: 8px; background: var(--dac-accent-soft); border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 50%, transparent);
     display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; font-size: 12px;
   }
-  .ib.sleept .ib-in { box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  .ib.sleept .ib-in { box-shadow: 0 8px 24px rgba(0,0,0,calc(.35 * var(--dac-diepte))); }
   .ib.ongeldig .ib-in { background: color-mix(in srgb, var(--dac-bad) 18%, transparent); border-color: var(--dac-bad); }
   .ib.ontbreekt .ib-in { border-style: dashed; background: var(--dac-surface-hi); }
   .ib-kop { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }

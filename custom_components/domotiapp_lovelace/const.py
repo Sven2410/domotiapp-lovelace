@@ -36,6 +36,24 @@ DATA_LOADER_REGISTERED: Final = "loader_hash"
 # Lengte van de hash in de ?v=.
 HASH_LENGTE: Final = 12
 
+# --- Het thema van de kaarten (licht of donker) ---------------------------
+#
+# Eén keuze voor de hele installatie, in de options van de config entry.
+# `auto` volgt het thema van Home Assistant: de kaart meet de tekstkleur van
+# het dashboard waar hij op staat. `licht` en `donker` winnen daarvan, voor
+# een dashboard met een foto als achtergrond waar die meting niets zegt.
+#
+# De waarden staan ook in src/thema-logica.js en horen gelijk te blijven: de
+# lader geeft ze letterlijk door aan de bundel.
+CONF_THEMA: Final = "thema"
+THEMA_AUTO: Final = "auto"
+THEMA_LICHT: Final = "licht"
+THEMA_DONKER: Final = "donker"
+THEMAS: Final = (THEMA_AUTO, THEMA_LICHT, THEMA_DONKER)
+DATA_THEMA: Final = "thema"
+# De globale waarin de lader de keuze zet, vóórdat de bundel geladen is.
+THEMA_GLOBALE: Final = "__domotiappLovelaceThema"
+
 # --- Opslag (SPEC 10.4 en 10.6) -----------------------------------------
 STORAGE_KEY: Final = f"{DOMAIN}.scenes"
 STORAGE_VERSION: Final = 1

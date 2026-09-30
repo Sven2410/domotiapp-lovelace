@@ -22,7 +22,8 @@
  * iets veranderde.
  */
 
-import { baseCss, sheet, tokens } from "./theme.js";
+import { baseCss, sheet, themaCss, tokens } from "./theme.js";
+import { isLicht, meetOpnieuw, volgThema } from "./thema.js";
 import { entitiesChanged } from "./ha.js";
 import { opgegevenRijen, volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldBadgeInKiezer, meldInKiezer } from "./registratie.js";
@@ -36,6 +37,7 @@ const hostCss = /* css */ `
     -webkit-font-smoothing: antialiased;
   }
   :host([hidden]) { display: none; }
+  ${themaCss}
 `;
 
 /**
@@ -129,6 +131,15 @@ export class DacCard extends HTMLElement {
   /** Component-specific CSS, overridden by subclasses. */
   static css = "";
 
+  /**
+   * Volgt deze kaart het lichte of donkere thema van de integratie?
+   *
+   * Alleen het infoscherm zet dit uit: dat heeft een eigen keuze Uiterlijk in
+   * het beheer, want het hangt bij een klant aan de muur en volgt daar geen
+   * dashboard.
+   */
+  static volgtThema = true;
+
   static get styleSheets_() {
     if (!Object.hasOwn(this, "sheets_")) {
       this.sheets_ = [sheet(hostCss + baseCss + this.css)];
@@ -220,6 +231,9 @@ export class DacCard extends HTMLElement {
   set hass(hass) {
     const prev = this.hass_;
     this.hass_ = hass;
+    // Een ander thema in Home Assistant (of een telefoon die 's avonds naar
+    // donker gaat) komt binnen als een nieuwe `themes`. Dan opnieuw meten.
+    if (prev && prev.themes !== hass?.themes && this.themaLos_) meetOpnieuw(this);
     if (!this.config) return;
     if (!this.built_) {
       this.build_();
@@ -236,6 +250,15 @@ export class DacCard extends HTMLElement {
   }
 
   connectedCallback() {
+    // Vóór het bouwen: `paint()` mag al weten of de kaart licht is.
+    if (this.constructor.volgtThema && !this.themaLos_) {
+      const wasLicht = this.licht_;
+      this.themaLos_ = volgThema(this);
+      // Home Assistant zet `hass` vóórdat de kaart in de pagina hangt
+      // (valkuil 25), dus er kan al getekend zijn zonder dat er iets te meten
+      // viel. Blijkt de kaart nu licht, dan nog een keer.
+      if (this.built_ && this.licht_ !== wasLicht) this.themaGewisseld_();
+    }
     if (!this.config) return;
     if (!this.built_) {
       this.build_();
@@ -253,8 +276,25 @@ export class DacCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.themaLos_?.();
+    this.themaLos_ = null;
     this.destroy_();
     this.wired_ = false;
+  }
+
+  /** Draagt deze kaart nu het lichte thema? Voor kleuren die `paint()` zelf zet. */
+  get licht_() {
+    return isLicht(this);
+  }
+
+  /**
+   * Het thema is gewisseld terwijl de kaart er al stond.
+   *
+   * De tokens volgen vanzelf; dit is er voor de kleuren die `paint()` met de
+   * hand zet, zoals de kleur van een brandende lamp.
+   */
+  themaGewisseld_() {
+    if (this.built_ && this.wired_ && this.hass_ && !this.config?.[INCOMPLETE]) this.paint();
   }
 
   /* ------------------------------------------------------- subclass API */

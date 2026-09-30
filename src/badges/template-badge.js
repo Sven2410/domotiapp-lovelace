@@ -316,14 +316,14 @@ class DomotiappTemplateBadge extends DacCard {
     const lampen = this.lampen_();
     if (lampen) {
       if (!lampen.length) return DEMP;
-      return gevraagd ?? lampKleur(this.hass?.states, lampen) ?? "var(--dac-lit)";
+      return gevraagd ?? lampKleur(this.hass?.states, lampen, this.licht_) ?? "var(--dac-lit)";
     }
     if (gevraagd) return gevraagd;
 
     const id = c.entity;
     const st = stateOf(this.hass, id);
     if (!st) return BLAUW;
-    if (id.startsWith("light.")) return isOn(st) ? lightTone(st) ?? "var(--dac-lit)" : DEMP;
+    if (id.startsWith("light.")) return isOn(st) ? lightTone(st, this.licht_) ?? "var(--dac-lit)" : DEMP;
     // Buiten de aan/uit-domeinen zegt "aan" niets -- zie badge-logica.js.
     if (!heeftAanUit(id)) return BLAUW;
     return isOn(st) ? BLAUW : DEMP;

@@ -1,10 +1,12 @@
 /**
- * Vier bewakers op de bron van de kaarten.
+ * Vijf bewakers op de bron van de kaarten.
  *
  * 1. Elke `:hover`-regel op een kaart staat achter `@media (hover: hover)`.
  * 2. Geen enkel sjabloonliteral wordt halverwege een CSS-commentaar afgesloten.
  * 3. Elke `var(--dac-...)` die gebruikt wordt, bestaat ook echt in theme.js.
  * 4. Er staan geen stuurtekens in de bron (een heredoc die backslashes at).
+ * 5. Geen kleur die alleen in donker klopt (wit op een paar procent, een vast
+ *    donker kleurenschema) buiten theme.js.
  *
  * **Bewaker 2 draait sinds 28 augustus 2026 bij ELKE `npm run build`.** Hij
  * bestond al en had de fout van die dag gevangen -- maar hij was niet gedraaid,
@@ -331,6 +333,65 @@ let stuur = 0;
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Bewaker 5: kleuren die alleen in DONKER kloppen.
+ *
+ * Sinds 0.54.0 is er een licht thema. Wat dat mogelijk maakt is dat geen enkele
+ * kaart zelf "wit op vijf procent" zegt: op een donkere kaart is dat een tint,
+ * op een witte pagina is het niets, en de knop die ermee getekend is verdwijnt.
+ * Zo'n vlak hoort rgba(var(--dac-tint), .05) te zijn; de tint keert om in
+ * licht. Hetzelfde voor color-scheme: dark op een invoerveld, dat in licht een
+ * zwart tijdveld op een witte kaart geeft: dat hoort var(--dac-scheme) te zijn.
+ *
+ * Dit is een bewaker en geen regel in CLAUDE.md alleen, om de reden van valkuil
+ * 34: kennis in een bestand is geen bewaking. De eerstvolgende kaart die
+ * iemand schrijft begint met een kopie van een bestaande, en wie daar uit
+ * gewoonte een witte tint in typt ziet in donker geen enkel verschil.
+ *
+ * WAT ER WEL MAG
+ *
+ * Wit dat over een BEELD of over een gekleurd vlak ligt, want dat is in licht
+ * even donker als in donker: de greep van een schuif, de glans over een
+ * voortgangsbalk, tekst op een camerabeeld, de rand om een spoel filament. Die
+ * plekken staan hieronder geteld per bestand. Komt er een bij, verhoog dan het
+ * getal en zeg erbij waarom.
+ */
+const WITTE_TINT = /rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/g;
+const VAST_SCHEMA = /color-scheme:\s*(dark|light)\b/g;
+const WIT_TOEGESTAAN = {
+  "src/theme.js": Infinity, // de tokens zelf
+  "src/slider.js": 1, // de greep van de schuif, op de gekleurde balk
+  "src/cards/auto-card.js": 1, // de glans over de laadbalk
+  "src/cards/camera-archief.js": 1, // de sluitknop op het vergrote beeld
+  "src/cards/camera-card.js": 1, // de cameranaam op een miniatuur
+  "src/cards/printer-card.js": 1, // de rand om de kleur van een spoel
+};
+let alleenDonker = 0;
+{
+  for (const pad of alleBronbestanden()) {
+    const bron = readFileSync(pad, "utf8");
+    const naam = relative(WORTEL, pad).split(sep).join("/");
+    const wit = [...bron.matchAll(WITTE_TINT)].length;
+    const mag = WIT_TOEGESTAAN[naam] ?? 0;
+    if (wit > mag) {
+      alleenDonker += 1;
+      fouten.push(
+        `${naam}: ${wit} keer wit met een alfa, ${mag} toegestaan -- gebruik rgba(var(--dac-tint), ...)`,
+      );
+    }
+    if (naam !== "src/theme.js") {
+      const schema = [...bron.matchAll(VAST_SCHEMA)];
+      // In een commentaar mag het woord staan; in de opmaak niet. Een
+      // declaratie eindigt op een puntkomma, een zin niet.
+      const echt = schema.filter((m) => bron.slice(m.index, m.index + 40).includes(";"));
+      if (echt.length) {
+        alleenDonker += 1;
+        fouten.push(`${naam}: een vast color-scheme -- gebruik var(--dac-scheme)`);
+      }
+    }
+  }
+}
+
 if (fouten.length > 0) {
   console.error("FOUT in de CSS van de kaarten:");
   for (const f of fouten) console.error(`  - ${f}`);
@@ -339,6 +400,12 @@ if (fouten.length > 0) {
       "\nEen :hover hoort in een @media (hover: hover) { ... }. Zonder dat blijft de\n" +
         "knop oplichten nadat je hem hebt aangetikt, ook als de pop-up erachter al\n" +
         "dicht is.",
+    );
+  }
+  if (alleenDonker > 0) {
+    console.error(
+      "\nEen kleur die alleen in donker klopt verdwijnt in het lichte thema. Zie\n" +
+        "bewaker 5 in scripts/check-css.mjs en de tokens in src/theme.js.",
     );
   }
   if (sjablonen > 0) {
@@ -353,5 +420,6 @@ if (fouten.length > 0) {
 console.log(
   `OK: ${bewaakt} hover-regel(s) op kaarten achter @media (hover: hover), ` +
     "geen sjabloon dat midden in een CSS-commentaar ophoudt, " +
-    "elke var(--dac-...) bestaat, en er staan geen stuurtekens in de bron.",
+    "elke var(--dac-...) bestaat, er staan geen stuurtekens in de bron, " +
+    "en geen kaart draagt een kleur die alleen in donker klopt.",
 );

@@ -378,7 +378,7 @@ class CameraCard extends DacCard {
       position: absolute; left: 0; top: 36px; z-index: 8; min-width: 180px;
       padding: 5px; display: flex; flex-direction: column;
       background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
-      border-radius: var(--dac-radius-sm); box-shadow: 0 18px 40px -14px rgba(0,0,0,.72);
+      border-radius: var(--dac-radius-sm); box-shadow: 0 18px 40px -14px rgba(0,0,0,calc(.72 * var(--dac-diepte)));
     }
     .filters .dagmenu[hidden] { display: none; }
     .filters .dagmenu button {

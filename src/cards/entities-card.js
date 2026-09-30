@@ -312,7 +312,7 @@ class EntitiesCard extends DacCard {
       flex: 0 0 auto; margin-left: auto; min-width: 0;
       font: inherit; font-size: 13px; line-height: 1.2;
       font-variant-numeric: tabular-nums;
-      color: var(--dac-ink); color-scheme: dark;
+      color: var(--dac-ink); color-scheme: var(--dac-scheme);
       background-color: var(--dac-surface);
       border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
       padding: 5px 10px; cursor: pointer; text-align: center;
@@ -340,7 +340,7 @@ class EntitiesCard extends DacCard {
     .keuze {
       flex: 0 0 auto; margin-left: auto; max-width: 55%;
       font: inherit; font-size: 13px; line-height: 1.2;
-      color: var(--dac-ink); color-scheme: dark;
+      color: var(--dac-ink); color-scheme: var(--dac-scheme);
       background-color: var(--dac-bg-raise);
       border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
       padding: 5px 8px 5px 10px; cursor: pointer;
@@ -350,7 +350,7 @@ class EntitiesCard extends DacCard {
     @media (hover: hover) { .keuze:hover { border-color: var(--dac-border-hi); } }
     .keuze:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
     .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
-    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
+    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-on-accent); }
     .row[data-vorm="tile"] .keuze {
       position: absolute; top: 12px; right: 12px; margin: 0; max-width: calc(100% - 24px);
     }
@@ -397,7 +397,7 @@ class EntitiesCard extends DacCard {
     if (item.tone) return toneValue(item.tone);
     if (this.config.tone) return toneValue(this.config.tone);
     if (domainOf(item.entity) !== "light") return TONES.accent;
-    return lightTone(stateOf(this.hass, item.entity)) ?? TONES.lit;
+    return lightTone(stateOf(this.hass, item.entity), this.licht_) ?? TONES.lit;
   }
 
   /**
