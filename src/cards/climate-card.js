@@ -105,7 +105,7 @@ class ClimateCard extends DacCard {
     /* ---- stelknop ---- */
     .set {
       flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px; padding: 3px;
-      background: rgba(255,255,255,.05); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-pill);
     }
     .set button {
@@ -114,8 +114,8 @@ class ClimateCard extends DacCard {
       border-radius: var(--dac-radius-pill);
       transition: background 180ms ease, color 180ms ease;
     }
-    @media (hover: hover) { .set button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); } }
-    .set button:active { background: rgba(255,255,255,.14); }
+    @media (hover: hover) { .set button:hover { color: var(--dac-ink); background: rgba(var(--dac-tint), .08); } }
+    .set button:active { background: rgba(var(--dac-tint), .14); }
     .set button:disabled { opacity: .3; cursor: default; }
     .set button .icon { width: 16px; height: 16px; }
     .set .target {
@@ -159,7 +159,7 @@ class ClimateCard extends DacCard {
     .tegel {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 6px;
-      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-sm);
     }
     .tegel .w {

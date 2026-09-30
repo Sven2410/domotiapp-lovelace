@@ -37,10 +37,12 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9999;
@@ -60,7 +62,7 @@ const css = /* css */ `
       max(16px, env(safe-area-inset-right))
       max(24px, env(safe-area-inset-bottom))
       max(16px, env(safe-area-inset-left));
-    background: color-mix(in srgb, #000 58%, transparent);
+    background: var(--dac-scrim);
     animation: op 140ms ease;
   }
   @keyframes op { from { opacity: 0 } to { opacity: 1 } }
@@ -72,7 +74,7 @@ const css = /* css */ `
     border-radius: var(--dac-radius);
     background: var(--dac-bg-raise);
     border: 1px solid var(--dac-border);
-    box-shadow: 0 24px 60px -20px rgba(0,0,0,.7);
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,calc(.7 * var(--dac-diepte)));
     display: flex; flex-direction: column; gap: 12px;
     animation: omhoog 160ms ease;
   }
@@ -150,7 +152,7 @@ const css = /* css */ `
   }
   .vink .icon { width: 16px; height: 16px; }
   .soort[aria-checked="true"] .vink {
-    background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: #0c0c0a;
+    background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi);
   }
 
   .leeg { font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); padding: 4px 2px; }
@@ -226,6 +228,9 @@ class MeldingenScherm extends HTMLElement {
 
   /** Open het scherm voor deze persoon, gevuld door deze kaart. */
   open(bron, persoon) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     if (!this.gebouwd_) this.bouw_();
     this.bron = bron;
     this.persoon = persoon;

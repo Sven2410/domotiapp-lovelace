@@ -3,7 +3,13 @@
     "step": {
       "user": {
         "title": "DomotiApp Lovelace",
-        "description": "There is nothing to configure. Confirm to install the card; it will then be available on every dashboard."
+        "description": "Once added, the cards are available on every dashboard. Choose how they look; you can change this later under Configure.",
+        "data": {
+          "thema": "Card theme"
+        },
+        "data_description": {
+          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background."
+        }
       }
     },
     "abort": {
@@ -13,6 +19,23 @@
   "options": {
     "step": {
       "init": {
+        "title": "DomotiApp Lovelace",
+        "menu_options": {
+          "uiterlijk": "Appearance: light or dark",
+          "scenes": "Clean up stored scenes"
+        }
+      },
+      "uiterlijk": {
+        "title": "Appearance of the cards",
+        "description": "Applies to every DomotiApp card on every dashboard. An open dashboard follows by itself, within five minutes at most; no restart is needed.\n\nThe info screen is not affected: it has its own Appearance setting in its management card.",
+        "data": {
+          "thema": "Card theme"
+        },
+        "data_description": {
+          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background."
+        }
+      },
+      "scenes": {
         "title": "Clean up stored scenes",
         "description": "Choose the light group whose stored scenes you want to delete. Each entry shows how many lights are configured per scene, so you can see whether there is work in it.\n\nNothing is deleted yet; you will be asked to confirm.",
         "data": {
@@ -35,6 +58,15 @@
       "niet_gevonden": "This light group is no longer in storage; nothing was deleted.",
       "niet_geladen": "DomotiApp Lovelace is not loaded. Try again once the integration is running.",
       "opslag_onbruikbaar": "The storage file does not have the expected shape, so there is nothing to clean up per light group. See the repair issue for the way out."
+    }
+  },
+  "selector": {
+    "thema": {
+      "options": {
+        "auto": "Automatic (follows Home Assistant)",
+        "licht": "Light",
+        "donker": "Dark"
+      }
     }
   },
   "issues": {

@@ -26,12 +26,14 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { nameOf } from "../ha.js";
 import { FADE_STANDAARD, SNELKEUZES, alsKlok, minutenUit } from "./sleeptimer-logica.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9999;
@@ -54,7 +56,7 @@ const css = /* css */ `
   .vak {
     width: min(360px, 100%); padding: 20px;
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border-hi);
-    border-radius: var(--dac-radius); box-shadow: 0 24px 60px -20px rgba(0,0,0,.7);
+    border-radius: var(--dac-radius); box-shadow: 0 24px 60px -20px rgba(0,0,0,calc(.7 * var(--dac-diepte)));
     display: flex; flex-direction: column; gap: 14px;
   }
 
@@ -231,6 +233,9 @@ class SleepTimer extends HTMLElement {
   /* --------------------------------------------------------------- openen */
 
   async open(hass, entityId, naam) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     if (!this.gebouwd_) this.bouw_();
     this.hass = hass;
     this.entity_ = entityId;

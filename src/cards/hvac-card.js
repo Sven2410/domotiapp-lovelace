@@ -127,7 +127,7 @@ class HvacCard extends DacCard {
     .tegel {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 6px; min-width: 0;
-      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-sm);
     }
     .tegel .w {
@@ -174,7 +174,7 @@ class HvacCard extends DacCard {
        wil je met één duim bij allebei kunnen. */
     .set {
       display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 3px;
-      background: rgba(255,255,255,.05); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-pill);
     }
     .set[hidden] { display: none; }
@@ -184,8 +184,8 @@ class HvacCard extends DacCard {
       border-radius: var(--dac-radius-pill);
       transition: background 180ms ease, color 180ms ease;
     }
-    @media (hover: hover) { .set button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); } }
-    .set button:active { background: rgba(255,255,255,.14); }
+    @media (hover: hover) { .set button:hover { color: var(--dac-ink); background: rgba(var(--dac-tint), .08); } }
+    .set button:active { background: rgba(var(--dac-tint), .14); }
     .set button:disabled { opacity: .3; cursor: default; }
     .set button .icon { width: 16px; height: 16px; }
     .set .target {
@@ -209,7 +209,7 @@ class HvacCard extends DacCard {
     .keuze {
       flex: 1 1 auto; min-width: 0;
       font: inherit; font-size: 13px; line-height: 1.2;
-      color: var(--dac-ink); color-scheme: dark;
+      color: var(--dac-ink); color-scheme: var(--dac-scheme);
       background-color: var(--dac-bg-raise);
       border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
       padding: 7px 10px; cursor: pointer;
@@ -218,7 +218,7 @@ class HvacCard extends DacCard {
     @media (hover: hover) { .keuze:hover { border-color: var(--dac-border-hi); } }
     .keuze:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
     .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
-    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-ink); }
+    .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-on-accent); }
 
     /* ------------------------------------------------------------- boost */
 

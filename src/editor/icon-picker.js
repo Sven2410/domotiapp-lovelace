@@ -22,11 +22,13 @@
 
 import { DAI, icons, resolve } from "../icons.js";
 import { sheet } from "../theme.js";
-import { tokens } from "../theme.js";
+import { tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { meldAan } from "../registratie.js";
 import { GROEPEN, naamVan, zoekIconen } from "./icoon-zoek.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host { ${tokens} display: block; font-family: var(--dac-font); }
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -205,6 +207,9 @@ class DacIconPicker extends HTMLElement {
   }
 
   connectedCallback() {
+    // Deze kiezer staat in een dialoog van Home Assistant zelf, en die volgt
+    // het thema van Home Assistant, niet de instelling van de integratie.
+    volgThema(this, { alleenMeten: true });
     if (this.built_) return;
     this.built_ = true;
     this.build_();

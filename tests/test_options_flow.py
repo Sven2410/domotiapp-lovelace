@@ -44,8 +44,18 @@ def _gezonde_groep(entity_id: str, aantallen: tuple[int, int, int]) -> dict[str,
 
 
 async def _start(hass: HomeAssistant) -> dict[str, Any]:
+    """Open Configureren en kies het opruimoverzicht.
+
+    Sinds 0.54.0 begint de options flow met een menu (Uiterlijk of Opgeslagen
+    scenes opruimen); de keuzelijst van SPEC 15.2 is de stap `scenes` daarachter.
+    Het menu zelf wordt in test_thema.py getoetst.
+    """
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    return await hass.config_entries.options.async_init(entry.entry_id)
+    menu = await hass.config_entries.options.async_init(entry.entry_id)
+    assert menu["type"] is data_entry_flow.FlowResultType.MENU
+    return await hass.config_entries.options.async_configure(
+        menu["flow_id"], {"next_step_id": "scenes"}
+    )
 
 
 # --------------------------------------------------------------------------
@@ -91,7 +101,7 @@ async def test_lijst_bevat_groep_waarvan_de_entiteit_weg_is(
     resultaat = await _start(hass)
 
     assert resultaat["type"] is data_entry_flow.FlowResultType.FORM
-    assert resultaat["step_id"] == "init"
+    assert resultaat["step_id"] == "scenes"
 
     opties = _opties(resultaat)
     waarden = {optie["value"] for optie in opties}

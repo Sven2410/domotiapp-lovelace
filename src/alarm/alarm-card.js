@@ -69,7 +69,7 @@ import {
   stopToestand,
   subtitel,
 } from "./weergave.js";
-import { vormtaal } from "../scene/vormtaal.js";
+import { MetThema, vormtaal } from "../scene/vormtaal.js";
 import { meetRaster, opgegevenRijen, volgRaster } from "../rasterhoogte.js";
 
 const VERSION = __CARD_VERSION__;
@@ -97,7 +97,7 @@ const svg = (pad, klasse = "icoon") =>
     <path d=${pad} />
   </svg>`;
 
-class DomotiappAlarmCard extends LitElement {
+class DomotiappAlarmCard extends MetThema(LitElement) {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -604,7 +604,7 @@ class DomotiappAlarmCard extends LitElement {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: var(--card-background-color, #fff);
+      background: var(--dac-veld);
       transition: transform 0.2s ease;
     }
     .schakelaar[aria-checked="true"]::after {
@@ -973,7 +973,7 @@ class DomotiappAlarmCard extends LitElement {
  * al op. Hij is hier veilig te gebruiken: deze editor bestaat alleen binnen
  * HA's kaarteditor-dialoog, en die dialoog is zelf van `ha-form` gemaakt.
  */
-class DomotiappAlarmCardEditor extends LitElement {
+class DomotiappAlarmCardEditor extends MetThema(LitElement, { alleenMeten: true }) {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

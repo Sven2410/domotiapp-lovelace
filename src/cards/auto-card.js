@@ -176,7 +176,7 @@ class AutoCard extends DacCard {
     .tegel {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       padding: 7px 5px; min-width: 0;
-      background: rgba(255,255,255,.038); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-sm); cursor: pointer;
     }
     .tegel .w {

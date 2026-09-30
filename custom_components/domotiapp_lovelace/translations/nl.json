@@ -3,7 +3,13 @@
     "step": {
       "user": {
         "title": "DomotiApp Lovelace",
-        "description": "Er valt niets in te stellen. Bevestig om de kaart te installeren; hij is daarna beschikbaar op elk dashboard."
+        "description": "De kaarten zijn na het toevoegen beschikbaar op elk dashboard. Kies hoe ze eruitzien; dat is later te wijzigen via Configureren.",
+        "data": {
+          "thema": "Thema van de kaarten"
+        },
+        "data_description": {
+          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond."
+        }
       }
     },
     "abort": {
@@ -13,6 +19,23 @@
   "options": {
     "step": {
       "init": {
+        "title": "DomotiApp Lovelace",
+        "menu_options": {
+          "uiterlijk": "Uiterlijk: licht of donker",
+          "scenes": "Opgeslagen scenes opruimen"
+        }
+      },
+      "uiterlijk": {
+        "title": "Uiterlijk van de kaarten",
+        "description": "Geldt voor alle DomotiApp-kaarten op alle dashboards. Een dashboard dat openstaat volgt vanzelf, uiterlijk binnen vijf minuten; een herstart is niet nodig.\n\nHet infoscherm doet hier niet aan mee: dat heeft zijn eigen keuze Uiterlijk in het beheer.",
+        "data": {
+          "thema": "Thema van de kaarten"
+        },
+        "data_description": {
+          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond."
+        }
+      },
+      "scenes": {
         "title": "Opgeslagen scenes opruimen",
         "description": "Kies de lichtgroep waarvan u de opgeslagen scenes wilt verwijderen. Achter elke groep staat het aantal ingestelde lampen per scene, zodat u ziet of er werk in zit.\n\nEr wordt nog niets verwijderd; u krijgt eerst een bevestiging.",
         "data": {
@@ -35,6 +58,15 @@
       "niet_gevonden": "Deze lichtgroep staat niet meer in de opslag; er is niets verwijderd.",
       "niet_geladen": "DomotiApp Lovelace is niet geladen. Probeer het opnieuw zodra de integratie draait.",
       "opslag_onbruikbaar": "Het opslagbestand heeft niet de verwachte vorm, dus er valt niets per lichtgroep op te ruimen. Zie de reparatiemelding voor de weg hieruit."
+    }
+  },
+  "selector": {
+    "thema": {
+      "options": {
+        "auto": "Automatisch (volgt Home Assistant)",
+        "licht": "Licht",
+        "donker": "Donker"
+      }
     }
   },
   "issues": {

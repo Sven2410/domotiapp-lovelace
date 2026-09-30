@@ -38,13 +38,15 @@
  */
 
 import { meldAan } from "../registratie.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { localizeState, nameOf, stateOf } from "../ha.js";
 import { isSpelend, isUit, mediaIcoon, watSpeeltEr } from "../cards/media-logica.js";
 import { koppelOproep, koppelStand } from "./koppelen.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 9999;
@@ -272,6 +274,9 @@ class SpelerKiezer extends HTMLElement {
   }
 
   open(hass, lijst, huidig, opKeuze) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     this.hass_ = hass;
     this.lijst_ = Array.isArray(lijst) ? lijst : [];
     this.huidig_ = huidig;

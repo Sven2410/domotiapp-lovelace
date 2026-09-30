@@ -78,7 +78,7 @@ class CoverCard extends DacCard {
       box-shadow: 0 0 14px -3px color-mix(in srgb, var(--tone) 60%, transparent);
     }
     .cv[data-shown="closed"] .chip {
-      color: var(--dac-ink-3); background: rgba(255,255,255,.05); border-color: var(--dac-border);
+      color: var(--dac-ink-3); background: rgba(var(--dac-tint), .05); border-color: var(--dac-border);
     }
 
     .txt { min-width: 0; }
@@ -89,7 +89,7 @@ class CoverCard extends DacCard {
     /* ---- open / stop / dicht ---- */
     .keys {
       display: inline-flex; gap: 2px; padding: 3px; flex: 0 0 auto;
-      background: rgba(255,255,255,.05); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border);
       border-radius: var(--dac-radius-pill);
     }
     .keys button {
@@ -98,8 +98,8 @@ class CoverCard extends DacCard {
       border-radius: var(--dac-radius-pill);
       transition: background 180ms ease, color 180ms ease;
     }
-    @media (hover: hover) { .keys button:hover { color: var(--dac-ink); background: rgba(255,255,255,.08); } }
-    .keys button:active { background: rgba(255,255,255,.14); }
+    @media (hover: hover) { .keys button:hover { color: var(--dac-ink); background: rgba(var(--dac-tint), .08); } }
+    .keys button:active { background: rgba(var(--dac-tint), .14); }
     .keys button .icon { width: 18px; height: 18px; }
     .keys button:disabled { opacity: .3; cursor: default; }
 

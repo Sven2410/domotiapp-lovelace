@@ -20,7 +20,7 @@
 import { DacCard, registerCard, registerEditor, INCOMPLETE } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
-import { bindActions, isDead, moreInfo, nameOf, stateOf } from "../ha.js";
+import { bindActions, isDead, lampkleurCss, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
@@ -53,7 +53,7 @@ class LightCard extends DacCard {
     .chip { width: 40px; height: 40px; cursor: pointer; }
     .chip .icon, .chip ha-icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
     .lamp[data-on="false"] .chip {
-      color: var(--dac-ink-3); background: rgba(255,255,255,.05); border-color: var(--dac-border);
+      color: var(--dac-ink-3); background: rgba(var(--dac-tint), .05); border-color: var(--dac-border);
     }
     /* Een brandende lamp gloeit een beetje. Dat is de enige plek in de familie
        waar een schaduw betekenis draagt in plaats van diepte. */
@@ -80,19 +80,19 @@ class LightCard extends DacCard {
     .toggle {
       flex: 0 0 auto; margin-left: auto; width: 52px; height: 30px; padding: 0; cursor: pointer;
       border-radius: var(--dac-radius-pill); position: relative;
-      background: rgba(255,255,255,.08); border: 1px solid var(--dac-border);
+      background: rgba(var(--dac-tint), .08); border: 1px solid var(--dac-border);
       transition: background 200ms ease, border-color 200ms ease;
     }
     .toggle::after {
       content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
-      border-radius: 50%; background: var(--dac-ink-2);
+      border-radius: 50%; background: var(--dac-knob-uit); box-shadow: var(--dac-knob-schaduw);
       transition: transform 220ms cubic-bezier(.3,.8,.4,1), background 200ms ease;
     }
     .lamp[data-on="true"] .toggle {
-      background: color-mix(in srgb, var(--tone) 28%, transparent);
-      border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+      background: color-mix(in srgb, var(--tone) var(--dac-spoor-aan), transparent);
+      border-color: color-mix(in srgb, var(--tone) var(--dac-spoor-rand), transparent);
     }
-    .lamp[data-on="true"] .toggle::after { transform: translateX(22px); background: var(--dac-ink); }
+    .lamp[data-on="true"] .toggle::after { transform: translateX(22px); background: var(--dac-knob); }
 
     .lamp.unavailable { opacity: .42; }
     .lamp.unavailable .slider, .lamp.unavailable .toggle { pointer-events: none; }
@@ -187,8 +187,8 @@ class LightCard extends DacCard {
     // entiteitenkaart (zie `lightTone` in ha.js). Dit is de kaart met de
     // kleurstrip: hier maak je de kleur, en dan hoort het icoon te laten zien
     // wat je aan het maken bent -- ook als het een groep is die je verzet.
-    const rgb = on ? st?.attributes?.rgb_color : null;
-    lampEl.style.setProperty("--tone", rgb ? `rgb(${rgb[0]},${rgb[1]},${rgb[2]})` : "var(--dac-lit)");
+    const kleur = on ? lampkleurCss(st?.attributes?.rgb_color, this.licht_, st?.attributes?.color_mode) : null;
+    lampEl.style.setProperty("--tone", kleur ?? "var(--dac-lit)");
 
     const ctl = this.$(".ctl");
     const kind = dead ? "none" : isDimmable(st) ? "range" : "toggle";

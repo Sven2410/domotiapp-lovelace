@@ -8,11 +8,11 @@
  */
 import { LitElement, css, html, nothing } from "lit";
 
-import { vormtaal } from "./vormtaal.js";
+import { MetThema, vormtaal } from "./vormtaal.js";
 
 const ATTR_LEDEN = "entity_id";
 
-export class DomotiappSceneCardEditor extends LitElement {
+export class DomotiappSceneCardEditor extends MetThema(LitElement, { alleenMeten: true }) {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

@@ -24,9 +24,11 @@
 
 import { meldAan } from "./registratie.js";
 import { meldVraagAan } from "./ha.js";
-import { sheet, tokens } from "./theme.js";
+import { sheet, tokens, themaCss } from "./theme.js";
+import { volgThema } from "./thema.js";
 
 const css = /* css */ `
+  ${themaCss}
   :host {
     ${tokens}
     position: fixed; inset: 0; z-index: 10000;
@@ -53,7 +55,7 @@ const css = /* css */ `
       max(24px, env(safe-area-inset-right))
       max(24px, env(safe-area-inset-bottom))
       max(24px, env(safe-area-inset-left));
-    background: color-mix(in srgb, #000 58%, transparent);
+    background: var(--dac-scrim);
     animation: op 140ms ease;
   }
   @keyframes op { from { opacity: 0 } to { opacity: 1 } }
@@ -70,7 +72,7 @@ const css = /* css */ `
     border-radius: var(--dac-radius);
     background: var(--dac-bg-raise);
     border: 1px solid var(--dac-border);
-    box-shadow: 0 24px 60px -20px rgba(0,0,0,.7);
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,calc(.7 * var(--dac-diepte)));
     animation: omhoog 160ms ease;
   }
   @keyframes omhoog { from { transform: translateY(8px); opacity: 0 } to { transform: none; opacity: 1 } }
@@ -86,7 +88,7 @@ const css = /* css */ `
   }
   @media (hover: hover) { button:hover { background: var(--dac-surface); color: var(--dac-ink); } }
   button.ja {
-    border-color: transparent; color: #0c0c0a;
+    border-color: transparent; color: var(--dac-on-accent-hi);
     background: var(--dac-accent-hi);
   }
   @media (hover: hover) { button.ja:hover { background: var(--dac-accent-hi); filter: brightness(1.08); } }
@@ -145,6 +147,9 @@ class Vraag extends HTMLElement {
   }
 
   open(vraag) {
+    // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
+    // bij elke opening opnieuw kijken of het dashboard licht of donker is.
+    volgThema(this);
     if (!this.gebouwd_) this.bouw_();
     this.$("h2").innerHTML = veilig(vraag.title ?? "Weet je het zeker?");
     this.$("p").innerHTML = veilig(vraag.text ?? "Weet je zeker dat je dit wilt doen?");

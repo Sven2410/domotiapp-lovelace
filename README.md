@@ -26,7 +26,9 @@ Nu er toch een integratie is, meldt die de bundel ook zelf aan bij de frontend.
 3. **Herstart Home Assistant.** Een nieuwe integratie wordt pas na een herstart
    ingelezen.
 4. **Instellingen → Apparaten & diensten → Integratie toevoegen**, zoek
-   **DomotiApp Lovelace** en bevestig. Er valt niets in te stellen.
+   **DomotiApp Lovelace**, kies het thema van de kaarten (Automatisch, Licht
+   of Donker) en bevestig. Automatisch volgt het thema van Home Assistant;
+   de keuze is later te verzetten via **Configureren → Uiterlijk**.
 
 Zie je de kaarten daarna niet in de kaartkiezer staan, herlaad de pagina dan hard
 (Ctrl+F5).
@@ -135,7 +137,8 @@ staat of rechts op de regel.
 
 De scenes horen bij die lichtgroep, niet bij het dashboard. Zet je de kaart
 ergens anders neer, dan gaan ze mee. Verwijder je een kamer, dan blijven ze
-bewaard tot je ze opruimt via **Configureren** bij de integratie.
+bewaard tot je ze opruimt via **Configureren → Opgeslagen scenes opruimen** bij
+de integratie.
 
 ## Voor ontwikkelaars
 

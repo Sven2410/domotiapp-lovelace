@@ -28,7 +28,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
 import "../editor/icon-picker.js";
-import { vormtaal } from "./vormtaal.js";
+import { MetThema, vormtaal } from "./vormtaal.js";
 
 import { bouwServiceOproepen, voerUit } from "./apply-scene.js";
 import { DEFAULT_ICONS, SCENE_COUNT } from "./const.js";
@@ -64,7 +64,7 @@ const TINTVERLOOP = `linear-gradient(to right, ${[0, 60, 120, 180, 240, 300, 360
   .map((tint) => `hsl(${tint}, 100%, 50%)`)
   .join(", ")})`;
 
-export class DomotiappSceneEditor extends LitElement {
+export class DomotiappSceneEditor extends MetThema(LitElement) {
   static properties = {
     hass: { attribute: false },
     entityId: { attribute: false },
@@ -169,7 +169,7 @@ export class DomotiappSceneEditor extends LitElement {
       }
       .keuze.actief {
         background: var(--dac-accent-hi);
-        color: #0c0c0a;
+        color: var(--dac-on-accent-hi);
         font-weight: 600;
       }
 

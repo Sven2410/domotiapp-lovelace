@@ -7,6 +7,8 @@
  * layout; this file stays about Home Assistant.
  */
 
+import { lampkleurVoor } from "./thema-logica.js";
+
 /**
  * De bevestigingsvraag, aangemeld door `vraag.js`.
  *
@@ -57,13 +59,22 @@ export const pictureOf = (hass, entityId, chosenIcon) =>
  * De test is `attributes.entity_id`: alleen groepen dragen de lijst met leden.
  * Nagekeken op een echte installatie, en dus niet op ledental: er staat daar een
  * groep met één lid, en die is even hard een groep als een groep met drie.
+ *
+ * `licht` zegt of de kaart het lichte thema draagt. Dan komt de kleur er
+ * donkerder uit, of helemaal niet als hij te dicht bij wit ligt: zie
+ * `lampkleurVoor` in thema-logica.js.
  */
-export function lightTone(st) {
+export function lightTone(st, licht = false) {
   if (!st || st.state !== "on") return null;
   const a = st.attributes ?? {};
   if (Array.isArray(a.entity_id)) return null;
-  const rgb = a.rgb_color;
-  return Array.isArray(rgb) && rgb.length >= 3 ? `rgb(${rgb[0]},${rgb[1]},${rgb[2]})` : null;
+  return lampkleurCss(a.rgb_color, licht, a.color_mode);
+}
+
+/** Een `rgb_color` van Home Assistant als CSS-kleur die op deze kaart te zien is. */
+export function lampkleurCss(rgb, licht = false, kleurmodus) {
+  const kleur = lampkleurVoor(rgb, licht, kleurmodus);
+  return kleur ? `rgb(${kleur[0]},${kleur[1]},${kleur[2]})` : null;
 }
 
 /** The name to show: what the config said, else the entity's own. */

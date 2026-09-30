@@ -49,6 +49,7 @@ from .alarm.store import AlarmStore
 from .const import (
     CARD_FILENAME,
     CARD_URL_PATH,
+    CONF_THEMA,
     DATA_ENTRY_COUNT,
     DATA_JS_URL,
     DATA_RESOURCE_ID,
@@ -168,7 +169,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # worker stale-while-revalidate teruggeeft -- ons niet meer op een oude
     # bundel zetten. Dit is de route uit de wekkerintegratie; zie loader.py voor
     # de meting waar hij uit voortkomt.
+    loader.zet_thema(hass, entry.options.get(CONF_THEMA))
     loader.async_registreer(hass, bundel_hash)
+    # Een andere keuze in Configureren hoeft de integratie niet te herladen:
+    # alleen de lader moet het weten. De kaarten halen hem daar zelf op.
+    entry.async_on_unload(entry.add_update_listener(_async_opties_gewijzigd))
 
     # UrlManager houdt een frozenset bij, dus een tweede identieke add() is
     # onschadelijk. `vorige_url` blijft staan voor precies één geval: een
@@ -212,6 +217,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_ruim_snapshots_op(hass)
 
     return True
+
+
+async def _async_opties_gewijzigd(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """De keuze licht, donker of automatisch is verzet (zie config_flow.py)."""
+    thema = loader.zet_thema(hass, entry.options.get(CONF_THEMA))
+    _LOGGER.debug("Thema van de kaarten: %s", thema)
 
 
 async def _async_ruim_snapshots_op(hass: HomeAssistant) -> None:

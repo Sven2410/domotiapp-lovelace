@@ -13,7 +13,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
 import { resolve } from "../icons.js";
-import { vormtaal } from "./vormtaal.js";
+import { MetThema, vormtaal } from "./vormtaal.js";
 import { meetRaster, opgegevenRijen, volgRaster } from "../rasterhoogte.js";
 
 import { bouwServiceOproepen, voerUit } from "./apply-scene.js";
@@ -45,7 +45,7 @@ const GEEN_GROEP = "geen-groep";
 const OPSLAGFOUT = "opslagfout";
 const FOUT = "fout";
 
-class DomotiappSceneCard extends LitElement {
+class DomotiappSceneCard extends MetThema(LitElement) {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },

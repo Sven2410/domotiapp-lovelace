@@ -32,13 +32,15 @@
 
 import { TONES, TONE_LABELS } from "../base.js";
 import { icons } from "../icons.js";
-import { sheet, tokens } from "../theme.js";
+import { sheet, tokens, themaCss } from "../theme.js";
+import { volgThema } from "../thema.js";
 import { meldAan } from "../registratie.js";
 
 /** Wat `toneValue` in base.js als losse kleur doorlaat, en dus wat wij toestaan. */
 const EIGEN = /^(#[0-9a-f]{3,8}|var\(--[\w-]+\)|rgba?\([^)]*\))$/i;
 
 const css = /* css */ `
+  ${themaCss}
   :host { ${tokens} display: block; font-family: var(--dac-font); }
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -136,6 +138,9 @@ class DacTonePicker extends HTMLElement {
   }
 
   connectedCallback() {
+    // Deze kiezer staat in een dialoog van Home Assistant zelf, en die volgt
+    // het thema van Home Assistant, niet de instelling van de integratie.
+    volgThema(this, { alleenMeten: true });
     if (this.built_) return;
     this.built_ = true;
     this.build_();

@@ -46,7 +46,7 @@ import {
   zoekEntiteiten,
   zomertijdWaarschuwing,
 } from "./editorlogica.js";
-import { vormtaal } from "../scene/vormtaal.js";
+import { MetThema, vormtaal } from "../scene/vormtaal.js";
 
 const DAGEN = [
   [1, "ma"],
@@ -81,7 +81,7 @@ const ICOON_OP = "M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z";
 const ICOON_BEZIG =
   "M6,2H18V8H18V8L14,12L18,16V16H18V22H6V16H6V16L10,12L6,8V8H6V2M16,16.5L12,12.5L8,16.5V20H16V16.5M12,11.5L16,7.5V4H8V7.5L12,11.5Z";
 
-export class DomotiappAlarmEditor extends LitElement {
+export class DomotiappAlarmEditor extends MetThema(LitElement) {
   static properties = {
     hass: { attribute: false },
     person: { attribute: false },
@@ -364,7 +364,7 @@ export class DomotiappAlarmEditor extends LitElement {
       padding: 10px;
       border: 1px solid var(--dac-border);
       border-radius: 6px;
-      background: var(--card-background-color, #fff);
+      background: var(--dac-veld);
     }
     .vak.tijd {
       /* Iets meer ruimte links en rechts dan de andere velden: de cijfers zijn
@@ -422,10 +422,10 @@ export class DomotiappAlarmEditor extends LitElement {
        van fase 10 (valkuil 70) blijft staan: de control houdt padding 0 en rand
        0 zolang hij width 100% krijgt. */
     .vak select {
-      background-color: var(--card-background-color, #fff);
+      background-color: var(--dac-veld);
     }
     .vak select option {
-      background-color: var(--card-background-color, #fff);
+      background-color: var(--dac-veld);
       color: var(--dac-ink);
     }
     /* Het gemarkeerde item houdt de accentkleur die de dagknoppen ook gebruiken.
