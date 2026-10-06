@@ -63,6 +63,8 @@ import {
 } from "../infoscherm-client.js";
 import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
 import { afvalKomend, afvalLijst, afvalWanneer } from "./infoscherm-afval.js";
+import { eersteOphaaldag } from "./afval-logica.js";
+import { opsomming } from "./meldingen-logica.js";
 import {
   ROLLEN,
   bronnenUit,
@@ -601,6 +603,7 @@ const css = /* css */ `
     background: color-mix(in srgb, var(--bak) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--bak) 34%, transparent);
   }
+  .af-eerst .af-icos { display: flex; gap: calc(6px * var(--s)); flex: 0 0 auto; }
   .af-eerst .af-ico {
     width: calc(38px * var(--s)); height: calc(38px * var(--s)); flex: 0 0 auto;
     display: grid; place-items: center; border-radius: var(--dac-radius-sm);
@@ -810,7 +813,10 @@ export class InfoschermCard extends DacCard {
 
   watched() {
     const i = this.installatie_();
-    return [i.weer, i.energie, "sun.sun", ...i.verlichting.map((l) => l.entity)].filter(Boolean);
+    // De afvalsensoren horen erbij: zonder hen kwam een nieuwe ophaaldatum pas
+    // in beeld als er toevallig iets anders veranderde. Gevonden op 6 oktober
+    // 2026 bij het nameten van twee bakken op één dag.
+    return [i.weer, i.energie, "sun.sun", ...i.verlichting.map((l) => l.entity), ...(i.afval ?? [])].filter(Boolean);
   }
 
   getCardSize() {
@@ -2108,10 +2114,12 @@ export class InfoschermCard extends DacCard {
           zet(`<div class="leeg">Geen ophaaldata gevonden.</div>`, "");
           break;
         }
-        const [eerst, ...rest] = komend;
         // De eerstvolgende krijgt het vlak; de rest is een rij. Dat is dezelfde
         // vorm als op de afvalkaart, en om dezelfde reden: je wilt in één
         // oogopslag zien wat er MORGEN uit moet, niet vier gelijke vakjes.
+        // Komen er twee op die dag, dan staan ze samen in het vlak.
+        const eerst = eersteOphaaldag(komend, (r) => r.dagen);
+        const rest = komend.filter((r) => !eerst.includes(r));
         zet(
           `<div class="af">
             ${this.htmlAfvalEerst_(eerst)}
@@ -2164,8 +2172,15 @@ export class InfoschermCard extends DacCard {
     return "#7b7b74";
   }
 
-  /** De eerstvolgende bak, met het vlak eromheen. */
-  htmlAfvalEerst_(rij) {
+  /**
+   * De bakken van de eerstvolgende ophaaldag, met het vlak eromheen.
+   *
+   * Eén bak: het vlak in zijn kleur. Twee of meer: elk icoon in zijn eigen
+   * kleur en het vlak neutraal, want de kleur van de eerste zou de tweede
+   * wegdrukken. Zie afval-logica.js.
+   */
+  htmlAfvalEerst_(rijen) {
+    const rij = rijen?.[0];
     if (!rij) return "";
     const dagen = rij.dagen ?? 0;
     const groot = dagen === 0 ? "vandaag" : dagen === 1 ? "morgen" : String(dagen);
@@ -2174,10 +2189,14 @@ export class InfoschermCard extends DacCard {
     // keer hetzelfde woord. Bij een bak die verder weg is zegt relativeDay al
     // een dag met een datum, en dan is dat precies goed.
     const regel = dagen <= 1 && rij.datum ? shortDate(rij.datum) : afvalWanneer(rij);
-    return `<div class="af-eerst" style="--bak:${this.afvalKleur_(rij.naam)}">
-      <span class="af-ico">${resolve("bin")}</span>
+    const vlak = rijen.length > 1 ? "var(--dac-ink-3)" : this.afvalKleur_(rij.naam);
+    const iconen = rijen
+      .map((r) => `<span class="af-ico" style="--bak:${this.afvalKleur_(r.naam)}">${resolve("bin")}</span>`)
+      .join("");
+    return `<div class="af-eerst" style="--bak:${vlak}">
+      <span class="af-icos">${iconen}</span>
       <span class="af-t">
-        <span class="af-n">${escapeHtml(rij.naam)}</span>
+        <span class="af-n">${escapeHtml(opsomming(rijen.map((r) => r.naam)))}</span>
         <span class="af-w">${escapeHtml(regel)}</span>
       </span>
       <span class="af-d">${escapeHtml(groot)}${onder ? ` <span class="af-w">${onder}</span>` : ""}</span>
@@ -2397,10 +2416,12 @@ export class InfoschermCard extends DacCard {
         const lijst = this.afvalLijst_();
         const komend = afvalKomend(lijst);
         const rest = lijst.filter((r) => r.reden);
+        const eerst = eersteOphaaldag(komend, (r) => r.dagen);
+        const later = komend.filter((r) => !eerst.includes(r));
         const html = komend.length
           ? `<div class="af-pagina">
-              ${this.htmlAfvalEerst_(komend[0])}
-              ${komend.length > 1 ? `<div class="af-lijst">${komend.slice(1).map((r) => this.htmlAfvalRij_(r, true)).join("")}</div>` : ""}
+              ${this.htmlAfvalEerst_(eerst)}
+              ${later.length ? `<div class="af-lijst">${later.map((r) => this.htmlAfvalRij_(r, true)).join("")}</div>` : ""}
               ${rest.length ? `<div class="af-uitleg">${rest.map((r) => `${escapeHtml(r.naam)}: ${escapeHtml(r.reden)}`).join(" · ")}</div>` : ""}
             </div>`
           : `<div class="leeg">Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>`;
