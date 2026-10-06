@@ -61,6 +61,56 @@ def test_twee_kaarten_zijn_een_melding_met_alle_personen() -> None:
     assert samen["afval"].dashboards == ["telefoon", "tablet"]
 
 
+def test_het_leidende_dashboard_gaat_voor() -> None:
+    """NIEUW GEDRAG, 6 oktober 2026.
+
+    Bij de eigenaar stond dezelfde kaart op zijn hoofddashboard (22:00, net
+    aangepast) en op een kopie voor de wandtablet (19:30). De kopie werd eerst
+    gevonden en won; zijn wijziging deed niets. Het dashboard waar hij het
+    laatst is aangepast hoort voor te gaan, waar het ook staat.
+    """
+    hoofd = {**KAART, "tijd_morgen": "22:00:00"}
+    tablet = {**KAART, "tijd_morgen": "19:30:00"}
+    gevonden = [("dashboard-test", tablet), ("", hoofd)]
+
+    samen = kaarten.voeg_samen(gevonden, {"afval": ""})
+    assert samen["afval"].tijden["morgen"] == "22:00"
+    assert samen["afval"].dashboards == ["", "dashboard-test"]
+
+    samen = kaarten.voeg_samen(gevonden, {"afval": "dashboard-test"})
+    assert samen["afval"].tijden["morgen"] == "19:30"
+
+
+def test_zonder_herinnering_gaat_het_standaarddashboard_voor() -> None:
+    """NIEUW GEDRAG. Tot 0.55.0 won de eerste die Home Assistant teruggaf."""
+    hoofd = {**KAART, "tijd_morgen": "22:00:00"}
+    tablet = {**KAART, "tijd_morgen": "19:30:00"}
+    samen = kaarten.voeg_samen([("dashboard-test", tablet), ("", hoofd)])
+    assert samen["afval"].tijden["morgen"] == "22:00"
+
+
+def test_overview_als_opgeslagen_dashboard_is_ook_het_standaarddashboard() -> None:
+    """NIEUW GEDRAG. Bij de eigenaar heet Overview `lovelace` (HA 2026.8).
+
+    Home Assistant geeft dat dashboard voorrang boven het oude zonder naam, en
+    hier dus ook. Precies zijn situatie: de kopie wordt eerst gevonden.
+    """
+    hoofd = {**KAART, "tijd_morgen": "22:00:00"}
+    tablet = {**KAART, "tijd_morgen": "19:30:00"}
+    oud = {**KAART, "tijd_morgen": "07:00:00"}
+    samen = kaarten.voeg_samen([("dashboard-test", tablet), ("", oud), ("lovelace", hoofd)])
+    assert samen["afval"].tijden["morgen"] == "22:00"
+    assert samen["afval"].dashboards == ["lovelace", "", "dashboard-test"]
+
+
+def test_een_leidend_dashboard_zonder_de_kaart_telt_niet() -> None:
+    """Weggehaald van het leidende dashboard: dan weer het standaarddashboard."""
+    hoofd = {**KAART, "tijd_morgen": "22:00:00"}
+    tablet = {**KAART, "tijd_morgen": "19:30:00"}
+    samen = kaarten.voeg_samen([("dashboard-test", tablet), ("", hoofd)], {"afval": "weg"})
+    assert samen["afval"].tijden["morgen"] == "22:00"
+
+
 async def test_leest_de_echte_lovelace(hass: HomeAssistant) -> None:
     await zet_integratie_op(hass)
     assert await kaarten.async_lees(hass) == {}

@@ -18,6 +18,8 @@ async def test_een_kaart_krijgt_de_stand_en_elke_wijziging(
     assert eerste["aan"] == {}
     # De telefoon uit de YAML gaat voor wat er gezocht zou worden.
     assert eerste["telefoons"][SVEN] == "test_sven"
+    # De tijden die de server echt gebruikt (sinds 0.55.0).
+    assert eerste["tijden"] == {"vandaag": "07:30", "morgen": "19:30"}
 
     await client.send_json(
         {"id": 2, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": LIEKE, "aan": False}
@@ -59,5 +61,29 @@ async def test_alleen_personen(hass: HomeAssistant, motor, hass_ws_client) -> No
     client = await hass_ws_client(hass)
     await client.send_json(
         {"id": 1, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": "notify.x", "aan": False}
+    )
+    assert (await client.receive_json())["success"] is False
+
+
+async def test_een_proef_naar_een_persoon(
+    hass: HomeAssistant, motor, telefoons, hass_ws_client
+) -> None:
+    """NIEUW GEDRAG (0.55.0). De knop in de pop-up stuurt alleen naar die persoon."""
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {
+            "id": 1,
+            "type": "domotiapp_lovelace/meldingen/proef",
+            "melding": "afval",
+            "moment": "morgen",
+            "persoon": SVEN,
+        }
+    )
+    antwoord = await client.receive_json()
+    assert antwoord["result"]["verstuurd"] == [SVEN]
+    assert [d for d, _ in telefoons] == ["test_sven"]
+
+    await client.send_json(
+        {"id": 2, "type": "domotiapp_lovelace/meldingen/proef", "melding": "afval", "moment": "morgen", "persoon": "notify.x"}
     )
     assert (await client.receive_json())["success"] is False

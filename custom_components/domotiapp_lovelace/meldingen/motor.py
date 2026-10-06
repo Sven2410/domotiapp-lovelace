@@ -23,6 +23,15 @@ De knop werkt alleen via de notify-DIENST van de companion-app
 neemt alleen een titel en een tekst, geen knoppen en geen tag. Dat is ook de
 reden dat de telefoon bij een PERSOON gezocht wordt (`bewaking/meldingen.py`)
 en niet als notify-entiteit gekozen.
+
+## Eén avondmelding per dag, ook als de tijd verschuift
+
+Is de melding van vanavond al verstuurd, dan levert een latere tijd vandaag
+niets meer op. Dat is met opzet: wie om 21:00 de tijd van 19:30 naar 22:00 zet,
+wil morgen om 22:00 een melding, niet vanavond een tweede aan het hele huis.
+Om te kijken of het werkt is er de PROEF (de knop in de pop-up van een
+persoon): die gaat alleen naar die persoon, telt niet als verstuurd, en heeft
+een eigen tag, zodat hij de echte melding op de telefoon niet vervangt.
 """
 
 from __future__ import annotations
@@ -51,6 +60,11 @@ from .store import MeldingOpslag
 _LOGGER = logging.getLogger(__name__)
 
 EVENT_LOVELACE_UPDATED = "lovelace_updated"
+
+
+# Op de plek van de ophaaldag in de tag en de knop van een proefmelding. Een tik
+# op "Staat buiten" in een proef doet daardoor niets: zie `_actie`.
+PROEF = "proef"
 
 
 def tag_voor(melding: str, ophaaldag: date | str) -> str:
@@ -84,6 +98,9 @@ class Motor:
         self._meld = meld
         self.meldingen: dict[str, Melding] = {}
         self._uit: list[CALLBACK_TYPE] = []
+        # Per (dashboard, melding) de instellingen van de vorige keer lezen. None
+        # tot de eerste lezing: wat er bij het opstarten staat is geen wijziging.
+        self._gezien: dict[tuple[str, str], tuple[Any, ...]] | None = None
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -100,8 +117,35 @@ class Motor:
             self._uit.pop()()
 
     async def async_herlees(self) -> None:
-        self.meldingen = await kaarten.async_lees(self.hass)
+        gelezen = await kaarten.async_lees_kaarten(self.hass)
+        self._onthoud_wijzigingen(gelezen)
+        self.meldingen = kaarten.voeg_samen(gelezen, self.opslag.alle_leidend())
         self._meld(None)
+
+    @callback
+    def _onthoud_wijzigingen(self, gelezen: list[tuple[str, dict[str, Any]]]) -> None:
+        """Is een kaart aangepast sinds de vorige keer? Dan gaat zijn dashboard voor.
+
+        Alleen een kaart die er de vorige keer ook stond, met andere
+        instellingen. Een NIEUWE kaart telt niet: wie een dashboard kopieert om
+        er een wandtablet van te maken, krijgt een kaart met de instellingen van
+        toen, en die hoort niet ineens voor te gaan. Zie de kop van kaarten.py.
+        """
+        nu = {
+            (m.dashboards[0], m.id): m.vergelijkbaar()
+            for m in kaarten.meldingen_per_kaart(gelezen)
+        }
+        if self._gezien is not None:
+            for sleutel, instellingen in nu.items():
+                dashboard, ident = sleutel
+                if sleutel in self._gezien and self._gezien[sleutel] != instellingen:
+                    _LOGGER.info(
+                        "Meldingenkaart %r op %s aangepast; die instellingen gaan voor",
+                        ident,
+                        dashboard or "standaard",
+                    )
+                    self.opslag.zet_leidend(ident, dashboard)
+        self._gezien = nu
 
     async def _herlees_tik(self, *_: Any) -> None:
         await self.async_herlees()
@@ -119,13 +163,21 @@ class Motor:
                     _LOGGER.debug("Melding %s (%s): %s", melding.id, moment, uitkomst)
 
     async def async_verstuur(
-        self, ident: str, moment: str, nu: datetime | None = None, *, proef: bool = False
+        self,
+        ident: str,
+        moment: str,
+        nu: datetime | None = None,
+        *,
+        proef: bool = False,
+        alleen: str | None = None,
     ) -> dict[str, Any]:
         """Stuur de melding van dit moment. Geeft terug wat er gebeurde en waarom.
 
         `proef` slaat de controles op tijd over (al verstuurd, staat al buiten)
         en stuurt ook als er niets opgehaald wordt, met een voorbeeld. Zo kan de
         klant zien of zijn telefoon gevonden wordt zonder tot 19:30 te wachten.
+        `alleen` beperkt het tot die ene persoon: een proef om 22:00 hoort niet
+        bij het hele huis binnen te komen.
         """
         nu = nu or dt_util.now()
         melding = self.meldingen.get(ident)
@@ -154,13 +206,20 @@ class Motor:
         if proef:
             titel = f"Proef · {titel}"
 
+        # Een proef krijgt een eigen tag: met die van de ophaaldag zou hij de
+        # echte melding van vanavond op de telefoon vervangen.
+        sleutel = PROEF if proef else ophaaldag
         data = {
-            "tag": tag_voor(ident, ophaaldag),
+            "tag": tag_voor(ident, sleutel),
             "group": "domotiapp-afval",
-            "actions": [{"action": actie_voor(ident, ophaaldag), "title": "Staat buiten"}],
+            "actions": [{"action": actie_voor(ident, sleutel), "title": "Staat buiten"}],
         }
 
-        ontvangers = [p for p in melding.personen if self.opslag.aan(ident, p)]
+        if alleen is not None:
+            # Wie de proef vraagt, wil hem krijgen, ook met het vinkje uit.
+            ontvangers = [alleen]
+        else:
+            ontvangers = [p for p in melding.personen if self.opslag.aan(ident, p)]
         gelukt: list[str] = []
         zonder: list[str] = []
         for persoon in ontvangers:
@@ -200,6 +259,9 @@ class Motor:
         if gelezen is None:
             return
         ident, datum = gelezen
+        if datum == PROEF:
+            # Een tik in een proefmelding zet niets buiten.
+            return
         door = self._persoon_van(event.context.user_id)
         self.opslag.zet_buiten(ident, datum, door, dt_util.now().isoformat())
         _LOGGER.info("Afval %s voor %s staat buiten (%s)", ident, datum, door or "onbekend")

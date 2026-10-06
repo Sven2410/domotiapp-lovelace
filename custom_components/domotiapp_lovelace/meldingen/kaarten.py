@@ -26,8 +26,31 @@ door de hele boom gelopen, op zoek naar elk object met ons `type`.
 
 Staat dezelfde kaart op de telefoon en op de tablet, dan is dat ÉÉN melding:
 ze delen hun `id` (standaard de soort, dus `afval`). De personen worden
-samengevoegd; de instellingen komen van de eerste kaart die gevonden wordt, en
-als ze verschillen staat dat in het logboek.
+samengevoegd. De instellingen (sensoren, tijden) komen van één kaart, en als ze
+verschillen staat dat in het logboek.
+
+**Welke kaart dat is: die het laatst is aangepast.** Tot 0.55.0 was het de
+eerste die gevonden werd, en dat is de volgorde waarin Home Assistant zijn
+dashboards bewaart -- niets waar iemand op kan sturen. Gemeld op 6 oktober
+2026: *"ik heb de tijd even op 22:00 gezet maar ik krijg geen melding"*. Hij
+zette de tijd op zijn hoofddashboard; dezelfde kaart stond ook op een kopie
+voor de wandtablet, nog op 19:30, en die werd eerst gevonden. Zijn wijziging
+deed niets, zonder dat hij dat kon zien.
+
+De motor merkt een aanpassing doordat de instellingen van een kaart anders zijn
+dan bij de vorige keer lezen, en onthoudt dan dat dashboard (`leidend` in de
+opslag, zodat het een herstart overleeft). Een kaart die er NIEUW bijkomt telt
+niet: een gekopieerd dashboard draagt de instellingen van toen. Zonder zo'n
+herinnering gaat het standaarddashboard voor: dat is het dashboard waar de
+meeste mensen hun instellingen doen.
+
+**Het standaarddashboard heeft twee namen.** In `dashboards` staat het oude
+onder `None`, maar sinds 2026.8 kan Overview ook een gewoon opgeslagen dashboard
+zijn met `url_path` `lovelace`, en dan geeft Home Assistant DAT voorrang
+(`_handle_errors` in `lovelace/websocket.py`: *"When url_path is None, prefer
+'lovelace' dashboard if it exists"*). Bij de eigenaar is het zo; zijn log noemde
+het dashboard "lovelace". Hier dus dezelfde volgorde: eerst `lovelace`, dan
+`None`.
 """
 
 from __future__ import annotations
@@ -37,6 +60,10 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+
+# De namen van het standaarddashboard, in de volgorde waarin Home Assistant ze
+# zelf kiest. `""` is `None` in `dashboards`; zie de kop van dit bestand.
+STANDAARD = ("lovelace", "")
 
 from .afval import tijd_geldig
 from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, STANDAARD_TIJD
@@ -144,18 +171,39 @@ def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     )
 
 
-def voeg_samen(kaarten: list[tuple[str, dict[str, Any]]]) -> dict[str, Melding]:
+def meldingen_per_kaart(kaarten: list[tuple[str, dict[str, Any]]]) -> list[Melding]:
+    """Elke kaart als melding, in de volgorde waarin ze staan. Zonder afval: weg."""
+    return [m for dashboard, kaart in kaarten if (m := melding_uit(kaart, dashboard)) is not None]
+
+
+def voeg_samen(
+    kaarten: list[tuple[str, dict[str, Any]]], leidend: dict[str, str] | None = None
+) -> dict[str, Melding]:
     """Van alle kaarten naar één melding per `id`.
 
-    De personen van alle kaarten tellen mee; de rest komt van de eerste. Wie
-    iemand op de tablet toevoegt, wil dat die persoon een melding krijgt, ook
-    als de kaart op de telefoon hem nog niet noemt.
+    De personen van alle kaarten tellen mee. Wie iemand op de tablet toevoegt,
+    wil dat die persoon een melding krijgt, ook als de kaart op de telefoon hem
+    nog niet noemt.
+
+    De instellingen komen van de kaart op het dashboard in `leidend` (waar hij
+    het laatst is aangepast), en anders van het standaarddashboard (`STANDAARD`).
+    Staat hij op geen van beide, dan van de eerste die gevonden is.
     """
+    leidend = leidend or {}
+    meldingen = meldingen_per_kaart(kaarten)
+
+    def voorrang(m: Melding) -> int:
+        dashboard = m.dashboards[0]
+        if leidend.get(m.id) == dashboard:
+            return 0
+        if dashboard in STANDAARD:
+            return 1 + STANDAARD.index(dashboard)
+        return 1 + len(STANDAARD)
+
+    # `sorted` is stabiel: binnen dezelfde voorrang blijft de volgorde staan.
     uit: dict[str, Melding] = {}
-    for dashboard, kaart in kaarten:
-        melding = melding_uit(kaart, dashboard)
-        if melding is None:
-            continue
+    for melding in sorted(meldingen, key=voorrang):
+        dashboard = melding.dashboards[0]
         bestaand = uit.get(melding.id)
         if bestaand is None:
             uit[melding.id] = melding
@@ -178,11 +226,16 @@ def voeg_samen(kaarten: list[tuple[str, dict[str, Any]]]) -> dict[str, Melding]:
     return uit
 
 
-async def async_lees(hass: HomeAssistant) -> dict[str, Melding]:
-    """Alle meldingen uit alle dashboards.
+async def async_lees(hass: HomeAssistant, leidend: dict[str, str] | None = None) -> dict[str, Melding]:
+    """Alle meldingen uit alle dashboards, samengevoegd. Zie `voeg_samen`."""
+    return voeg_samen(await async_lees_kaarten(hass), leidend)
+
+
+async def async_lees_kaarten(hass: HomeAssistant) -> list[tuple[str, dict[str, Any]]]:
+    """Alle meldingenkaarten uit alle dashboards, met het dashboard erbij.
 
     Faalt het lezen van één dashboard, dan tellen de andere gewoon mee. Faalt
-    het geheel (Lovelace anders dan verwacht), dan zijn er geen meldingen, met
+    het geheel (Lovelace anders dan verwacht), dan zijn er geen kaarten, met
     een foutregel in het logboek.
     """
     try:
@@ -192,11 +245,11 @@ async def async_lees(hass: HomeAssistant) -> dict[str, Melding]:
         )
     except ImportError:
         _LOGGER.error("Lovelace van deze Home Assistant is anders dan verwacht; geen meldingen")
-        return {}
+        return []
 
     lovelace = hass.data.get(LOVELACE_DATA)
     if lovelace is None:
-        return {}
+        return []
 
     kaarten: list[tuple[str, dict[str, Any]]] = []
     for url_path, dashboard in list(lovelace.dashboards.items()):
@@ -209,5 +262,4 @@ async def async_lees(hass: HomeAssistant) -> dict[str, Melding]:
             continue
         for kaart in zoek_kaarten(config):
             kaarten.append((url_path or "", kaart))
-
-    return voeg_samen(kaarten)
+    return kaarten

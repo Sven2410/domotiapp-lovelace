@@ -51,6 +51,7 @@ import {
   krijgtIets,
   meldingId,
   personenUit,
+  proefUitkomst,
   soortAan,
   soortenVan,
   staatAan,
@@ -283,6 +284,10 @@ class MeldingenCard extends DacCard {
       storing: this.zonderTelefoon_(persoon)
         ? `Geen telefoon gevonden. Zonder de app van Home Assistant krijgt ${voornaam(naam)} niets, ook niet met een vinkje.`
         : null,
+      // Alleen voor een beheerder (de server weigert het anders), en pas als de
+      // server de kaart kent: een kaart die nog niet is opgeslagen heeft niets
+      // om te versturen.
+      proef: Boolean(this.hass?.user?.is_admin) && Boolean(this.standen_.afval?.bekend),
       soorten: this.soorten_().map((soort) => {
         const stand = this.standen_[soort.id];
         return {
@@ -293,6 +298,27 @@ class MeldingenCard extends DacCard {
         };
       }),
     };
+  }
+
+  /**
+   * Een proefmelding naar deze ene persoon. De pop-up roept dit aan.
+   *
+   * Over het moment van de avond als die er is: dat is de melding die het
+   * vaakst komt, en die met de knop "Staat buiten".
+   */
+  async proef(persoon) {
+    const naam = voornaam(nameOf(this.hass, persoon));
+    try {
+      const uitkomst = await this.hass.connection.sendMessagePromise({
+        type: "domotiapp_lovelace/meldingen/proef",
+        melding: meldingId(this.config, "afval"),
+        moment: this.config.afval_morgen ? "morgen" : "vandaag",
+        persoon,
+      });
+      return proefUitkomst(uitkomst, naam);
+    } catch (fout) {
+      return { tekst: `Proef mislukt: ${fout?.message ?? fout}`, fout: true };
+    }
   }
 
   afvalRegel_(stand) {

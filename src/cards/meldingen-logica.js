@@ -71,9 +71,10 @@ export const isoDag = (d) =>
  * @param {string} [p.tijdMorgen] wanneer de avondmelding komt
  * @param {{datum: string}|null} [p.buiten] van de server: wie tikte "Staat buiten"
  * @param {string} [p.door]     de naam van wie dat deed
+ * @param {boolean} [p.verstuurd] is de avondmelding van vandaag al uitgegaan?
  * @param {Date} [p.nu]
  */
-export function kopRegel({ vandaag, morgen, tijdMorgen, buiten, door, nu = new Date() } = {}) {
+export function kopRegel({ vandaag, morgen, tijdMorgen, buiten, door, verstuurd = false, nu = new Date() } = {}) {
   const v = afvalSoorten(vandaag);
   const m = afvalSoorten(morgen);
   const morgenDag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1);
@@ -84,6 +85,11 @@ export function kopRegel({ vandaag, morgen, tijdMorgen, buiten, door, nu = new D
   if (m.length) {
     const gezet = staatBuiten(morgenDag);
     if (gezet) return `Morgen ${opsomming(m)}${gezet}`;
+    // Al verstuurd: dan is "melding om 22:00" niet waar, want er komt vanavond
+    // geen tweede (zie de kop van meldingen/motor.py). Gemeld op 6 oktober
+    // 2026: hij zette de tijd op 22:00 en wachtte op een melding die niet kon
+    // komen, terwijl hier "melding om 22:00" stond.
+    if (verstuurd) return `Morgen ${opsomming(m)} · melding verstuurd`;
     const tijd = tijdKort(tijdMorgen);
     return `Morgen ${opsomming(m)}${tijd ? ` · melding om ${tijd}` : ""}`;
   }
@@ -174,9 +180,13 @@ export function krijgtIets(standen, soorten, persoon) {
 export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date() } = {}) {
   if (stand && !stand.bekend) return "Actief zodra het dashboard is opgeslagen";
   if (!config?.afval_vandaag && !config?.afval_morgen) return "Nog geen afvalsensor gekozen";
-  const tijdMorgen = tijdKort(config.tijd_morgen) || "19:30";
-  const tijdVandaag = tijdKort(config.tijd_vandaag) || "07:30";
-  const wat = kopRegel({ vandaag, morgen, tijdMorgen, buiten: stand?.buiten, door, nu });
+  // De tijden die de SERVER gebruikt gaan voor die van deze kaart. Staat
+  // dezelfde kaart op twee dashboards met andere tijden, dan geldt er één, en
+  // de andere kaart hoort niet te beweren dat zijn tijd geldt.
+  const tijdMorgen = tijdKort(stand?.tijden?.morgen) || tijdKort(config.tijd_morgen) || "19:30";
+  const tijdVandaag = tijdKort(stand?.tijden?.vandaag) || tijdKort(config.tijd_vandaag) || "07:30";
+  const verstuurd = stand?.verstuurd?.morgen === isoDag(nu);
+  const wat = kopRegel({ vandaag, morgen, tijdMorgen, buiten: stand?.buiten, door, verstuurd, nu });
   if (wat) return wat;
   const momenten = [
     config.afval_morgen ? `de avond ervoor om ${tijdMorgen}` : "",
@@ -184,4 +194,27 @@ export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date
   ].filter(Boolean);
   const zin = momenten.join(" en ");
   return zin[0].toUpperCase() + zin.slice(1);
+}
+
+/**
+ * Wat er onder de proefknop komt te staan, uit het antwoord van de server.
+ *
+ * De server geeft `{verstuurd, zonder_telefoon, titel}` terug, of `{reden}` als
+ * hij niet kon (zie `async_verstuur` in meldingen/motor.py). "Verstuurd" is wat
+ * Home Assistant aan de telefoon doorgaf; of hij aankwam weet niemand, en daar
+ * hoort de klant zelf naar te kijken.
+ *
+ * @param {object} uitkomst het antwoord van `meldingen/proef`
+ * @param {string} naam     de voornaam van de persoon
+ * @returns {{tekst: string, fout: boolean}}
+ */
+export function proefUitkomst(uitkomst, naam) {
+  if (uitkomst?.reden) return { tekst: uitkomst.reden, fout: true };
+  if (uitkomst?.verstuurd?.length) {
+    return { tekst: `Verstuurd naar ${naam}: “${uitkomst.titel}”. Kijk op de telefoon.`, fout: false };
+  }
+  if (uitkomst?.zonder_telefoon?.length) {
+    return { tekst: `Niet verstuurd: geen werkende telefoon gevonden voor ${naam}.`, fout: true };
+  }
+  return { tekst: "Niet verstuurd.", fout: true };
 }

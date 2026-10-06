@@ -4,7 +4,7 @@
 |---|---|
 | `meldingen/subscribe` | iedere ingelogde gebruiker |
 | `meldingen/aan` | iedere ingelogde gebruiker |
-| `meldingen/proef` | alleen beheerders |
+| `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
 
 Omzetten mag iedereen: de kaart hangt op een tablet met een kioskaccount, en
 daar hoort Lieke haar eigen meldingen uit te kunnen zetten. Een proefmelding
@@ -50,6 +50,10 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
     opgeslagen melding: in de editor voegt iemand een persoon toe die de server
     nog niet kent, en het voorbeeld hoort dan meteen te zeggen of er een
     telefoon bij gevonden is.
+
+    `tijden` zijn de tijden die de server ECHT gebruikt. Staat dezelfde kaart
+    op twee dashboards met andere tijden, dan zegt de kaart met de verliezende
+    tijd anders iets wat niet gebeurt (zie de kop van kaarten.py).
     """
     data = hass.data.get(DOMAIN, {})
     opslag = data.get(DATA_OPSLAG)
@@ -62,6 +66,7 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
         "aan": opslag.alle_aan(ident) if opslag else {},
         "buiten": buiten,
         "verstuurd": {m: opslag.verstuurd(ident, m) for m in MOMENTEN} if opslag else {},
+        "tijden": dict(melding.tijden) if melding else None,
         "telefoons": {
             p["entity_id"]: (melding.diensten.get(p["entity_id"]) if melding else None) or p["dienst"]
             for p in telefoons.overzicht(hass)
@@ -131,6 +136,8 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         vol.Required("type"): f"{DOMAIN}/meldingen/proef",
         vol.Required("melding"): cv.string,
         vol.Required("moment"): vol.In(MOMENTEN),
+        # Niet `id` noemen: dat is het berichtnummer (valkuil 41).
+        vol.Optional("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
     }
 )
 @websocket_api.async_response
@@ -141,5 +148,7 @@ async def ws_proef(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None
         return
     # Vers lezen: de proef hoort bij de kaart zoals hij NU is opgeslagen.
     await motor.async_herlees()
-    uitkomst = await motor.async_verstuur(msg["melding"], msg["moment"], proef=True)
+    uitkomst = await motor.async_verstuur(
+        msg["melding"], msg["moment"], proef=True, alleen=msg.get("persoon")
+    )
     connection.send_result(msg["id"], uitkomst)
