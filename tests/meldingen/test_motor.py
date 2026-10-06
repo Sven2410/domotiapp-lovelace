@@ -37,6 +37,27 @@ async def test_om_half_acht_s_avonds_krijgt_iedereen_de_melding(
     ]
 
 
+async def test_twee_bakken_op_een_dag_staan_samen_in_een_melding(
+    hass: HomeAssistant, motor, telefoons
+) -> None:
+    """REGRESSIEWACHT, 6 oktober 2026.
+
+    De eigenaar meldde dat er maar één bak in zijn melding stond terwijl er
+    twee aan straat moesten. Zijn sensor zei om 19:30 letterlijk wat hier staat
+    (uitgelezen uit de geschiedenis); deze toets houdt vast dat daar één
+    melding met allebei de bakken uit komt, en niet twee en niet één bak.
+    """
+    hass.states.async_set("sensor.afval_morgen", "Papier, Restafval")
+    await motor._tik(om(26, 19, 30))
+
+    assert [d for d, _ in telefoons] == ["test_sven", "test_lieke"]
+    data = telefoons[0][1]
+    assert data["title"] == "Morgen Papier en Restafval"
+    assert data["message"] == (
+        "Morgen worden Papier en Restafval opgehaald. Zet de containers vanavond aan de straat."
+    )
+
+
 async def test_wie_uit_staat_krijgt_niets(hass: HomeAssistant, motor, telefoons) -> None:
     hass.states.async_set("sensor.afval_morgen", "gft")
     motor.opslag.zet_aan("afval", LIEKE, False)

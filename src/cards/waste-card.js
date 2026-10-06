@@ -22,6 +22,8 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { dayCount, daysBetween, nameOf, parseDate, relativeDay, shortDate, stateOf } from "../ha.js";
 import { korteNamen } from "./afval-namen.js";
+import { eersteOphaaldag } from "./afval-logica.js";
+import { opsomming } from "./meldingen-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
 /** Bin colours, matched on what the sensor happens to be called. */
@@ -165,12 +167,23 @@ class WasteCard extends DacCard {
       background: color-mix(in srgb, var(--tone) 11%, transparent);
       border: 1px solid color-mix(in srgb, var(--tone) 34%, transparent);
     }
+    /* Elke bak van die dag een eigen icoon, in zijn eigen kleur. Moeten er twee
+       tegelijk aan straat, dan is het vlak eromheen neutraal: het is dan niet
+       de bak van één fractie, en de kleur van de eerste zou de tweede
+       wegdrukken. Gemeld op 6 oktober 2026 -- zie afval-logica.js. */
+    .hero .bins { display: flex; gap: 6px; flex: 0 0 auto; }
     .hero .bin {
       width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center;
       border-radius: var(--dac-radius-sm); color: var(--tone);
       background: color-mix(in srgb, var(--tone) 18%, transparent);
     }
     .hero .bin .icon, .hero .bin ha-icon { width: 21px; height: 21px; --mdc-icon-size: 21px; }
+    /* Drie of meer op één dag: kleiner, anders blijft er voor de namen niets
+       over op een kaart van een halve kolom breed. */
+    .hero .bins[data-aantal="veel"] { gap: 4px; }
+    .hero .bins[data-aantal="veel"] .bin { width: 32px; height: 32px; }
+    .hero .bins[data-aantal="veel"] .bin .icon,
+    .hero .bins[data-aantal="veel"] .bin ha-icon { width: 17px; height: 17px; --mdc-icon-size: 17px; }
     .hero .what { min-width: 0; }
     .hero .big {
       font-size: 18px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15;
@@ -325,7 +338,7 @@ class WasteCard extends DacCard {
       <div class="card surface">
         ${c.title ? `<div class="head"><b>${escapeHtml(c.title)}</b></div>` : ""}
         ${c.show_hero === false ? "" : `<div class="hero" hidden>
-          <span class="bin"></span>
+          <span class="bins"></span>
           <span class="what">
             <span class="eyebrow"></span>
             <span class="big"></span>
@@ -343,6 +356,9 @@ class WasteCard extends DacCard {
     // De uitgelichte bak is de eerstvolgende die ECHT nog komt. Een bak zonder
     // datum hoort daar niet te staan, ook al staat hij vooraan in de lijst.
     const komend = this.komend_(items);
+    // Alle bakken van die eerste dag, niet alleen de eerste van de lijst: komen
+    // papier en restafval samen, dan moeten ze er ook samen staan.
+    const eerst = eersteOphaaldag(komend, (i) => i.days);
     const hero = this.$(".hero");
     const list = this.$(".list");
     const empty = this.$(".empty");
@@ -350,7 +366,7 @@ class WasteCard extends DacCard {
     empty.hidden = items.length > 0;
 
     if (this.breed_()) {
-      this.paintBreed_(items, komend[0]);
+      this.paintBreed_(items, eerst);
       // Zelf meten en niet op de waarnemer vertrouwen (valkuil 8): op een
       // telefoon breken de bakken af naar twee rijen, en dan hoort de kaart
       // naar 120px te groeien in plaats van de tekst tegen de rand te duwen.
@@ -361,20 +377,26 @@ class WasteCard extends DacCard {
     if (hero) {
       hero.hidden = komend.length === 0;
       if (komend.length) {
-        const next = komend[0];
-        hero.style.setProperty("--tone", next.tone);
+        const next = eerst[0];
+        // Eén bak: het vlak in zijn kleur. Meer bakken: het vlak neutraal en
+        // elk icoon in zijn eigen kleur (zie de CSS bij .bins).
+        hero.style.setProperty("--tone", eerst.length > 1 ? toneValue("neutral") : next.tone);
         this.setAttribute(
           "urgency",
           next.days === 0 ? "today" : next.days === 1 ? "tomorrow" : "later"
         );
 
-        const bin = hero.querySelector(".bin");
-        if (bin.dataset.icon !== next.icon) {
-          bin.dataset.icon = next.icon;
-          bin.innerHTML = resolve(next.icon, "bin");
+        const bins = hero.querySelector(".bins");
+        const sig = eerst.map((i) => `${i.icon}|${i.tone}`).join(",");
+        if (bins.dataset.sig !== sig) {
+          bins.dataset.sig = sig;
+          bins.dataset.aantal = eerst.length > 2 ? "veel" : String(eerst.length);
+          bins.innerHTML = eerst
+            .map((i) => `<span class="bin" style="--tone:${escapeHtml(i.tone)}">${resolve(i.icon, "bin")}</span>`)
+            .join("");
         }
         this.text(hero.querySelector(".eyebrow"), relativeDay(next.date));
-        this.text(hero.querySelector(".big"), next.label);
+        this.text(hero.querySelector(".big"), opsomming(eerst.map((i) => i.label)));
         this.text(hero.querySelector(".n"), next.days === 0 ? "nu" : String(next.days));
         this.text(
           hero.querySelector(".u"),
@@ -386,11 +408,14 @@ class WasteCard extends DacCard {
     if (list) {
       // Skipping the hero's own fraction would leave a gap in the calendar, so
       // the list stays complete and simply starts where the hero left off.
-      // De uitgelichte bak staat al bovenaan; die niet nog eens in de lijst.
-      const eersteKomend = komend[0];
+      // De uitgelichte bakken staan al bovenaan; die niet nog eens in de lijst.
+      // Dat waren er altijd één, en dan stond de tweede bak van dezelfde dag
+      // hieronder alsof hij later kwam.
       const rest =
-        this.config.show_hero === false ? items : items.filter((i) => i !== eersteKomend);
-      const wanted = rest.map((i) => `${i.label}${+i.date}${i.reden ?? ""}`).join("|");
+        this.config.show_hero === false ? items : items.filter((i) => !eerst.includes(i));
+      // Met de dagen erbij: om middernacht wordt "morgen" "vandaag" zonder dat
+      // er een datum verandert.
+      const wanted = rest.map((i) => `${i.label}${+i.date}${i.days}${i.reden ?? ""}`).join("|");
       if (list.dataset.sig === wanted) return;
       list.dataset.sig = wanted;
 
@@ -425,11 +450,13 @@ class WasteCard extends DacCard {
    * Wat hier anders is dan in de lijst: er is geen uitgelichte regel bovenaan,
    * maar de eerstvolgende bak licht op tussen de andere. Dat scheelt de hele
    * kop -- en dat is precies waar de ruimtewinst zit.
+   *
+   * Komen er twee op dezelfde dag, dan lichten ze allebei op.
    */
-  paintBreed_(items, eerste) {
+  paintBreed_(items, eerst) {
     const vak = this.$(".breed");
     if (!vak) return;
-    const sig = items.map((i) => `${i.label}|${+i.date}|${i.reden ?? ""}`).join(",");
+    const sig = items.map((i) => `${i.label}|${+i.date}|${i.days}|${i.reden ?? ""}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
 
@@ -443,7 +470,7 @@ class WasteCard extends DacCard {
               ? "morgen"
               : relativeDay(i.date);
         return `
-          <div class="b" style="--tone:${i.tone}" data-eerst="${i === eerste}"
+          <div class="b" style="--tone:${i.tone}" data-eerst="${eerst.includes(i)}"
                data-stil="${Boolean(i.reden)}" title="${escapeHtml(i.label)}">
             <i></i>
             <span class="t">
