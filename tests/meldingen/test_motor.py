@@ -173,3 +173,119 @@ async def test_een_proef_stuurt_ook_zonder_afval(hass: HomeAssistant, motor, tel
     assert telefoons[0][1]["title"] == "Proef · Morgen GFT"
     # Een proef telt niet als "vandaag al verstuurd".
     assert motor.opslag.verstuurd("afval", "morgen") is None
+
+
+# ---------------------------------------------------------------------------
+# 0.55.0, 6 oktober 2026: "ik heb de tijd even op 22:00 gezet maar ik krijg
+# geen melding op me telefoon". Twee oorzaken: de melding van die avond was om
+# 19:30 al verstuurd, en dezelfde kaart op een tweede dashboard (19:30) won van
+# zijn hoofddashboard (22:00).
+# ---------------------------------------------------------------------------
+
+
+async def maak_dashboard(hass: HomeAssistant, hass_ws_client, url_path: str, kaarten: list) -> None:
+    """Een tweede dashboard, zoals zijn kopie voor de wandtablet."""
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {"id": 1, "type": "lovelace/dashboards/create", "url_path": url_path, "title": "Tablet"}
+    )
+    antwoord = await client.receive_json()
+    assert antwoord["success"], antwoord
+    await client.send_json(
+        {"id": 2, "type": "lovelace/config/save", "url_path": url_path, "config": {"views": [{"cards": kaarten}]}}
+    )
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+
+
+async def test_de_laatst_aangepaste_kaart_gaat_voor(
+    hass: HomeAssistant, motor, telefoons, hass_ws_client
+) -> None:
+    """NIEUW GEDRAG. Waar de kaart het laatst is aangepast, die tijd geldt."""
+    await maak_dashboard(hass, hass_ws_client, "dashboard-tablet", [KAART])
+    assert motor.meldingen["afval"].tijden["morgen"] == "19:30"
+
+    # Op het hoofddashboard naar 22:00.
+    await zet_dashboard(hass, [{**KAART, "tijd_morgen": "22:00:00"}])
+    assert motor.meldingen["afval"].tijden["morgen"] == "22:00"
+    assert motor.opslag.alle_leidend() == {"afval": ""}
+
+    # Daarna op de tablet naar 20:15: nu gaat de tablet voor.
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {
+            "id": 1,
+            "type": "lovelace/config/save",
+            "url_path": "dashboard-tablet",
+            "config": {"views": [{"cards": [{**KAART, "tijd_morgen": "20:15:00"}]}]},
+        }
+    )
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert motor.meldingen["afval"].tijden["morgen"] == "20:15"
+    assert motor.opslag.alle_leidend() == {"afval": "dashboard-tablet"}
+
+    # En om 20:15 komt hij ook echt.
+    hass.states.async_set("sensor.afval_morgen", "Papier, Restafval")
+    await motor._tik(om(26, 20, 15))
+    assert [d["title"] for _, d in telefoons] == ["Morgen Papier en Restafval"] * 2
+
+
+async def test_een_gekopieerde_kaart_gaat_niet_voor(
+    hass: HomeAssistant, motor, hass_ws_client
+) -> None:
+    """NIEUW GEDRAG. Een nieuwe kaart draagt de instellingen van toen, en wint niet."""
+    await maak_dashboard(hass, hass_ws_client, "dashboard-tablet", [{**KAART, "tijd_morgen": "18:00:00"}])
+    assert motor.meldingen["afval"].tijden["morgen"] == "19:30"
+    assert motor.opslag.alle_leidend() == {}
+
+
+async def test_een_latere_tijd_geeft_vandaag_geen_tweede_melding(
+    hass: HomeAssistant, motor, telefoons
+) -> None:
+    """REGRESSIEWACHT. Om 19:30 verstuurd, om 21:00 naar 22:00 gezet: vanavond niets meer.
+
+    Zo bedoeld: wie de tijd verschuift wil MORGEN een melding om 22:00, niet
+    vanavond een tweede aan het hele huis. Testen gaat met de proef.
+    """
+    hass.states.async_set("sensor.afval_morgen", "gft")
+    await motor._tik(om(26, 19, 30))
+    assert len(telefoons) == 2
+
+    await zet_dashboard(hass, [{**KAART, "tijd_morgen": "22:00:00"}])
+    await motor._tik(om(26, 22, 0))
+    assert len(telefoons) == 2
+    assert await motor.async_verstuur("afval", "morgen", om(26, 22, 0)) == {"reden": "Vandaag al verstuurd"}
+
+
+async def test_een_proef_naar_een_persoon(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG. De proefknop in de pop-up stuurt alleen naar die persoon.
+
+    Ook als zijn vinkje uit staat (wie op de knop drukt, wil hem krijgen), en
+    met een eigen tag, zodat hij de echte melding op de telefoon niet vervangt.
+    """
+    hass.states.async_set("sensor.afval_morgen", "Papier, Restafval")
+    motor.opslag.zet_aan("afval", LIEKE, False)
+    uitkomst = await motor.async_verstuur("afval", "morgen", om(26, 22, 0), proef=True, alleen=LIEKE)
+
+    assert uitkomst["verstuurd"] == [LIEKE]
+    assert [d for d, _ in telefoons] == ["test_lieke"]
+    data = telefoons[0][1]
+    assert data["title"] == "Proef · Morgen Papier en Restafval"
+    assert data["data"]["tag"] == "domotiapp-afval-proef"
+    assert data["data"]["actions"] == [
+        {"action": "DOMOTIAPP_AFVAL_BUITEN|afval|proef", "title": "Staat buiten"}
+    ]
+    assert motor.opslag.verstuurd("afval", "morgen") is None
+
+
+async def test_staat_buiten_in_een_proef_doet_niets(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG. Anders zou een proef de echte ochtendmelding laten vervallen."""
+    hass.bus.async_fire(
+        "mobile_app_notification_action",
+        {"action": "DOMOTIAPP_AFVAL_BUITEN|afval|proef"},
+        context=Context(user_id="gebruiker-sven"),
+    )
+    await hass.async_block_till_done()
+    assert motor.opslag.buiten("afval") is None
+    assert telefoons == []

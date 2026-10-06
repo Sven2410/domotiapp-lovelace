@@ -15,6 +15,13 @@
  * melding om 19:30"): dat stond eerst in de kop van de kaart, en die kop is
  * weg.
  *
+ * Onderaan staat voor een beheerder een knop **Stuur een proefmelding**, die
+ * alleen naar deze persoon gaat. Gevraagd zonder het te vragen op 6 oktober
+ * 2026: *"ik heb de tijd even op 22:00 gezet maar ik krijg geen melding"* --
+ * een tijd verschuiven om te testen werkt niet, want de melding van die avond
+ * was al uit (zie de kop van meldingen/motor.py). Testen hoort geen tijd te
+ * kosten en geen huisgenoten wakker te maken.
+ *
  * Een vinkje werkt meteen, zonder Opslaan. Dat deed de schakelaar op de kaart
  * ook, en een pop-up waarin je iets aanvinkt en die je daarna wegtikt zonder dat
  * het bewaard is, is een valkuil voor iedereen die niet weet dat er een knop
@@ -157,6 +164,24 @@ const css = /* css */ `
 
   .leeg { font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); padding: 4px 2px; }
 
+  /* De proef: een gewone knop, rustiger dan een vinkje, want hij verandert
+     niets aan wat iemand krijgt. */
+  .proef { display: flex; flex-direction: column; gap: 6px; }
+  .proef button {
+    min-height: 40px; padding: 0 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 12px; font: inherit; font-size: 13px; font-weight: 500;
+    background: var(--dac-surface); border: 1px solid var(--dac-border); color: var(--dac-ink-2);
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) {
+    .proef button:hover:not(:disabled) { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); color: var(--dac-ink); }
+  }
+  .proef button:disabled { cursor: default; opacity: .55; }
+  .proef button .icon { width: 16px; height: 16px; }
+  .proef .uit { font-size: 12px; line-height: 1.4; color: var(--dac-ink-2); text-align: center; }
+  .proef .uit[data-soort="fout"] { color: var(--dac-warn); }
+
   :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
   .vak:focus, .vak:focus-visible { outline: none; }
   @media (prefers-reduced-motion: reduce) {
@@ -198,6 +223,10 @@ class MeldingenScherm extends HTMLElement {
           </header>
           <div class="storing" hidden></div>
           <div class="lijst"></div>
+          <div class="proef" hidden>
+            <button type="button">${resolve("bell")}<span>Stuur een proefmelding</span></button>
+            <div class="uit" role="status"></div>
+          </div>
         </div>
       </div>`;
     this.gebouwd_ = true;
@@ -210,6 +239,8 @@ class MeldingenScherm extends HTMLElement {
     this.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && this.hasAttribute("open")) this.sluit();
     });
+
+    this.$(".proef button").addEventListener("click", () => this.proef_());
 
     const lijst = this.$(".lijst");
     lijst.addEventListener("click", (e) => this.vink_(e.target.closest(".soort")));
@@ -240,6 +271,9 @@ class MeldingenScherm extends HTMLElement {
     const lijst = this.$(".lijst");
     lijst.innerHTML = "";
     delete lijst.dataset.sig;
+    // De uitkomst van een proef hoort bij de persoon voor wie hij was.
+    this.$(".proef .uit").textContent = "";
+    this.$(".proef button").disabled = false;
     this.setAttribute("open", "");
     this.teken();
     // De focus op het VAK en niet op het eerste vinkje: een vinkje dat na een
@@ -275,6 +309,8 @@ class MeldingenScherm extends HTMLElement {
     const storing = this.$(".storing");
     storing.hidden = !inhoud.storing;
     storing.textContent = inhoud.storing ?? "";
+
+    this.$(".proef").hidden = !inhoud.proef;
 
     const lijst = this.$(".lijst");
     if (!inhoud.soorten.length) {
@@ -313,6 +349,23 @@ class MeldingenScherm extends HTMLElement {
         `${s.naam} voor ${inhoud.naam}: ${s.aan ? "aan" : "uit"}${s.regel ? `. ${s.regel}` : ""}`
       );
     }
+  }
+
+  /** Stuur een proef naar deze persoon, en zeg wat er gebeurde. */
+  async proef_() {
+    const knop = this.$(".proef button");
+    const uit = this.$(".proef .uit");
+    if (!this.bron || knop.disabled) return;
+    const persoon = this.persoon;
+    knop.disabled = true;
+    uit.dataset.soort = "";
+    uit.textContent = "Versturen…";
+    const { tekst, fout } = await this.bron.proef(persoon);
+    // Ondertussen dicht gegaan, of voor iemand anders geopend: niets zeggen.
+    if (this.persoon !== persoon) return;
+    knop.disabled = false;
+    uit.dataset.soort = fout ? "fout" : "";
+    uit.textContent = tekst;
   }
 
   vink_(regel) {

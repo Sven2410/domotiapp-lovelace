@@ -8,8 +8,14 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `aan` | per melding, per persoon: krijgt hij hem? Standaard ja |
 | `buiten` | per melding: voor welke ophaaldag iemand "Staat buiten" tikte, en wie |
 | `verstuurd` | per melding, per moment: op welke dag hij al is uitgegaan |
+| `leidend` | per melding: van welk dashboard de instellingen gelden |
 
 `verstuurd` is er zodat een herstart om 19:30:10 geen tweede melding oplevert.
+
+`leidend` is er voor dezelfde kaart op twee dashboards met andere tijden: dan
+gaat het dashboard voor waar hij het LAATST is aangepast. Dat moet een herstart
+overleven, want de kaart zelf zegt niet wanneer hij is opgeslagen. Zie
+`voeg_samen` in kaarten.py.
 """
 
 from __future__ import annotations
@@ -34,7 +40,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -46,6 +52,9 @@ class MeldingOpslag:
                 self._data[sleutel] = waarde
             else:
                 _LOGGER.warning("Meldingenopslag: %r ontbreekt of is geen object; leeg begonnen", sleutel)
+        # Sinds 0.55.0. Een opslag van daarvoor heeft hem niet, en dat is geen fout.
+        if isinstance(rauw.get("leidend"), dict):
+            self._data["leidend"] = rauw["leidend"]
 
     @callback
     def _bewaar(self) -> None:
@@ -88,4 +97,18 @@ class MeldingOpslag:
     @callback
     def zet_verstuurd(self, melding: str, moment: str, datum: str) -> None:
         self._data["verstuurd"].setdefault(melding, {})[moment] = datum
+        self._bewaar()
+
+    # ---------------------------------------------------------------- leidend
+
+    @callback
+    def alle_leidend(self) -> dict[str, str]:
+        """Per melding het dashboard waarvan de instellingen gelden."""
+        return dict(self._data["leidend"])
+
+    @callback
+    def zet_leidend(self, melding: str, dashboard: str) -> None:
+        if self._data["leidend"].get(melding) == dashboard:
+            return
+        self._data["leidend"][melding] = dashboard
         self._bewaar()
