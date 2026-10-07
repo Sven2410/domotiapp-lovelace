@@ -77,6 +77,10 @@
     "opslag_onbruikbaar": {
       "title": "De opgeslagen scenes zijn onbruikbaar",
       "description": "Het opslagbestand {opslagsleutel} kan wel gelezen worden, maar de inhoud heeft niet de verwachte vorm: {reden}.\n\nEr wordt in deze toestand niets gelezen en niets geschreven, zodat het bestand intact blijft. Alle scenekaarten melden dat de opslag onleesbaar is.\n\nZo komt u eruit: zet .storage/domotiapp_lovelace.scenes terug uit een backup, of verwijder het bestand om met een schone lei te beginnen. Herstart daarna Home Assistant of herlaad de integratie. Hebt u het bestand verwijderd, dan kunnen de scenes per kamer opnieuw worden ingesteld."
+    },
+    "competities_bezet": {
+      "title": "Competitiesensoren niet aangemaakt",
+      "description": "DomotiApp Lovelace maakt de sensoren voor de sportpop-up zelf, met het logo erbij. Deze namen zijn al in gebruik door een andere entiteit: {entiteiten}\n\nDaarom zijn ze niet aangemaakt. Ernaast zou een tweede sensor met _2 achter de naam komen, en dan verandert er op het dashboard niets.\n\nMeestal is het een sjabloonhelper van vroeger (Instellingen > Apparaten en diensten > Helpers). Haal die weg en herstart Home Assistant: dan maakt DomotiApp Lovelace de sensor onder precies deze naam, en verdwijnt deze melding. Het logo in customize.yaml is daarna ook niet meer nodig."
     }
   }
 }

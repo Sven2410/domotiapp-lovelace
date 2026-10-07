@@ -13,6 +13,7 @@ De integratie doet:
    service-workercache heeft. Zie `resource.py` voor het waarom.
 4. De opslaglaag laden en de WebSocket-commando's registreren (SPEC 10 en 11).
 5. Achtergebleven snapshot-scenes opruimen (SPEC 9.3.1).
+6. De vijf competitiesensoren voor de sportpop-up (`sensor.py`).
 
 De `?v=` in de frontend-URL is de **hash van het bundelbestand**, niet het
 versienummer (SPEC 16.2). Alleen dan verandert de URL precies wanneer de
@@ -29,6 +30,7 @@ from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.scene import DOMAIN as SCENE_DOMAIN
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
@@ -69,6 +71,8 @@ from .const import (
 from .store import SceneStore
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 def _bereken_hash(pad: Path) -> str:
     """SHA-256 van het bundelbestand, afgekapt. Blokkerende I/O."""
@@ -231,6 +235,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # niet ophoudt (SPEC 9.3.1).
     await _async_ruim_snapshots_op(hass)
 
+    # De competitiesensoren voor de sportpop-up (sinds 0.57.0, zie sensor.py).
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 
@@ -302,6 +309,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     resource zou dan bij elke herstart verdwijnen en terugkomen. Weghalen
     gebeurt in `async_remove_entry`.
     """
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+
     data = hass.data.get(DOMAIN, {})
     data[DATA_ENTRY_COUNT] = max(0, data.get(DATA_ENTRY_COUNT, 0) - 1)
 
