@@ -1529,6 +1529,18 @@ die daar niet staan:
    tabblad van de grote klikken (navigeren binnen de pagina), en wachten met
    `computer wait` in plaats van met een lus in de pagina.
 
+67. **Lees een sensor van DomotiApp Coach aan zijn ATTRIBUTEN, niet aan zijn
+   toestand.** De toestand is tekst voor mensen, en die verandert op verzoek
+   van de eigenaar: de startsensor van de vaatwasser was op 26 september 2026
+   in coach v0.100.0 een tijdstip, en dezelfde avond in v0.100.1 "om 14:00",
+   met het tijdstip in het attribuut `start`. De vaatwasserkaart was die avond
+   gebouwd tegen een nagebootste sensor in de eerste vorm, en zag daarna geen
+   enkel plan meer -- zonder fout, met "Klaar om te starten" op de kaart. Het
+   kwam op 7 oktober 2026 boven, toen hij het veld zelf invulde. De coach is
+   een ander project met een eigen sessie; lees bij elke koppeling de kop van
+   zijn `sensor.py` op dat moment, en niet wat er in een notitie of een
+   eerder rapport over de vorm staat.
+
 ---
 
 ## Projectstand
