@@ -22,7 +22,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { dayCount, daysBetween, nameOf, parseDate, relativeDay, shortDate, stateOf } from "../ha.js";
 import { korteNamen } from "./afval-namen.js";
-import { eersteOphaaldag } from "./afval-logica.js";
+import { eersteOphaaldag, heroWoorden } from "./afval-logica.js";
 import { opsomming } from "./meldingen-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
@@ -184,8 +184,17 @@ class WasteCard extends DacCard {
     .hero .bins[data-aantal="veel"] .bin { width: 32px; height: 32px; }
     .hero .bins[data-aantal="veel"] .bin .icon,
     .hero .bins[data-aantal="veel"] .bin ha-icon { width: 17px; height: 17px; --mdc-icon-size: 17px; }
-    .hero .what { min-width: 0; }
+    /* De namen nemen wat er over is, en houden daar ook op.
+
+       Ze liepen eerst dwars door "nu aan de weg" heen. Gemeld op 7 oktober
+       2026 met een schermafdruk van zijn telefoon, en nagemeten in een kaart
+       van 354 pixels: "Restafval en Papier" eindigde 49,5 pixels voorbij het
+       begin van de telling. De ellips stond er wel, maar op een SPAN, en een
+       inline element kapt niets af -- vandaar display: block. */
+    .hero .what { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+    .hero .what .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hero .big {
+      display: block;
       font-size: 18px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
@@ -194,6 +203,19 @@ class WasteCard extends DacCard {
       display: flex; align-items: baseline; gap: 5px;
     }
     .hero .when .n { font-size: 18px; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+    /* Krap: de namen passen niet naast de telling. Dan verhuist die naar de
+       regel erboven ("VANDAAG · NU AAN DE WEG") en krijgen de namen de hele
+       breedte. Dat wordt GEMETEN in pasHeroAan_ en niet geschat: of het past
+       hangt van de namen af, niet alleen van de breedte. Is het daarna nog te
+       smal (drie bakken op een telefoon), dan mogen ze over twee regels. */
+    .hero .bij { display: none; }
+    .hero[data-krap] .bij { display: inline; }
+    .hero[data-krap] .when { display: none; }
+    .hero[data-krap] .big {
+      white-space: normal;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    }
 
     /* Today and tomorrow are the only two states that need to shout. */
     :host([urgency="today"]) .hero { animation: pulse 2.6s ease-in-out infinite; }
@@ -236,6 +258,35 @@ class WasteCard extends DacCard {
   wire() {
     // Alleen de brede vorm groeit; de lijstvorm staat vast op zijn rijen.
     if (this.breed_()) this.teardown_.push(volgRaster(this.$(".card")));
+
+    // Het uitgelichte vlak meet opnieuw als het van maat verandert. In een
+    // pop-up wordt de kaart getekend terwijl hij dicht is, en dan is er niets
+    // te meten (valkuil 52); pas bij het openen krijgt hij een breedte, en dan
+    // komt er geen `hass` meer langs.
+    const hero = this.$(".hero");
+    if (hero && typeof ResizeObserver !== "undefined") {
+      const waarnemer = new ResizeObserver(() => this.pasHeroAan_());
+      waarnemer.observe(hero);
+      this.teardown_.push(() => waarnemer.disconnect());
+    }
+  }
+
+  /**
+   * Passen de namen naast de telling? Zo niet, dan `data-krap` (zie de CSS).
+   *
+   * Altijd gemeten in de GEWONE vorm: de vorige uitslag eerst weghalen, anders
+   * meet je de krappe vorm en blijft hij krap als de kaart breder wordt. Het
+   * eind is dezelfde maat als het begin, dus de waarnemer vuurt hier niet
+   * opnieuw op.
+   */
+  pasHeroAan_() {
+    const hero = this.$(".hero");
+    const big = hero?.querySelector(".big");
+    if (!big || hero.hidden || !big.textContent) return;
+    hero.removeAttribute("data-krap");
+    // Niet in beeld (een dichte pop-up): niets te meten, de waarnemer komt terug.
+    if (!big.clientWidth) return;
+    hero.toggleAttribute("data-krap", big.scrollWidth > big.clientWidth + 1);
   }
 
   /**
@@ -340,7 +391,7 @@ class WasteCard extends DacCard {
         ${c.show_hero === false ? "" : `<div class="hero" hidden>
           <span class="bins"></span>
           <span class="what">
-            <span class="eyebrow"></span>
+            <span class="eyebrow"><span class="dag"></span><span class="bij"></span></span>
             <span class="big"></span>
           </span>
           <span class="when"><span class="n tnum"></span><span class="eyebrow u"></span></span>
@@ -395,13 +446,13 @@ class WasteCard extends DacCard {
             .map((i) => `<span class="bin" style="--tone:${escapeHtml(i.tone)}">${resolve(i.icon, "bin")}</span>`)
             .join("");
         }
-        this.text(hero.querySelector(".eyebrow"), relativeDay(next.date));
+        const woorden = heroWoorden(next.days);
+        this.text(hero.querySelector(".dag"), relativeDay(next.date));
+        this.text(hero.querySelector(".bij"), woorden.bij ? ` · ${woorden.bij}` : "");
         this.text(hero.querySelector(".big"), opsomming(eerst.map((i) => i.label)));
-        this.text(hero.querySelector(".n"), next.days === 0 ? "nu" : String(next.days));
-        this.text(
-          hero.querySelector(".u"),
-          next.days === 0 ? "aan de weg" : next.days === 1 ? "dag" : "dagen"
-        );
+        this.text(hero.querySelector(".n"), woorden.n);
+        this.text(hero.querySelector(".u"), woorden.u);
+        this.pasHeroAan_();
       }
     }
 
