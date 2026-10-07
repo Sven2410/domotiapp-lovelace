@@ -29,3 +29,28 @@ export function eersteOphaaldag(komend, dag) {
   if (eerste == null) return [komend[0]];
   return komend.filter((bak) => dag(bak) === eerste);
 }
+
+/**
+ * De woorden in het uitgelichte vlak van de afvalkaart, naast de namen.
+ *
+ * `n` en `u` staan rechts in het vlak: "nu aan de weg", "1 dag", "6 dagen".
+ * `bij` is wat er bovenaan achter de dag komt als dat rechts niet past.
+ * Gemeld op 7 oktober 2026 met een schermafdruk van zijn telefoon: twee bakken
+ * op één dag ("Restafval en Papier") liepen dwars door "nu aan de weg" heen.
+ * Op een smalle kaart verhuist het daarom naar de regel erboven, en krijgen de
+ * namen de hele breedte. Of het past, meet de kaart zelf.
+ *
+ * Morgen en overmorgen krijgen bovenaan niets extra: daar staat "morgen" of
+ * "overmorgen" al, en "1 dag" zegt dan niets nieuws.
+ *
+ * @param {number} dagen  tot de ophaling, 0 is vandaag
+ * @returns {{n: string, u: string, bij: string}}
+ */
+export function heroWoorden(dagen) {
+  if (dagen === 0) return { n: "nu", u: "aan de weg", bij: "nu aan de weg" };
+  return {
+    n: String(dagen),
+    u: dagen === 1 ? "dag" : "dagen",
+    bij: dagen >= 3 ? `over ${dagen} dagen` : "",
+  };
+}
