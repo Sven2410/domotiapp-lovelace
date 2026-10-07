@@ -4,9 +4,10 @@
  * Op 26 september 2026 werd de vaatwasser thuis om 12:16 vrijgegeven, plande
  * DomotiApp Coach 14:00, en ging hij om 13:12 met de hand aan: op de kaart
  * stond nergens dat er een plan was. De coach meldt dat moment sindsdien in
- * `sensor.domotiapp_coach_vaatwasser_start_om` -- een tijdstip zolang hij wacht,
- * `unknown` zodra hij draait of niet vrijgegeven is -- met de vrijgaveschakelaar
- * in het attribuut `release_switch`.
+ * `sensor.domotiapp_coach_vaatwasser_start_om` -- zolang hij wacht, `unknown`
+ * zodra hij draait of niet vrijgegeven is -- met de vrijgaveschakelaar in het
+ * attribuut `release_switch`. Eerst als tijdstip in de toestand, sinds v0.100.1
+ * van de coach als tekst met het tijdstip in `start`; zie het blok daarover.
  *
  * Alles hier is NIEUW GEDRAG, behalve de tests die met REGRESSIEWACHT beginnen:
  * die toetsen dat een plan NIET wint van iets belangrijkers, en dat deed de
@@ -71,7 +72,74 @@ describe("NIEUW GEDRAG: het startmoment lezen", () => {
   });
 });
 
+/*
+ * Sinds v0.100.1 van de coach (27 september 2026) is de TOESTAND tekst, zoals
+ * hij het zelf op een kaart zou zetten -- "om 12:15", "morgen om 09:00",
+ * "zondag om 09:00" of "nu" -- en staat het tijdstip in het attribuut `start`.
+ * De kaart was een dag eerder gebouwd tegen v0.100.0, waar de toestand nog een
+ * tijdstip was, en zag het plan daarna niet meer. Gemeld op 7 oktober 2026:
+ * het veld stond goed ingevuld, de sensor zei "om 12:15", de kaart zei "Klaar
+ * om te starten".
+ */
+describe("NIEUW GEDRAG: de coach zet tekst in de toestand en het tijdstip in start", () => {
+  // Zijn sensor van 7 oktober 2026, letterlijk uitgelezen (alleen de reden
+  // ingekort).
+  const zijn = S("om 12:15", {
+    start: "2026-10-07T12:15:00+02:00",
+    reason: "Hij start om 12:15: dan is Express 60 °C het goedkoopst.",
+    rule: "wait-for-start",
+    released: true,
+    running: false,
+    release_switch: "input_boolean.schakelaar_vaatwasser",
+  });
+  const vanochtend = new Date("2026-10-07T07:30:00Z");
+
+  it("leest het tijdstip uit het attribuut start", () => {
+    assert.equal(+V.startMoment(zijn, vanochtend), +new Date("2026-10-07T12:15:00+02:00"));
+  });
+
+  it("ook als het morgen of over een paar dagen is", () => {
+    const morgen = S("morgen om 09:00", { start: "2026-10-08T09:00:00+02:00" });
+    assert.equal(+V.startMoment(morgen, vanochtend), +new Date("2026-10-08T09:00:00+02:00"));
+    const zondag = S("zondag om 09:00", { start: "2026-10-11T09:00:00+02:00" });
+    assert.equal(+V.startMoment(zondag, vanochtend), +new Date("2026-10-11T09:00:00+02:00"));
+  });
+
+  it("REGRESSIEWACHT: laat een tijdstip in start dat voorbij is vallen, net als in de toestand", () => {
+    const laat = new Date("2026-10-07T10:20:00Z"); // 12:20 in Nederland
+    assert.equal(V.startMoment(zijn, laat), null);
+  });
+
+  it("'nu' is nu, en dan zegt de kaart dat ook", () => {
+    // Bij "nu" staat start op null: de coach start hem op dit moment.
+    const nu = S("nu", { start: null, rule: "cheapest-start" });
+    assert.equal(+V.startMoment(nu, NU), +NU);
+    assert.equal(V.startTekst(V.startMoment(nu, NU), NU), "Start nu");
+  });
+
+  it("zet het plan op de kaart in plaats van klaar om te starten", () => {
+    // De kaart rekent met het moment; de woorden maakt hij zelf, zodat ze op
+    // elke kaart hetzelfde zijn. Hier in lokale tijd, los van de tijdzone van
+    // de machine die de test draait.
+    const lokaal = S("om 14:00", { start: OM(26, 14).toISOString() });
+    const t = V.toestand({ status: S("ready"), start: V.startMoment(lokaal, NU), nu: NU });
+    assert.equal(t.tekst, "Start om 14:00");
+  });
+
+  it("REGRESSIEWACHT: niets gepland is niets, ook met de attributen erbij", () => {
+    // Zo staat zijn sensor als de vaatwasser draait of niet vrijgegeven is.
+    const leeg = S("unknown", { start: null, running: true });
+    assert.equal(V.startMoment(leeg, NU), null);
+  });
+});
+
 describe("NIEUW GEDRAG: het startmoment in woorden", () => {
+  it("zegt nu als het moment er is", () => {
+    // In de minuut marge na het moment, en bij de "nu" van de coach.
+    assert.equal(V.startTekst(NU, NU), "Start nu");
+    assert.equal(V.startTekst(new Date(+NU - 30_000), NU), "Start nu");
+  });
+
   it("zegt vandaag zonder dag", () => {
     assert.equal(V.startTekst(OM(26, 14), NU), "Start om 14:00");
     assert.equal(V.startTekst(OM(26, 9, 5), OM(26, 8)), "Start om 09:05");

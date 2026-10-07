@@ -163,13 +163,31 @@ export const klepOpen = (st) => Boolean(st) && st.state === "on";
  * coach 14:00, en ging hij om 13:12 met de hand aan: op de kaart stond nergens
  * dat er een plan was.
  *
- * De sensor van de coach draagt een TIJDSTIP zolang hij wacht, en staat op
- * `unknown` zodra hij draait of niet meer vrijgegeven is. Andere systemen doen
- * het met een `input_datetime` of een kale klok; alle drie worden gelezen.
+ * De sensor van de coach staat op `unknown` zodra hij draait of niet meer
+ * vrijgegeven is. Zolang hij wacht is de toestand sinds v0.100.1 van de coach
+ * TEKST -- "om 14:00", "morgen om 09:00", "zondag om 09:00" of "nu" -- en staat
+ * het tijdstip in het attribuut `start`. In v0.100.0 was de toestand zelf het
+ * tijdstip, en daartegen is deze kaart in 0.47.0 gebouwd; een dag later zag hij
+ * het plan niet meer (gemeld op 7 oktober 2026). Andere systemen doen het met
+ * een `input_datetime` of een kale klok; alles wordt gelezen.
  */
 
 /** Hoe ver een gepland moment voorbij mag zijn voordat het niet meer telt. */
 const START_MARGE_MS = 60_000;
+
+/**
+ * Een datum met tijd als `Date`, of null als het er geen is.
+ *
+ * Met zone (de coach, `datetime`) is het één moment; zonder zone
+ * (`input_datetime`) is het lokale tijd, en dat is precies hoe een ISO-tekst
+ * met een T erin en zonder zone gelezen wordt.
+ */
+function tijdstip(s) {
+  const vol = String(s ?? "").trim().match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}:\d{2}.*)$/);
+  if (!vol) return null;
+  const d = new Date(`${vol[1]}T${vol[2].padStart(5, "0")}`);
+  return Number.isNaN(+d) ? null : d;
+}
 
 /**
  * Het moment waarop hij straks start, als `Date`, of null.
@@ -179,8 +197,17 @@ const START_MARGE_MS = 60_000;
  * minuut marge op, zodat de tekst niet wegvalt in de seconden tussen het
  * startsein en de statussensor die "draait" meldt.
  *
- * Een kale klok ("02:00") is vandaag, of morgen als dat al voorbij is -- een
- * nachtelijke start wordt 's avonds gepland.
+ * Waar het vandaan komt, in deze volgorde:
+ *
+ *   1. het attribuut `start` (de coach): daar staat het tijdstip, en de
+ *      toestand is dan tekst die de kaart niet hoeft te ontleden;
+ *   2. "nu" (de coach start hem op dit moment): dan is het moment nu;
+ *   3. de toestand zelf: een tijdstip, of een kale klok ("02:00") -- vandaag,
+ *      of morgen als dat al voorbij is, want een nachtelijke start wordt
+ *      's avonds gepland.
+ *
+ * Een toestand `unknown` of `unavailable` wint van alles: dan is er niets
+ * gepland, wat er ook nog in de attributen staat.
  *
  * @param {object|null} st de state van de sensor
  * @param {Date} nu wordt meegegeven zodat de test niet van de klok afhangt
@@ -189,16 +216,15 @@ export function startMoment(st, nu = new Date()) {
   if (!st) return null;
   const s = String(st.state ?? "").trim();
   if (!s || s === "unknown" || s === "unavailable") return null;
+  const telt = (d) => (+d < +nu - START_MARGE_MS ? null : d);
 
-  // Een datum met tijd. Met zone (de coach, `datetime`) is het één moment;
-  // zonder zone (`input_datetime`) is het lokale tijd, en dat is precies hoe
-  // een ISO-tekst met een T erin en zonder zone gelezen wordt.
-  const vol = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}:\d{2}.*)$/);
-  if (vol) {
-    const d = new Date(`${vol[1]}T${vol[2].padStart(5, "0")}`);
-    if (Number.isNaN(+d)) return null;
-    return +d < +nu - START_MARGE_MS ? null : d;
-  }
+  const uitAttribuut = tijdstip(st.attributes?.start);
+  if (uitAttribuut) return telt(uitAttribuut);
+
+  if (/^(nu|now)$/i.test(s)) return new Date(+nu);
+
+  const uitToestand = tijdstip(s);
+  if (uitToestand) return telt(uitToestand);
 
   const klok = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (klok) {
@@ -230,9 +256,13 @@ const dagenTussen = (van, tot) =>
  * Vandaag zonder dag, morgen als "morgen", binnen een week met de naam van de
  * dag en daarna met een datum. Op de KALENDER gerekend en niet in uren: om
  * 23:00 is 02:00 morgen, ook al is het maar drie uur.
+ *
+ * Is het moment er (de "nu" van de coach, of de minuut marge erna), dan "Start
+ * nu": "Start om 12:15" om 12:15:30 leest als iets dat nog moet komen.
  */
 export function startTekst(moment, nu = new Date()) {
   if (!moment) return "";
+  if (+moment <= +nu) return "Start nu";
   const klok = `${String(moment.getHours()).padStart(2, "0")}:${String(moment.getMinutes()).padStart(2, "0")}`;
   const dagen = dagenTussen(nu, moment);
   if (dagen <= 0) return `Start om ${klok}`;
