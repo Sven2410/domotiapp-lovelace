@@ -11,6 +11,13 @@ DOMAIN: Final = "domotiapp_lovelace"
 CARD_FILENAME: Final = "domotiapp-lovelace.js"
 CARD_URL_PATH: Final = f"/{DOMAIN}/{CARD_FILENAME}"
 
+# De afbeeldingen die de integratie meelevert (de achtergrond van het
+# DomotiApp-dashboard), uit de map `afbeeldingen/` naast dit bestand. Dit adres
+# en de bestandsnamen staan in dashboards van klanten: NOOIT hernoemen of
+# weghalen, alleen aanvullen. Bewaakt door tests/test_afbeeldingen.py.
+AFBEELDINGEN_MAP: Final = "afbeeldingen"
+AFBEELDINGEN_URL_PATH: Final = f"/{DOMAIN}/{AFBEELDINGEN_MAP}"
+
 # Sleutels in hass.data[DOMAIN]. Het aantal entries is nodig omdat de
 # frontend-registratie hoort te verdwijnen zodra de laatste entry weg is.
 DATA_STATIC_PATH_REGISTERED: Final = "static_path_registered"
