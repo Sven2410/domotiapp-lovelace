@@ -12,7 +12,8 @@ CARD_FILENAME: Final = "domotiapp-lovelace.js"
 CARD_URL_PATH: Final = f"/{DOMAIN}/{CARD_FILENAME}"
 
 # De afbeeldingen die de integratie meelevert (de achtergrond van het
-# DomotiApp-dashboard), uit de map `afbeeldingen/` naast dit bestand. Dit adres
+# DomotiApp-dashboard en de logo's van de competitiesensoren in sensor.py), uit
+# de map `afbeeldingen/` naast dit bestand. Dit adres
 # en de bestandsnamen staan in dashboards van klanten: NOOIT hernoemen of
 # weghalen, alleen aanvullen. Bewaakt door tests/test_afbeeldingen.py.
 AFBEELDINGEN_MAP: Final = "afbeeldingen"

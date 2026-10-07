@@ -37,7 +37,15 @@ MAP = Path(__file__).parent.parent / "custom_components" / "domotiapp_lovelace" 
 
 # De namen die in dashboards van klanten staan. Alleen aanvullen, nooit
 # hernoemen of weghalen.
-VASTE_NAMEN = ["achtergrond.png"]
+VASTE_NAMEN = [
+    "achtergrond.png",
+    # Sinds 0.57.0: de logo's van de competitiesensoren (zie test_competities.py).
+    "eredivisie.png",
+    "premierleague.png",
+    "bundesliga.png",
+    "laliga.png",
+    "formule1.png",
+]
 
 PNG_HANDTEKENING = b"\x89PNG\r\n\x1a\n"
 

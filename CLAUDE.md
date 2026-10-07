@@ -506,13 +506,22 @@ die de bundelhash in zijn *antwoord* geeft. Een gehashte URL rechtstreeks in
 **De integratie levert ook afbeeldingen mee** (sinds 0.56.0): de map
 `custom_components/domotiapp_lovelace/afbeeldingen/` staat op
 `/domotiapp_lovelace/afbeeldingen/`, zonder inloggen, zodat een beheersessie ze
-in een dashboard kan zetten zonder dat er iets in `/config/www` hoeft. Nu alleen
-`achtergrond.png`, de zwarte achtergrond van het DomotiApp-dashboard. **Die
-adressen staan in dashboards van klanten: nooit hernoemen of weghalen, alleen
-aanvullen** (`VASTE_NAMEN` in `tests/test_afbeeldingen.py`). Zonder
-cacheheaders, met opzet: de bundel krijgt een nieuwe `?v=`, deze adressen niet.
-En de repo is publiek: geen merklogo's van derden erin zonder dat de eigenaar
-daar ja op heeft gezegd.
+in een dashboard kan zetten zonder dat er iets in `/config/www` hoeft:
+`achtergrond.png` (de zwarte achtergrond van het DomotiApp-dashboard) en sinds
+0.57.0 vijf competitielogo's. **Die adressen staan in dashboards van klanten:
+nooit hernoemen of weghalen, alleen aanvullen** (`VASTE_NAMEN` in
+`tests/test_afbeeldingen.py`). Zonder cacheheaders, met opzet: de bundel krijgt
+een nieuwe `?v=`, deze adressen niet. De logo's zijn merken van derden in een
+publieke repo; de eigenaar heeft daar op 7 oktober 2026 bewust ja op gezegd.
+Vraag het opnieuw voordat er een merk BIJ komt.
+
+**En vijf sensoren** (sinds 0.57.0, `sensor.py`): `sensor.eredivisie`,
+`premier_league`, `bundesliga`, `la_liga` en `formule_1`, toestand de naam en het
+logo als `entity_picture`, voor de sportpop-up. Altijd aan, zijn keuze. Is de
+entity_id al bezet (bij de oude installaties een sjabloonhelper), dan maakt de
+integratie hem NIET -- geen `_2` ernaast -- en meldt ze het in het log en onder
+Reparaties (`competities_bezet`). Weghalen van zo'n helper is iets bij de
+klant, en dus voor een beheersessie, niet voor ons.
 
 **Configureren begint met een menu** (sinds 0.54.0): *Uiterlijk* en *Opgeslagen
 scenes opruimen*. De config flow vraagt bij het toevoegen om het thema. Dat
