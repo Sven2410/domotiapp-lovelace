@@ -3,7 +3,8 @@
 De integratie doet:
 
 1. `hass.http.async_register_static_paths()` — het gebundelde JS-bestand op
-   een eigen URL zetten.
+   een eigen URL zetten, en de map `afbeeldingen/` op
+   `/domotiapp_lovelace/afbeeldingen/` (de achtergrond van het dashboard).
 2. `frontend.add_extra_js_url()` — dat bestand door HA laten importeren in
    `index.html`, zodat de klant géén Lovelace-resource hoeft toe te voegen.
 3. **Dezelfde URL óók als Lovelace-resource registreren** (SPEC 16.5). Twee
@@ -47,6 +48,8 @@ from .alarm.const import STORAGE_KEY as ALARM_STORAGE_KEY
 from .alarm.const import STORAGE_VERSION as ALARM_STORAGE_VERSION
 from .alarm.store import AlarmStore
 from .const import (
+    AFBEELDINGEN_MAP,
+    AFBEELDINGEN_URL_PATH,
     CARD_FILENAME,
     CARD_URL_PATH,
     CONF_THEMA,
@@ -157,7 +160,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     CARD_URL_PATH,
                     str(bundel),
                     cache_headers=True,
-                )
+                ),
+                # De afbeeldingen voor het dashboard, zodat ze niet bij elke
+                # klant met de hand in /config/www hoeven. ZONDER cacheheaders,
+                # en dat is het verschil met de bundel: die krijgt bij elke
+                # wijziging een nieuwe `?v=`, maar deze adressen staan vast in
+                # dashboards van klanten. Met `cache_headers=True` houdt een
+                # browser een vervangen afbeelding een maand lang vast; zonder
+                # vraagt hij met de ETag of hij nog klopt.
+                StaticPathConfig(
+                    AFBEELDINGEN_URL_PATH,
+                    str(Path(integration.file_path) / AFBEELDINGEN_MAP),
+                    cache_headers=False,
+                ),
             ]
         )
         data[DATA_STATIC_PATH_REGISTERED] = True

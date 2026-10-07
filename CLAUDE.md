@@ -503,6 +503,17 @@ Start een sessie gerust in een oude map — het werk gebeurt alsnog hier.
 die de bundelhash in zijn *antwoord* geeft. Een gehashte URL rechtstreeks in
 `index.html` overleeft HA's service worker niet. Zie ook valkuil 2 en 15.
 
+**De integratie levert ook afbeeldingen mee** (sinds 0.56.0): de map
+`custom_components/domotiapp_lovelace/afbeeldingen/` staat op
+`/domotiapp_lovelace/afbeeldingen/`, zonder inloggen, zodat een beheersessie ze
+in een dashboard kan zetten zonder dat er iets in `/config/www` hoeft. Nu alleen
+`achtergrond.png`, de zwarte achtergrond van het DomotiApp-dashboard. **Die
+adressen staan in dashboards van klanten: nooit hernoemen of weghalen, alleen
+aanvullen** (`VASTE_NAMEN` in `tests/test_afbeeldingen.py`). Zonder
+cacheheaders, met opzet: de bundel krijgt een nieuwe `?v=`, deze adressen niet.
+En de repo is publiek: geen merklogo's van derden erin zonder dat de eigenaar
+daar ja op heeft gezegd.
+
 **Configureren begint met een menu** (sinds 0.54.0): *Uiterlijk* en *Opgeslagen
 scenes opruimen*. De config flow vraagt bij het toevoegen om het thema. Dat
 wijkt af van de letter van SPEC 15.2 en 19 (lege config flow, options flow
