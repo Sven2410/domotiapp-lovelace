@@ -561,6 +561,28 @@ mediakaart heeft een veld *Speakers om mee te groeperen*, en leeg laten valt
 terug op het label. Sinds 0.16.1 valt een ALGEMENE mediaspeler daar niet op
 terug maar op zijn eigen speakerlijst.
 
+### Het contract met DomotiApp Coach
+
+Sinds 0.58.0 werken de vaatwasser-, laadpaal- en batterijkaart met de coach:
+per apparaat een eigen apparaat in Home Assistant (fabrikant "DomotiApp Coach"),
+met de rol van elke entiteit in `translation_key`. Zie de kop van
+`src/cards/coach-logica.js`. Twee regels, door de eigenaar bevestigd op
+12 oktober 2026:
+
+- **Er gaat niets uit dat een attribuut van de coach leest dat nog niet in een
+  echte dump van zijn installatie heeft gestaan.** De dumps staan als vaste
+  testinvoer in `tests/js/vaste-invoer/coach-<versie>-<apparaat>.json`, met een
+  test erop. Dat dit geen formaliteit is, bleek in de nacht van 11 oktober: in de
+  echte gegevens stuurde de coach zonder auto toch een laadplan, en kon Leegladen
+  onder de ondergrens. Allebei waren de kaarten er anders mee uitgegaan. Kan iets
+  niet in een dump gezien worden (het batterijplan bij een vast contract is
+  leeg), lees dan de bron van de coach op dat moment en zet dat in het rapport.
+- **De coach hernoemt of verwijdert niets wat een kaart leest.** Toevoegen mag;
+  moet er iets anders, dan gaat `contract` omhoog. Dat is de kant van de coach
+  (CLAUDE.md van domotiapp-coach, "Wat gelijk moet blijven"). Hier betekent het:
+  een kaart beslist nooit op de toestandstekst (valkuil 67), en een `contract`
+  dat hoger is dan `COACH_CONTRACT` is geen fout.
+
 ### Badges zijn iets anders dan kaarten
 
 Sinds 0.43.0 zit er ook een **badge** in de bundel: `domotiapp-template-badge`,
