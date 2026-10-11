@@ -68,6 +68,13 @@ describe("NIEUW GEDRAG: wat de coach zegt, uit de attributen", () => {
     assert.deepEqual(V.coachStand({ ...st, state: "om 9 uur morgen, of zo" }), c);
   });
 
+  it("onderscheidt `later` dat er niet is van `later` dat leeg is", () => {
+    const met = (attributen) => V.coachStand({ state: "", attributes: attributen }).later;
+    assert.equal(met({ later: "morgen" }), "morgen");
+    assert.equal(met({ later: null }), "");
+    assert.equal(met({}), undefined);
+  });
+
   it("neemt alleen echte booleans als ja", () => {
     const c = V.coachStand({ state: "", attributes: { vrijgegeven: "true", nu: 1 } });
     assert.equal(c.vrijgegeven, false);
@@ -107,7 +114,27 @@ describe("NIEUW GEDRAG: de knoppen van de coach", () => {
     ]);
   });
 
-  it("zegt 'Morgen starten' als de klaar-tijd van vandaag voorbij is", () => {
+  it("neemt het woord van het paneel over: `later` van de coach", () => {
+    const [vrij, nu] = V.coachKnoppen({ coach: stand({ later: "morgen" }), rollen: ROLLEN, nu: NU });
+    assert.equal(vrij.label, "Morgen starten");
+    assert.equal(vrij.aria, "Ingeruimd, morgen starten");
+    assert.equal(nu.aria, "Ingeruimd, nu starten");
+    const [maandag] = V.coachKnoppen({ coach: stand({ later: "maandag" }), rollen: ROLLEN, nu: NU });
+    assert.equal(maandag.label, "Maandag starten");
+  });
+
+  it("zegt gewoon Ingeruimd als de coach niets gemist heeft, ook met een klaar-tijd van morgen", () => {
+    // Een weekschema dat vandaag uit staat: de volgende klaar-tijd is morgen,
+    // maar vandaag is er niets gemist. Het paneel zegt dan "Ingeruimd".
+    const [vrij] = V.coachKnoppen({
+      coach: stand({ later: "", klaarOm: new Date(2026, 9, 12, 16, 30) }),
+      rollen: ROLLEN,
+      nu: NU,
+    });
+    assert.equal(vrij.label, "Ingeruimd");
+  });
+
+  it("zegt 'Morgen starten' als de klaar-tijd van vandaag voorbij is (sensor zonder `later`)", () => {
     // Na 16:30 geeft de coach de klaar-tijd van morgen.
     const [vrij, nu] = V.coachKnoppen({
       coach: stand({ klaarOm: new Date(2026, 9, 12, 16, 30) }),
@@ -119,7 +146,7 @@ describe("NIEUW GEDRAG: de knoppen van de coach", () => {
     assert.equal(nu.aria, "Ingeruimd, nu starten");
   });
 
-  it("noemt de dag als de volgende klaar-tijd verder weg is", () => {
+  it("noemt de dag als de volgende klaar-tijd verder weg is (sensor zonder `later`)", () => {
     // Het schema heeft maandag geen klaar-tijd: dan is de volgende dinsdag.
     const [vrij] = V.coachKnoppen({ coach: stand({ klaarOm: new Date(2026, 9, 13, 7, 0) }), rollen: ROLLEN, nu: NU });
     assert.equal(vrij.label, "Dinsdag starten");

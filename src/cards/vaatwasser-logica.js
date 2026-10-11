@@ -306,8 +306,13 @@ export function vindStartSensor(states, schakelaar) {
  *
  * Wat de coach zegt komt uit de attributen van zijn startsensor (contract 1):
  * `stand` (niet_vrijgegeven | gepland | start_nu | draait | klaar),
- * `vrijgegeven`, `nu`, `klaar_om` en `type`. Nooit uit de toestand: die is voor
- * mensen en mag veranderen (valkuil 67).
+ * `vrijgegeven`, `nu`, `later`, `klaar_om` en `type`. Nooit uit de toestand:
+ * die is voor mensen en mag veranderen (valkuil 67).
+ *
+ * `later` is het woord dat het paneel erbij zet ("morgen", "maandag") als de
+ * klaar-tijd van vandaag gemist is, en anders null -- letterlijk `besluit.later`
+ * uit de coach, zodat kaart en paneel niet uiteen kunnen lopen. Een sensor
+ * zonder dat attribuut valt terug op `klaar_om`.
  */
 
 /** De velden van de kaart die de coach kan invullen, met zijn sleutel in `entiteiten`. */
@@ -340,7 +345,11 @@ export function metCoachVelden(config, entiteiten) {
  * Wat de coach over dit apparaat zegt, uit de attributen van zijn startsensor.
  *
  * @param {object|null} st
- * @returns {{stand: string, vrijgegeven: boolean, nu: boolean, klaarOm: Date|null, type: string}|null}
+ * `later` is `undefined` als de sensor het attribuut niet heeft, en "" als de
+ * coach zegt dat er niets gemist is: dat verschil bepaalt of `klaar_om` nog
+ * meetelt.
+ *
+ * @returns {{stand: string, vrijgegeven: boolean, nu: boolean, later: string|undefined, klaarOm: Date|null, type: string}|null}
  */
 export function coachStand(st) {
   const a = st?.attributes;
@@ -349,6 +358,7 @@ export function coachStand(st) {
     stand: String(a.stand ?? ""),
     vrijgegeven: a.vrijgegeven === true,
     nu: a.nu === true,
+    later: "later" in a ? String(a.later ?? "") : undefined,
     klaarOm: tijdstip(a.klaar_om),
     type: String(a.type ?? ""),
   };
@@ -395,7 +405,7 @@ export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) 
       aan: true,
     });
   } else {
-    const later = laterWoord(coach.klaarOm, nu);
+    const later = coach.later ?? laterWoord(coach.klaarOm, nu);
     knoppen.push({
       rol: "vrijgave",
       entity: rollen.ingeruimd_morgen,
@@ -421,9 +431,11 @@ export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) 
 /**
  * "morgen", "maandag", of "" als de klaar-tijd vandaag is.
  *
- * Het paneel zet er "morgen" bij zodra de klaar-tijd van vandaag voorbij is;
- * de coach geeft dan de klaar-tijd van morgen als `klaar_om`. Op de KALENDER
- * gerekend, net als `startTekst`.
+ * Alleen voor een sensor zonder `later`. Het paneel zet er "morgen" bij zodra
+ * de klaar-tijd van vandaag voorbij is; de coach geeft dan de klaar-tijd van
+ * morgen als `klaar_om`. Dat wijkt af op een dag zonder klaar-tijd (dan zegt
+ * dit "morgen" en het paneel niets), en daarom gaat `later` voor. Op de
+ * KALENDER gerekend, net als `startTekst`.
  */
 function laterWoord(klaarOm, nu) {
   if (!klaarOm) return "";

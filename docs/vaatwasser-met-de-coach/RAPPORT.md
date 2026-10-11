@@ -24,7 +24,7 @@ goedgekeurd. Voor de vaatwasser komt het hierop neer:
 |---|---|
 | het apparaat | per coach-apparaat één HA-apparaat, fabrikant `DomotiApp Coach`, model `Vaatwasser` / `Wasmachine` / `Droger` / ... |
 | de rol van een entiteit | `translation_key`, een vaste sleutel die hernoemen overleeft |
-| sensor `start` (bestond al) | attributen `start`, `klaar_om`, `nu`, `vrijgegeven`, `stand` (`niet_vrijgegeven` / `gepland` / `start_nu` / `draait` / `klaar`), `contract`, `type`, `entiteiten`, `release_switch` |
+| sensor `start` (bestond al) | attributen `start`, `klaar_om`, `later`, `nu`, `vrijgegeven`, `stand` (`niet_vrijgegeven` / `gepland` / `start_nu` / `draait` / `klaar`), `contract`, `type`, `entiteiten`, `release_switch` |
 | binary_sensor `vrijgegeven` | de waarheid van de coach |
 | knoppen | `ingeruimd_morgen`, `ingeruimd_nu`, `vrijgave_intrekken` |
 | `entiteiten` | wat de klant bij de coach invulde: `door`, `start`, `stop`, `program`, `remaining`, ... |
@@ -65,8 +65,16 @@ het coachpaneel (`views/overview.js` in domotiapp-coach):
 
 Net als in het paneel is de vrijgave één knop die wisselt: Ingeruimd geeft
 vrij, en een tik op Vrijgegeven trekt de vrijgave in. Bij een wasmachine of
-droger heet hij *Mag draaien*, net als in het paneel. "Morgen" wordt de naam
-van de dag als de volgende klaar-tijd verder weg ligt ("Dinsdag starten").
+droger heet hij *Mag draaien*, net als in het paneel.
+
+**Het woord "morgen" komt van de coach**: het attribuut `later` is letterlijk
+`besluit.later` van het paneel ("morgen", "maandag"), en alleen gezet als de
+klaar-tijd van vandaag gemist is. Zo lopen kaart en paneel niet uiteen. Dat
+kwam tijdens het bouwen boven: de eerste versie leidde het af uit `klaar_om`,
+en op een dag zonder klaar-tijd (een weekschema dat vandaag uit staat) zegt dat
+"Morgen starten" waar het paneel "Ingeruimd" zegt. De coach-sessie bleek
+`later` al in 0.110.0 te hebben. Een sensor zonder `later` valt terug op
+`klaar_om`.
 
 **Handmatig** klapt de programmakeuze en Start/Stop van de machine zelf open.
 In het paneel zit dat ook een stap verder weg: het zijn de enige knoppen die
@@ -121,13 +129,29 @@ de twee testbestanden erbij:
 
 Alles is **NIEUW GEDRAG**: 23 tests in `vaatwasser-coach.test.mjs` die elk
 afzonderlijk falen, plus `coach-logica.test.mjs` dat als bestand niet laadt (16
-tests). Op deze tak zijn alle 39 groen, en de hele suite ook:
+tests).
+
+Daarna kwam `later` erbij, met drie tests. Tegen de eerste commit van deze tak
+(2cf0c11, nog zonder `later`) falen precies die drie:
 
 ```
-ℹ tests 1387
-ℹ pass 1387
+  ✖ onderscheidt `later` dat er niet is van `later` dat leeg is
+  ✖ neemt het woord van het paneel over: `later` van de coach
+  ✖ zegt gewoon Ingeruimd als de coach niets gemist heeft, ook met een klaar-tijd van morgen
+ℹ tests 26
+ℹ pass 23
+ℹ fail 3
+```
+
+Op deze tak zijn alle 42 groen, en de hele suite ook:
+
+```
+ℹ tests 1390
+ℹ pass 1390
 ℹ fail 0
 ```
+
+Python, in `python:3.14-slim`: `773 passed in 161.40s`.
 
 `npm run verify`, `check:registratie`, `check:controls` en `check:css` (bij de
 build) zijn groen.
@@ -160,8 +184,10 @@ devices: Vaatwasser (Vaatwasser), Oprit (Laadpaal), fabrikant DomotiApp Coach
 
 Na elke build de config entry herladen, service worker en caches gewist, en de
 `?v=` uit `performance.getEntriesByType("resource")` vergeleken met de sha256 op
-schijf: `bda7e223829d`, daarna `a9db1204872e` en tot slot `4ad876f57d5a`
-(0.58.0). Steeds gelijk. Ook `paintCoach_` bestond in de geladen klasse.
+schijf: `bda7e223829d`, daarna `a9db1204872e`, `4ad876f57d5a` (0.58.0) en tot
+slot `39e5b600ef1f` (met `later`, na een herstart van de container voor de
+nep-coach en in een vers tabblad). Steeds gelijk. Ook `paintCoach_` bestond in
+de geladen klasse.
 
 ### Echte kliks op de kaart
 
@@ -192,6 +218,19 @@ sensor zonder contract  ->  "Werk DomotiApp Coach bij naar 0.110.0 of nieuwer." 
 coach_device weg        ->  "Het gekozen apparaat van de coach bestaat niet meer."  knoppen: geen
 weer de echte sensor    ->  geen zin, Morgen starten / Nu starten / Handmatig terug
 ```
+
+### `later` gaat voor `klaar_om`
+
+Op de laatste bundel, met de nep-coach na 16:30 (`klaar_om` is morgen):
+
+```
+later "morgen"                      ->  Morgen starten · Nu starten · Handmatig
+later null, klaar_om nog steeds morgen  ->  Ingeruimd · Nu starten · Handmatig
+weer de echte stand                 ->  Morgen starten · Nu starten · Handmatig
+```
+
+Met `later` leeg staat er dus Ingeruimd, ook al zou `klaar_om` "morgen" geven.
+De kaart volgt het woord van de coach.
 
 ### De rasterhoogte
 
@@ -268,10 +307,9 @@ vinkje is de kaart ongewijzigd.
 - Dat de echte coach de entiteiten aanmaakt zoals in het contract: met
   `has_entity_name`, een `translation_key` per rol, en fabrikant en model op het
   apparaat. Dat wordt nagelopen met de dump.
-- Dat `klaar_om` op een latere kalenderdag betekent dat de klaar-tijd van
-  vandaag voorbij is. Daaraan ontleent de kaart "Morgen starten". Het paneel
-  gebruikt daarvoor `missed` uit het besluit, en dat staat niet in het
-  contract.
+- Dat een sensor zonder `later` van een coach is die het nog niet kent. Daar
+  valt de kaart terug op `klaar_om`, en die kan op een dag zonder klaar-tijd
+  "Morgen starten" zeggen waar het paneel "Ingeruimd" zegt.
 - Dat Handmatig per kaart dicht begint, en open blijft tot je hem weer dichtklapt
   of de pagina herlaadt. Er wordt niets bewaard.
 
