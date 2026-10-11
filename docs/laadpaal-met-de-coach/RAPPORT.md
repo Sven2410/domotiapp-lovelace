@@ -168,6 +168,10 @@ zodra de dump van v0.111.1 de nieuwe modusattributen laat zien.
   niets gewijzigd. Daarna eerst de focus gecontroleerd, en toen ging het goed.
 - **Valkuil 48 twee keer**: een tabblad sluiten liet de hele tabgroep
   verdwijnen.
+- **CI ving een test die van de tijdzone afhing.** De dumptest verwachtte
+  "sinds 12:08", maar CI draait in UTC en daar is het 10:08. De kaart toont
+  terecht de klok van wie kijkt; de test rekent het nu zelf uit. Daarna lokaal
+  nagelopen met `TZ=UTC` en `TZ=America/New_York`: allebei 1455 groen.
 
 ## Aannames
 

@@ -102,7 +102,11 @@ describe("NIEUW GEDRAG: de laadbeurt zoals de echte coach hem meldt", () => {
   it("REGRESSIEWACHT: noemt hem 'deze laadbeurt' zolang de kabel erin zit, ook als hij vol is", () => {
     const t = L.sessieTekst(sessie, NU);
     assert.equal(t.kop, "Deze laadbeurt");
-    assert.equal(t.tijd, "sinds 12:08");
+    // 12:08 in Nederland, maar de kaart toont de klok van wie kijkt, en CI
+    // draait in UTC (daar is het 10:08). Dus uitgerekend, niet uitgeschreven.
+    const begin = new Date("2026-10-11T12:08:03+02:00");
+    const klok = `${String(begin.getHours()).padStart(2, "0")}:${String(begin.getMinutes()).padStart(2, "0")}`;
+    assert.equal(t.tijd, `sinds ${klok}`);
   });
 
   it("zegt van hoeveel naar hoeveel procent", () => {
