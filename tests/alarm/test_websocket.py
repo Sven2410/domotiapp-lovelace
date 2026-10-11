@@ -1228,3 +1228,100 @@ async def test_niet_admin_mag_alle_tien_commandos(
         # sound/search mag not_found geven (geen MA), maar nooit unauthorized.
         code = antwoord.get("error", {}).get("code")
         assert code != "unauthorized", (payload["type"], antwoord)
+
+
+# --- 0.60.1: geldt_sinds -------------------------------------------------
+
+OUD_MOMENT = "2026-01-01T00:00:00+01:00"
+
+
+async def test_een_nieuwe_wekker_krijgt_geldt_sinds(
+    hass: HomeAssistant, hass_ws_client, omgeving
+) -> None:
+    """NIEUW GEDRAG (0.60.1). De server zet zelf sinds wanneer het schema geldt.
+
+    Daarop leunt de inhaalslag: van vóór dat moment meldt hij niets.
+    """
+    import datetime as dt
+
+    client = await hass_ws_client(hass)
+    antwoord = await _stuur(
+        client,
+        {"type": f"{DOMAIN}/alarms/save", "person": PERSON_ENTITY_ID, "alarm": geldige_wekker()},
+    )
+    assert antwoord["success"], antwoord
+    sinds = antwoord["result"]["alarms"][0]["geldt_sinds"]
+    assert sinds is not None
+    assert dt.datetime.fromisoformat(sinds).tzinfo is not None
+
+
+async def test_geldt_sinds_verschuift_alleen_als_het_schema_verandert(
+    hass: HomeAssistant, hass_ws_client, omgeving
+) -> None:
+    """NIEUW GEDRAG (0.60.1). Een andere naam: hetzelfde moment. Een andere tijd: nu.
+
+    Alleen de naam wijzigen verandert niets aan wat er gemist kan zijn; een andere
+    tijd of andere dagen wel.
+    """
+    client = await hass_ws_client(hass)
+    antwoord = await _stuur(
+        client,
+        {"type": f"{DOMAIN}/alarms/save", "person": PERSON_ENTITY_ID, "alarm": geldige_wekker()},
+    )
+    alarm_id = antwoord["result"]["alarms"][0]["id"]
+    await hass.data[DOMAIN][DATA_STORE].async_werk_velden_bij(
+        omgeving, alarm_id, {"geldt_sinds": OUD_MOMENT}
+    )
+
+    antwoord = await _stuur(
+        client,
+        {
+            "type": f"{DOMAIN}/alarms/save",
+            "person": PERSON_ENTITY_ID,
+            "alarm": geldige_wekker(id=alarm_id, name="Werk (aangepast)"),
+        },
+    )
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["alarms"][0]["geldt_sinds"] == OUD_MOMENT
+
+    antwoord = await _stuur(
+        client,
+        {
+            "type": f"{DOMAIN}/alarms/save",
+            "person": PERSON_ENTITY_ID,
+            "alarm": geldige_wekker(id=alarm_id, time="07:15"),
+        },
+    )
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["alarms"][0]["geldt_sinds"] != OUD_MOMENT
+
+
+async def test_aanzetten_zet_geldt_sinds_alleen_als_hij_uit_stond(
+    hass: HomeAssistant, hass_ws_client, omgeving
+) -> None:
+    """NIEUW GEDRAG (0.60.1). Wat langskwam terwijl hij uit stond, is niet gemist."""
+    client = await hass_ws_client(hass)
+    antwoord = await _stuur(
+        client,
+        {"type": f"{DOMAIN}/alarms/save", "person": PERSON_ENTITY_ID, "alarm": geldige_wekker()},
+    )
+    alarm_id = antwoord["result"]["alarms"][0]["id"]
+    store = hass.data[DOMAIN][DATA_STORE]
+
+    # Aan terwijl hij al aan staat: niets veranderd.
+    await store.async_werk_velden_bij(omgeving, alarm_id, {"geldt_sinds": OUD_MOMENT})
+    aanzetten = {
+        "type": f"{DOMAIN}/alarms/set_enabled",
+        "person": PERSON_ENTITY_ID,
+        "alarm_id": alarm_id,
+        "enabled": True,
+    }
+    antwoord = await _stuur(client, aanzetten)
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["alarms"][0]["geldt_sinds"] == OUD_MOMENT
+
+    # Uit, en weer aan: vanaf nu.
+    await store.async_werk_velden_bij(omgeving, alarm_id, {"enabled": False})
+    antwoord = await _stuur(client, aanzetten)
+    assert antwoord["success"], antwoord
+    assert antwoord["result"]["alarms"][0]["geldt_sinds"] != OUD_MOMENT

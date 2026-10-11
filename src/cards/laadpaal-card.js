@@ -107,10 +107,9 @@ class LaadpaalCard extends DacCard {
     .st .stip { flex: 0 0 auto; width: 15px; height: 15px; color: var(--tone); display: grid; }
     .st .stip .icon { width: 15px; height: 15px; }
     .st .woord { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .reden {
-      font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2);
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
+    /* Heel, niet na twee regels afgekapt: op de batterijkaart las hij "... wat
+       het huis vraagt komt…" (12 oktober 2026), en hier geldt hetzelfde. */
+    .reden { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); }
 
     /* De accustand: groot, want daar vroeg hij om. Het getal draagt geen
        kleur (theme.js); de balk eronder wel. */

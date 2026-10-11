@@ -224,6 +224,20 @@ async def _handle_save(hass, connection, msg) -> None:
             connection.send_error(msg["id"], websocket_api.ERR_NOT_ALLOWED, str(reden))
             return
 
+    # Sinds wanneer dit schema geldt (0.60.1). Een nieuwe wekker, een andere
+    # tijd of andere dagen, of een wekker die uit stond en nu aan gaat: vanaf nu.
+    # Alleen de naam of het geluid wijzigen verandert niets aan wat er gemist kan
+    # zijn, dus dan blijft het oude moment staan.
+    schema_nieuw = (
+        bestaand is None
+        or bestaand["time"] != gevalideerd["time"]
+        or bestaand["days"] != gevalideerd["days"]
+        or (not bestaand["enabled"] and gevalideerd["enabled"])
+    )
+    gevalideerd["geldt_sinds"] = (
+        dt_util.now().isoformat() if schema_nieuw else bestaand.get("geldt_sinds")
+    )
+
     # one_shot_at wordt server-side berekend als days leeg is (SPEC 15.2).
     if not gevalideerd["days"]:
         moment = eerstvolgende_keer_dat_tijd_voorbijkomt(dt_util.now(), gevalideerd["time"])
@@ -296,6 +310,11 @@ async def _handle_set_enabled(hass, connection, msg) -> None:
     velden: dict[str, Any] = {"enabled": msg["enabled"]}
     if msg["enabled"]:
         velden.update(_one_shot_bij_aanzetten(hass, store, registry_id, msg["alarm_id"]))
+        # Een wekker die uit stond en aan gaat, geldt vanaf nu (0.60.1). Wat er
+        # tijdens het uitstaan langskwam is niet gemist.
+        bestaand = store.wekker(registry_id, msg["alarm_id"])
+        if bestaand is not None and not bestaand["enabled"]:
+            velden["geldt_sinds"] = dt_util.now().isoformat()
     bijgewerkt = await store.async_werk_velden_bij(registry_id, msg["alarm_id"], velden)
     if bijgewerkt is None:
         raise PersonNietGevonden(f"wekker {msg['alarm_id']} bestaat niet bij {msg['person']}")

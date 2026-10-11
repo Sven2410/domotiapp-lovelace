@@ -40,8 +40,10 @@ GEBRUIKERSVELDEN: frozenset[str] = frozenset(
 )
 
 # Velden die de server zelf beheert en die nooit van de kaart komen (SPEC 15.2).
+# `geldt_sinds` kwam erbij in 0.60.1: sinds wanneer het schema van de wekker
+# geldt, zodat de inhaalslag niets meldt van vóór dat moment (zie planner.py).
 SERVERVELDEN: frozenset[str] = frozenset(
-    {"one_shot_at", "last_fired", "last_message"}
+    {"one_shot_at", "last_fired", "last_message", "geldt_sinds"}
 )
 
 _SOUND_VELDEN: frozenset[str] = frozenset({"uri", "name", "media_type", "image"})
@@ -253,6 +255,7 @@ def valideer_wekker(waarde: Any, veld: str = "alarm") -> dict[str, Any]:
         "light": valideer_light(waarde.get("light"), f"{veld}.light"),
         "last_fired": _valideer_iso(waarde.get("last_fired"), f"{veld}.last_fired"),
         "last_message": valideer_message(waarde.get("last_message"), f"{veld}.last_message"),
+        "geldt_sinds": _valideer_iso(waarde.get("geldt_sinds"), f"{veld}.geldt_sinds"),
     }
 
 

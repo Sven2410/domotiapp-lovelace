@@ -139,7 +139,8 @@ describe("REGRESSIEWACHT: de rest van de kaart tegen coach 0.112.1", () => {
     const sessie = L.laadpaalStand(st).sessie;
     const t = L.sessieTekst(sessie, NU);
     assert.equal(t.kop, "Vorige laadbeurt");
-    assert.equal(t.tekst, `15,5 kWh · 2,1 kWh zon · ${EUR("3,19")} net · ${EUR("3,64")} incl. zon`);
+    // Sinds 0.60.1 ook wat er uit de thuisbatterij kwam.
+    assert.equal(t.tekst, `15,5 kWh · 2,1 kWh zon · 0,3 kWh accu · ${EUR("3,19")} net · ${EUR("3,64")} incl. zon`);
     assert.equal(t.accu, "4% → 80%");
     // De klok van wie kijkt: CI draait in UTC.
     assert.equal(t.tijd, `${klok(new Date(sessie.begin))} – ${klok(new Date(sessie.einde))}`);
