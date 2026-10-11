@@ -291,6 +291,166 @@ export function vindStartSensor(states, schakelaar) {
   return ids[0] ?? "";
 }
 
+/*
+ * IN COMBINATIE MET DE COACH
+ *
+ * De eigenaar op 11 oktober 2026: de knoppen "Ingeruimd, morgen starten",
+ * "Ingeruimd, nu starten" en "Handmatige besturing" uit het coachpaneel moeten
+ * ook op de vaatwasserkaart, achter een vinkje in de editor. Zonder coach is
+ * het de gewone kaart.
+ *
+ * De woorden zijn die van het paneel (`views/overview.js` in domotiapp-coach),
+ * zodat het op beide plekken hetzelfde heet. Daar is de vrijgave EEN knop die
+ * wisselt: "Ingeruimd" zet hem aan, "Vrijgegeven" erop drukken trekt hem in.
+ * En pas als de klaar-tijd van vandaag voorbij is, staat er "morgen" bij.
+ *
+ * Wat de coach zegt komt uit de attributen van zijn startsensor (contract 1):
+ * `stand` (niet_vrijgegeven | gepland | start_nu | draait | klaar),
+ * `vrijgegeven`, `nu`, `klaar_om` en `type`. Nooit uit de toestand: die is voor
+ * mensen en mag veranderen (valkuil 67).
+ */
+
+/** De velden van de kaart die de coach kan invullen, met zijn sleutel in `entiteiten`. */
+export const VELDEN_UIT_COACH = {
+  remaining: "remaining",
+  door: "door",
+  start: "start",
+  stop: "stop",
+  program: "program",
+};
+
+/**
+ * De config, met de lege velden ingevuld uit wat de klant bij de coach koos.
+ *
+ * Een veld dat in de editor is ingevuld gaat voor: dat is de uitweg als de
+ * coach iets anders gebruikt dan wat er op de kaart hoort.
+ *
+ * @param {object} config
+ * @param {Record<string, string>} entiteiten uit `klantEntiteiten()`
+ */
+export function metCoachVelden(config, entiteiten) {
+  const uit = { ...config };
+  for (const [veld, sleutel] of Object.entries(VELDEN_UIT_COACH)) {
+    if (!uit[veld] && entiteiten?.[sleutel]) uit[veld] = entiteiten[sleutel];
+  }
+  return uit;
+}
+
+/**
+ * Wat de coach over dit apparaat zegt, uit de attributen van zijn startsensor.
+ *
+ * @param {object|null} st
+ * @returns {{stand: string, vrijgegeven: boolean, nu: boolean, klaarOm: Date|null, type: string}|null}
+ */
+export function coachStand(st) {
+  const a = st?.attributes;
+  if (!a || st.state === "unavailable") return null;
+  return {
+    stand: String(a.stand ?? ""),
+    vrijgegeven: a.vrijgegeven === true,
+    nu: a.nu === true,
+    klaarOm: tijdstip(a.klaar_om),
+    type: String(a.type ?? ""),
+  };
+}
+
+/**
+ * Een statussensor voor wie er geen heeft, uit de stand van de coach.
+ *
+ * Niet elke klant heeft een sensor die "Run" of "Ready" zegt; de coach weet
+ * aan het vermogen of hij draait. Een sensor die er wél is gaat voor -- die
+ * kent ook pauze en storing, en de coach niet.
+ */
+export function statusUitCoach(coach) {
+  if (!coach?.stand) return null;
+  const woord = coach.stand === "draait" ? "run" : coach.stand === "klaar" ? "finished" : "ready";
+  return { entity_id: "", state: woord, attributes: {} };
+}
+
+/**
+ * De knoppen van de coach op de kaart, in volgorde.
+ *
+ * Een knop zonder entiteit staat er niet: een coach die een knop (nog) niet
+ * levert, krijgt geen knop die niets doet. Zolang hij draait is er niets vrij
+ * te geven; dan blijft alleen Handmatig over (en dat is de kaart zelf).
+ *
+ * @param {object} p
+ * @param {ReturnType<typeof coachStand>} p.coach
+ * @param {Record<string, string>} p.rollen uit `coachRollen()`
+ * @param {boolean} [p.loopt] draait hij volgens de statussensor?
+ * @param {Date} [p.nu]
+ * @returns {{rol: string, entity: string, label: string, aria: string, aan: boolean}[]}
+ */
+export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) {
+  if (!coach || loopt || coach.stand === "draait") return [];
+  const kort = !coach.type || coach.type === "vaatwasser" ? "Ingeruimd" : "Mag draaien";
+  const knoppen = [];
+
+  if (coach.vrijgegeven) {
+    knoppen.push({
+      rol: "vrijgave",
+      entity: rollen.vrijgave_intrekken,
+      label: "Vrijgegeven",
+      aria: "Vrijgegeven. Druk om de vrijgave in te trekken.",
+      aan: true,
+    });
+  } else {
+    const later = laterWoord(coach.klaarOm, nu);
+    knoppen.push({
+      rol: "vrijgave",
+      entity: rollen.ingeruimd_morgen,
+      label: later ? `${later[0].toUpperCase()}${later.slice(1)} starten` : kort,
+      aria: later ? `${kort}, ${later} starten` : kort,
+      aan: false,
+    });
+  }
+
+  if (!coach.nu) {
+    knoppen.push({
+      rol: "nu",
+      entity: rollen.ingeruimd_nu,
+      label: "Nu starten",
+      aria: coach.vrijgegeven ? "Toch nu starten" : `${kort}, nu starten`,
+      aan: false,
+    });
+  }
+
+  return knoppen.filter((k) => k.entity);
+}
+
+/**
+ * "morgen", "maandag", of "" als de klaar-tijd vandaag is.
+ *
+ * Het paneel zet er "morgen" bij zodra de klaar-tijd van vandaag voorbij is;
+ * de coach geeft dan de klaar-tijd van morgen als `klaar_om`. Op de KALENDER
+ * gerekend, net als `startTekst`.
+ */
+function laterWoord(klaarOm, nu) {
+  if (!klaarOm) return "";
+  const dagen = dagenTussen(nu, klaarOm);
+  if (dagen <= 0) return "";
+  if (dagen === 1) return "morgen";
+  return dagen < 7 ? DAGEN[klaarOm.getDay()] : "";
+}
+
+/**
+ * Wat de kaart zegt als de coach aan staat en er toch niets te volgen is, of "".
+ *
+ * Zonder deze zin blijft de rij met knoppen gewoon leeg, en dan lijkt de kaart
+ * kapot terwijl er een coach van vóór v0.110.0 draait.
+ *
+ * @param {{reden: string}} keuze uit `kiesApparaat()`
+ * @param {number} contract uit `contractVan()` op de startsensor
+ */
+export function coachMelding(keuze, contract) {
+  if (keuze.reden === "geen")
+    return "Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach 0.110.0 of nieuwer nodig.";
+  if (keuze.reden === "meerdere") return "Kies in de editor welk apparaat van de coach deze kaart volgt.";
+  if (keuze.reden === "weg") return "Het gekozen apparaat van de coach bestaat niet meer.";
+  if (!contract) return "Werk DomotiApp Coach bij naar 0.110.0 of nieuwer.";
+  return "";
+}
+
 /**
  * Loopt er een programma?
  *

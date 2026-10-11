@@ -35,21 +35,45 @@
  * niet, maar de WOORDEN wel: om middernacht wordt "morgen" vandaag, en na het
  * moment zelf hoort de tekst weg te gaan. Daarom tikt de kaart op die twee
  * momenten zelf een keer; zie `planTik_`.
+ *
+ * IN COMBINATIE MET DE COACH
+ *
+ * Sinds 0.58.0 kan de kaart een apparaat van DomotiApp Coach volgen (het vinkje
+ * in de editor). Dan staan de knoppen van het coachpaneel erop: Ingeruimd (of
+ * "Morgen starten" als de klaar-tijd van vandaag voorbij is), Nu starten, en
+ * Handmatig. Handmatig klapt de programmakeuze en Start/Stop van de machine
+ * zelf open -- dat is in het paneel ook een stap verder weg, omdat het de
+ * enige knoppen zijn die langs de coach heen gaan. Lege velden vult de kaart
+ * met wat de klant bij de coach koos. Zie `coach-logica.js` voor hoe de kaart
+ * het apparaat en zijn entiteiten vindt.
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacEditor, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { isOn, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import {
+  COACH_FABRIKANT,
+  PROGRAMMA_MODELLEN,
+  coachRollen,
+  contractVan,
+  kiesApparaat,
+  klantEntiteiten,
+} from "./coach-logica.js";
 import { huidigeKeuze, keuzes, kiesOproep } from "./keuzeveld.js";
 import { keuzeNaam } from "./programmanaam.js";
 import {
   bezig,
+  coachKnoppen,
+  coachMelding,
+  coachStand,
   draait,
   drukOproep,
+  metCoachVelden,
   restMinuten,
   startMoment,
+  statusUitCoach,
   toestand,
   vindStartSensor,
   voortgangPct,
@@ -210,12 +234,27 @@ class DishwasherCard extends DacCard {
     }
     @media (hover: hover) { .knop.stop:hover { background: color-mix(in srgb, var(--dac-bad) 14%, transparent); } }
 
-    /* De slimme knop is een schakelaar en laat dat ook zien. */
-    .knop.slim[data-aan="true"] {
+    /* De slimme knop is een schakelaar en laat dat ook zien, en de vrijgave
+       van de coach ook: "Vrijgegeven" is aan, en erop drukken trekt hem in. */
+    .knop[data-aan="true"] {
       color: var(--dac-accent-hi);
       border-color: color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
       background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
     }
+
+    /* Handmatig klapt open, en dat mag je zien. */
+    .knop.hand[aria-expanded="true"] { color: var(--dac-ink); border-color: var(--dac-border-hi); }
+
+    /* Een tekst die niet past wordt afgekapt, niet over de buurknop heen
+       geschreven. "Woensdag starten" is de langste. */
+    .knop .lb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Waarom de knoppen van de coach er niet staan, als dat zo is. */
+    .coachhint {
+      flex: 0 0 auto; margin: 0; padding: 0 2px;
+      font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2);
+    }
+    .coachhint[hidden] { display: none; }
 
     .top.unavailable { opacity: .42; }
 
@@ -232,25 +271,69 @@ class DishwasherCard extends DacCard {
 
   validate(config) {
     const c = { name: "", icon: "dishwasher", ...config };
-    if (!c.status && !c.remaining && !c.progress && !c.program) {
+    // Met de coach is er altijd iets te tonen: zijn stand, en anders de zin
+    // waarom niet.
+    if (!c.coach && !c.status && !c.remaining && !c.progress && !c.program) {
       c[INCOMPLETE] =
         "Kies minstens een statussensor. Resterende tijd, voortgang, programma en de knoppen mogen daarna.";
     }
     return c;
   }
 
+  /**
+   * Een ander register (de coach net geïnstalleerd, een apparaat erbij) is
+   * geen wijziging in een toestand, en `watched()` ziet het dus niet.
+   */
+  set hass(hass) {
+    const oud = this.hass_;
+    super.hass = hass;
+    if (!oud || !this.config?.coach || this.config[INCOMPLETE] || !this.built_ || !this.wired_) return;
+    if (oud.entities !== hass?.entities || oud.devices !== hass?.devices) this.paint();
+  }
+
+  get hass() {
+    return super.hass;
+  }
+
   watched() {
+    const c = this.velden_();
     return [
-      this.config.status,
-      this.config.remaining,
+      c.status,
+      c.remaining,
       this.startSensor_(),
-      this.config.progress,
-      this.config.program,
-      this.config.door,
-      this.config.smart,
-      this.config.start,
-      this.config.stop,
+      c.progress,
+      c.program,
+      c.door,
+      c.smart,
+      c.start,
+      c.stop,
     ].filter(Boolean);
+  }
+
+  /**
+   * Het apparaat van de coach en zijn entiteiten per rol, of null zonder coach.
+   *
+   * Vastgehouden zolang het register en de keuze dezelfde zijn: dit draait bij
+   * elke wijziging in het huis, en het register is een ronde langs alles.
+   */
+  coach_() {
+    const c = this.config;
+    const hass = this.hass_;
+    if (!c?.coach || !hass) return null;
+    const m = this.coachMemo_;
+    const gekozen = c.coach_device || "";
+    if (m && m.entities === hass.entities && m.devices === hass.devices && m.gekozen === gekozen) return m.uit;
+    const keuze = kiesApparaat(hass, gekozen, PROGRAMMA_MODELLEN, "Vaatwasser");
+    const uit = { keuze, rollen: coachRollen(hass, keuze.id) };
+    this.coachMemo_ = { entities: hass.entities, devices: hass.devices, gekozen, uit };
+    return uit;
+  }
+
+  /** De config zoals de kaart hem gebruikt: met de coach erbij, de lege velden ingevuld. */
+  velden_() {
+    const coach = this.coach_();
+    if (!coach?.rollen.start) return this.config;
+    return metCoachVelden(this.config, klantEntiteiten(stateOf(this.hass, coach.rollen.start)));
   }
 
   template() {
@@ -276,6 +359,13 @@ class DishwasherCard extends DacCard {
 
         <div class="balk" hidden><span class="vul"></span></div>
 
+        <div class="rij coach" hidden>
+          ${knop("vrijgave", "check", "Ingeruimd")}
+          ${knop("nu", "play", "Nu starten")}
+          ${knop("hand", "handmatig", "Handmatig")}
+        </div>
+        <p class="coachhint" hidden></p>
+
         <div class="rij programma" hidden>
           <span class="programslot" style="display:contents"></span>
         </div>
@@ -291,14 +381,27 @@ class DishwasherCard extends DacCard {
   wire() {
     const c = this.config;
 
-    // Tikken op de kop opent de entiteit die het meest te zeggen heeft.
+    // Tikken op de kop opent de entiteit die het meest te zeggen heeft. Met de
+    // coach kan dat een veld zijn dat hij invulde, dus pas bij de tik gelezen.
     this.on(this.$(".top"), "click", () => {
-      const id = c.status || c.remaining || c.program;
+      const v = this.velden_();
+      const id = v.status || v.remaining || v.program || this.startSensor_();
       if (id) this.moreInfo_(id);
     });
 
-    this.on(this.$(".knop.start"), "click", () => this.druk_(c.start));
-    this.on(this.$(".knop.stop"), "click", () => this.druk_(c.stop));
+    this.on(this.$(".knop.start"), "click", () => this.druk_(this.velden_().start));
+    this.on(this.$(".knop.stop"), "click", () => this.druk_(this.velden_().stop));
+
+    // De knoppen van de coach dragen hun entiteit in `data-entity`: welke het
+    // is hangt af van de stand (Ingeruimd geeft vrij, Vrijgegeven trekt in).
+    for (const klasse of ["vrijgave", "nu"]) {
+      const knop = this.$(`.knop.${klasse}`);
+      this.on(knop, "click", () => this.druk_(knop.dataset.entity));
+    }
+    this.on(this.$(".knop.hand"), "click", () => {
+      this.handOpen_ = !this.handOpen_;
+      this.paint();
+    });
     this.on(this.$(".knop.slim"), "click", () => {
       if (!c.smart) return;
       const aan = isOn(stateOf(this.hass, c.smart));
@@ -311,9 +414,10 @@ class DishwasherCard extends DacCard {
     // attributen. Daarom hangt het gedrag aan de RIJ en niet aan de lijst.
     this.on(this.$(".rij.programma"), "change", (e) => {
       const lijst = e.target?.closest?.(".keuze");
-      if (!lijst || !c.program) return;
+      const program = this.velden_().program;
+      if (!lijst || !program) return;
       e.stopPropagation();
-      const oproep = kiesOproep(c.program, lijst.value, keuzes(stateOf(this.hass, c.program)));
+      const oproep = kiesOproep(program, lijst.value, keuzes(stateOf(this.hass, program)));
       if (oproep) this.hass.callService(oproep[0], oproep[1], oproep[2]);
     });
 
@@ -335,6 +439,10 @@ class DishwasherCard extends DacCard {
   startSensor_() {
     const c = this.config;
     if (c?.planned_start) return c.planned_start;
+    // Met de coach aan is het de sensor van het gekozen apparaat. Een coach van
+    // vóór v0.110.0 heeft er geen; dan blijft het zoeken via de schakelaar.
+    const coach = this.coach_()?.rollen.start;
+    if (coach) return coach;
     const states = this.hass_?.states;
     if (!c?.smart || !states) return "";
     if (this.gevonden_ && states[this.gevonden_]?.attributes?.release_switch === c.smart) {
@@ -388,12 +496,14 @@ class DishwasherCard extends DacCard {
   }
 
   paint() {
-    const c = this.config;
-    const status = stateOf(this.hass, c.status);
+    const c = this.velden_();
+    const startSt = stateOf(this.hass, this.startSensor_());
+    const coach = this.coach_() ? coachStand(startSt) : null;
+    const status = stateOf(this.hass, c.status) ?? (c.status ? null : statusUitCoach(coach));
     const deur = stateOf(this.hass, c.door);
     const rest = restMinuten(stateOf(this.hass, c.remaining));
     const pct = voortgangPct(stateOf(this.hass, c.progress));
-    const start = startMoment(stateOf(this.hass, this.startSensor_()));
+    const start = startMoment(startSt);
 
     const nu = toestand({ status, deur, rest, pct, start });
     this.planTik_(start);
@@ -415,7 +525,13 @@ class DishwasherCard extends DacCard {
     }
     chip.style.setProperty("--tone", tone);
 
-    this.text(".nm", c.name || nameOf(this.hass, c.status, null) || "Vaatwasser");
+    // Met de coach de naam die de klant daar gaf: een statussensor heet bij
+    // Home Connect "Vaatwasser Operation state".
+    const apparaat = this.hass?.devices?.[this.coach_()?.keuze.id ?? ""];
+    this.text(
+      ".nm",
+      c.name || apparaat?.name_by_user || apparaat?.name || nameOf(this.hass, c.status, null) || "Vaatwasser"
+    );
     const stEl = this.$(".st");
     const tekst = escapeHtml(nu.tekst);
     const let_ = nu.waarschuwing ? ` &middot; <span class="let">${escapeHtml(nu.waarschuwing)}</span>` : "";
@@ -446,12 +562,18 @@ class DishwasherCard extends DacCard {
       }
     }
 
-    this.paintBediening_();
+    this.paintBediening_(c, startSt, coach, loopt);
     meetRaster(this.$(".card"));
   }
 
-  paintBediening_() {
-    const c = this.config;
+  /**
+   * @param {object} c de velden uit `velden_()`
+   * @param {object|null} startSt de startsensor (van de coach)
+   * @param {object|null} coach uit `coachStand()`, of null zonder coach
+   * @param {boolean} loopt draait hij volgens de statussensor?
+   */
+  paintBediening_(c, startSt, coach, loopt) {
+    const metCoach = Boolean(this.config.coach);
 
     // De programmakeuze wordt pas gebouwd als de opties bekend zijn.
     const slot = this.$(".programslot");
@@ -482,15 +604,63 @@ class DishwasherCard extends DacCard {
       if (lijst.value !== gekozen) lijst.value = gekozen;
     }
 
+    // Met de coach is Ingeruimd de slimme sturing; de schakelaar ernaast zou
+    // hetzelfde twee keer zeggen.
     const slim = this.$(".knop.slim");
-    slim.hidden = !c.smart;
-    if (c.smart) slim.dataset.aan = String(isOn(stateOf(this.hass, c.smart)));
+    const metSlim = Boolean(c.smart) && !metCoach;
+    slim.hidden = !metSlim;
+    if (metSlim) slim.dataset.aan = String(isOn(stateOf(this.hass, c.smart)));
 
     this.$(".knop.start").hidden = !c.start;
     this.$(".knop.stop").hidden = !c.stop;
 
-    this.$(".rij.programma").hidden = !lijst;
-    this.$(".rij.knoppen").hidden = !c.smart && !c.start && !c.stop;
+    const handmatig = Boolean(lijst || c.start || c.stop);
+    // Zonder coach staat alles open, zoals altijd. Met de coach pas na
+    // Handmatig: dat zijn de knoppen die langs de coach heen gaan.
+    const open = !metCoach || this.handOpen_;
+    this.$(".rij.programma").hidden = !lijst || !open;
+    this.$(".rij.knoppen").hidden = (!metSlim && !c.start && !c.stop) || !open;
+
+    this.paintCoach_(startSt, coach, loopt, handmatig);
+  }
+
+  /** De rij van de coach: Ingeruimd, Nu starten, Handmatig -- of waarom niet. */
+  paintCoach_(startSt, coach, loopt, handmatig) {
+    const rij = this.$(".rij.coach");
+    const hint = this.$(".coachhint");
+    const info = this.coach_();
+    if (!info) {
+      rij.hidden = true;
+      hint.hidden = true;
+      return;
+    }
+
+    const melding = coachMelding(info.keuze, contractVan(startSt));
+    const knoppen = melding ? [] : coachKnoppen({ coach, rollen: info.rollen, loopt });
+    this.text(".coachhint", melding);
+    hint.hidden = !melding;
+
+    for (const klasse of ["vrijgave", "nu"]) {
+      const el = this.$(`.knop.${klasse}`);
+      const k = knoppen.find((x) => x.rol === klasse);
+      el.hidden = !k;
+      if (!k) continue;
+      el.dataset.entity = k.entity;
+      el.dataset.aan = String(k.aan);
+      el.setAttribute("aria-label", k.aria);
+      el.title = k.aria;
+      const lb = el.querySelector(".lb");
+      if (lb.textContent !== k.label) lb.textContent = k.label;
+    }
+
+    const hand = this.$(".knop.hand");
+    hand.hidden = !handmatig;
+    hand.setAttribute("aria-expanded", String(Boolean(this.handOpen_)));
+    // In een smalle kolom valt het woord weg (zie de @container hierboven);
+    // dan is dit de enige naam die de knop nog heeft.
+    hand.setAttribute("aria-label", "Handmatige besturing");
+    hand.title = "Handmatige besturing";
+    rij.hidden = !knoppen.length && !handmatig;
   }
 
   /* ------------------------------------------------- Lovelace-afspraken */
@@ -532,8 +702,35 @@ class DishwasherEditor extends DacEditor {
   }
 
   schema() {
+    const c = this.config_ ?? {};
     return [
       { name: "name", selector: sel.text() },
+
+      // Eén vinkje, en het blok eronder alleen als het aan staat: dezelfde vorm
+      // als de presets op de camerakaart (zie Vormregels in CLAUDE.md). De
+      // eigenaar op 11 oktober 2026: "Heeft een klant de coach: vinkje aan.
+      // Zonder coach: vinkje uit, gewone vaatwasserkaart."
+      { name: "coach", selector: sel.bool() },
+      ...(c.coach
+        ? [
+            section(
+              "DomotiApp Coach",
+              "mdi:leaf",
+              [
+                {
+                  name: "coach_device",
+                  selector: {
+                    device: {
+                      filter: PROGRAMMA_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })),
+                    },
+                  },
+                },
+              ],
+              true
+            ),
+          ]
+        : []),
+
       { name: "status", selector: sel.entity(["sensor", "binary_sensor"]) },
       { name: "remaining", selector: sel.entity(["sensor"]) },
       { name: "planned_start", selector: sel.entity(["sensor", "input_datetime", "datetime", "time"]) },
@@ -550,6 +747,8 @@ class DishwasherEditor extends DacEditor {
     return (
       {
         name: "Naam",
+        coach: "In combinatie met DomotiApp Coach",
+        coach_device: "Apparaat bij de coach",
         status: "Statussensor",
         remaining: "Resterende tijd",
         planned_start: "Geplande start",
@@ -565,6 +764,9 @@ class DishwasherEditor extends DacEditor {
 
   helper(s) {
     const uitleg = {
+      coach:
+        "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Velden die je hieronder leeg laat, vult de kaart met wat er bij de coach is ingevuld.",
+      coach_device: "Leeg laten: de vaatwasser van de coach, als er precies één is.",
       status: "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf.",
       remaining:
         "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
