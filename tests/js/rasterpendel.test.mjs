@@ -13,7 +13,9 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
-import { stabielDoel } from "../../src/rasterhoogte.js";
+import * as R from "../../src/rasterhoogte.js";
+
+const { stabielDoel } = R;
 
 /** Een nep-vak; `stabielDoel` gebruikt het alleen als sleutel in een WeakMap. */
 const vak = () => ({});
@@ -88,5 +90,25 @@ describe("stabielDoel — NIEUW GEDRAG", () => {
     assert.equal(stabielDoel(v, 184), 184);
     assert.equal(stabielDoel(v, 248), 248);
     assert.equal(stabielDoel(v, 184), 184);
+  });
+});
+
+describe("bewusteWijziging -- NIEUW GEDRAG (0.58.1)", () => {
+  // Gemeld op 11 oktober 2026: Handmatig op de vaatwasserkaart drie keer open
+  // en dicht, en de kaart bleef groot, ook dichtgeklapt.
+  it("laat een kaart weer krimpen na drie keer open en dicht door een mens", () => {
+    const v = {};
+    for (const h of [120, 248, 120, 248, 120, 248]) {
+      R.bewusteWijziging(v);
+      stabielDoel(v, h);
+    }
+    R.bewusteWijziging(v);
+    assert.equal(stabielDoel(v, 120), 120);
+  });
+
+  it("REGRESSIEWACHT: zonder die melding blijft een echte pendel vastgezet op de grootste", () => {
+    const v = {};
+    for (const h of [120, 248, 120, 248, 120, 248]) stabielDoel(v, h);
+    assert.equal(stabielDoel(v, 120), 248);
   });
 });

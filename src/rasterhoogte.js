@@ -257,6 +257,24 @@ export function stabielDoel(vak, doel) {
 }
 
 /**
+ * Zeg tegen de pendeldemper dat de volgende wijziging BEDOELD is.
+ *
+ * De demper hierboven ziet het verschil niet tussen een opmaaklus en een mens
+ * die iets open- en dichtklapt: allebei zijn het twee hoogtes om en om. Gemeld
+ * op 11 oktober 2026 met drie schermafdrukken uit een bubble-pop-up: *"klik
+ * ik nog een paar keer op handmatig dan krijg ik ineens dit groote en als ik
+ * dan de popup sluit en weer open dan is die weer normaal."* Na drie keer
+ * Handmatig (120, 248, 120, 248) stond de vaatwasserkaart vast op 248, ook
+ * dichtgeklapt.
+ *
+ * Roep dit aan in de klik die de inhoud verandert, VOOR het tekenen. Een lus
+ * die daarna alsnog ontstaat, wordt gewoon weer herkend.
+ */
+export function bewusteWijziging(vak) {
+  if (vak && typeof vak === "object") geschiedenis.delete(vak);
+}
+
+/**
  * Hoeveel rasterrijen de gemeten inhoud van dit vak nodig heeft, of null.
  *
  * DIT IS DE ONDERGRENS DIE EEN KAART AAN HOME ASSISTANT MOET OPGEVEN, en het is
