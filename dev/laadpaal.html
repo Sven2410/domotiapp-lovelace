@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Laadpaal &mdash; proefopstelling</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 20px;
+    background: #0c0c0a; color: #e8e4de;
+    font-family: Roboto, "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  h2 { font-size: 12px; font-weight: 600; color: rgba(232,228,222,.5); margin: 18px 0 6px; }
+  .rij { display: flex; gap: 20px; align-items: flex-start; }
+  .vak { flex: 0 0 auto; }
+  .vak small { display: block; font-size: 10px; color: rgba(232,228,222,.38); margin-bottom: 4px; }
+  #log {
+    position: fixed; inset: auto 0 0 0; height: 90px; overflow: auto;
+    background: rgba(18,18,15,.96); border-top: 1px solid rgba(232,228,222,.2);
+    font: 12px/1.5 ui-monospace, monospace; padding: 6px 16px;
+  }
+</style>
+</head>
+<body>
+<!--
+  De laadpaalkaart in drie situaties en drie breedtes, zonder Home Assistant.
+  Gemaakt voor 0.59.1 (11 oktober 2026): drie modusknoppen moeten op 320 en
+  280 passen, en de regel "Planning · klaar om 06:00" naast Snel.
+
+  Serveer de repo-map (niet dev/), bijvoorbeeld:
+    python -m http.server 8791 --bind 127.0.0.1
+  en open http://127.0.0.1:8791/dev/laadpaal.html
+
+  De situaties:
+  1. de echte dump van coach 0.112.1 (geen auto, planning voor vandaag);
+  2. coach 0.112.3: een auto aan de paal, planning voor vandaag, alleen Snel;
+  3. coach 0.112.3: geen planning vandaag, voorkeur Goedkoopst, drie knoppen.
+-->
+<div id="situaties"></div>
+<div id="log"></div>
+<script type="module">
+if (!customElements.get("home-assistant")) customElements.define("home-assistant", class extends HTMLElement {});
+if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement {});
+
+await import(`../custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js?t=${Date.now()}`);
+
+const log = (t) => {
+  const el = document.getElementById("log");
+  el.insertAdjacentHTML("afterbegin", `<div>${new Date().toLocaleTimeString()} ${t}</div>`);
+};
+
+const dump = await (await fetch(`../tests/js/vaste-invoer/coach-0.112.1-laadpaal.json?t=${Date.now()}`)).json();
+
+/** Een hass uit een lijst entiteiten zoals de dump ze heeft. */
+function hassUit(lijst, wijzig = {}) {
+  const states = {};
+  const entities = {};
+  for (const e of lijst) {
+    states[e.entity_id] = { entity_id: e.entity_id, state: e.state, attributes: { ...e.attributes } };
+    entities[e.entity_id] = { entity_id: e.entity_id, device_id: "lp", platform: "domotiapp_coach", translation_key: e.translation_key };
+  }
+  const c = states["sensor.laadpaal_coach"];
+  c.state = wijzig.state ?? c.state;
+  Object.assign(c.attributes, wijzig.attributes ?? {});
+  if (wijzig.modus) states["select.laadpaal_modus"].state = wijzig.modus;
+  return {
+    states, entities,
+    devices: { lp: { id: "lp", name: "Laadpaal", manufacturer: "DomotiApp Coach", model: "Laadpaal" } },
+    language: "nl", locale: { language: "nl" }, user: { name: "proef" }, config: {}, themes: {},
+    async callService(domein, dienst, data) { log(`callService ${domein}.${dienst} ${JSON.stringify(data)}`); },
+    async callWS(b) { log(`ws ${b.type}`); return null; },
+  };
+}
+
+const nu = new Date();
+const morgen6 = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1, 6, 0).toISOString();
+
+const SITUATIES = [
+  ["1. Echte dump coach 0.112.1: geen auto, planning voor vandaag", {}],
+  ["2. Coach 0.112.3: auto aan de paal, planning voor vandaag", {
+    state: "Wacht tot 01:00", modus: "planning",
+    attributes: { stand: "wacht", soc: 41, modus_keuzes: ["snel"], modus_actief: "planning", planning_nu: true, klaar_om_volgende: morgen6, expected_done: morgen6 },
+  }],
+  ["3. Coach 0.112.3: geen planning vandaag, voorkeur Goedkoopst", {
+    state: "Wacht op goedkope stroom", modus: "planning",
+    attributes: { stand: "wacht", soc: 41, modus_keuzes: ["snel", "continu", "zon"], modus_actief: "planning", planning_nu: false, schema_aan: false },
+  }],
+];
+
+const doel = document.getElementById("situaties");
+for (const [titel, wijzig] of SITUATIES) {
+  doel.insertAdjacentHTML("beforeend", `<h2>${titel}</h2>`);
+  const rij = document.createElement("div");
+  rij.className = "rij";
+  doel.appendChild(rij);
+  for (const breed of [500, 320, 280]) {
+    const vak = document.createElement("div");
+    vak.className = "vak";
+    vak.style.width = `${breed}px`;
+    vak.innerHTML = `<small>${breed}px</small>`;
+    const kaart = document.createElement("domotiapp-laadpaal-card");
+    kaart.dataset.breed = String(breed);
+    kaart.setConfig({ type: "custom:domotiapp-laadpaal-card" });
+    kaart.hass = hassUit(dump, structuredClone(wijzig));
+    vak.appendChild(kaart);
+    rij.appendChild(vak);
+  }
+}
+log("klaar");
+</script>
+</body>
+</html>

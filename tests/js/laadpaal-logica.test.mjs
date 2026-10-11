@@ -111,16 +111,16 @@ describe("NIEUW GEDRAG: de knoppen voor de modus", () => {
     attributes: { options },
   });
 
-  it("zet de vier standen neer en wijst aan welke aan staat", () => {
+  it("zet de drie knoppen neer en wijst aan welke aan staat (Planning is sinds 0.59.1 geen knop)", () => {
     const k = L.modusKnoppen(select("zon"));
-    assert.deepEqual(k.map((x) => x.sleutel), ["planning", "snel", "continu", "zon"]);
-    assert.deepEqual(k.map((x) => x.aan), [false, false, false, true]);
+    assert.deepEqual(k.map((x) => x.sleutel), ["snel", "continu", "zon"]);
+    assert.deepEqual(k.map((x) => x.aan), [false, false, true]);
   });
 
   it("laat een stand weg die de select niet aanbiedt", () => {
     assert.deepEqual(
       L.modusKnoppen(select("snel", ["planning", "snel"])).map((x) => x.sleutel),
-      ["planning", "snel"]
+      ["snel"]
     );
   });
 
@@ -298,17 +298,17 @@ describe("NIEUW GEDRAG: de modus die echt geldt (coach 0.111.1)", () => {
   it("wijst de modus aan die de coach actief noemt, niet de voorkeur van de paal", () => {
     // Zijn situatie op 11 oktober 2026: de paal op zon, het schema aan.
     const k = L.modusKnoppen(select("zon"), stand({ modus: "zon", modus_actief: "planning", modus_keuzes: ["planning", "snel"], planning_nu: true }));
-    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["planning*", "snel"]);
+    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["snel"]);
   });
 
-  it("laat zonder planning alle vier zien", () => {
+  it("laat zonder planning alle drie zien", () => {
     const k = L.modusKnoppen(select("zon"), stand({ modus_actief: "zon", modus_keuzes: ["planning", "snel", "continu", "zon"], planning_nu: false }));
-    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["planning", "snel", "continu", "zon*"]);
+    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["snel", "continu", "zon*"]);
   });
 
   it("volgt de select bij een coach die de nieuwe attributen nog niet heeft", () => {
     const k = L.modusKnoppen(select("zon"), stand({}));
-    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["planning", "snel", "continu", "zon*"]);
+    assert.deepEqual(k.map((x) => x.sleutel + (x.aan ? "*" : "")), ["snel", "continu", "zon*"]);
   });
 
   it("leest planning_nu als echte boolean", () => {

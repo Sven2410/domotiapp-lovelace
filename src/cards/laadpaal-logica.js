@@ -39,9 +39,15 @@ export const STANDEN = {
   storing: { label: "Storing", icoon: "warning", tone: "bad" },
 };
 
-/** De vier standen van de select `modus`, in de volgorde van de coachkaart. */
+/**
+ * De knoppen voor de modus, in de volgorde van de coachkaart.
+ *
+ * Planning is GEEN knop (sinds 0.59.1). De eigenaar zag op 11 oktober 2026
+ * vier afgekapte knoppen ("Plann...", "Conti...") en vroeg "wat is de knop
+ * planning". Planning is wat het schema aanzet; dat staat als regel naast de
+ * knoppen (`modusRegel`). De select houdt zijn vier opties.
+ */
 export const MODI = [
-  { sleutel: "planning", label: "Planning", icoon: "calendar" },
   { sleutel: "snel", label: "Snel", icoon: "bolt" },
   { sleutel: "continu", label: "Continu", icoon: "plug" },
   { sleutel: "zon", label: "Zon", icoon: "sun" },
@@ -89,9 +95,12 @@ export function laadpaalStand(st) {
     // 11 oktober 2026: "in de laadpaal kaart moet ook de batterij % komen van
     // de auto". Zonder sensor in de auto telt de coach zelf door vanaf een
     // opgegeven stand (`soc_geschat`), en dan staat er "± 62%".
-    soc: getal(a.soc),
+    // Zonder auto geen percentage (0.59.1). De coach geeft de laatst bekende
+    // stand door, en dat is goed, maar op de kaart las "77%" als een auto die
+    // er niet was. De eigenaar: "waarom staat er 77%".
+    soc: metAuto ? getal(a.soc) : null,
     socGeschat: a.soc_geschat === true,
-    actieradius: getal(a.actieradius_km),
+    actieradius: metAuto ? getal(a.actieradius_km) : null,
     doel: getal(a.target_percent),
     doelBeurt: a.doel_beurt === true,
     modus: String(a.modus ?? ""),
@@ -137,8 +146,8 @@ export const standVorm = (stand) => STANDEN[stand] ?? { label: "", icoon: "plug"
  * die niet bereikbaar is geeft geen knoppen.
  *
  * Met de stand van de coach erbij (0.111.1) ook alleen de knoppen die NU iets
- * doen (`modus_keuzes`): met een planning voor vandaag zijn dat Planning en
- * Snel. Een tik op Zon wordt dan wel onthouden, maar de planning wint, en op de
+ * doen (`modus_keuzes`): met een planning voor vandaag is dat alleen Snel
+ * (coach 0.112.3; daarvoor ook Planning, en die is hier geen knop meer). Een tik op Zon wordt dan wel onthouden, maar de planning wint, en op de
  * kaart gebeurt er niets zichtbaars -- daarom laat het paneel ze dan weg, en
  * deze kaart ook. Aan staat `modus_actief`, niet de voorkeur van de paal.
  *
@@ -153,6 +162,37 @@ export function modusKnoppen(st, stand = null) {
   return MODI.filter((m) => (!opties || opties.includes(m.sleutel)) && (!keuzes || keuzes.includes(m.sleutel))).map(
     (m) => ({ ...m, aan: actief === m.sleutel })
   );
+}
+
+/**
+ * Wat er geldt zonder dat er een knop aan staat, als één regel, of null.
+ *
+ * Twee gevallen, allebei met `modus_actief` "planning" (de coach-sessie,
+ * 11 oktober 2026):
+ *
+ * - met een planning voor vandaag (`planning_nu`): "Planning", met de tijd
+ *   waarop hij klaar moet zijn (`klaar_om_volgende`, anders de time-entiteit);
+ * - zonder: de voorkeur van de paal is "Goedkoopst", de goedkoopste bekende
+ *   uren zonder klaar-tijd.
+ *
+ * Staat er een andere modus aan, dan zegt die knop het al, en is er geen regel.
+ * Een coach zonder `modus_actief` (van vóór 0.111.1) weet niet of de planning
+ * vandaag geldt: dan alleen "Planning".
+ *
+ * @param {object|null} st de state van de select `modus`
+ * @param {object|null} stand uit `laadpaalStand()`
+ * @param {object|null} [klaarSt] de state van de time `klaar_om`
+ * @returns {{icoon: string, woord: string, tijd: string}|null}
+ */
+export function modusRegel(st, stand, klaarSt = null) {
+  if (!st || st.state === "unavailable") return null;
+  const actief = stand?.modusActief ?? st.state;
+  if (actief !== "planning") return null;
+  if (stand?.modusActief == null) return { icoon: "calendar", woord: "Planning", tijd: "" };
+  if (!stand.planningNu) return { icoon: "clock", woord: "Goedkoopst", tijd: "" };
+  const uitTijd = /^\d{1,2}:\d{2}/.test(String(klaarSt?.state ?? "")) ? String(klaarSt.state).slice(0, 5) : "";
+  const tijd = stand.klaarOmVolgende ? klok(stand.klaarOmVolgende) : uitTijd;
+  return { icoon: "calendar", woord: "Planning", tijd };
 }
 
 /* ------------------------------------------------------------- het plan */

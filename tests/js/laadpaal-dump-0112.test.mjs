@@ -124,16 +124,15 @@ describe("REGRESSIEWACHT: de rest van de kaart tegen coach 0.112.1", () => {
     assert.equal(C.contractVan(st), 1);
   });
 
-  it("zegt 'Geen auto' in rust, met de laatst bekende accustand", () => {
+  it("zegt 'Geen auto' in rust", () => {
     const s = L.laadpaalStand(st);
     assert.equal(s.tekst, "Geen auto");
     assert.equal(L.standVorm(s.stand).tone, "neutral");
-    assert.equal(L.socTekst(s), "77%");
   });
 
-  it("biedt Planning en Snel aan, met Planning aan, al staat de paal op zon", () => {
+  it("biedt alleen Snel aan als de planning geldt, al staat de paal op zon (Planning is sinds 0.59.1 geen knop)", () => {
     const k = L.modusKnoppen(hass.states["select.laadpaal_modus"], L.laadpaalStand(st));
-    assert.deepEqual(k.map((m) => [m.sleutel, m.aan]), [["planning", true], ["snel", false]]);
+    assert.deepEqual(k.map((m) => [m.sleutel, m.aan]), [["snel", false]]);
   });
 
   it("meldt de vorige laadbeurt met beide bedragen", () => {
