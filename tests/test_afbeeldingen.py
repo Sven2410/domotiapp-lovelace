@@ -59,6 +59,10 @@ VASTE_WEBP = [
     "laadpalen/easee-charge-max-pro.webp",
     "laadpalen/alfen-eve-single-plus.webp",
     "laadpalen/alfen-eve-double-plus.webp",
+    # Sinds 0.60.0: de thuisbatterijkaart. Ook productfoto's, met toestemming van
+    # de eigenaar als installateur (11 oktober 2026).
+    "thuisbatterijen/anker-solarbank-max-ac.webp",
+    "thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp",
 ]
 
 
@@ -175,6 +179,6 @@ async def test_regressiewacht_de_submap_toont_geen_inhoud(hass: HomeAssistant, h
     await zet_integratie_op(hass)
     client = await hass_client_no_auth()
 
-    for adres in (f"{ADRES}/laadpalen", f"{ADRES}/laadpalen/"):
+    for adres in (f"{ADRES}/laadpalen", f"{ADRES}/laadpalen/", f"{ADRES}/thuisbatterijen/"):
         antwoord = await client.get(adres)
         assert antwoord.status in (403, 404), (adres, antwoord.status)

@@ -47,6 +47,7 @@ import "./cards/navbar-card.js";
 import "./cards/tabs-card.js";
 import "./cards/dishwasher-card.js";
 import "./cards/laadpaal-card.js";
+import "./cards/batterij-card.js";
 import "./cards/meldingen-card.js";
 import "./cards/printer-card.js";
 import "./cards/auto-card.js";
