@@ -162,7 +162,7 @@ export function klantEntiteiten(st) {
  *
  * @param {{reden: string}} keuze uit `kiesApparaat()`
  * @param {number} contract uit `contractVan()` op de startsensor
- * @param {string} [versie] de coach die deze kaart nodig heeft (de batterij: 0.112.0)
+ * @param {string} [versie] de coach die deze kaart nodig heeft (laadpaal en batterij: 0.112.1)
  */
 export function coachMelding(keuze, contract, versie = "0.110.0") {
   if (keuze.reden === "geen") return `Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach ${versie} of nieuwer nodig.`;

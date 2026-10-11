@@ -1,0 +1,105 @@
+[
+  {
+    "entity_id": "sensor.batterij_coach",
+    "translation_key": "coach",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "Nul op de meter",
+    "attributes": {
+      "contract": 1,
+      "type": "thuisbatterij",
+      "stand": "nul_op_de_meter",
+      "accu_fabrikant": "Anker",
+      "accu_model": "Anker SOLIX Solarbank Max AC",
+      "zelf": true,
+      "soc": 5,
+      "reason": "Hij houdt de meter op nul: overschot gaat erin, wat het huis vraagt komt eruit. De batterij doet dat zelf, met zijn eigen meter.",
+      "temperatuur": 21,
+      "plan": [],
+      "opgeleverd_vandaag": 0,
+      "opgeleverd_maand": 1.05,
+      "opgeleverd_totaal": 4.04,
+      "opgeleverd_sinds": "2026-09-28",
+      "override": null,
+      "leeg_tot": null,
+      "vakantie": false,
+      "vakantie_max": 50,
+      "reserve": null,
+      "ondergrens": 5,
+      "entiteiten": {
+        "soc": "sensor.thuisbatterij_soc",
+        "setpoint": "number.thuisbatterij_vermogensbesturing",
+        "discharge_limit": "number.thuisbatterij_ontladingslimiet",
+        "charge_limit": "number.thuisbatterij_maximale_laadlimiet",
+        "capacity": "sensor.thuisbatterij_accucapaciteit",
+        "discharge_power": "sensor.thuisbatterij_ontlaadvermogen_van_de_batterij",
+        "charge_power": "sensor.thuisbatterij_laadvermogen_van_de_batterij",
+        "mode": "select.thuisbatterij_bedrijfsmodus_apparaat_werkt_in_externe_modus",
+        "direction": "select.thuisbatterij_netvermogen",
+        "temperature": "sensor.thuisbatterij_batterijtemperatuur"
+      },
+      "icon": "mdi:home-battery",
+      "friendly_name": "Batterij Coach"
+    }
+  },
+  {
+    "entity_id": "button.batterij_nu_vol_laden",
+    "translation_key": "vol_laden",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "unknown",
+    "attributes": {
+      "icon": "mdi:battery-arrow-up",
+      "friendly_name": "Batterij Nu vol laden"
+    }
+  },
+  {
+    "entity_id": "button.batterij_nu_leegladen",
+    "translation_key": "leegladen",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "unknown",
+    "attributes": {
+      "icon": "mdi:battery-arrow-down",
+      "friendly_name": "Batterij Nu leegladen"
+    }
+  },
+  {
+    "entity_id": "button.batterij_terug_naar_het_plan",
+    "translation_key": "terug_naar_plan",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "unknown",
+    "attributes": {
+      "icon": "mdi:calendar-sync",
+      "friendly_name": "Batterij Terug naar het plan"
+    }
+  },
+  {
+    "entity_id": "switch.batterij_vakantiestand",
+    "translation_key": "vakantiestand",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "off",
+    "attributes": {
+      "icon": "mdi:palm-tree",
+      "friendly_name": "Batterij Vakantiestand"
+    }
+  },
+  {
+    "entity_id": "number.batterij_leegladen_tot",
+    "translation_key": "leeg_tot",
+    "device_model": "Thuisbatterij",
+    "device_manufacturer": "DomotiApp Coach",
+    "state": "5.0",
+    "attributes": {
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "mode": "auto",
+      "unit_of_measurement": "%",
+      "icon": "mdi:battery-low",
+      "friendly_name": "Batterij Leegladen tot"
+    }
+  }
+]

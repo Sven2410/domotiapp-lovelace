@@ -36,6 +36,7 @@ import {
   batterijAfbeelding,
   batterijStand,
   grenzenTekst,
+  leegTotMetGrens,
   opdrachtKnoppen,
   opgeleverdTekst,
   planStaven,
@@ -195,7 +196,7 @@ class BatterijCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig: zonder keuze zoekt de kaart zelf de enige
     // thuisbatterij van de coach, en anders zegt hij waarom niet.
-    return { name: "", afbeelding: "anker_solarbank_max_ac", ...config };
+    return { name: "", afbeelding: "auto", ...config };
   }
 
   set hass(hass) {
@@ -315,8 +316,8 @@ class BatterijCard extends DacCard {
    * getal dat er staat.
    */
   stap_(richting) {
-    const id = this.coach_()?.rollen.leeg_tot;
-    const st = stateOf(this.hass, id);
+    const r = this.coach_()?.rollen ?? {};
+    const st = leegTotMetGrens(stateOf(this.hass, r.leeg_tot), batterijStand(stateOf(this.hass, r.coach)));
     if (!st) return;
     const basis = this.pending_ != null ? { ...st, state: String(this.pending_) } : st;
     const volgende = stapWaarde(basis, richting);
@@ -355,7 +356,7 @@ class BatterijCard extends DacCard {
     const r = info?.rollen ?? {};
     const coachSt = stateOf(this.hass, r.coach);
     const s = batterijStand(coachSt);
-    const melding = info ? coachMelding(info.keuze, contractVan(coachSt), "0.112.0") : "";
+    const melding = info ? coachMelding(info.keuze, contractVan(coachSt), "0.112.1") : "";
 
     const apparaat = this.hass?.devices?.[info?.keuze.id ?? ""];
     this.text(".nm", c.name || apparaat?.name_by_user || apparaat?.name || "Thuisbatterij");
@@ -371,7 +372,7 @@ class BatterijCard extends DacCard {
     this.text(".reden", s?.reden ?? "");
     this.$(".reden").hidden = !s?.reden;
     this.$(".kop").setAttribute("aria-label", `${this.$(".nm").textContent}, ${this.$(".woord").textContent}`);
-    this.paintFoto_();
+    this.paintFoto_(s);
 
     this.$(".lading").hidden = s?.soc == null;
     this.text(".soc", s?.soc != null ? `${Math.round(s.soc)}%` : "");
@@ -413,9 +414,10 @@ class BatterijCard extends DacCard {
     meetRaster(this.$(".card"));
   }
 
-  paintFoto_() {
+  /** De foto: een gekozen model, de foto bij merk en model van de batterij, een eigen, of niets. */
+  paintFoto_(s) {
     const c = this.config;
-    const bron = batterijAfbeelding(c.afbeelding, c.image ?? "");
+    const bron = batterijAfbeelding(c.afbeelding, s, c.image ?? "");
     const img = this.$(".foto");
     const geen = this.$(".geenfoto");
     if (img.dataset.bron !== bron) {
@@ -458,7 +460,7 @@ class BatterijCard extends DacCard {
     rij.hidden = !knoppen.length;
 
     // Leegladen tot [getal] [Leegladen]
-    const totSt = stateOf(this.hass, r.leeg_tot);
+    const totSt = leegTotMetGrens(stateOf(this.hass, r.leeg_tot), s);
     const metLeeg = Boolean(r.leegladen) && Boolean(totSt) && totSt.state !== "unavailable";
     this.$(".leeg").hidden = !metLeeg;
     if (metLeeg) {
@@ -528,6 +530,7 @@ class BatterijCard extends DacCard {
 }
 
 const AFBEELDING_KEUZES = [
+  { value: "auto", label: "Automatisch (merk en model van de batterij)" },
   ...Object.entries(BATTERIJ_FOTOS).map(([value, f]) => ({ value, label: f.label })),
   { value: "eigen", label: "Eigen afbeelding" },
   { value: "geen", label: "Geen afbeelding" },
@@ -535,7 +538,7 @@ const AFBEELDING_KEUZES = [
 
 class BatterijEditor extends DacEditor {
   defaults() {
-    return { afbeelding: "anker_solarbank_max_ac" };
+    return { afbeelding: "auto" };
   }
 
   pickers() {
@@ -563,7 +566,8 @@ class BatterijEditor extends DacEditor {
     return {
       name: "Leeg laten: de naam die de batterij bij de coach heeft.",
       coach_device:
-        "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.0 of nieuwer nodig.",
+        "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.",
+      afbeelding: "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC).",
     }[s.name];
   }
 }

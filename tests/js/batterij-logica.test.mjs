@@ -7,8 +7,8 @@
  * 11 oktober 2026 beschreef (v0.112.0), met de antwoorden op twee vragen
  * erbij: `plan[].kw` is het verwachte gemiddelde (laden positief, ontladen
  * negatief, ook bij "nul" niet nul), een blok kan een kwartier zijn, en
- * `opgeleverd_*` is None zolang het nog niet bekend is. Er is nog geen echte
- * dump; die volgt.
+ * `opgeleverd_*` is None zolang het nog niet bekend is. De echte dump van
+ * v0.112.1 staat in `batterij-dump-0112.test.mjs`.
  *
  * Tijden in LOKALE tijd, zodat de uitkomst niet van de tijdzone afhangt.
  */
@@ -160,14 +160,15 @@ describe("NIEUW GEDRAG: wat hij opleverde, en de grenzen", () => {
 describe("NIEUW GEDRAG: de foto", () => {
   const BASIS = "/domotiapp_lovelace/afbeeldingen/";
 
-  it("neemt zonder keuze de Solarbank", () => {
-    assert.equal(B.batterijAfbeelding(undefined), `${BASIS}thuisbatterijen/anker-solarbank-max-ac.webp`);
+  it("neemt zonder keuze de foto bij het model dat de coach meldt, en anders niets", () => {
+    assert.equal(B.batterijAfbeelding(undefined, { model: "Anker SOLIX Solarbank Max AC" }), `${BASIS}thuisbatterijen/anker-solarbank-max-ac.webp`);
+    assert.equal(B.batterijAfbeelding(undefined, null), "");
   });
 
   it("neemt het gekozen model, een eigen afbeelding of niets", () => {
-    assert.equal(B.batterijAfbeelding("anker_solarbank_max_ac_uitbreiding"), `${BASIS}thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp`);
-    assert.equal(B.batterijAfbeelding("eigen", "/local/accu.png"), "/local/accu.png");
-    assert.equal(B.batterijAfbeelding("geen", "/local/accu.png"), "");
+    assert.equal(B.batterijAfbeelding("anker_solarbank_max_ac_uitbreiding", null), `${BASIS}thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp`);
+    assert.equal(B.batterijAfbeelding("eigen", null, "/local/accu.png"), "/local/accu.png");
+    assert.equal(B.batterijAfbeelding("geen", null, "/local/accu.png"), "");
   });
 
   it("heeft voor elk model een pad onder thuisbatterijen/", () => {
@@ -176,10 +177,10 @@ describe("NIEUW GEDRAG: de foto", () => {
 });
 
 describe("NIEUW GEDRAG: de melding noemt de coach die deze kaart nodig heeft", () => {
-  it("zegt 0.112.0 voor de batterij, en blijft 0.110.0 voor de rest", async () => {
+  it("zegt 0.112.1 voor de batterij, en blijft 0.110.0 voor de rest", async () => {
     const C = await import("../../src/cards/coach-logica.js");
-    assert.match(C.coachMelding({ reden: "geen" }, 0, "0.112.0"), /0\.112\.0/);
-    assert.match(C.coachMelding({ reden: "enige" }, 0, "0.112.0"), /bij naar 0\.112\.0/);
+    assert.match(C.coachMelding({ reden: "geen" }, 0, "0.112.1"), /0\.112\.1/);
+    assert.match(C.coachMelding({ reden: "enige" }, 0, "0.112.1"), /bij naar 0\.112\.1/);
     assert.match(C.coachMelding({ reden: "geen" }, 0), /0\.110\.0/);
   });
 });

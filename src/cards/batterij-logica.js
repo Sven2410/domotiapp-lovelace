@@ -4,7 +4,7 @@
  * Gevraagd op 11 oktober 2026, samen met de laadpaal: een kaart voor de
  * thuisbatterij die met DomotiApp Coach werkt, voor in een bubble-pop-up.
  *
- * Alles komt van de coach (contract 1, v0.112.0): een sensor `coach` met de
+ * Alles komt van de coach (contract 1, v0.112.1): een sensor `coach` met de
  * stand en het plan, knoppen `vol_laden`, `leegladen` en `terug_naar_plan`, een
  * number `leeg_tot` en een schakelaar `vakantiestand`. Zie `coach-logica.js`
  * voor hoe de kaart ze vindt.
@@ -66,6 +66,11 @@ export function batterijStand(st) {
   const override = a.override === "vol" || a.override === "leeg" ? a.override : null;
   return {
     stand,
+    // Wat de integratie van de batterij zelf zegt (coach 0.112.1), voor de
+    // foto. Bij hem thuis "Anker" en "Anker SOLIX Solarbank Max AC": het model
+    // draagt het merk zelf ook. Een lege tekst is "niet bekend".
+    fabrikant: String(a.accu_fabrikant ?? ""),
+    model: String(a.accu_model ?? ""),
     tekst: LEEG.has(ruw) ? STANDEN[stand]?.label ?? "" : ruw.charAt(0).toUpperCase() + ruw.slice(1),
     reden: String(a.reason ?? ""),
     zelf: a.zelf === true,
@@ -77,12 +82,32 @@ export function batterijStand(st) {
     totaal: getal(a.opgeleverd_totaal),
     sinds: /^\d{4}-\d{2}-\d{2}$/.test(String(a.opgeleverd_sinds ?? "")) ? String(a.opgeleverd_sinds) : "",
     override,
+    // Het doel van een LOPENDE leegbeurt, alleen gevuld zolang `override`
+    // "leeg" is. De instelling zelf is de number `leeg_tot`, en die staat
+    // standaard op de ondergrens (coach-sessie, 11 oktober 2026).
     leegTot: getal(a.leeg_tot),
     vakantie: a.vakantie === true,
     vakantieMax: getal(a.vakantie_max),
     reserve: getal(a.reserve),
     ondergrens: getal(a.ondergrens),
   };
+}
+
+/**
+ * De number `leeg_tot`, met de ondergrens van de batterij als minimum.
+ *
+ * De number zelf gaat van 0 tot 100 (de echte dump van 0.112.1), maar de coach
+ * laadt nooit verder leeg dan de ondergrens. Bij hem thuis stond hij op 5, en
+ * de ondergrens is 5: een tik op − gaf dan 0, de coach zette het terug, en de
+ * kaart sprong van 0% naar 5%. Met de ondergrens als minimum staat − daar uit.
+ *
+ * @param {object|null} st de state van de number `leeg_tot`
+ * @param {ReturnType<typeof batterijStand>} stand
+ */
+export function leegTotMetGrens(st, stand) {
+  if (!st || stand?.ondergrens == null) return st;
+  const min = Math.max(getal(st.attributes?.min) ?? 0, stand.ondergrens);
+  return { ...st, attributes: { ...st.attributes, min } };
 }
 
 /**
@@ -221,15 +246,43 @@ export const BATTERIJ_FOTOS = {
 };
 
 /**
+ * Welke foto er bij een batterij hoort, of null.
+ *
+ * Op het model, en op een DEEL van de tekst: bij hem thuis is het "Anker SOLIX
+ * Solarbank Max AC", met het merk er zelf in. Alleen een Solarbank Max AC krijgt
+ * de foto; een andere Solarbank ziet er anders uit, en een verkeerde foto is
+ * erger dan geen. De uitbreiding is aan het model niet te zien: die kies je in
+ * de editor.
+ *
+ * @param {{fabrikant?: string, model?: string}|null} accu uit `batterijStand()`
+ * @returns {string|null} een sleutel uit `BATTERIJ_FOTOS`
+ */
+export function fotoBijAccu(accu) {
+  const model = `${accu?.model ?? ""}`.toLowerCase();
+  if (/\bsolarbank\s+max\s+ac\b/.test(model)) return "anker_solarbank_max_ac";
+  return null;
+}
+
+/**
  * Het adres van de afbeelding op de kaart, of "".
  *
- * De coach meldt (nog) niet welk merk de batterij is, dus er is geen
- * Automatisch: zonder keuze is het de Solarbank, omdat dat de batterij is die
- * de eigenaar levert.
+ * - `eigen`: de eigen afbeelding (leeg als er geen is);
+ * - `geen`: geen afbeelding;
+ * - een model uit `BATTERIJ_FOTOS`: die foto;
+ * - Automatisch (of niets gekozen): een eigen afbeelding als die er is, anders
+ *   de foto bij merk en model van de batterij (`fotoBijAccu`), anders niets.
+ *
+ * Tot coach 0.112.1 meldde de coach geen merk, en was het zonder keuze altijd de
+ * Solarbank. Nu kiest Automatisch, net als op de laadpaalkaart.
+ *
+ * @param {string} keuze `afbeelding` uit de config
+ * @param {{fabrikant?: string, model?: string}|null} accu uit `batterijStand()`
+ * @param {string} eigen `image` uit de config
  */
-export function batterijAfbeelding(keuze, eigen = "") {
+export function batterijAfbeelding(keuze, accu, eigen = "") {
   if (keuze === "geen") return "";
   if (keuze === "eigen") return eigen || "";
-  const foto = BATTERIJ_FOTOS[keuze] ?? BATTERIJ_FOTOS.anker_solarbank_max_ac;
-  return AFBEELDINGEN_BASIS + foto.pad;
+  const foto = BATTERIJ_FOTOS[keuze] ?? (!eigen ? BATTERIJ_FOTOS[fotoBijAccu(accu)] : null);
+  if (foto) return AFBEELDINGEN_BASIS + foto.pad;
+  return eigen || "";
 }
