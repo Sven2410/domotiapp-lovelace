@@ -117,6 +117,19 @@ class FotoPicker extends HTMLElement {
     if (this.gebouwd_) this.teken_();
   }
 
+  /**
+   * Het icoon in het voorbeeld zolang er geen afbeelding is. Standaard de auto,
+   * waar deze kiezer voor gebouwd is; de laadpaalkaart geeft `plug` mee
+   * (sinds 0.59.0 -- daar stond eerst gewoon een auto).
+   */
+  set fallback(v) {
+    this.fallback_ = v;
+    if (!this.gebouwd_) return;
+    const vak = this.$(".voorbeeld");
+    if (vak && !this.value) vak.dataset.bron = "-";
+    this.teken_();
+  }
+
   $(sel) {
     return this.shadowRoot.querySelector(sel);
   }
@@ -127,7 +140,7 @@ class FotoPicker extends HTMLElement {
       <div class="vak">
         <span class="voorbeeld"></span>
         <span class="rechts">
-          <input type="text" placeholder="/local/auto.png" aria-label="Pad naar de afbeelding" />
+          <input type="text" placeholder="/local/afbeelding.png" aria-label="Pad naar de afbeelding" />
           <span class="knoppen">
             <button class="doe kies" type="button">${resolve("plus")}<span>Kies een bestand</span></button>
             <button class="weg leeg" type="button">Wissen</button>
@@ -185,13 +198,13 @@ class FotoPicker extends HTMLElement {
         img.alt = "";
         img.onerror = () => {
           vak.dataset.bron = "";
-          vak.innerHTML = resolve("car");
+          vak.innerHTML = resolve(this.fallback_ || "car");
         };
         vak.replaceChildren(img);
       }
     } else if (vak.dataset.bron !== "") {
       vak.dataset.bron = "";
-      vak.innerHTML = resolve("car");
+      vak.innerHTML = resolve(this.fallback_ || "car");
     }
   }
 
@@ -239,7 +252,7 @@ class FotoPicker extends HTMLElement {
       this.melding_("Geüpload.");
     } catch (fout) {
       this.melding_(
-        `${fout?.message ?? "Uploaden lukte niet"}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/auto.png.`,
+        `${fout?.message ?? "Uploaden lukte niet"}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/afbeelding.png.`,
         true
       );
     } finally {

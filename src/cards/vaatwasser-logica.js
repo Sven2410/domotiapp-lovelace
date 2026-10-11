@@ -510,23 +510,8 @@ function laterWoord(klaarOm, nu) {
   return dagen < 7 ? DAGEN[klaarOm.getDay()] : "";
 }
 
-/**
- * Wat de kaart zegt als de coach aan staat en er toch niets te volgen is, of "".
- *
- * Zonder deze zin blijft de rij met knoppen gewoon leeg, en dan lijkt de kaart
- * kapot terwijl er een coach van vóór v0.110.0 draait.
- *
- * @param {{reden: string}} keuze uit `kiesApparaat()`
- * @param {number} contract uit `contractVan()` op de startsensor
- */
-export function coachMelding(keuze, contract) {
-  if (keuze.reden === "geen")
-    return "Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach 0.110.0 of nieuwer nodig.";
-  if (keuze.reden === "meerdere") return "Kies in de editor welk apparaat van de coach deze kaart volgt.";
-  if (keuze.reden === "weg") return "Het gekozen apparaat van de coach bestaat niet meer.";
-  if (!contract) return "Werk DomotiApp Coach bij naar 0.110.0 of nieuwer.";
-  return "";
-}
+/** Zie `coach-logica.js`; hier doorgegeven omdat de vaatwasser hem als eerste had. */
+export { coachMelding } from "./coach-logica.js";
 
 /**
  * Loopt er een programma?

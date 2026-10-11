@@ -24,6 +24,23 @@
  * contract is daarom: de toestand mag veranderen, de attributen niet. Deze
  * kaarten lezen alleen attributen, en `contract` zegt welke afspraak er geldt.
  *
+ * HET CONTRACT IS VAN TWEE KANTEN
+ *
+ * De eigenaar op 11 oktober 2026: "wanneer er iets bij komt in de coach wat
+ * invloed heeft op de lovelace kaart, dat dat goed opgepakt wordt." De coach
+ * heeft zijn kant vastgelegd (CLAUDE.md van domotiapp-coach, "Wat gelijk moet
+ * blijven"): niets hernoemen of weghalen wat een kaart leest, toevoegen mag,
+ * en anders gaat `contract` omhoog. Deze kant:
+ *
+ * - Een kaart leest NOOIT de tekst van een toestand om iets te beslissen. Tonen
+ *   mag; kiezen gebeurt op attributen en vaste sleutels.
+ * - Heeft een kaart meer nodig dan contract 1 biedt, dan wordt het eerst aan
+ *   de coach-sessie gevraagd, en niet zelf afgeleid of geraden.
+ * - Er wordt niets uitgebracht dat een nieuw attribuut leest voordat het in een
+ *   echte dump van de coach gezien is.
+ * - Een `contract` dat hoger is dan `COACH_CONTRACT` is geen fout: toevoegen
+ *   mag. Een lager contract (of geen) is een coach die bijgewerkt moet worden.
+ *
  * Geen DOM: dit hoort in een gewone Node-test.
  */
 
@@ -135,4 +152,22 @@ export function klantEntiteiten(st) {
     if (typeof waarde === "string" && /^[a-z_]+\.[a-z0-9_]+$/.test(waarde)) uit[sleutel] = waarde;
   }
   return uit;
+}
+
+/**
+ * Wat de kaart zegt als de coach aan staat en er toch niets te volgen is, of "".
+ *
+ * Zonder deze zin blijft de rij met knoppen gewoon leeg, en dan lijkt de kaart
+ * kapot terwijl er een coach van vóór v0.110.0 draait.
+ *
+ * @param {{reden: string}} keuze uit `kiesApparaat()`
+ * @param {number} contract uit `contractVan()` op de startsensor
+ */
+export function coachMelding(keuze, contract) {
+  if (keuze.reden === "geen")
+    return "Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach 0.110.0 of nieuwer nodig.";
+  if (keuze.reden === "meerdere") return "Kies in de editor welk apparaat van de coach deze kaart volgt.";
+  if (keuze.reden === "weg") return "Het gekozen apparaat van de coach bestaat niet meer.";
+  if (!contract) return "Werk DomotiApp Coach bij naar 0.110.0 of nieuwer.";
+  return "";
 }
