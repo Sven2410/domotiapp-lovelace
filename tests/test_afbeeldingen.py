@@ -49,6 +49,23 @@ VASTE_NAMEN = [
 
 PNG_HANDTEKENING = b"\x89PNG\r\n\x1a\n"
 
+# Sinds 0.59.0: de foto's van de laadpalen, voor de laadpaalkaart. WebP, want
+# met transparantie is dat een tiende van een PNG. Productfoto's van de
+# fabrikant, gebruikt met toestemming van de eigenaar als installateur
+# (11 oktober 2026). Ook hier: alleen aanvullen, nooit hernoemen of weghalen --
+# een gekozen foto staat als pad in het dashboard.
+VASTE_WEBP = [
+    "laadpalen/easee-charge-up.webp",
+    "laadpalen/easee-charge-max-pro.webp",
+    "laadpalen/alfen-eve-single-plus.webp",
+    "laadpalen/alfen-eve-double-plus.webp",
+]
+
+
+def is_webp(data: bytes) -> bool:
+    """RIFF....WEBP: de kop van elk WebP-bestand."""
+    return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+
 
 def test_het_adres_staat_vast() -> None:
     """Het adres zelf, letterlijk: het staat in dashboards van klanten."""
@@ -120,3 +137,44 @@ async def test_regressiewacht_niet_buiten_de_map(hass: HomeAssistant, hass_clien
     antwoord = await client.get(f"{ADRES}/..%2Fmanifest.json")
 
     assert antwoord.status != 200 or "domain" not in await antwoord.text()
+
+
+@pytest.mark.parametrize("naam", VASTE_WEBP)
+def test_de_laadpaalfoto_is_meegeleverd(naam: str) -> None:
+    """NIEUW GEDRAG: de foto's van de laadpaalkaart staan in de repo, als WebP."""
+    pad = MAP / naam
+    assert pad.is_file(), f"{pad} ontbreekt"
+    assert is_webp(pad.read_bytes())
+
+
+@pytest.mark.parametrize("naam", VASTE_WEBP)
+async def test_de_laadpaalfoto_wordt_geserveerd(
+    hass: HomeAssistant, hass_client_no_auth, naam: str
+) -> None:
+    """NIEUW GEDRAG: zonder token, als WebP, uit een submap.
+
+    Een submap is niets bijzonders voor de static path van Home Assistant,
+    maar het adres is het contract, dus het wordt letterlijk opgevraagd.
+    """
+    await zet_integratie_op(hass)
+    client = await hass_client_no_auth()
+
+    antwoord = await client.get(f"{ADRES}/{naam}")
+
+    assert antwoord.status == 200
+    assert antwoord.headers.get("Content-Type") == "image/webp"
+    assert await antwoord.read() == (MAP / naam).read_bytes()
+
+
+async def test_regressiewacht_de_submap_toont_geen_inhoud(hass: HomeAssistant, hass_client_no_auth) -> None:
+    """REGRESSIEWACHT: ook de map met laadpalen is geen lijst om door te bladeren.
+
+    Slaagt ook zonder die map (dan is het een 404), maar valt om als iemand
+    `show_index` aanzet voor de afbeeldingen.
+    """
+    await zet_integratie_op(hass)
+    client = await hass_client_no_auth()
+
+    for adres in (f"{ADRES}/laadpalen", f"{ADRES}/laadpalen/"):
+        antwoord = await client.get(adres)
+        assert antwoord.status in (403, 404), (adres, antwoord.status)
