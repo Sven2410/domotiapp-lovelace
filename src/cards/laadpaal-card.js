@@ -529,10 +529,10 @@ class LaadpaalCard extends DacCard {
     meetRaster(this.$(".card"));
   }
 
-  /** De foto: een gekozen model, de foto bij het merk van de coach, een eigen, of niets. */
+  /** De foto: een gekozen model, de foto bij merk en model van de paal, een eigen, of niets. */
   paintFoto_(s) {
     const c = this.config;
-    const bron = laadpaalAfbeelding(c.afbeelding, s?.merk ?? "", c.image ?? "");
+    const bron = laadpaalAfbeelding(c.afbeelding, s, c.image ?? "");
     const img = this.$(".foto");
     const geen = this.$(".geenfoto");
     if (img.dataset.bron !== bron) {
@@ -706,7 +706,7 @@ class LaadpaalCard extends DacCard {
 
 /** De keuzes voor de foto, in de volgorde waarin hij ze noemde. */
 const AFBEELDING_KEUZES = [
-  { value: "auto", label: "Automatisch (het merk dat de coach meldt)" },
+  { value: "auto", label: "Automatisch (merk en model van de paal)" },
   ...Object.entries(LAADPAAL_FOTOS).map(([value, f]) => ({ value, label: f.label })),
   { value: "eigen", label: "Eigen afbeelding" },
   { value: "geen", label: "Geen afbeelding" },
@@ -751,8 +751,8 @@ class LaadpaalEditor extends DacEditor {
     return {
       name: "Leeg laten: de naam die de laadpaal bij de coach heeft.",
       coach_device:
-        "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.110.0 of nieuwer nodig.",
-      afbeelding: "Automatisch kiest de foto bij het merk dat de coach meldt (Easee of Alfen).",
+        "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.",
+      afbeelding: "Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen).",
       power: "Leeg laten: de vermogenssensor die bij de coach is ingevuld.",
     }[s.name];
   }

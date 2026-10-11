@@ -73,6 +73,7 @@ export function laadpaalStand(st) {
   const a = st?.attributes;
   if (!a || st.state === "unavailable") return null;
   const stand = String(a.stand ?? "");
+  const metAuto = stand !== "geen_auto";
   const ruw = String(st.state ?? "").trim();
   // De tekst van de coach zoals hij is, met een hoofdletter vooraan. Zonder
   // tekst het woord van de stand.
@@ -103,11 +104,20 @@ export function laadpaalStand(st) {
     planningNu: a.planning_nu === true,
     modusBeurt: a.modus_beurt === true,
     pauze: a.pauze === true,
-    klaarVerwacht: moment(a.expected_done),
-    kwhNodig: getal(a.kwh_needed),
+    // Zonder auto rekent de coach toch door: wat er zou gebeuren als er nu een
+    // auto aan ging, met de laatst bekende accustand. In de echte dump van
+    // 0.112.1 stond er bij "geen_auto" een plan van twee uur en "vol rond
+    // 23:02". Dat is een vooruitblik en geen plan; de coach-sessie: "toon het
+    // alleen als stand niet geen_auto is".
+    klaarVerwacht: metAuto ? moment(a.expected_done) : null,
+    kwhNodig: metAuto ? getal(a.kwh_needed) : null,
     amps: getal(a.amps),
     merk: String(a.brand ?? ""),
-    plan: Array.isArray(a.plan) ? a.plan : [],
+    // Wat de integratie van de paal zelf zegt (coach 0.112.1), voor de foto.
+    // Een lege tekst is "niet bekend".
+    fabrikant: String(a.paal_fabrikant ?? ""),
+    model: String(a.paal_model ?? ""),
+    plan: metAuto && Array.isArray(a.plan) ? a.plan : [],
     sessie,
     schemaAan: a.schema_aan === true,
     perDag: a.per_dag === true,
@@ -403,8 +413,28 @@ export const LAADPAAL_FOTOS = {
   },
 };
 
-/** Welke foto er bij een merk hoort als er niets gekozen is. */
-const PER_MERK = { easee: "easee_charge_max_pro", alfen: "alfen_eve_single_plus" };
+/**
+ * Welke foto er bij een paal hoort, of null.
+ *
+ * Op de fabrikant, met het model als verfijning. Sinds coach 0.112.1 staan
+ * die er allebei, zoals de integratie van de paal ze meldt; bij hem thuis
+ * "Easee" en "Charge Max". Een coach van daarvoor meldt alleen `brand`
+ * ("easee"), en dan is het de gewone foto van dat merk.
+ *
+ * Op een DEEL van de tekst, niet op de hele: een model draagt soms zelf het
+ * merk ("Anker SOLIX Solarbank Max AC" bij de batterij), en een integratie
+ * schrijft "Charge Max" waar een andere "Easee Charge Max" schrijft.
+ *
+ * @param {{fabrikant?: string, model?: string, merk?: string}|null} paal uit `laadpaalStand()`
+ * @returns {string|null} een sleutel uit `LAADPAAL_FOTOS`
+ */
+export function fotoBijPaal(paal) {
+  const fabrikant = `${paal?.fabrikant || paal?.merk || ""}`.toLowerCase();
+  const model = `${paal?.model ?? ""}`.toLowerCase();
+  if (/\beasee\b/.test(fabrikant)) return /\bup\b/.test(model) ? "easee_charge_up" : "easee_charge_max_pro";
+  if (/\balfen\b/.test(fabrikant)) return /\bdouble\b/.test(model) ? "alfen_eve_double_plus" : "alfen_eve_single_plus";
+  return null;
+}
 
 /**
  * Het adres van de afbeelding op de kaart, of "".
@@ -412,17 +442,17 @@ const PER_MERK = { easee: "easee_charge_max_pro", alfen: "alfen_eve_single_plus"
  * - `eigen`: de eigen afbeelding (leeg als er geen is);
  * - `geen`: geen afbeelding;
  * - een model uit `LAADPAAL_FOTOS`: die foto;
- * - niets gekozen: een eigen afbeelding als die er is, anders de foto bij het
- *   merk dat de coach meldt (`brand`), anders niets.
+ * - niets gekozen: een eigen afbeelding als die er is, anders de foto bij
+ *   merk en model van de paal (`fotoBijPaal`), anders niets.
  *
  * @param {string} keuze `afbeelding` uit de config
- * @param {string} merk `brand` van de coach
+ * @param {{fabrikant?: string, model?: string, merk?: string}|null} paal uit `laadpaalStand()`
  * @param {string} eigen `eigen_afbeelding` uit de config
  */
-export function laadpaalAfbeelding(keuze, merk, eigen = "") {
+export function laadpaalAfbeelding(keuze, paal, eigen = "") {
   if (keuze === "geen") return "";
   if (keuze === "eigen") return eigen || "";
-  const foto = LAADPAAL_FOTOS[keuze] ?? (!eigen ? LAADPAAL_FOTOS[PER_MERK[merk]] : null);
+  const foto = LAADPAAL_FOTOS[keuze] ?? (!eigen ? LAADPAAL_FOTOS[fotoBijPaal(paal)] : null);
   if (foto) return AFBEELDINGEN_BASIS + foto.pad;
   return eigen || "";
 }

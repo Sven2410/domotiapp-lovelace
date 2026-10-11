@@ -86,7 +86,7 @@ describe("REGRESSIEWACHT: de laadpaalkaart vindt de echte coach", () => {
 
   it("neemt de foto van de Easee als er niets gekozen is", () => {
     assert.equal(
-      L.laadpaalAfbeelding("auto", L.laadpaalStand(st).merk),
+      L.laadpaalAfbeelding("auto", L.laadpaalStand(st)),
       "/domotiapp_lovelace/afbeeldingen/laadpalen/easee-charge-max-pro.webp"
     );
   });

@@ -267,23 +267,23 @@ describe("NIEUW GEDRAG: de afbeelding van de paal", () => {
   const B = L.AFBEELDINGEN_BASIS;
 
   it("neemt het gekozen model", () => {
-    assert.equal(L.laadpaalAfbeelding("alfen_eve_double_plus", "easee"), `${B}laadpalen/alfen-eve-double-plus.webp`);
+    assert.equal(L.laadpaalAfbeelding("alfen_eve_double_plus", { merk: "easee" }), `${B}laadpalen/alfen-eve-double-plus.webp`);
   });
 
-  it("kiest zonder keuze de foto bij het merk van de coach", () => {
-    assert.equal(L.laadpaalAfbeelding("", "easee"), `${B}laadpalen/easee-charge-max-pro.webp`);
-    assert.equal(L.laadpaalAfbeelding(undefined, "alfen"), `${B}laadpalen/alfen-eve-single-plus.webp`);
-    assert.equal(L.laadpaalAfbeelding("", ""), "");
+  it("kiest zonder keuze de foto bij het merk van een coach van vóór 0.112.1 (alleen brand)", () => {
+    assert.equal(L.laadpaalAfbeelding("", { merk: "easee" }), `${B}laadpalen/easee-charge-max-pro.webp`);
+    assert.equal(L.laadpaalAfbeelding(undefined, { merk: "alfen" }), `${B}laadpalen/alfen-eve-single-plus.webp`);
+    assert.equal(L.laadpaalAfbeelding("", { merk: "" }), "");
   });
 
   it("laat een eigen afbeelding voorgaan als er niets gekozen is", () => {
-    assert.equal(L.laadpaalAfbeelding("", "easee", "/local/paal.jpg"), "/local/paal.jpg");
-    assert.equal(L.laadpaalAfbeelding("eigen", "easee", "/local/paal.jpg"), "/local/paal.jpg");
-    assert.equal(L.laadpaalAfbeelding("eigen", "easee", ""), "");
+    assert.equal(L.laadpaalAfbeelding("", { merk: "easee" }, "/local/paal.jpg"), "/local/paal.jpg");
+    assert.equal(L.laadpaalAfbeelding("eigen", { merk: "easee" }, "/local/paal.jpg"), "/local/paal.jpg");
+    assert.equal(L.laadpaalAfbeelding("eigen", { merk: "easee" }, ""), "");
   });
 
   it("toont niets als dat gekozen is", () => {
-    assert.equal(L.laadpaalAfbeelding("geen", "easee", "/local/paal.jpg"), "");
+    assert.equal(L.laadpaalAfbeelding("geen", { merk: "easee" }, "/local/paal.jpg"), "");
   });
 
   it("heeft voor elk model een pad onder laadpalen/", () => {
