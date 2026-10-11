@@ -55,6 +55,7 @@ import {
   laadpaalAfbeelding,
   laadpaalStand,
   modusKnoppen,
+  modusRegel,
   planBalk,
   sessieTekst,
   socTekst,
@@ -146,6 +147,23 @@ class LaadpaalCard extends DacCard {
     /* ------------------------------------------------------- de bediening */
 
     .rij { display: flex; gap: 6px; min-width: 0; }
+
+    /* De modus: wat er geldt zonder knop ("Planning · klaar om 06:00",
+       "Goedkoopst") op een eigen regel boven de knoppen, en naast de knop als
+       er maar één is (Snel, met een planning voor vandaag). */
+    .modi { flex-wrap: wrap; align-items: center; }
+    .modusregel {
+      flex: 1 1 100%; min-width: 0;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; color: var(--dac-ink-2); white-space: nowrap;
+    }
+    .modusregel .icon { width: 15px; height: 15px; flex: 0 0 auto; color: var(--dac-accent-hi); }
+    .modusregel .wat { overflow: hidden; text-overflow: ellipsis; }
+    .modusregel b { font-weight: 500; color: var(--dac-ink); }
+    .knoppen { flex: 1 1 100%; display: flex; gap: 6px; min-width: 0; }
+    .modi[data-aantal="1"] .modusregel:not([hidden]) { flex: 1 1 0; }
+    .modi[data-aantal="1"] .modusregel:not([hidden]) + .knoppen { flex: 0 0 auto; }
+    .modi[data-aantal="1"] .modusregel:not([hidden]) + .knoppen .seg { padding: 8px 14px; }
     .seg, .schakel {
       flex: 1 1 0; min-width: 0;
       display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -250,13 +268,15 @@ class LaadpaalCard extends DacCard {
 
     .melding { margin: 0; font-size: 12px; line-height: 1.4; color: var(--dac-ink-2); }
 
-    /* Smal: kleinere foto, en de modusknoppen alleen met hun icoon. */
-    /* Alleen bij vier modusknoppen vallen de woorden weg; twee (Planning en
-       Snel, met een planning voor vandaag) passen er met woord op 320. */
+    /* Smal: kleinere foto. */
     @container (max-width: 360px) {
       .foto { width: 48px; height: 66px; }
       .soc { font-size: 24px; }
-      .modi[data-aantal="4"] .seg .lb { display: none; }
+    }
+    /* Drie modusknoppen op 280: "Continu" vroeg 43px en kreeg er 40 (gemeten
+       op 11 oktober 2026). Zonder icoon heeft het woord ruimte genoeg. */
+    @container (max-width: 310px) {
+      .modi[data-aantal="3"] .seg .icon { display: none; }
     }
 
     :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
@@ -332,7 +352,7 @@ class LaadpaalCard extends DacCard {
         <div class="lijn" hidden><span class="vul"></span><span class="mik" hidden></span></div>
         <div class="feiten" hidden></div>
 
-        <div class="rij modi" hidden></div>
+        <div class="rij modi" hidden><span class="modusregel" hidden></span><span class="knoppen"></span></div>
         <div class="rij schakels" hidden>
           <button type="button" class="schakel pauze" hidden>${resolve("pause")}<span class="lb">Pauze</span></button>
           <button type="button" class="schakel schema" hidden>${resolve("calendar")}<span class="lb">Schema</span></button>
@@ -557,12 +577,14 @@ class LaadpaalCard extends DacCard {
 
   paintBediening_(r, s) {
     // ----- modus
-    const modi = modusKnoppen(stateOf(this.hass, r.modus), s);
+    const modusSt = stateOf(this.hass, r.modus);
+    const modi = modusKnoppen(modusSt, s);
     const rij = this.$(".modi");
+    const knoppen = this.$(".modi .knoppen");
     const sig = JSON.stringify(modi.map((m) => m.sleutel));
     if (rij.dataset.sig !== sig) {
       rij.dataset.sig = sig;
-      rij.innerHTML = modi
+      knoppen.innerHTML = modi
         .map(
           (m) =>
             `<button type="button" class="seg" data-modus="${escapeHtml(m.sleutel)}" aria-pressed="false">${resolve(m.icoon)}<span class="lb">${escapeHtml(m.label)}</span></button>`
@@ -573,7 +595,20 @@ class LaadpaalCard extends DacCard {
       const aan = modi.find((m) => m.sleutel === knop.dataset.modus)?.aan ?? false;
       knop.setAttribute("aria-pressed", String(aan));
     }
-    rij.hidden = !modi.length;
+    // Wat er geldt zonder knop. Nog een keer de knop kiezen die aan staat zet
+    // hem terug naar de voorkeur (coach 0.112.3); daar hoeft de kaart niets
+    // voor te doen, want een tik stuurt altijd de optie van de knop.
+    const regel = modusRegel(modusSt, s, stateOf(this.hass, r.klaar_om));
+    const rEl = this.$(".modusregel");
+    rEl.hidden = !regel;
+    const rHtml = regel
+      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd ? ` · klaar om ${escapeHtml(regel.tijd)}` : ""}</span>`
+      : "";
+    if (rEl.dataset.html !== rHtml) {
+      rEl.dataset.html = rHtml;
+      rEl.innerHTML = rHtml;
+    }
+    rij.hidden = !modi.length && !regel;
     rij.dataset.aantal = String(modi.length);
 
     // ----- pauze en schema

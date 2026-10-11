@@ -78,8 +78,8 @@ describe("REGRESSIEWACHT: de laadpaalkaart vindt de echte coach", () => {
     assert.ok(!b || b.blokken.length === 0);
   });
 
-  it("biedt de vier modi aan, met laden tot 80 in stappen van 5", () => {
-    assert.deepEqual(L.modusKnoppen(hass.states["select.laadpaal_modus"]).map((m) => m.sleutel), ["planning", "snel", "continu", "zon"]);
+  it("biedt drie modusknoppen aan (Planning is sinds 0.59.1 geen knop), met laden tot 80 in stappen van 5", () => {
+    assert.deepEqual(L.modusKnoppen(hass.states["select.laadpaal_modus"]).map((m) => m.sleutel), ["snel", "continu", "zon"]);
     assert.equal(L.stapWaarde(hass.states["number.laadpaal_laden_tot"], 1), 85);
     assert.equal(L.stapWaarde(hass.states["number.laadpaal_laden_tot"], -1), 75);
   });
