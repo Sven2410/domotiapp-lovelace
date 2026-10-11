@@ -217,8 +217,21 @@ describe("NIEUW GEDRAG: de velden die de coach invult", () => {
     });
   });
 
-  it("laat een veld uit de editor staan", () => {
+  it("laat de coach winnen van een veld dat nog in de editor stond", () => {
+    // Zijn situatie op 11 oktober 2026: alle oude velden nog ingevuld, en het
+    // vinkje aan. Die velden ziet hij niet meer, dus ze tellen niet mee.
     const uit = V.metCoachVelden({ door: "binary_sensor.eigen" }, { door: "binary_sensor.klep" });
+    assert.equal(uit.door, "binary_sensor.klep");
+  });
+
+  it("REGRESSIEWACHT: laat een veld uit de editor voorgaan met Afwijken van de coach", () => {
+    const uit = V.metCoachVelden({ afwijken: true, door: "binary_sensor.eigen" }, { door: "binary_sensor.klep" });
+    assert.equal(uit.door, "binary_sensor.eigen");
+  });
+
+  it("REGRESSIEWACHT: houdt een ingevuld veld waar de coach niets levert", () => {
+    const uit = V.metCoachVelden({ progress: "sensor.voortgang", door: "binary_sensor.eigen" }, {});
+    assert.equal(uit.progress, "sensor.voortgang");
     assert.equal(uit.door, "binary_sensor.eigen");
   });
 
@@ -243,5 +256,67 @@ describe("NIEUW GEDRAG: waarom de knoppen er niet staan", () => {
   it("zegt niets als alles er is", () => {
     assert.equal(V.coachMelding({ reden: "gekozen" }, 1), "");
     assert.equal(V.coachMelding({ reden: "enige" }, 1), "");
+  });
+});
+
+describe("NIEUW GEDRAG: welke velden de editor toont", () => {
+  // Wat de echte coach bij hem levert (dump van 11 oktober 2026): alles
+  // behalve de voortgang.
+  const ALLES = {
+    status: "sensor.status",
+    remaining: "sensor.rest",
+    program: "sensor.actief",
+    program_select: "select.programma",
+    start: "button.start",
+    stop: "button.stop",
+    door: "binary_sensor.deur",
+    release_switch: "input_boolean.vrijgave",
+  };
+
+  it("laat zonder coach alles staan, behalve Geplande start", () => {
+    const v = V.editorVelden({ coach: false, entiteiten: ALLES });
+    assert.deepEqual(v.zichtbaar, ["status", "remaining", "progress", "program", "start", "stop", "door", "smart"]);
+    assert.ok(!v.zichtbaar.includes("planned_start"));
+    assert.deepEqual(v.afwijken, []);
+  });
+
+  it("laat met de coach alleen zien wat de coach niet levert: bij hem de voortgang", () => {
+    const v = V.editorVelden({ coach: true, entiteiten: ALLES });
+    assert.deepEqual(v.zichtbaar, ["progress"]);
+    assert.deepEqual(v.afwijken, ["status", "remaining", "program", "start", "stop", "door"]);
+  });
+
+  it("laat een veld staan dat de coach niet heeft", () => {
+    const { door, ...zonderDeur } = ALLES;
+    const v = V.editorVelden({ coach: true, entiteiten: zonderDeur });
+    assert.deepEqual(v.zichtbaar, ["progress", "door"]);
+    assert.ok(!v.afwijken.includes("door"));
+  });
+
+  it("zet een programmasensor niet onder Afwijken: dat is geen keuzelijst", () => {
+    const { program_select, ...zonderLijst } = ALLES;
+    const v = V.editorVelden({ coach: true, entiteiten: zonderLijst });
+    assert.ok(v.zichtbaar.includes("program"));
+  });
+
+  it("toont met de coach geen Slimme sturing: Ingeruimd is de slimme sturing", () => {
+    const v = V.editorVelden({ coach: true, entiteiten: {} });
+    assert.ok(!v.zichtbaar.includes("smart"));
+    assert.ok(!v.afwijken.includes("smart"));
+  });
+});
+
+describe("NIEUW GEDRAG: het korte woord voor een telefoon", () => {
+  // Gemeld op 11 oktober 2026 vanaf zijn iPhone: "Morgen ..." en "Handmat...".
+  it("maakt van 'Morgen starten' 'Morgen' en van 'Nu starten' 'Nu'", () => {
+    const k = V.coachKnoppen({ coach: stand({ later: "morgen" }), rollen: ROLLEN, nu: NU });
+    assert.deepEqual(k.map((x) => x.kort), ["Morgen", "Nu"]);
+  });
+
+  it("laat een woord dat al kort is staan", () => {
+    const k = V.coachKnoppen({ coach: stand({ stand: "gepland", vrijgegeven: true }), rollen: ROLLEN, nu: NU });
+    assert.deepEqual(k.map((x) => x.kort), ["Vrijgegeven", "Nu"]);
+    const i = V.coachKnoppen({ coach: stand({ later: "" }), rollen: ROLLEN, nu: NU });
+    assert.equal(i[0].kort, "Ingeruimd");
   });
 });

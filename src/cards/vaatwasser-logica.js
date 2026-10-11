@@ -334,25 +334,74 @@ const VELDEN_UIT_COACH = [
   ["program", ["program_select", "program"], ["select", "input_select"]],
 ];
 
+/** Het id dat de coach voor dit veld levert, of "". */
+function uitCoach(veld, entiteiten) {
+  const regel = VELDEN_UIT_COACH.find(([v]) => v === veld);
+  if (!regel) return "";
+  const [, sleutels, domeinen] = regel;
+  return (
+    sleutels
+      .map((k) => entiteiten?.[k])
+      .find((x) => x && (!domeinen || domeinen.includes(x.split(".")[0]))) ?? ""
+  );
+}
+
 /**
- * De config, met de lege velden ingevuld uit wat de klant bij de coach koos.
+ * De config zoals de kaart hem gebruikt, met de velden van de coach erin.
  *
- * Een veld dat in de editor is ingevuld gaat voor: dat is de uitweg als de
- * coach iets anders gebruikt dan wat er op de kaart hoort.
+ * Standaard WINT DE COACH. De eigenaar op 11 oktober 2026, met het vinkje aan
+ * en al zijn oude velden nog ingevuld: *"Alleen lijkt mij dat deze sensoren
+ * invulvelden dan weg kunnen als ik het vinkje aan zet van de coach toch?"*
+ * De editor laat ze dan weg (zie `editorVelden`), en een veld dat je niet ziet
+ * hoort de kaart ook niet stil te sturen. Een ingevuld veld telt alleen nog
+ * waar de coach niets levert.
+ *
+ * Met `afwijken` aan is het andersom: wat in de editor staat gaat voor, en de
+ * coach vult alleen de lege velden. Dat is de uitweg als de coach iets anders
+ * gebruikt dan wat er op de kaart hoort.
  *
  * @param {object} config
  * @param {Record<string, string>} entiteiten uit `klantEntiteiten()`
  */
 export function metCoachVelden(config, entiteiten) {
   const uit = { ...config };
-  for (const [veld, sleutels, domeinen] of VELDEN_UIT_COACH) {
-    if (uit[veld]) continue;
-    const id = sleutels
-      .map((k) => entiteiten?.[k])
-      .find((x) => x && (!domeinen || domeinen.includes(x.split(".")[0])));
-    if (id) uit[veld] = id;
+  for (const [veld] of VELDEN_UIT_COACH) {
+    const id = uitCoach(veld, entiteiten);
+    if (!id) continue;
+    if (config?.afwijken && uit[veld]) continue;
+    uit[veld] = id;
   }
   return uit;
+}
+
+/**
+ * Welke velden de editor toont, en welke onder "Afwijken van de coach".
+ *
+ * Geplande start staat er in geen van beide meer: *"in een normale vaatwasser
+ * kaart zonder coach moet geplande start sowieso weg want die komt van de
+ * coach toch?"* (11 oktober 2026). Een `planned_start` die al in de YAML staat
+ * blijft werken, en zonder vinkje vindt de kaart de startsensor van de coach
+ * nog steeds via Slimme sturing (de route van 0.47.0).
+ *
+ * Met de coach: alleen wat de coach NIET levert, zodat er niets dubbel staat.
+ * Wat hij wel levert staat onder het vinkje Afwijken, en is daar ook pas iets
+ * waard: zonder dat vinkje wint de coach (zie `metCoachVelden`). Slimme
+ * sturing staat er met de coach nergens: Ingeruimd is de slimme sturing, en de
+ * knop Slim staat dan niet op de kaart.
+ *
+ * @param {object} p
+ * @param {boolean} p.coach het vinkje
+ * @param {Record<string, string>} p.entiteiten wat de coach levert (leeg als er geen coach gevonden is)
+ * @returns {{zichtbaar: string[], afwijken: string[]}}
+ */
+export function editorVelden({ coach, entiteiten }) {
+  const alle = ["status", "remaining", "progress", "program", "start", "stop", "door", "smart"];
+  if (!coach) return { zichtbaar: alle, afwijken: [] };
+  const vanCoach = new Set(VELDEN_UIT_COACH.map(([v]) => v).filter((v) => uitCoach(v, entiteiten)));
+  return {
+    zichtbaar: alle.filter((v) => !vanCoach.has(v) && v !== "smart"),
+    afwijken: alle.filter((v) => vanCoach.has(v)),
+  };
 }
 
 /**
@@ -403,7 +452,7 @@ export function statusUitCoach(coach) {
  * @param {Record<string, string>} p.rollen uit `coachRollen()`
  * @param {boolean} [p.loopt] draait hij volgens de statussensor?
  * @param {Date} [p.nu]
- * @returns {{rol: string, entity: string, label: string, aria: string, aan: boolean}[]}
+ * @returns {{rol: string, entity: string, label: string, kort: string, aria: string, aan: boolean}[]}
  */
 export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) {
   if (!coach || loopt || coach.stand === "draait") return [];
@@ -439,7 +488,9 @@ export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) 
     });
   }
 
-  return knoppen.filter((k) => k.entity);
+  // Het korte woord voor een heel smalle kaart: "Morgen starten" wordt
+  // "Morgen", "Nu starten" wordt "Nu". De rest is al kort.
+  return knoppen.filter((k) => k.entity).map((k) => ({ ...k, kort: k.label.replace(/ starten$/, "") }));
 }
 
 /**

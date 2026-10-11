@@ -52,7 +52,7 @@ import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } 
 import { DacEditor, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { isOn, nameOf, stateOf } from "../ha.js";
-import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   COACH_FABRIKANT,
   PROGRAMMA_MODELLEN,
@@ -65,6 +65,7 @@ import { huidigeKeuze, keuzes, kiesOproep } from "./keuzeveld.js";
 import { keuzeNaam } from "./programmanaam.js";
 import {
   bezig,
+  editorVelden,
   coachKnoppen,
   coachMelding,
   coachStand,
@@ -185,6 +186,24 @@ class DishwasherCard extends DacCard {
        "Sta" zegt is geen startknop. */
 
     .rij { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+
+    /* De programmakeuze en de knoppen eronder, als één blok: zonder coach twee
+       regels, zoals hierboven gemeten. MET de coach staat er geen Slim meer, en
+       dan passen de keuzelijst en Start/Stop naast elkaar -- op een smalle
+       kaart lopen ze vanzelf door naar een tweede regel. Gemeld op 11 oktober
+       2026 met een schermafdruk: Handmatig open gaf een lege strook boven de
+       kop. Gemeten: 195px inhoud, 11 boven de drie rijen (184), dus vier rijen
+       (248) met 53px lucht. Op een regel is het 154, en dat zijn er drie. */
+    .bediening { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .bediening[hidden] { display: none; }
+    /* Tussen twee regels 6 en niet 8: op 320 en 280 breed kwam de open kaart
+       op 185, één pixel boven drie rijen, en dan wordt het er vier. */
+    :host([coach]) .bediening { flex-direction: row; flex-wrap: wrap; row-gap: 6px; column-gap: 8px; }
+    /* 140 + 8 + 180 = 328: past op een telefoon van 380 (binnen 354), en
+       daaronder gaat het naar twee regels. Gemeten op 11 oktober 2026; met
+       160 en 200 liep het op 380 al door. */
+    :host([coach]) .bediening .programma { flex: 1 1 140px; }
+    :host([coach]) .bediening .knoppen { flex: 1 1 180px; }
     .rij[hidden] { display: none; }
 
     /* De programmakeuze. Ondoorzichtige achtergrond, net als op de
@@ -266,6 +285,32 @@ class DishwasherCard extends DacCard {
       .keuze { flex: 1 1 auto; }
     }
 
+    /* DE RIJ VAN DE COACH OP EEN TELEFOON
+       Gemeld op 11 oktober 2026 vanaf zijn iPhone, in een bubble-pop-up van
+       ongeveer 380 breed: "Morgen ..." en "Handmat..." -- drie knoppen met
+       icoon en woord passen daar niet. Alleen iconen (de regel hierboven) is
+       hier geen uitweg: een vinkje, een driehoek en een hand zeggen samen niet
+       wat er gebeurt. Dus in stappen, en Handmatig geeft als eerste toe, want
+       dat is de knop die je het minst nodig hebt:
+         - tot 440: Handmatig alleen het handje (de naam staat in aria-label
+           en title), de andere twee houden icoon en woord;
+         - tot 340: ook hun icoon weg, kleinere letter;
+         - tot 290: het korte woord ("Morgen", "Nu"). */
+    .knop .kort { display: none; }
+    @container (max-width: 440px) {
+      .rij.coach .knop.hand { flex: 0 0 auto; padding: 9px 13px; }
+      .rij.coach .knop.hand .lb { display: none; }
+    }
+    @container (max-width: 340px) {
+      .rij.coach .knop.vrijgave, .rij.coach .knop.nu { flex: 1 1 0; padding: 9px 6px; font-size: 12px; }
+      .rij.coach .knop.vrijgave .lb, .rij.coach .knop.nu .lb { display: inline; }
+      .rij.coach .knop.vrijgave > .icon, .rij.coach .knop.nu > .icon { display: none; }
+    }
+    @container (max-width: 290px) {
+      .rij.coach .knop.vrijgave .lb, .rij.coach .knop.nu .lb { display: none; }
+      .rij.coach .knop.vrijgave .kort, .rij.coach .knop.nu .kort { display: inline; }
+    }
+
     :focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
   `;
 
@@ -344,7 +389,7 @@ class DishwasherCard extends DacCard {
 
     const knop = (klasse, icoon, label) => `
       <button type="button" class="knop ${klasse}" hidden>
-        ${resolve(icoon)}<span class="lb">${escapeHtml(label)}</span>
+        ${resolve(icoon)}<span class="lb">${escapeHtml(label)}</span><span class="kort">${escapeHtml(label)}</span>
       </button>`;
 
     return `
@@ -366,14 +411,16 @@ class DishwasherCard extends DacCard {
         </div>
         <p class="coachhint" hidden></p>
 
-        <div class="rij programma" hidden>
-          <span class="programslot" style="display:contents"></span>
-        </div>
+        <div class="bediening" hidden>
+          <div class="rij programma" hidden>
+            <span class="programslot" style="display:contents"></span>
+          </div>
 
-        <div class="rij knoppen" hidden>
-          ${knop("slim", "bolt", "Slim")}
-          ${knop("start", "play", "Start")}
-          ${knop("stop", "stop", "Stop")}
+          <div class="rij knoppen" hidden>
+            ${knop("slim", "bolt", "Slim")}
+            ${knop("start", "play", "Start")}
+            ${knop("stop", "stop", "Stop")}
+          </div>
         </div>
       </div>`;
   }
@@ -400,6 +447,9 @@ class DishwasherCard extends DacCard {
     }
     this.on(this.$(".knop.hand"), "click", () => {
       this.handOpen_ = !this.handOpen_;
+      // Open en dicht is twee hoogtes om en om, en dat ziet de pendeldemper
+      // anders aan voor een lus: dan bleef de kaart groot (0.58.1).
+      bewusteWijziging(this.$(".card"));
       this.paint();
     });
     this.on(this.$(".knop.slim"), "click", () => {
@@ -438,11 +488,14 @@ class DishwasherCard extends DacCard {
    */
   startSensor_() {
     const c = this.config;
-    if (c?.planned_start) return c.planned_start;
-    // Met de coach aan is het de sensor van het gekozen apparaat. Een coach van
-    // vóór v0.110.0 heeft er geen; dan blijft het zoeken via de schakelaar.
+    // Met de coach aan is het de sensor van het gekozen apparaat, ook als er
+    // nog een Geplande start in de YAML staat: dat veld is er met de coach niet
+    // meer (sinds 0.58.1), en een veld dat je niet ziet hoort niet te sturen.
+    // Een coach van vóór v0.110.0 heeft er geen; dan blijft het zoeken via de
+    // schakelaar.
     const coach = this.coach_()?.rollen.start;
     if (coach) return coach;
+    if (c?.planned_start) return c.planned_start;
     const states = this.hass_?.states;
     if (!c?.smart || !states) return "";
     if (this.gevonden_ && states[this.gevonden_]?.attributes?.release_switch === c.smart) {
@@ -510,6 +563,7 @@ class DishwasherCard extends DacCard {
     const loopt = draait(status);
 
     this.toggleAttribute("draait", loopt);
+    this.toggleAttribute("coach", Boolean(c.coach));
     this.toggleAttribute("onbekend", loopt && pct == null);
 
     const top = this.$(".top");
@@ -620,6 +674,9 @@ class DishwasherCard extends DacCard {
     const open = !metCoach || this.handOpen_;
     this.$(".rij.programma").hidden = !lijst || !open;
     this.$(".rij.knoppen").hidden = (!metSlim && !c.start && !c.stop) || !open;
+    // Het blok telt als één kind van de kaart (zie rasterhoogte.js): leeg hoort
+    // het geen tussenruimte te kosten.
+    this.$(".bediening").hidden = this.$(".rij.programma").hidden && this.$(".rij.knoppen").hidden;
 
     this.paintCoach_(startSt, coach, loopt, handmatig);
   }
@@ -651,6 +708,8 @@ class DishwasherCard extends DacCard {
       el.title = k.aria;
       const lb = el.querySelector(".lb");
       if (lb.textContent !== k.label) lb.textContent = k.label;
+      const kort = el.querySelector(".kort");
+      if (kort.textContent !== k.kort) kort.textContent = k.kort;
     }
 
     const hand = this.$(".knop.hand");
@@ -692,6 +751,18 @@ class DishwasherCard extends DacCard {
   }
 }
 
+/** De velden van de editor, op naam: `editorVelden` kiest welke er staan. */
+const VELD = {
+  status: { name: "status", selector: sel.entity(["sensor", "binary_sensor"]) },
+  remaining: { name: "remaining", selector: sel.entity(["sensor"]) },
+  progress: { name: "progress", selector: sel.entity(["sensor", "number"]) },
+  program: { name: "program", selector: sel.entity(["select", "input_select"]) },
+  start: { name: "start", selector: sel.entity(["button", "input_button", "script", "switch", "automation"]) },
+  stop: { name: "stop", selector: sel.entity(["button", "input_button", "script", "switch", "automation"]) },
+  door: { name: "door", selector: sel.entity(["binary_sensor"]) },
+  smart: { name: "smart", selector: sel.entity(["input_boolean", "switch"]) },
+};
+
 class DishwasherEditor extends DacEditor {
   defaults() {
     return { icon: "dishwasher" };
@@ -701,8 +772,19 @@ class DishwasherEditor extends DacEditor {
     return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "dishwasher", auto: false }];
   }
 
+  /** Wat de coach van dit apparaat levert, zoals de kaart het ook zou vinden. */
+  coachEntiteiten_() {
+    const c = this.config_ ?? {};
+    const hass = this.hass_;
+    if (!c.coach || !hass) return {};
+    const keuze = kiesApparaat(hass, c.coach_device || "", PROGRAMMA_MODELLEN, "Vaatwasser");
+    const start = coachRollen(hass, keuze.id).start;
+    return klantEntiteiten(stateOf(hass, start));
+  }
+
   schema() {
     const c = this.config_ ?? {};
+    const velden = editorVelden({ coach: Boolean(c.coach), entiteiten: this.coachEntiteiten_() });
     return [
       { name: "name", selector: sel.text() },
 
@@ -731,15 +813,15 @@ class DishwasherEditor extends DacEditor {
           ]
         : []),
 
-      { name: "status", selector: sel.entity(["sensor", "binary_sensor"]) },
-      { name: "remaining", selector: sel.entity(["sensor"]) },
-      { name: "planned_start", selector: sel.entity(["sensor", "input_datetime", "datetime", "time"]) },
-      { name: "progress", selector: sel.entity(["sensor", "number"]) },
-      { name: "program", selector: sel.entity(["select", "input_select"]) },
-      { name: "start", selector: sel.entity(["button", "input_button", "script", "switch", "automation"]) },
-      { name: "stop", selector: sel.entity(["button", "input_button", "script", "switch", "automation"]) },
-      { name: "door", selector: sel.entity(["binary_sensor"]) },
-      { name: "smart", selector: sel.entity(["input_boolean", "switch"]) },
+      // Alleen wat de coach niet levert; de rest onder Afwijken. Gevraagd op
+      // 11 oktober 2026, met alle oude velden nog ingevuld: "Alleen lijkt mij
+      // dat deze sensoren invulvelden dan weg kunnen als ik het vinkje aan zet
+      // van de coach toch?" Zie `editorVelden` in vaatwasser-logica.js.
+      ...velden.zichtbaar.map((naam) => VELD[naam]),
+      ...(c.coach && velden.afwijken.length ? [{ name: "afwijken", selector: sel.bool() }] : []),
+      ...(c.coach && c.afwijken && velden.afwijken.length
+        ? [section("Afwijken van de coach", "mdi:pencil", velden.afwijken.map((naam) => VELD[naam]), true)]
+        : []),
     ];
   }
 
@@ -749,9 +831,9 @@ class DishwasherEditor extends DacEditor {
         name: "Naam",
         coach: "In combinatie met DomotiApp Coach",
         coach_device: "Apparaat bij de coach",
+        afwijken: "Afwijken van de coach",
         status: "Statussensor",
         remaining: "Resterende tijd",
-        planned_start: "Geplande start",
         progress: "Voortgang (0-100%)",
         program: "Programmakeuze",
         start: "Start / pauze",
@@ -765,13 +847,13 @@ class DishwasherEditor extends DacEditor {
   helper(s) {
     const uitleg = {
       coach:
-        "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Velden die je hieronder leeg laat, vult de kaart met wat er bij de coach is ingevuld.",
+        "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer.",
       coach_device: "Leeg laten: de vaatwasser van de coach, als er precies één is.",
+      afwijken:
+        "Kies zelf andere sensoren of knoppen dan de coach gebruikt. Wat je daar invult gaat voor; wat je leeg laat, komt van de coach.",
       status: "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf.",
       remaining:
         "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
-      planned_start:
-        "Het moment waarop een energiebeheerder hem straks start. Op de kaart staat dan 'Start om 14:00'. Leeg laten: de kaart zoekt zelf de sensor van DomotiApp Coach bij de schakelaar onder Slimme sturing.",
       progress:
         "Zonder deze sensor is er geen stand, en schuift er een streepje heen en weer zolang hij draait.",
       program: "Een keuzelijst met de programma's. Verschijnt als uitklaplijst op de kaart.",
