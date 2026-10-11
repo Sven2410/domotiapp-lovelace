@@ -1,0 +1,138 @@
+[
+  {
+    "entity_id": "sensor.laadpaal_coach",
+    "state": "Geen auto",
+    "attributes": {
+      "contract": 1,
+      "type": "laadpaal",
+      "stand": "geen_auto",
+      "rule": "disconnected",
+      "amps": 0,
+      "reason": "Er hangt geen auto aan de lader.",
+      "brand": "easee",
+      "paal_fabrikant": "Easee",
+      "paal_model": "Charge Max",
+      "soc": 77,
+      "soc_geschat": false,
+      "actieradius_km": null,
+      "target_percent": 80,
+      "doel_beurt": false,
+      "modus": "zon",
+      "modus_beurt": false,
+      "modus_actief": "planning",
+      "modus_keuzes": [
+        "snel"
+      ],
+      "planning_nu": true,
+      "pauze": false,
+      "expected_done": "2026-10-11T23:58:00+02:00",
+      "kwh_needed": 0.6237467018469657,
+      "plan": [
+        {
+          "start": "2026-10-11T23:00:00+02:00",
+          "end": "2026-10-12T00:00:00+02:00",
+          "charging": true,
+          "kw": 4.14,
+          "kwh": 0.62,
+          "solar_kwh": 0,
+          "price": 0.24171,
+          "why": "nog 0,6 kWh, vol rond 23:58"
+        },
+        {
+          "start": "2026-10-12T00:00:00+02:00",
+          "end": "2026-10-12T01:00:00+02:00",
+          "charging": false,
+          "kw": 0,
+          "kwh": 0,
+          "solar_kwh": 0,
+          "price": 0.24171,
+          "why": "hij is dan al klaar"
+        },
+        {
+          "start": "2026-10-12T01:00:00+02:00",
+          "end": "2026-10-12T02:00:00+02:00",
+          "charging": false,
+          "kw": 0,
+          "kwh": 0,
+          "solar_kwh": 0,
+          "price": 0.24171,
+          "why": "hij is dan al klaar"
+        }
+      ],
+      "sessie": {
+        "actief": false,
+        "begin": "2026-10-11T12:08:03+02:00",
+        "einde": "2026-10-11T21:39:55+02:00",
+        "kwh": 15.53,
+        "kosten": 3.6443,
+        "zon_kwh": 2.081,
+        "soc_begin": 4,
+        "soc_eind": 80,
+        "kosten_net": 3.1875,
+        "net_kwh": 13.19,
+        "accu_kwh": 0.263
+      },
+      "schema_aan": true,
+      "per_dag": false,
+      "schema_dagen": [
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        },
+        {
+          "aan": true,
+          "klaar_om": "06:00"
+        }
+      ],
+      "klaar_om_volgende": "2026-10-12T06:00:00+02:00",
+      "entiteiten": {
+        "status": "sensor.laadpaal_status",
+        "no_current_reason": "sensor.laadpaal_reden_geen_stroom",
+        "lifetime_energy": "sensor.laadpaal_levensduur_verbruik",
+        "max_limit": "sensor.laadpaal_maximale_limiet_lader",
+        "current": "sensor.laadpaal_stroom",
+        "dynamic_limit": "sensor.laadpaal_dynamisch_laadgrens_van_lader",
+        "circuit_limit": "sensor.laadpaal_dynamic_laadgrens_van_stroomcircuit",
+        "power": "sensor.laadpaal_vermogen",
+        "energy": "sensor.laadpaal_levensduur_verbruik",
+        "soc": "sensor.auto_soc"
+      },
+      "icon": "mdi:ev-station",
+      "friendly_name": "Laadpaal Coach"
+    }
+  },
+  {
+    "entity_id": "select.laadpaal_modus",
+    "state": "planning",
+    "attributes": {
+      "options": [
+        "planning",
+        "snel",
+        "continu",
+        "zon"
+      ],
+      "icon": "mdi:ev-plug-type2",
+      "friendly_name": "Laadpaal Modus"
+    }
+  }
+]
