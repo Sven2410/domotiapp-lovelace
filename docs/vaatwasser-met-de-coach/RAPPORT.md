@@ -232,6 +232,60 @@ weer de echte stand                 ->  Morgen starten · Nu starten · Handmati
 Met `later` leeg staat er dus Ingeruimd, ook al zou `klaar_om` "morgen" geven.
 De kaart volgt het woord van de coach.
 
+### Tegen de echte coach v0.110.0
+
+Op 11 oktober 2026 om 20:21 haalde de coach-sessie een dump van de vijf
+entiteiten uit de Home Assistant van de eigenaar (2026.10.1), geanonimiseerd
+(zijn eigen entity_ids vervangen door algemene namen; die van de coach en de
+translation_keys zijn echt). Die staat als vaste testinvoer in
+`tests/js/vaste-invoer/coach-0.110.0-vaatwasser.json`, met
+`tests/js/vaatwasser-coach-dump.test.mjs` erbij.
+
+**Wat klopte:** fabrikant "DomotiApp Coach" en model "Vaatwasser" op alle vijf;
+de vijf translation_keys; `contract: 1`; `stand`, `vrijgegeven`, `nu`,
+`klaar_om` met zone en `later: "morgen"`. Het oude lege apparaat "DomotiApp
+Coach" (fabrikant "DomotiApp") dat er bij hem nog staat, valt buiten de kiezer.
+`ingeruimd_morgen` heet daar `button.vaatwasser_ingeruimd_goedkoopste_moment`;
+de kaart vindt hem op de sleutel, niet op de naam.
+
+**Wat niet klopte, en nu gerepareerd is:**
+
+| In de dump | Wat de kaart deed | Nu |
+|---|---|---|
+| `entiteiten.program` = `sensor.vaatwasser_actief_programma`, het ACTIEVE programma | een uitklaplijst van een sensor, waarmee niets te kiezen valt | de keuzelijst uit `entiteiten.program_select`; alleen `select` en `input_select` |
+| `entiteiten.status` = de bedrijfsstatus | niet overgenomen | overgenomen: met alleen het vinkje aan klopt de statusregel |
+
+Allebei stonden niet in het contract zoals het was afgesproken, en de nep-coach
+volgde dat contract. Precies daarom wachtte deze uitgave op de dump.
+
+Tegen 86bea87 (de stand vóór deze reparatie):
+
+```
+  ✖ neemt de keuzelijst voor het programma, en niet de sensor met het actieve programma
+  ✖ neemt de statussensor van de coach over
+  ✖ laat het veld leeg als de coach alleen een sensor voor het programma heeft
+ℹ tests 9
+ℹ pass 6
+ℹ fail 3
+```
+
+De zes die slaagden zijn REGRESSIEWACHT: vinden, rollen, contract en "Morgen
+starten" op de echte knoppen werkten al. Daarna: `npm test` 1399 groen.
+
+**In de browser nagemeten** met een nep-coach in de vorm van de dump
+(`program` als sensor die niet bestaat, `program_select` en `status` erbij), en
+een kaart met als hele config `{type, coach: true}`. Bundel `1a21742a7e2e`,
+gelijk aan schijf.
+- Status: "Draait · nog 1 u 24 min" bij Run, "Klaar om te starten" bij Ready.
+  Die komt uit `entiteiten.status`.
+- Handmatig open met een echte klik (`isTrusted: true`): de programmalijst is
+  `Eco 50°C / Speed 60°C / Intensief 70°C / Voorspoelen`, precies de opties van
+  `program_select`. Start en Stop staan erbij, en de kaart is 248 px hoog.
+
+**De knoppen zijn niet in zijn echte keuken ingedrukt.** De vaatwasser is leeg
+en het is zijn huis; de coach-sessie heeft ze in haar eigen proeven (proef 143)
+wel ingedrukt. Dat ligt bij hem om te proberen.
+
 ### De rasterhoogte
 
 `getBoundingClientRect().height` van `.card`:
@@ -289,12 +343,10 @@ vinkje is de kaart ongewijzigd.
 
 ## Wat niet lukte
 
-- **Nog niet gemeten tegen de echte coach.** Coach v0.110.0 is nog niet
-  uitgebracht. De nep-coach volgt het contract zoals het op 11 oktober 2026
-  is afgesproken, maar hij is door deze sessie geschreven, en dat is precies
-  hoe het bij 0.47.0 misging. **Deze uitgave wacht daarom op de echte dump van
-  de coach.** Pas als de kaart daartegen is nagelopen, wordt er gemerged en
-  uitgebracht.
+- **De knoppen zijn niet in zijn echte Home Assistant ingedrukt.** De kaart
+  is tegen de echte dump van coach v0.110.0 nagelopen (zie hierboven), en
+  daar kwamen twee fouten uit die nu gerepareerd zijn. Maar op een echte
+  "Morgen starten" bij hem thuis is nog niet gedrukt.
 - **Het testtabblad stond de hele ronde verborgen** (`visibilityState:
   hidden`). Vooraan stond het startvenster DomotiApp, en daar is volgens
   valkuil 60 niets aan veranderd. Kliks, toetsen, de editor en de

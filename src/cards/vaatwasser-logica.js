@@ -315,14 +315,24 @@ export function vindStartSensor(states, schakelaar) {
  * zonder dat attribuut valt terug op `klaar_om`.
  */
 
-/** De velden van de kaart die de coach kan invullen, met zijn sleutel in `entiteiten`. */
-export const VELDEN_UIT_COACH = {
-  remaining: "remaining",
-  door: "door",
-  start: "start",
-  stop: "stop",
-  program: "program",
-};
+/**
+ * De velden van de kaart die de coach kan invullen: per veld de sleutels in
+ * `entiteiten`, op volgorde van voorkeur, en welke domeinen er mogen.
+ *
+ * Gemeten aan de echte coach v0.110.0 (dump van 11 oktober 2026, zie
+ * tests/js/vaste-invoer): `program` is daar het ACTIEVE programma, een sensor,
+ * en de keuzelijst heet `program_select`. Een sensor als programmakeuze geeft
+ * een uitklaplijst waarmee niets te kiezen valt -- daarom de domeinen. En
+ * `status` levert de coach ook, al stond het niet in het contract.
+ */
+const VELDEN_UIT_COACH = [
+  ["status", ["status"]],
+  ["remaining", ["remaining"]],
+  ["door", ["door"]],
+  ["start", ["start"]],
+  ["stop", ["stop"]],
+  ["program", ["program_select", "program"], ["select", "input_select"]],
+];
 
 /**
  * De config, met de lege velden ingevuld uit wat de klant bij de coach koos.
@@ -335,8 +345,12 @@ export const VELDEN_UIT_COACH = {
  */
 export function metCoachVelden(config, entiteiten) {
   const uit = { ...config };
-  for (const [veld, sleutel] of Object.entries(VELDEN_UIT_COACH)) {
-    if (!uit[veld] && entiteiten?.[sleutel]) uit[veld] = entiteiten[sleutel];
+  for (const [veld, sleutels, domeinen] of VELDEN_UIT_COACH) {
+    if (uit[veld]) continue;
+    const id = sleutels
+      .map((k) => entiteiten?.[k])
+      .find((x) => x && (!domeinen || domeinen.includes(x.split(".")[0])));
+    if (id) uit[veld] = id;
   }
   return uit;
 }
