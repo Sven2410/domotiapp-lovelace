@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Thuisbatterij &mdash; proefopstelling</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 20px 20px 120px;
+    background: #0c0c0a; color: #e8e4de;
+    font-family: Roboto, "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  h2 { font-size: 12px; font-weight: 600; color: rgba(232,228,222,.5); margin: 18px 0 6px; }
+  .rij { display: flex; gap: 20px; align-items: flex-start; }
+  .vak { flex: 0 0 auto; }
+  .vak small { display: block; font-size: 10px; color: rgba(232,228,222,.38); margin-bottom: 4px; }
+  .editor { width: 420px; background: #151513; border: 1px solid rgba(232,228,222,.14); border-radius: 14px; padding: 14px; }
+  .editor pre { margin: 10px 0 0; font: 11px/1.45 ui-monospace, monospace; color: #8fb9d6; white-space: pre-wrap; }
+  #log {
+    position: fixed; inset: auto 0 0 0; height: 90px; overflow: auto;
+    background: rgba(18,18,15,.96); border-top: 1px solid rgba(232,228,222,.2);
+    font: 12px/1.5 ui-monospace, monospace; padding: 6px 16px;
+  }
+</style>
+</head>
+<body>
+<!--
+  De thuisbatterijkaart en zijn editor, zonder Home Assistant, met de echte
+  dump van coach 0.112.1 als hass. Gemaakt op 11 oktober 2026 voor 0.60.0.
+
+  Serveer de repo-map (niet dev/), bijvoorbeeld:
+    python -m http.server 8791 --bind 127.0.0.1
+  en open http://127.0.0.1:8791/dev/batterij.html
+
+  De foto komt van de integratie en is hier niet te zien; het adres wel.
+-->
+<div id="situaties"></div>
+<div id="log"></div>
+<script type="module">
+import "./ha-form-stub.js";
+if (!customElements.get("home-assistant")) customElements.define("home-assistant", class extends HTMLElement {});
+if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement {});
+
+await import(`../custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js?t=${Date.now()}`);
+
+const log = (t) => document.getElementById("log").insertAdjacentHTML("afterbegin", `<div>${new Date().toLocaleTimeString()} ${t}</div>`);
+const dump = await (await fetch(`../tests/js/vaste-invoer/coach-0.112.1-batterij.json?t=${Date.now()}`)).json();
+
+/** Een hass uit de dump, met wijzigingen op de sensor en de number. */
+function hassUit(wijzig = {}) {
+  const states = {};
+  const entities = {};
+  for (const e of dump) {
+    states[e.entity_id] = { entity_id: e.entity_id, state: e.state, attributes: { ...e.attributes } };
+    entities[e.entity_id] = { entity_id: e.entity_id, device_id: "bt", platform: "domotiapp_coach", translation_key: e.translation_key };
+  }
+  const c = states["sensor.batterij_coach"];
+  if (wijzig.state) c.state = wijzig.state;
+  Object.assign(c.attributes, wijzig.attributes ?? {});
+  if (wijzig.leegTot != null) states["number.batterij_leegladen_tot"].state = String(wijzig.leegTot);
+  return {
+    states, entities,
+    devices: { bt: { id: "bt", name: "Thuisbatterij", manufacturer: "DomotiApp Coach", model: "Thuisbatterij" } },
+    language: "nl", locale: { language: "nl" }, user: { name: "proef" }, config: {}, themes: {},
+    async callService(domein, dienst, data) { log(`callService ${domein}.${dienst} ${JSON.stringify(data)}`); },
+    async callWS(b) { log(`ws ${b.type}`); return null; },
+  };
+}
+
+const SITUATIES = [
+  ["1. Echte dump coach 0.112.1: nul op de meter, 5%, leeg plan", {}],
+  ["2. Een lopende leegbeurt tot 30%", { state: "Ontladen", leegTot: 30, attributes: { stand: "ontladen", override: "leeg", leeg_tot: 30, soc: 64 } }],
+  ["3. Een batterij van een ander merk", { attributes: { accu_fabrikant: "Zendure", accu_model: "SolarFlow 2400 AC" } }],
+];
+
+const doel = document.getElementById("situaties");
+for (const [titel, wijzig] of SITUATIES) {
+  doel.insertAdjacentHTML("beforeend", `<h2>${titel}</h2>`);
+  const rij = document.createElement("div");
+  rij.className = "rij";
+  doel.appendChild(rij);
+  for (const breed of [500, 320]) {
+    const vak = document.createElement("div");
+    vak.className = "vak";
+    vak.style.width = `${breed}px`;
+    vak.innerHTML = `<small>${breed}px</small>`;
+    const kaart = document.createElement("domotiapp-batterij-card");
+    kaart.dataset.breed = String(breed);
+    kaart.setConfig({ type: "custom:domotiapp-batterij-card" });
+    kaart.hass = hassUit(structuredClone(wijzig));
+    vak.appendChild(kaart);
+    rij.appendChild(vak);
+  }
+}
+
+// De editor, met de echo van Home Assistant: wat hij wegschrijft komt via
+// setConfig terug, bevroren (zie dev/preview.html).
+const bevries = (o) => { if (o && typeof o === "object" && !Object.isFrozen(o)) { Object.freeze(o); Object.values(o).forEach(bevries); } return o; };
+doel.insertAdjacentHTML("beforeend", `<h2>Editor (lege config, zoals uit de kaartkiezer)</h2>`);
+const doos = document.createElement("div");
+doos.className = "editor";
+const ed = document.createElement("domotiapp-batterij-card-editor");
+ed.hass = hassUit();
+ed.setConfig(bevries({ type: "custom:domotiapp-batterij-card" }));
+const uit = document.createElement("pre");
+uit.textContent = "{}";
+ed.addEventListener("config-changed", (e) => {
+  e.stopPropagation();
+  const cfg = bevries(e.detail.config);
+  uit.textContent = JSON.stringify(cfg, null, 1);
+  log(`config-changed ${JSON.stringify(cfg)}`);
+  ed.setConfig(cfg);
+});
+doos.append(ed, uit);
+doel.appendChild(doos);
+log("klaar");
+</script>
+</body>
+</html>

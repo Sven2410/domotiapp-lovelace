@@ -252,12 +252,13 @@ export function planBalk(plan, nu = new Date(), { minUren = 6, maxUren = 24 } = 
 const klok = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 /**
- * Hele uren onder de balk, hooguit vijf, plus "nu" aan het begin.
+ * Hele uren onder de balk, hooguit vijf, plus "nu" aan het begin. Ook voor de
+ * batterijkaart.
  *
  * Een tik vlak naast "nu" (binnen een tiende van de balk) valt weg: twee
  * tijden over elkaar heen zijn er nul.
  */
-function tikken(van, tot) {
+export function tikken(van, tot) {
   const uren = (+tot - +van) / 3_600_000;
   const stap = uren <= 6 ? 2 : uren <= 12 ? 3 : 6;
   const uit = [{ pct: 0, tekst: "nu" }];

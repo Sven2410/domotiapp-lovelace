@@ -1561,6 +1561,27 @@ die daar niet staan:
    zijn `sensor.py` op dat moment, en niet wat er in een notitie of een
    eerder rapport over de vorm staat.
 
+68. **`git worktree add ""` WIST DE HELE HUIDIGE MAP, `.git` incluis.** Op
+   11 oktober 2026 om 23:03 is zo de hele projectmap leeggemaakt, met
+   `git version 2.55.0.windows.3`. Git zegt alleen "fatal: The empty string is
+   not a valid path", maar dan is de map al leeg. Nagespeeld in een
+   wegwerprepo: na de fout stond er niets meer, ook geen `.git`.
+
+   De lege string kwam uit een shellvariabele. Het commando was
+   `iets && W="pad"; git worktree add --detach "$W" HEAD`. Het eerste stuk
+   faalde, waardoor `W` nooit gezet werd, en de `;` liet de rest gewoon
+   doorlopen. Wat er verloren ging: alles wat niet op GitHub stond. Dat was een
+   kwartier werk, plus `.ha-dev-config`, de hele testinstance, die niet in git
+   staat.
+
+   De regels:
+   - **Geef `git worktree` en `rm -rf` nooit een variabele.** Schrijf het pad
+     letterlijk uit, of gebruik `${W:?}`: dan stopt de shell als hij leeg is.
+   - **Gebruik voor "draai de test tegen de oude code" geen worktree** maar
+     `git archive HEAD | tar -x -C <vaste map>`. Dat raakt de repo niet aan.
+   - **Push wat af is meteen**, ook als de PR nog niet klaar is. Wat op GitHub
+     staat was in tien minuten terug.
+
 ---
 
 ## Projectstand

@@ -482,7 +482,7 @@ class LaadpaalCard extends DacCard {
     const r = info?.rollen ?? {};
     const coachSt = stateOf(this.hass, r.coach);
     const s = laadpaalStand(coachSt);
-    const melding = info ? coachMelding(info.keuze, contractVan(coachSt)) : "";
+    const melding = info ? coachMelding(info.keuze, contractVan(coachSt), "0.112.1") : "";
 
     // ----- kop
     const apparaat = this.hass?.devices?.[info?.keuze.id ?? ""];

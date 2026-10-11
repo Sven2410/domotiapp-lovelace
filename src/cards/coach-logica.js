@@ -162,12 +162,12 @@ export function klantEntiteiten(st) {
  *
  * @param {{reden: string}} keuze uit `kiesApparaat()`
  * @param {number} contract uit `contractVan()` op de startsensor
+ * @param {string} [versie] de coach die deze kaart nodig heeft (laadpaal en batterij: 0.112.1)
  */
-export function coachMelding(keuze, contract) {
-  if (keuze.reden === "geen")
-    return "Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach 0.110.0 of nieuwer nodig.";
+export function coachMelding(keuze, contract, versie = "0.110.0") {
+  if (keuze.reden === "geen") return `Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach ${versie} of nieuwer nodig.`;
   if (keuze.reden === "meerdere") return "Kies in de editor welk apparaat van de coach deze kaart volgt.";
   if (keuze.reden === "weg") return "Het gekozen apparaat van de coach bestaat niet meer.";
-  if (!contract) return "Werk DomotiApp Coach bij naar 0.110.0 of nieuwer.";
+  if (!contract) return `Werk DomotiApp Coach bij naar ${versie} of nieuwer.`;
   return "";
 }
