@@ -357,6 +357,10 @@ export function sessieTekst(sessie, nu = new Date()) {
   const zon = getal(sessie.zon_kwh);
   if (kwh != null) delen.push(`${getalTekst(kwh)} kWh`);
   if (zon != null && zon > 0) delen.push(`${getalTekst(zon)} kWh zon`);
+  // Wat er uit de thuisbatterij kwam (coach 0.112.0, gezien in de dump van
+  // 0.112.1). De eigenaar op 11 oktober 2026: ja, tonen.
+  const uitAccu = getal(sessie.accu_kwh);
+  if (uitAccu != null && uitAccu > 0) delen.push(`${getalTekst(uitAccu)} kWh accu`);
   // Sinds coach 0.112.0 ook `kosten_net`: alleen het net, het bedrag uit het
   // verslag op de telefoon. Dat staat dan vooraan, want dat is wat hij kent.
   const net = getal(sessie.kosten_net);

@@ -919,3 +919,61 @@ async def test_eenmalige_wekker_in_het_verleden_wordt_niet_gepland(
         "geen listener voor een moment in het verleden"
     )
     assert not afgegaan(hass, registry_id)
+
+
+# --- 0.60.1: niets melden van vóór het schema gold -----------------------
+
+
+async def test_een_nieuwe_wekker_meldt_geen_gemist_moment_van_voor_hij_bestond(
+    hass: HomeAssistant, hass_storage, freezer
+) -> None:
+    """NIEUW GEDRAG (0.60.1). De bevinding van 30 september 2026.
+
+    Een wekker die om 23:20 is aangemaakt voor werkdagen om 06:45, meldde na een
+    herstart van Home Assistant om 23:46: "Je wekker van 06:45 is niet afgegaan;
+    Home Assistant heeft dat moment gemist." Om 06:45 bestond hij nog niet. De
+    eigenaar op 11 oktober 2026: repareren.
+    """
+    freezer.move_to(dt.datetime(2026, 8, 10, 23, 46, tzinfo=AMS))
+    registry_id = await zet_op(
+        hass,
+        [
+            volledige_wekker(
+                time="06:45",
+                days=[1, 2, 3, 4, 5],
+                geldt_sinds=dt.datetime(2026, 8, 10, 23, 20, tzinfo=AMS).isoformat(),
+            )
+        ],
+        hass_storage,
+    )
+    assert not afgegaan(hass, registry_id)
+    wekker = uit_opslag(hass, registry_id)
+    assert wekker["last_message"] is None, wekker["last_message"]
+    assert wekker["last_fired"] is None, "er is niets overgeslagen, dus ook niets te boeken"
+
+
+async def test_een_echt_gemist_moment_wordt_nog_steeds_gemeld(
+    hass: HomeAssistant, hass_storage, freezer
+) -> None:
+    """REGRESSIEWACHT (0.60.1): `geldt_sinds` slikt geen echte gemiste wekker in.
+
+    Bestond de wekker al vóór het moment, dan blijft het zoals SPEC 13.4 stap 6
+    zegt: overslaan, met een mededeling. Op de code van vóór 0.60.1 valt deze
+    test om een andere reden om: daar was `geldt_sinds` een onbekend veld.
+    """
+    freezer.move_to(dt.datetime(2026, 8, 10, 7, 30, tzinfo=AMS))
+    registry_id = await zet_op(
+        hass,
+        [
+            volledige_wekker(
+                time="06:45",
+                days=[1, 2, 3, 4, 5],
+                geldt_sinds=dt.datetime(2026, 8, 9, 20, 0, tzinfo=AMS).isoformat(),
+            )
+        ],
+        hass_storage,
+    )
+    assert not afgegaan(hass, registry_id)
+    message = uit_opslag(hass, registry_id)["last_message"]
+    assert message is not None
+    assert message["kind"] == meldingen.KIND_SKIPPED_GRACE_WINDOW

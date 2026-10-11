@@ -81,10 +81,10 @@ class BatterijCard extends DacCard {
     .st .stip { flex: 0 0 auto; width: 15px; height: 15px; color: var(--tone); display: grid; }
     .st .stip .icon { width: 15px; height: 15px; }
     .st .woord { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .reden {
-      font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2);
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
+    /* Heel, niet na twee regels afgekapt. De eigenaar op 12 oktober 2026, met
+       een schermafdruk van "... wat het huis vraagt komt…": "ook op pc snijd de
+       tekst af van de batterij kaart". */
+    .reden { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); }
 
     /* De lading: groot, zoals de accustand op de laadpaalkaart. Het getal
        draagt geen kleur (theme.js). */
@@ -124,11 +124,19 @@ class BatterijCard extends DacCard {
       background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
     }
 
-    /* Leegladen: eerst het getal, dan de knop. */
-    .leeg { display: flex; gap: 6px; align-items: center; }
-    .leeg .kopje { flex: 0 0 auto; font-size: 12px; color: var(--dac-ink-2); padding-left: 4px; }
+    /* Vol laden en Leegladen naast elkaar, en Terug naar het plan erbij als er
+       een opdracht loopt. De eigenaar op 12 oktober 2026: "vol laden en leeg
+       laden moet naast elkaar staan". Terug naar het plan staat op een eigen
+       regel eronder: met drie op een rij werd hij op 380 afgekapt, en zo blijft
+       de hele naam staan, ook op 280 (gemeten op 12 oktober 2026). */
+    .opdrachten { flex-wrap: wrap; }
+    .opdrachten .knop[data-rol="plan"] { flex-basis: 100%; }
+
+    /* Leegladen tot: een instelling op een eigen regel, onder de knoppen. */
+    .leeg { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .leeg .kopje { flex: 0 0 auto; font-size: 12px; color: var(--dac-ink-2); padding-left: 4px; white-space: nowrap; }
     .set {
-      flex: 1 1 auto; height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 2px;
+      flex: 0 1 170px; min-width: 120px; height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 2px;
       background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
     }
     .set button {
@@ -141,7 +149,6 @@ class BatterijCard extends DacCard {
     .set button .icon { width: 16px; height: 16px; }
     .set .waarde { flex: 1 1 auto; text-align: center; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--dac-ink); }
     .set .waarde.pending { color: var(--dac-accent-hi); }
-    .leeg .knop { flex: 0 0 auto; padding: 8px 14px; }
 
     /* "vakantierij" en niet "vakantie": die naam heeft het streepje in de
        accubalk al, en this.$(".vakantie") pakte dat streepje in plaats van
@@ -179,15 +186,10 @@ class BatterijCard extends DacCard {
 
     .melding { margin: 0; font-size: 12px; line-height: 1.4; color: var(--dac-ink-2); }
 
-    /* Smal: "Terug naar het plan" werd op 320 "Terug naar het p..." (gemeten
-       op 11 oktober 2026). Dan het korte woord; de hele naam staat in
-       aria-label. */
+    /* Smal: een kleinere foto en lading. */
     @container (max-width: 360px) {
       .foto { width: 64px; height: 50px; }
       .soc { font-size: 24px; }
-      .leeg .kopje { display: none; }
-      .opdrachten .knop .lb { display: none; }
-      .opdrachten .knop .kort { display: inline; }
     }
 
     :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
@@ -257,7 +259,6 @@ class BatterijCard extends DacCard {
             <span class="waarde"></span>
             <button type="button" data-d="1" aria-label="Meer">${resolve("plus")}</button>
           </div>
-          <button type="button" class="knop leegknop" aria-pressed="false">${resolve("arrowDown")}<span class="lb">Leegladen</span></button>
         </div>
 
         <div class="vakantierij" hidden>
@@ -282,11 +283,13 @@ class BatterijCard extends DacCard {
       if (id) this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: id }, bubbles: true, composed: true }));
     });
     // De opdrachtknoppen worden in `paint()` gebouwd; het gedrag hangt aan de rij.
+    // Leegladen gaat via `leegladen_()`: eerst het getal, dan de knop.
     this.on(this.$(".opdrachten"), "click", (e) => {
       const knop = e.target?.closest?.(".knop");
-      if (knop) this.druk_(knop.dataset.entity);
+      if (!knop) return;
+      if (knop.dataset.rol === "leeg") this.leegladen_();
+      else this.druk_(knop.dataset.entity);
     });
-    this.on(this.$(".leegknop"), "click", () => this.leegladen_());
     this.on(this.$(".vakantieknop"), "click", () => {
       const id = this.coach_()?.rollen.vakantiestand;
       if (!id) return;
@@ -441,8 +444,8 @@ class BatterijCard extends DacCard {
   }
 
   paintOpdrachten_(s, r) {
-    // Vol laden en Terug naar het plan; Leegladen staat bij zijn getal.
-    const knoppen = opdrachtKnoppen(s, r).filter((k) => k.rol !== "leeg");
+    // Vol laden, Leegladen en Terug naar het plan, naast elkaar.
+    const knoppen = opdrachtKnoppen(s, r);
     const rij = this.$(".opdrachten");
     const sig = JSON.stringify(knoppen.map((k) => [k.rol, k.entity]));
     if (rij.dataset.sig !== sig) {
@@ -459,7 +462,7 @@ class BatterijCard extends DacCard {
     }
     rij.hidden = !knoppen.length;
 
-    // Leegladen tot [getal] [Leegladen]
+    // Leegladen tot [− getal +], de instelling bij de knop Leegladen.
     const totSt = leegTotMetGrens(stateOf(this.hass, r.leeg_tot), s);
     const metLeeg = Boolean(r.leegladen) && Boolean(totSt) && totSt.state !== "unavailable";
     this.$(".leeg").hidden = !metLeeg;
@@ -472,7 +475,6 @@ class BatterijCard extends DacCard {
       this.$('.set [data-d="-1"]').disabled = stapWaarde(basis, -1) == null;
       this.$('.set [data-d="1"]').disabled = stapWaarde(basis, 1) == null;
       this.$(".set").setAttribute("aria-label", `Leegladen tot ${Math.round(v)}%`);
-      this.$(".leegknop").setAttribute("aria-pressed", String(s?.override === "leeg"));
     }
 
     // De vakantiestand: aan of uit, met de grens van de installateur erbij.

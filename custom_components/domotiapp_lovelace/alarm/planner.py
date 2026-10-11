@@ -377,6 +377,16 @@ class Planner:
         if laatste is not None and dt.datetime.fromisoformat(laatste) >= moment:
             return
 
+        # Stap 3b (0.60.1): van vóór het schema gold, valt niets in te halen.
+        # Een wekker die om 23:20 werd aangemaakt voor werkdagen om 06:45, meldde
+        # na een herstart om 23:46 dat hij die ochtend "niet was afgegaan" -- terwijl
+        # hij toen nog niet bestond. `geldt_sinds` zet de server bij het opslaan
+        # en bij het aanzetten. Een wekker van vóór 0.60.1 heeft het niet, en
+        # gedraagt zich zoals voorheen.
+        sinds = wekker.get("geldt_sinds")
+        if sinds is not None and moment < dt.datetime.fromisoformat(sinds):
+            return
+
         # Stap 4 was "door de gebruiker overgeslagen" en is in fase 7 vervallen met
         # `skip_next`. De nummering van SPEC 13.4 blijft staan; doorschuiven zou elke
         # verwijzing naar "stap 3" en "stap 5" stil naar een andere stap laten wijzen.
