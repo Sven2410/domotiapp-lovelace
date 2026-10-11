@@ -316,3 +316,15 @@ describe("NIEUW GEDRAG: de modus die echt geldt (coach 0.111.1)", () => {
     assert.equal(stand({ planning_nu: "true" }).planningNu, false);
   });
 });
+
+describe("NIEUW GEDRAG: de kosten alleen van het net (coach 0.112.0)", () => {
+  it("zet het bedrag uit het verslag vooraan, en dat met zon erachter", () => {
+    const t = L.sessieTekst({ actief: true, kwh: 15, kosten: 3.59, kosten_net: 3.13, zon_kwh: 2.1 }, NU);
+    assert.match(t.tekst, /^15 kWh · 2,1 kWh zon · €\s3,13 net · €\s3,59 incl\. zon$/);
+  });
+
+  it("laat het weg bij een coach die het niet levert", () => {
+    const t = L.sessieTekst({ actief: true, kwh: 15, kosten: 3.59 }, NU);
+    assert.doesNotMatch(t.tekst, / net/);
+  });
+});
