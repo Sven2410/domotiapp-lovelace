@@ -21,7 +21,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
-import { RUST_NA_FOUT, bestandUrl, haal, upload } from "../../src/infoscherm-client.js";
+import { Abonnement, RUST_NA_FOUT, bestandUrl, haal, upload } from "../../src/infoscherm-client.js";
 
 const echteFetch = globalThis.fetch;
 afterEach(() => {
@@ -100,5 +100,88 @@ describe("upload", () => {
     const meta = await upload(verlopen(), new File(["png"], "logo.png", { type: "image/png" }));
     assert.equal(meta.id, "01ABC");
     assert.deepEqual(verzoeken.map((v) => v.kop), ["Bearer vers"]);
+  });
+});
+
+/**
+ * NIEUW GEDRAG (0.62.2): het abonnement overleeft een herstart van Home
+ * Assistant. Tot dan mislukte het abonneren vlak na de herverbinding met
+ * `unknown_command`, stil, en kwam er daarna niets meer binnen. Gemeten op
+ * 12 oktober 2026: de server zei "3 van 8", het scherm bleef "2 van 8".
+ */
+describe("Abonnement", () => {
+  /** Een verbinding die de eerste `weiger` keer zegt dat het commando onbekend is. */
+  function verbinding(weiger = 0) {
+    const log = { aanvragen: 0, opgezegd: 0, opties: [] };
+    const connection = {
+      async subscribeMessage(_cb, _bericht, opties) {
+        log.aanvragen += 1;
+        log.opties.push(opties);
+        if (log.aanvragen <= weiger) throw { code: "unknown_command", message: "Unknown command." };
+        return () => {
+          log.opgezegd += 1;
+        };
+      },
+    };
+    return { hass: { connection }, log };
+  }
+
+  /** Een klok die je zelf laat tikken. */
+  function klok() {
+    const wacht = [];
+    return {
+      opties: { klok: (fn) => (wacht.push(fn), wacht.length), stopKlok: () => wacht.splice(0) },
+      async tik() {
+        const fn = wacht.shift();
+        if (fn) await fn();
+        await new Promise((k) => setTimeout(k, 0));
+      },
+    };
+  }
+
+  it("probeert het opnieuw zolang Home Assistant nog opstart, en laat dan zelf opnieuw abonneren", async () => {
+    const { hass, log } = verbinding(2);
+    const k = klok();
+    const abo = new Abonnement(() => {}, k.opties);
+    await abo.start(hass);
+    assert.equal(abo.actief, false);
+    await k.tik();
+    assert.equal(abo.actief, false);
+    await k.tik();
+    assert.equal(abo.actief, true);
+    assert.equal(log.aanvragen, 3);
+    // De bibliotheek van Home Assistant abonneert niet zelf opnieuw: dat doet de kaart.
+    assert.ok(log.opties.every((o) => o?.resubscribe === false));
+  });
+
+  it("een nieuwe start zegt het vorige abonnement eerst op", async () => {
+    const { hass, log } = verbinding();
+    const abo = new Abonnement(() => {});
+    await abo.start(hass);
+    await abo.start(hass);
+    assert.equal(log.aanvragen, 2);
+    assert.equal(log.opgezegd, 1);
+    assert.equal(abo.actief, true);
+  });
+
+  it("stop zegt op en probeert niets meer", async () => {
+    const { hass, log } = verbinding(5);
+    const k = klok();
+    const abo = new Abonnement(() => {}, k.opties);
+    await abo.start(hass);
+    abo.stop();
+    await k.tik();
+    assert.equal(log.aanvragen, 1);
+    assert.equal(abo.actief, false);
+  });
+
+  it("een andere fout dan opstarten wordt niet herhaald", async () => {
+    const k = klok();
+    let aanvragen = 0;
+    const hass = { connection: { subscribeMessage: async () => { aanvragen += 1; throw { code: "unauthorized" }; } } };
+    const abo = new Abonnement(() => {}, k.opties);
+    await abo.start(hass);
+    await k.tik();
+    assert.equal(aanvragen, 1);
   });
 });

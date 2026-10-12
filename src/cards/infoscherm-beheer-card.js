@@ -61,7 +61,7 @@ import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import { volgRaster } from "../rasterhoogte.js";
 import { vraagBevestiging } from "../vraag.js";
 import {
-  abonneer,
+  Abonnement,
   bestandUrl,
   bewaar,
   haalGebruikers,
@@ -357,6 +357,14 @@ export class InfoschermBeheerCard extends DacCard {
     this.logoAnalyses_ = new Map();
     this.herkansing_ = new Herkansing(() => this.haal_());
     this.verbinding_ = new Verbindingswacht();
+    // Stand en feeds van de server; overleeft een herstart (zie Abonnement).
+    this.abo_ = new Abonnement((bericht) => {
+      if (bericht?.soort === "stand") this.nieuweStand_(bericht.stand);
+      if (bericht?.soort === "feeds") {
+        this.feedFouten_ = bericht.feed_fouten ?? {};
+        this.teken_("instellingen");
+      }
+    });
     this.fout_ = null;
     this.laatstOpgeslagen_ = "";
   }
@@ -484,8 +492,9 @@ export class InfoschermBeheerCard extends DacCard {
       this.openConfig_ = this.config.open;
       this.open_ = this.config.open && this.config.open !== "geen" ? this.config.open : null;
     }
+    this.teardown_.push(() => this.abo_.stop());
     this.haal_();
-    this.luister_();
+    this.abo_.start(this.hass);
   }
 
   set hass(hass) {
@@ -493,7 +502,7 @@ export class InfoschermBeheerCard extends DacCard {
     super.hass = hass;
     if (terug && this.built_) {
       this.haal_();
-      this.luister_();
+      this.abo_.start(hass);
     }
   }
 
@@ -520,27 +529,6 @@ export class InfoschermBeheerCard extends DacCard {
       }
       this.fout_ = fout?.message ?? "Het beheer kon niet laden.";
       this.paint();
-    }
-  }
-
-  async luister_() {
-    if (!this.hass?.connection?.subscribeMessage) return;
-    // Zelfde opzet als in de infoschermkaart (zie `abonnement_` daar): niet
-    // op `isConnected` toetsen, want die is false terwijl `wire()` draait.
-    let dood = false;
-    this.teardown_.push(() => { dood = true; });
-    try {
-      const opzeggen = await abonneer(this.hass, (bericht) => {
-        if (bericht?.soort === "stand") this.nieuweStand_(bericht.stand);
-        if (bericht?.soort === "feeds") {
-          this.feedFouten_ = bericht.feed_fouten ?? {};
-          this.teken_("instellingen");
-        }
-      });
-      if (dood) opzeggen();
-      else this.teardown_.push(() => { try { opzeggen(); } catch { /* verbinding al weg */ } });
-    } catch {
-      /* haal_ plant de herkansing */
     }
   }
 

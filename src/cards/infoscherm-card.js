@@ -55,7 +55,7 @@ import { resolve } from "../icons.js";
 import { attrsOf, fmtNumber, isOn, localizeState, shortDate, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import {
-  abonneer,
+  Abonnement,
   bestandUrl,
   haalStand,
   nogNietGereed,
@@ -782,6 +782,14 @@ export class InfoschermCard extends DacCard {
     // mag het ophalen van de rest niet ophouden.
     this.dashHerkansing_ = new Herkansing(() => this.dashProbeer_(true));
     this.verbinding_ = new Verbindingswacht();
+    // Stand en feeds van de server; overleeft een herstart (zie Abonnement).
+    this.abo_ = new Abonnement((bericht) => {
+      if (bericht?.soort === "stand") this.nieuweStand_(bericht.stand);
+      else if (bericht?.soort === "feeds") {
+        this.feeds_ = bericht.feeds ?? [];
+        this.paint();
+      }
+    });
     this.fout_ = null;
     /* De laatst gewenste HTML per vak, zodat een herschildering niets
        aanraakt dat niet veranderd is -- ook niet als er intussen een foto
@@ -993,9 +1001,10 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => this.herkansing_.stop());
     this.teardown_.push(() => this.dashHerkansing_.stop());
     this.teardown_.push(() => this.zegWeerOp_());
+    this.teardown_.push(() => this.abo_.stop());
 
     this.haal_();
-    this.luister_();
+    this.abo_.start(this.hass);
   }
 
   /**
@@ -1063,49 +1072,12 @@ export class InfoschermCard extends DacCard {
     this.paint();
   }
 
-  /**
-   * Een abonnement dat zichzelf opzegt als de kaart intussen is afgebroken.
-   *
-   * NIET op `this.isConnected` toetsen, zoals de weerkaart doet. Home
-   * Assistant zet `hass` VOORDAT het element in de view hangt (valkuil 25),
-   * dus `wire()` draait terwijl `isConnected` nog false is -- en dan zegt zo'n
-   * toets het abonnement meteen weer op, terwijl de kaart even later gewoon
-   * in beeld komt en nooit meer een wijziging ontvangt. Gemeten op
-   * 9 september 2026 (valkuil 42).
-   */
-  async abonnement_(start) {
-    let dood = false;
-    this.teardown_.push(() => { dood = true; });
-    const opzeggen = await start();
-    if (dood) opzeggen();
-    else this.teardown_.push(() => { try { opzeggen(); } catch { /* verbinding al weg */ } });
-    return opzeggen;
-  }
-
-  async luister_() {
-    if (!this.hass?.connection?.subscribeMessage) return;
-    try {
-      await this.abonnement_(() =>
-        abonneer(this.hass, (bericht) => {
-          if (bericht?.soort === "stand") this.nieuweStand_(bericht.stand);
-          else if (bericht?.soort === "feeds") {
-            this.feeds_ = bericht.feeds ?? [];
-            this.paint();
-          }
-        })
-      );
-    } catch {
-      // Nog niet klaar: haal_ plant de herkansing, en na een herverbinding
-      // wordt er opnieuw geluisterd.
-    }
-  }
-
   set hass(hass) {
     const terug = this.verbinding_.herverbonden(hass);
     super.hass = hass;
     if (terug && this.built_) {
       this.haal_();
-      this.luister_();
+      this.abo_.start(hass);
     }
     this.paintMerkje_();
   }
