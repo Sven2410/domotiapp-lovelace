@@ -88,6 +88,8 @@ import {
   standaardIndeling,
   vrijePlek,
 } from "./infoscherm-logica.js";
+import { SCHERM_ACHTERGROND, logoWaarschuwing } from "./infoscherm-logo.js";
+import { analyseerLogo, snijLogoBij } from "./infoscherm-logo-beeld.js";
 
 const TAG = "domotiapp-infoscherm-beheer-card";
 
@@ -252,9 +254,19 @@ const css = /* css */ `
   .b-onder { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .plaatje { width: 96px; height: 64px; border-radius: var(--dac-radius-sm); overflow: hidden; background: var(--dac-surface-hi); display: grid; place-items: center; color: var(--dac-ink-3); font-size: 20px; }
   .plaatje img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  /* Het logo volgt zijn eigen verhouding, net als op het scherm. */
-  .plaatje.logo { width: auto; min-width: 64px; max-width: 220px; height: 64px; padding: 4px; }
-  .plaatje.logo img { width: auto; height: 100%; max-width: 100%; object-fit: contain; }
+  /* Het logo volgt zijn eigen verhouding, net als op het scherm. Flex en geen
+     grid, om dezelfde reden als daar (.logo in de infoschermkaart): in een
+     grid werd een liggend logo zo hoog als de volle breedte en viel de
+     onderkant weg. */
+  .plaatje.logo { width: auto; min-width: 64px; max-width: 220px; height: 64px; padding: 4px; display: flex; align-items: center; justify-content: center; }
+  .plaatje.logo img { width: auto; height: 100%; max-width: 100%; min-width: 0; object-fit: contain; }
+  /* Het voorbeeld staat op de achtergrond van het SCHERM, niet op die van
+     Home Assistant: een zwart logo op een doorzichtige achtergrond zag er hier
+     prima uit en viel op de iPad weg (12 oktober 2026). Vaste kleuren, met
+     opzet: het is een stukje van het scherm, en dat volgt het thema niet. */
+  .plaatje.logo.op-donker { background: ${SCHERM_ACHTERGROND.donker}; }
+  .plaatje.logo.op-licht { background: ${SCHERM_ACHTERGROND.licht}; }
+  .hulp.logo-waarschuwing { color: var(--dac-warn); }
 
   .ot-tabel { display: grid; grid-template-columns: 90px auto 100px 100px 100px 100px; gap: 6px 10px; align-items: center; font-size: 13px; }
   .ot-tabel .k { font-size: 11px; color: var(--dac-ink-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -341,6 +353,7 @@ export class InfoschermBeheerCard extends DacCard {
     this.uitgesteld_ = new Set();
     this.open_ = null;
     this.meldingen_ = {};
+    this.logoAnalyses_ = new Map();
     this.herkansing_ = new Herkansing(() => this.haal_());
     this.verbinding_ = new Verbindingswacht();
     this.fout_ = null;
@@ -644,6 +657,7 @@ export class InfoschermBeheerCard extends DacCard {
     const inhoud = sec.querySelector(".inhoud");
     inhoud.innerHTML = html + this.htmlVoet_(blok);
     this.plaatjes_(inhoud);
+    if (blok === "instellingen") this.logoVoorbeeld_();
     this.tel_(blok);
   }
 
@@ -888,11 +902,12 @@ export class InfoschermBeheerCard extends DacCard {
       <div class="rij twee">
         <div class="veld"><label>Logo</label>
           <div class="b-onder">
-            <div class="plaatje logo" data-bestand="${at(s.logo)}">${s.logo ? "" : resolve("camera")}</div>
+            <div class="plaatje logo${s.logo ? ` op-${s.uiterlijk === "licht" ? "licht" : "donker"}` : ""}" data-bestand="${at(s.logo)}">${s.logo ? "" : resolve("camera")}</div>
             <button class="knop klein" type="button" data-actie="logo">${resolve("camera")} ${s.logo ? "Ander logo" : "Logo kiezen"}</button>
             ${s.logo ? `<button class="knop klein" type="button" data-actie="logoweg">${resolve("close")} Logo weg</button>` : ""}
           </div>
-          <div class="hulp">Het logo houdt zijn eigen verhouding: lang, breed of vierkant.</div>
+          <div class="hulp">Het logo houdt zijn eigen verhouding: lang, breed of vierkant. Het voorbeeld staat op de achtergrond van het scherm (Uiterlijk hieronder). Een doorzichtige rand gaat er bij het uploaden af.</div>
+          <div class="hulp logo-waarschuwing" hidden></div>
         </div>
         <div class="veld"><label>Accentkleur op het scherm</label>
           <div class="b-onder">
@@ -934,6 +949,38 @@ export class InfoschermBeheerCard extends DacCard {
           <button class="knop" type="button" data-actie="f_ververs">Nu ophalen</button>
         </div>
       </div>`;
+  }
+
+  /**
+   * Het voorbeeld van het logo op de achtergrond van het gekozen uiterlijk,
+   * en de waarschuwing als het daar grotendeels wegvalt. Ook na een andere
+   * keuze bij Uiterlijk, zonder het blok opnieuw te tekenen.
+   */
+  logoVoorbeeld_() {
+    const vak = this.$(".plaatje.logo");
+    const melding = this.$(".logo-waarschuwing");
+    if (!vak || !melding) return;
+    const id = this.werk_?.scherm?.logo || null;
+    const uiterlijk = () => (this.werk_?.scherm?.uiterlijk === "licht" ? "licht" : "donker");
+    vak.classList.toggle("op-donker", !!id && uiterlijk() === "donker");
+    vak.classList.toggle("op-licht", !!id && uiterlijk() === "licht");
+    const zet = (analyse) => {
+      if ((this.werk_?.scherm?.logo || null) !== id) return;
+      const tekst = id ? logoWaarschuwing(analyse, uiterlijk()) : "";
+      melding.textContent = tekst;
+      melding.hidden = !tekst;
+    };
+    if (!id) return zet(null);
+    if (!this.logoAnalyses_.has(id)) {
+      const meting = bestandUrl(this.hass, id)
+        .then((url) => (url ? analyseerLogo(url) : null))
+        .then((analyse) => {
+          if (!analyse) this.logoAnalyses_.delete(id);
+          return analyse;
+        });
+      this.logoAnalyses_.set(id, meting);
+    }
+    this.logoAnalyses_.get(id).then(zet);
   }
 
   /** Foto's en logo's uit de blob-cache in de zojuist getekende blokken. */
@@ -1013,6 +1060,7 @@ export class InfoschermBeheerCard extends DacCard {
       } else {
         w[veld] = waarde;
       }
+      if (veld === "uiterlijk") this.logoVoorbeeld_();
     } else if (sectie === "installatie") {
       if (veld === "l_naam") {
         const l = w.verlichting?.[Number(i)];
@@ -1357,7 +1405,9 @@ export class InfoschermBeheerCard extends DacCard {
     this.meldingen_[blok] = { tekst: "Bezig met uploaden…" };
     this.teken_(blok, true);
     try {
-      const meta = await upload(this.hass, bestand);
+      // Een logo verliest eerst zijn doorzichtige rand (zie infoscherm-logo.js).
+      const { bestand: klaar, bijgesneden } = veld === "logo" ? await snijLogoBij(bestand) : { bestand, bijgesneden: false };
+      const meta = await upload(this.hass, klaar);
       const w = this.werk_[sectie];
       const houder = i === undefined ? w : w[i];
       const oud = houder[veld];
@@ -1365,8 +1415,10 @@ export class InfoschermBeheerCard extends DacCard {
       // Het oude bestand hangt nergens meer aan zodra dit is opgeslagen; nu al
       // vergeten in de cache is genoeg, de server ruimt het op bij opslaan.
       if (oud) this.oudeBestanden_ = [...(this.oudeBestanden_ ?? []), oud];
-      this.meldingen_[blok] = { tekst: `${meta.naam || "Bestand"} geüpload.` };
+      // Eerst markeren, dan de melding: markeer_ wist de melding van het blok,
+      // en tot 0.61.0 stond het andersom, zodat "geüpload" nooit te zien was.
       this.markeer_(sectie, blok);
+      this.meldingen_[blok] = { tekst: `${meta.naam || "Bestand"} geüpload.${bijgesneden ? " De lege rand eromheen is weggesneden." : ""}` };
     } catch (fout) {
       this.meldingen_[blok] = { tekst: fout?.message ?? "Uploaden lukte niet.", fout: true };
     }

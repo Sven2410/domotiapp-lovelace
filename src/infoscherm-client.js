@@ -14,6 +14,18 @@
  * haalt de kaart het bestand met het token van zijn eigen verbinding op en
  * zet het in een `blob:`-URL. Die verloopt nooit, en een bestand verandert
  * nooit meer nadat het is geüpload (een nieuw logo is een nieuw ID).
+ *
+ * HET TOKEN VERLOOPT NA EEN HALF UUR, EN DE PAGINA VERVERST HET NIET VANZELF
+ *
+ * Tot 0.61.0 las dit bestand `hass.auth.data.access_token` rechtstreeks. Dat
+ * token is een half uur geldig; de websocket blijft daarna gewoon open (die is
+ * bij het verbinden één keer ingelogd), maar een `fetch` met het oude token
+ * krijgt een 401. Op een iPad die dagen dezelfde pagina toont was elk logo of
+ * elke foto die na het eerste half uur werd geüpload dus onzichtbaar, en een
+ * upload uit een beheerpagina die sinds de ochtend openstond mislukte. Gemeld
+ * door een beheersessie op 12 oktober 2026; zie valkuil 15 voor dezelfde 401
+ * bij het herladen van de config entry. `haal` gaat daarom via
+ * `hass.fetchWithAuth`, die het token eerst ververst als het verlopen is.
  */
 
 import { nogNietGereed } from "./herkansing.js";
@@ -21,7 +33,21 @@ import { nogNietGereed } from "./herkansing.js";
 const PREFIX = "domotiapp_lovelace/infoscherm";
 const URL = "/api/domotiapp_lovelace/infoscherm";
 
-const token = (hass) => hass?.auth?.data?.access_token ?? hass?.auth?.accessToken ?? "";
+/** Zo lang wordt een bestand dat niet opgehaald kon worden met rust gelaten. */
+export const RUST_NA_FOUT = 30_000;
+
+/**
+ * Een verzoek met een GELDIG token. `hass.fetchWithAuth` ververst het token
+ * zelf als het verlopen is; bestaat die niet (een nagebootste `hass`), dan
+ * doen we hetzelfde met de hand.
+ */
+export async function haal(hass, pad, init = {}) {
+  if (typeof hass?.fetchWithAuth === "function") return hass.fetchWithAuth(pad, init);
+  const auth = hass?.auth;
+  if (auth?.expired && typeof auth.refreshAccessToken === "function") await auth.refreshAccessToken();
+  const token = auth?.data?.access_token ?? auth?.accessToken ?? "";
+  return fetch(pad, { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` } });
+}
 
 const roep = (hass, type, extra = {}) => hass.connection.sendMessagePromise({ type: `${PREFIX}/${type}`, ...extra });
 
@@ -59,11 +85,7 @@ export { nogNietGereed };
 export async function upload(hass, bestand) {
   const body = new FormData();
   body.append("bestand", bestand, bestand.name);
-  const antwoord = await fetch(`${URL}/upload`, {
-    method: "POST",
-    body,
-    headers: { Authorization: `Bearer ${token(hass)}` },
-  });
+  const antwoord = await haal(hass, `${URL}/upload`, { method: "POST", body });
   let gegevens = null;
   try {
     gegevens = await antwoord.json();
@@ -79,6 +101,7 @@ export async function upload(hass, bestand) {
 /* ------------------------------------------------------- de blob-cache */
 
 const blobs = new Map();
+const mislukt = new Map();
 
 /**
  * De `blob:`-URL van een bestand, uit de cache of vers opgehaald.
@@ -86,22 +109,28 @@ const blobs = new Map();
  * Meerdere kaarten op één pagina delen de cache, en een tweede vraag om
  * hetzelfde ID terwijl de eerste nog loopt krijgt dezelfde belofte.
  *
+ * Mislukt het, dan wordt dat niet blijvend onthouden: een kaart mag het later
+ * opnieuw vragen. Maar niet meteen: het scherm tekent bij elke wijziging in
+ * Home Assistant, en een bestand dat weg is zou anders bij elke lamp die
+ * omgaat opnieuw opgevraagd worden. Binnen `RUST_NA_FOUT` is het antwoord
+ * meteen null.
+ *
  * @returns {Promise<string|null>} null als het bestand er niet (meer) is
  */
-export function bestandUrl(hass, id) {
+export function bestandUrl(hass, id, nu = Date.now()) {
   if (!id) return Promise.resolve(null);
   if (blobs.has(id)) return blobs.get(id);
+  if (nu - (mislukt.get(id) ?? -Infinity) < RUST_NA_FOUT) return Promise.resolve(null);
   const belofte = (async () => {
     try {
-      const antwoord = await fetch(`${URL}/bestand/${id}`, {
-        headers: { Authorization: `Bearer ${token(hass)}` },
-      });
+      const antwoord = await haal(hass, `${URL}/bestand/${id}`);
       if (!antwoord.ok) throw new Error(String(antwoord.status));
-      return URL_createObjectURL(await antwoord.blob());
+      const url = URL_createObjectURL(await antwoord.blob());
+      mislukt.delete(id);
+      return url;
     } catch {
-      // Niet blijvend onthouden: een 401 na een verlopen token hoort de
-      // volgende keer gewoon opnieuw geprobeerd te worden.
       blobs.delete(id);
+      mislukt.set(id, nu);
       return null;
     }
   })();
@@ -116,5 +145,6 @@ const URL_createObjectURL = (blob) => globalThis.URL.createObjectURL(blob);
 export function vergeetBestand(id) {
   const belofte = blobs.get(id);
   blobs.delete(id);
+  mislukt.delete(id);
   belofte?.then((url) => url && globalThis.URL.revokeObjectURL(url));
 }
