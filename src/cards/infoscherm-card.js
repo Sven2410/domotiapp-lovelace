@@ -114,7 +114,7 @@ import {
   verdunReeks,
   vloeiendPad,
 } from "./infoscherm-logica.js";
-import { SCHERM_ACHTERGROND } from "./infoscherm-logo.js";
+import { SCHERM } from "./infoscherm-logo.js";
 
 const TAG = "domotiapp-infoscherm-card";
 
@@ -171,8 +171,8 @@ const css = /* css */ `
   /* Een wachtkamer is overdag licht; dan een lichte uitvoering. Alleen de
      ladders veranderen, de vorm niet. */
   .scherm.licht {
-    --dac-bg: ${SCHERM_ACHTERGROND.licht}; --dac-bg-raise: #ffffff;
-    --dac-surface: rgba(20, 20, 10, 0.045); --dac-surface-hi: rgba(20, 20, 10, 0.08);
+    --dac-bg: ${SCHERM.licht.achtergrond}; --dac-bg-raise: #ffffff;
+    --dac-surface: ${SCHERM.licht.vlak}; --dac-surface-hi: rgba(20, 20, 10, 0.08);
     --dac-border: rgba(20, 20, 10, 0.10); --dac-border-hi: rgba(20, 20, 10, 0.2);
     --dac-ink: #1a1a17; --dac-ink-2: rgba(26, 26, 23, 0.66); --dac-ink-3: rgba(26, 26, 23, 0.42);
     --dac-shadow: none;
@@ -255,8 +255,13 @@ const css = /* css */ `
   .blok > .bk { --s: var(--ss); }
   /* Het welkomblok meet ook zijn hoogte (container-type: size), zodat een
      laag blok logo, klok en tekst naast elkaar zet en een hoog blok onder
-     elkaar. Een rasterblok heeft zijn maat van het raster, dus dat mag. */
-  .blok.welkom { background: none; border: none; box-shadow: none; justify-content: center; container-type: size; }
+     elkaar. Een rasterblok heeft zijn maat van het raster, dus dat mag.
+     Sinds 0.61.1 met hetzelfde vlak en dezelfde rand als de andere blokken:
+     zonder zweefde het los tussen de kaarten. Zijn woorden op 12 oktober
+     2026: "wel wil ik zo'n omtrek om de welkom kaart want nu past het niet
+     tussen de kaarten", en op de vraag of dat overal moest: "ja alles met
+     kader". */
+  .blok.welkom { justify-content: center; container-type: size; }
   .bk {
     display: flex; align-items: center; gap: calc(10px * var(--s)); flex: 0 0 auto; width: 100%;
     padding: calc(11px * var(--s)) calc(16px * var(--s)); text-align: left; font: inherit; color: inherit;
@@ -310,7 +315,7 @@ const css = /* css */ `
   .blok.klein .bericht .foto { display: none; }
   /* Alles links uitgelijnd: het logo hoort linksboven, ook in een hoog blok
      (het stond in het midden omdat het vak de hele breedte kreeg). */
-  .blok.welkom .bi { padding: calc(4px * var(--s)) calc(6px * var(--s)); justify-content: center; align-items: flex-start; gap: calc(8px * var(--s)); }
+  .blok.welkom .bi { padding: calc(12px * var(--s)) calc(16px * var(--s)); justify-content: center; align-items: flex-start; gap: calc(8px * var(--s)); }
   .leeg { color: var(--dac-ink-3); font-size: calc(16px * var(--s)); padding: calc(10px * var(--s)) 0; }
 
   /* welkom */
