@@ -937,12 +937,11 @@ export class InfoschermBeheerCard extends DacCard {
       ${this.schakel_("aanwezig_teller", s.aanwezig_teller !== false, { label: "Teller bij Aanwezig (x van y)", s: "scherm" })}
       ${this.schakel_("weer_animatie", s.weer_animatie !== false, { label: "Bewegende weericonen", s: "scherm" })}
       <div class="veld"><label>Het blok Welkom</label>
-        <div class="hulp">Wat er in het welkomblok op het scherm staat. Alleen het logo? Zet de tekst leeg en de openingsregel uit.</div>
+        <div class="hulp">Wat er in het welkomblok op het scherm staat, naast de klok. Alleen het logo? Zet de tekst leeg. De openingstijden staan in hun eigen blok.</div>
         <div class="rij twee" style="margin-top: 6px">
           ${this.veld_("Tekst (leeg = geen tekst)", "welkom_tekst", s.welkom_tekst ?? "Welkom", { s: "scherm" })}
           <div class="veld" style="gap: 0">
             ${this.schakel_("logo_verbergen", s.logo_verbergen === true, { label: "Logo op het scherm verbergen", s: "scherm" })}
-            ${this.schakel_("welkom_onder", s.welkom_onder !== false, { label: "Regel met de openingstijd van vandaag", s: "scherm" })}
           </div>
         </div>
       </div>

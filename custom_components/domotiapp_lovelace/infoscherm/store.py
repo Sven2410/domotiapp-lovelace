@@ -455,6 +455,9 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
         # Ronde 4: het logo staat standaard in het welkomblok (er is geen kop
         # meer); de oude sleutel welkom_logo (standaard False) vervalt.
         "logo_verbergen": bool(rauw.get("logo_verbergen", False)),
+        # Sinds 0.62.1 niet meer gebruikt: de openingstijd staat alleen nog in
+        # het blok Openingstijden. Blijft hier, zodat een opgeslagen scherm met
+        # deze sleutel gewoon geldig blijft.
         "welkom_onder": bool(rauw.get("welkom_onder", True)),
     }
 

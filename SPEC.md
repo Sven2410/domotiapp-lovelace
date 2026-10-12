@@ -2526,8 +2526,8 @@ uitzonderingen; niets anders), personen, mededelingen (tekst, `van` en `tot`
 als datum of datum-met-tijd), verjaardagen (naam, geboortedatum, leeftijd
 tonen), `scherm` (logo, accent, uiterlijk, vorm van de foto's, terugvaltijd,
 weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
-mededeling, en wat er in het welkomblok staat: tekst, logo verbergen,
-openingsregel),
+mededeling, en wat er in het welkomblok staat: tekst en logo verbergen;
+`welkom_onder` wordt sinds 0.62.1 niet meer gebruikt),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
 receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
@@ -2626,9 +2626,12 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   afvalkaart, en om dezelfde reden. Achter de kop zit een pagina met alles en
   de datum voluit.
 - Er is geen kop boven het raster (ronde 4): het welkomblok draagt het logo
-  (linksboven, tenzij verborgen), de klok met de datum, en wat de receptie
-  kiest: een tekst en de regel met de openingstijd van vandaag. Laag of breed
-  staat dat naast elkaar, hoog onder elkaar.
+  (linksboven, tenzij verborgen), de klok met de datum, en een tekst die de
+  receptie kiest. Laag of breed staat dat naast elkaar, hoog onder elkaar. De
+  openingstijden staan ALLEEN in het blok Openingstijden; de regel met de
+  openingstijd van vandaag in het welkomblok is er sinds 0.62.1 uit, op
+  verzoek van de eigenaar (12 oktober 2026), met zijn akkoord op deze
+  SPEC-wijziging.
 - De mededelingen zijn een reeks: één tegelijk, met een teller ("2 van 3"),
   die na een instelbare tijd (standaard 10 s) naar de volgende schuift. Een
   veeg op het scherm schuift zelf en zet de klok opnieuw; met een muis is de

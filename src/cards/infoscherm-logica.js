@@ -388,21 +388,6 @@ export function relatieveTijd(iso, nu) {
 export const omDeBeurt = (lijst, tel) =>
   lijst?.length ? lijst[((tel % lijst.length) + lijst.length) % lijst.length] : "";
 
-/**
- * De uitleg onder de klok in de nachtstand.
- *
- * "Gesloten · morgen open om 08:00", "Gesloten · Studiedag", of alleen
- * "Gesloten" als er de komende twee weken niets open is.
- */
-export function geslotenRegel(praktijk, nu) {
-  const vandaag = openingVandaag(praktijk, nu);
-  const delen = ["Gesloten"];
-  if (vandaag.reden) delen.push(vandaag.reden);
-  const volgende = volgendeOpening(praktijk, nu);
-  if (volgende) delen.push(`${volgende.dag} open om ${volgende.tijd}`);
-  return delen.join(" · ");
-}
-
 /* ------------------------------------------------------------ het raster */
 
 /**
