@@ -93,9 +93,7 @@ import {
   energieReeks,
   energieSamenvatting,
   formatEnergie,
-  geslotenRegel,
   groepeerOpFunctie,
-  heeftOpeningstijden,
   kolomVolgorde,
   openingKop,
   openingsGroepen,
@@ -107,7 +105,6 @@ import {
   lijnPad,
   mededelingPeriode,
   nieuwsLijst,
-  openingVandaag,
   openingsRegels,
   paginas,
   pasLijst,
@@ -332,7 +329,6 @@ const css = /* css */ `
 
   /* welkom */
   .welkomtekst { font-size: calc(30px * var(--s)); font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
-  .welkom-onder { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); }
   .blok.welkom .logo { height: calc(52px * var(--s)); max-width: 100%; }
   .blok.welkom .logo:not(.beeld) { width: calc(52px * var(--s)); }
   .blok.welkom .w-tekstvak { display: flex; flex-direction: column; gap: calc(3px * var(--s)); min-width: 0; }
@@ -2061,18 +2057,14 @@ export class InfoschermCard extends DacCard {
       case "welkom": {
         // Het welkomblok draagt sinds ronde 4 ook de klok en de datum; er is
         // geen kop meer boven het raster. Wat er verder in staat kiest de
-        // receptie: het logo, een tekst, de regel met de openingstijd.
-        const p = this.stand_?.praktijk ?? {};
+        // receptie: het logo en een tekst. De regel met de openingstijd van
+        // vandaag is er sinds 0.62.1 uit, op zijn woord van 12 oktober 2026:
+        // "in het welkoms blok niet de openeingstijd laten zien dat moet puur
+        // in openingstijden blok".
         const s = this.stand_?.scherm ?? {};
-        const nu = new Date();
-        let onder = "";
-        if (s.welkom_onder !== false && heeftOpeningstijden(p)) {
-          const opening = openingVandaag(p, nu);
-          onder = opening.open ? `Vandaag geopend tot ${opening.tot}` : geslotenRegel(p, nu);
-        }
         const tekst = s.welkom_tekst ?? "Welkom";
         const logo = s.logo_verbergen !== true && s.logo ? `<div class="logo" data-logo="${escapeHtml(s.logo)}"></div>` : "";
-        const regels = `${tekst ? `<div class="welkomtekst">${escapeHtml(tekst)}</div>` : ""}${onder ? `<div class="welkom-onder">${escapeHtml(onder)}</div>` : ""}`;
+        const regels = tekst ? `<div class="welkomtekst">${escapeHtml(tekst)}</div>` : "";
         // De tijd zelf staat NIET in deze html: die schrijft paintKlok_ elke
         // minuut in de bestaande elementen, zodat het blok (en het logo erin)
         // niet elke minuut opnieuw getekend wordt.

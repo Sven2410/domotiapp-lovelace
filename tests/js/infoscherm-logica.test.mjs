@@ -19,7 +19,6 @@ import {
   datumLang,
   formatteerTijdvakken,
   geldigNu,
-  geslotenRegel,
   groepeerOpFunctie,
   heeftOpeningstijden,
   initialen,
@@ -200,11 +199,6 @@ describe("openingstijden", () => {
     assert.equal(volgendeOpening({ openingstijden: {} }, NU), null);
   });
 
-  it("geslotenRegel", () => {
-    assert.equal(geslotenRegel(PRAKTIJK, new Date(2026, 8, 9, 21, 0)), "Gesloten · morgen open om 08:00");
-    assert.equal(geslotenRegel(PRAKTIJK, new Date(2026, 8, 16, 10, 0)), "Gesloten · Studiedag · morgen open om 08:00");
-    assert.equal(geslotenRegel({ openingstijden: {} }, NU), "Gesloten");
-  });
 
   it("openingsRegels: zeven regels, maandag eerst, vandaag gemarkeerd met de uitzondering", () => {
     const regels = openingsRegels(PRAKTIJK, new Date(2026, 8, 16, 10, 0));
