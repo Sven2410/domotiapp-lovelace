@@ -1604,6 +1604,20 @@ die daar niet staan:
    - **Push wat af is meteen**, ook als de PR nog niet klaar is. Wat op GitHub
      staat was in tien minuten terug.
 
+69. **Een `<img>` met `height: 100%` in een GRID-vak wordt zo hoog als zijn
+   eigen verhouding wil, niet als het vak.** De rij van zo'n vak is `auto`, en
+   tijdens het bepalen van die rij telt de 100% als `auto`. Het logo van het
+   infoscherm stond zo: een vak van 502 bij 60, een rij van 221 hoog, en het
+   `overflow: hidden` liet alleen de bovenste 27% zien. Bij een klant begon de
+   tekening pas op 31%, en het logo was er niet -- terwijl het vak wél ruimte
+   innam (de klok zakte 35 px). Gemeten op 12 oktober 2026. De beheersessie
+   hield het eerst voor een contrastprobleem (zwarte letters op donker), en
+   pas toen hij het scherm op licht zette en nog steeds niets zag, kwam de
+   CSS boven. In een FLEXvak lost de 100% wel op tegen de vaste hoogte; zie
+   `.logo` in `infoscherm-card.js`. Een avatar met hetzelfde patroon gaat net
+   goed: een liggende foto wordt door de rij opgerekt, een staande loopt eruit
+   en wordt bovenaan uitgesneden.
+
 ---
 
 ## Projectstand

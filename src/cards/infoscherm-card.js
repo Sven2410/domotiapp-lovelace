@@ -114,6 +114,7 @@ import {
   verdunReeks,
   vloeiendPad,
 } from "./infoscherm-logica.js";
+import { SCHERM_ACHTERGROND } from "./infoscherm-logo.js";
 
 const TAG = "domotiapp-infoscherm-card";
 
@@ -170,7 +171,7 @@ const css = /* css */ `
   /* Een wachtkamer is overdag licht; dan een lichte uitvoering. Alleen de
      ladders veranderen, de vorm niet. */
   .scherm.licht {
-    --dac-bg: #f3f1ec; --dac-bg-raise: #ffffff;
+    --dac-bg: ${SCHERM_ACHTERGROND.licht}; --dac-bg-raise: #ffffff;
     --dac-surface: rgba(20, 20, 10, 0.045); --dac-surface-hi: rgba(20, 20, 10, 0.08);
     --dac-border: rgba(20, 20, 10, 0.10); --dac-border-hi: rgba(20, 20, 10, 0.2);
     --dac-ink: #1a1a17; --dac-ink-2: rgba(26, 26, 23, 0.66); --dac-ink-3: rgba(26, 26, 23, 0.42);
@@ -189,9 +190,16 @@ const css = /* css */ `
   /* Het logo volgt zijn eigen verhouding: een lang logo wordt lang, een breed
      logo breed. Alleen zonder beeld (de eerste letter van de naam) is het een
      vierkant. Gemeld op 10 september 2026: "nu is het een vast vierkantje". */
+  /* FLEX en geen grid. In een grid is de rij auto, en dan telt de 100% van
+     de img tijdens het bepalen van die rij als auto: de img kreeg de hoogte
+     die bij de VOLLE breedte van het vak hoort. Gemeten op 12 oktober 2026
+     met een liggend logo van 1410 bij 620: een vak van 502 bij 60, een rij
+     van 221, en alleen de bovenste 27% in beeld -- en daar stond bij die klant
+     nog niets, want de tekening begon op 31%. In een flexvak lost de 100% op
+     tegen de vaste hoogte van het vak. */
   .logo {
     height: calc(64px * var(--s)); max-width: calc(260px * var(--s)); flex: 0 0 auto;
-    display: grid; place-items: center; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
     color: var(--tone); font-weight: 700; font-size: calc(22px * var(--s));
   }
   .logo:not(.beeld) {
@@ -200,7 +208,7 @@ const css = /* css */ `
     border: 1px solid color-mix(in srgb, var(--tone) 32%, transparent);
   }
   .logo:empty { display: none; }
-  .logo img { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
+  .logo img { height: 100%; width: auto; max-width: 100%; min-width: 0; object-fit: contain; display: block; }
   .w-klok { display: flex; flex-direction: column; flex: 0 0 auto; min-width: 0; }
   .klok { font-size: calc(48px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .datum { font-size: calc(15px * var(--s)); color: var(--dac-ink-2); margin-top: calc(3px * var(--s)); white-space: nowrap; }
@@ -1760,17 +1768,26 @@ export class InfoschermCard extends DacCard {
 
   /** Foto's van medewerkers en plaatjes bij het nieuws in een zojuist getekend vak. */
   fotos_(wortel) {
-    for (const el of wortel.querySelectorAll(".avatar[data-foto]:not([data-foto=''])")) {
-      bestandUrl(this.hass, el.dataset.foto).then((url) => {
-        if (url && el.isConnected) el.innerHTML = `<img alt="" src="${url}">`;
-      });
-    }
+    for (const el of wortel.querySelectorAll(".avatar[data-foto]:not([data-foto=''])")) this.avatar_(el);
     const lijst = this.nieuws_();
     for (const el of wortel.querySelectorAll(".bericht[data-id]")) {
       const item = lijst.find((n) => n.id === el.dataset.id);
       const foto = el.querySelector(".foto");
       if (item && foto && item.afbeelding) this.plaatje_(foto, item);
     }
+  }
+
+  /**
+   * Eén foto in een avatar. Lukt het niet, dan krijgt hij `data-opnieuw` en
+   * probeert `paint` het later nog eens, net als bij het logo (paintLogo_).
+   */
+  avatar_(el) {
+    delete el.dataset.opnieuw;
+    bestandUrl(this.hass, el.dataset.foto).then((url) => {
+      if (!el.isConnected) return;
+      if (url) el.innerHTML = `<img alt="" src="${url}">`;
+      else el.dataset.opnieuw = "";
+    });
   }
 
   /* ------------------------------------------------------------ paint */
@@ -1782,6 +1799,7 @@ export class InfoschermCard extends DacCard {
     this.paintPaginas_();
     this.paintPagina_(this.pagina_);
     this.paintMerkje_();
+    for (const el of this.$$(".avatar[data-opnieuw]")) this.avatar_(el);
   }
 
   paintUiterlijk_() {
@@ -1793,7 +1811,13 @@ export class InfoschermCard extends DacCard {
     scherm.classList.toggle("stil", s.weer_animatie === false);
   }
 
-  /** Het logo in een vak; zonder logo blijft het vak leeg en dus onzichtbaar. */
+  /**
+   * Het logo in een vak; zonder logo blijft het vak leeg en dus onzichtbaar.
+   *
+   * Lukte het ophalen niet, dan gaat de wens eraf, zodat een volgende `paint`
+   * het opnieuw probeert. Tot 0.61.0 bleef hij staan, en dan kwam het logo pas
+   * terug als de pagina herlaadde: op een iPad in kioskmodus nooit.
+   */
   paintLogo_(logo, logoId) {
     if (!logo || logo.dataset.wens === logoId) return;
     logo.dataset.wens = logoId;
@@ -1801,7 +1825,11 @@ export class InfoschermCard extends DacCard {
     logo.textContent = "";
     if (logoId) {
       bestandUrl(this.hass, logoId).then((url) => {
-        if (!url || logo.dataset.wens !== logoId) return;
+        if (logo.dataset.wens !== logoId) return;
+        if (!url) {
+          delete logo.dataset.wens;
+          return;
+        }
         logo.innerHTML = `<img alt="" src="${url}">`;
         logo.classList.add("beeld");
       });
@@ -1998,10 +2026,11 @@ export class InfoschermCard extends DacCard {
         // minuut in de bestaande elementen, zodat het blok (en het logo erin)
         // niet elke minuut opnieuw getekend wordt.
         const klokHtml = `<div class="w-klok"><div class="klok">--:--</div><div class="datum"></div></div>`;
-        if (this.vul_(bi, `${logo}${klokHtml}${regels ? `<div class="w-tekstvak">${regels}</div>` : ""}`, false)) {
-          const vak = bi.querySelector(".logo[data-logo]");
-          if (vak) this.paintLogo_(vak, vak.dataset.logo);
-        }
+        // Ook als de html gelijk bleef: een logo dat de vorige keer niet
+        // opgehaald kon worden krijgt zo een nieuwe kans (zie paintLogo_).
+        this.vul_(bi, `${logo}${klokHtml}${regels ? `<div class="w-tekstvak">${regels}</div>` : ""}`, false);
+        const vak = bi.querySelector(".logo[data-logo]");
+        if (vak) this.paintLogo_(vak, vak.dataset.logo);
         this.paintKlok_();
         break;
       }
