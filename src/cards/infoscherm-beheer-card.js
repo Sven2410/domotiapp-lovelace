@@ -235,7 +235,7 @@ const css = /* css */ `
   .item.verjaardag { grid-template-columns: minmax(0, 2fr) 170px auto auto; }
   .item.feed { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
   .item.uitz { grid-template-columns: 150px auto 110px 110px minmax(0, 1fr) auto; }
-  .item.lamp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .item.lamp { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
   .item.lamp .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .item.lamp .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item.lamp .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -320,7 +320,7 @@ const css = /* css */ `
   @container (max-width: 720px) {
     .item.persoon { grid-template-columns: 28px 44px minmax(0, 1fr) auto; }
     .item.persoon .veld:nth-child(4) { grid-column: 3 / -1; }
-    .item.mededeling, .item.verjaardag, .item.uitz, .item.lamp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .item.mededeling, .item.verjaardag, .item.uitz { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .item.feed { grid-template-columns: minmax(0, 1fr); }
     .ot-tabel { grid-template-columns: 70px auto 1fr 1fr; }
     .ot-tabel .vak2 { display: none; }
@@ -399,14 +399,17 @@ export class InfoschermBeheerCard extends DacCard {
       verlichting: c.lights,
       kiosk_gebruikers: c.kiosk_users,
     };
-    const sleutel = JSON.stringify(wens);
+    // De lampen als VERZAMELING: hun volgorde is van de receptie (sinds
+    // 0.62.0 versleepbaar), en een andere volgorde in de kaartconfig is dus
+    // geen verschil. De server houdt die volgorde ook aan.
+    const sleutel = JSON.stringify({ ...wens, verlichting: [...(c.lights ?? [])].sort() });
     const i = this.stand_.installatie ?? {};
     const nu = JSON.stringify({
       weer: i.weer ?? null,
       energie: i.energie ?? null,
       agendas: i.agendas ?? [],
       afval: i.afval ?? [],
-      verlichting: (i.verlichting ?? []).map((l) => l.entity),
+      verlichting: (i.verlichting ?? []).map((l) => l.entity).sort(),
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
     if (sleutel === nu || sleutel === this.laatstGesynct_) return;
@@ -876,7 +879,8 @@ export class InfoschermBeheerCard extends DacCard {
     const rijen = lampen
       .map((l, i) => {
         const a = this.hass?.states?.[l.entity]?.attributes ?? {};
-        return `<div class="item lamp" data-i="${i}">
+        return `<div class="item lamp" data-i="${i}" data-lijst="verlichting">
+          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
           <div class="ent"><b>${at(a.friendly_name ?? l.entity)}</b><span>${at(l.entity)}</span></div>
           ${this.veld_("Naam op het scherm", "l_naam", l.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
         </div>`;
@@ -884,7 +888,7 @@ export class InfoschermBeheerCard extends DacCard {
       .join("");
     return `
       ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: "Verlichting op het scherm tonen", s: "instellingen" })}
-      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart).</div>
+      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart); een nieuwe lamp komt achteraan.</div>
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
   }
 
@@ -1168,7 +1172,9 @@ export class InfoschermBeheerCard extends DacCard {
     if (!item || !lijst || !blok) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const sectie = this.blokInfo_(blok).secties[0];
-    const w = this.werk_[sectie];
+    // De meeste lijsten zijn de sectie zelf (personen); de lampen zijn een
+    // lijst IN de installatie, en dat zegt `data-lijst` op de rij.
+    const w = item.dataset.lijst ? this.werk_[sectie]?.[item.dataset.lijst] : this.werk_[sectie];
     const van = Number(item.dataset.i);
     if (!Array.isArray(w) || !w[van]) return;
 
@@ -1562,7 +1568,7 @@ const HELPERS = {
   weather: "Leeg = geen weer op het scherm.",
   energy:
     "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
-  lights: "De namen zoals ze op het scherm staan geeft de receptie hieronder in het blok Verlichting; daar staat ook de schakelaar om ze te tonen.",
+  lights: "De namen en de volgorde op het scherm stelt de receptie in het blok Verlichting in; daar staat ook de schakelaar om ze te tonen. Een nieuwe lamp komt achteraan.",
   kiosk_users:
     "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren. Alleen een beheerder ziet deze lijst.",
   show_instellingen:

@@ -96,6 +96,9 @@ import {
   geslotenRegel,
   groepeerOpFunctie,
   heeftOpeningstijden,
+  kolomVolgorde,
+  openingKop,
+  openingsGroepen,
   isTellerstand,
   isoDatumTijd,
   klok,
@@ -293,10 +296,18 @@ const css = /* css */ `
      4 verlichtingen zoals je ziet." */
   .blok.klein .bk { padding: calc(6px * var(--s)) calc(14px * var(--s)); }
   .blok.klein .bi { padding: calc(6px * var(--s)) calc(12px * var(--s)); gap: calc(6px * var(--s)); }
-  .blok.dicht .bi { gap: calc(6px * var(--s)); }
-  .blok.dicht .tegels, .blok.dicht .lampen { gap: calc(6px * var(--s)); }
-  .blok.klein .persoon, .blok.klein .lamp, .blok.dicht .persoon, .blok.dicht .lamp { min-height: 0; padding: calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
-  .blok.klein .avatar, .blok.klein .lamp .chip, .blok.dicht .avatar, .blok.dicht .lamp .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(13px * var(--s)); }
+  /* "Halfdicht" zit ertussen (sinds 0.62.0): dezelfde compacte tegels, maar
+     alleen de functie gaat eraf en Aanwezig/Afwezig blijft staan. Met twintig
+     medewerkers in een blok van 2×6 sprong het blok meteen naar dicht, en
+     stond er bij niemand meer of hij er was -- terwijl de tegels daarna over
+     de hoogte werden uitgesmeerd en er ruim plek was. Gemeld op 12 oktober
+     2026: "waarom wordt er niet aanwezig of afwezig laten zien?" */
+  .blok.dicht .bi, .blok.halfdicht .bi { gap: calc(6px * var(--s)); }
+  .blok.dicht .tegels, .blok.dicht .lampen, .blok.halfdicht .tegels, .blok.halfdicht .lampen { gap: calc(6px * var(--s)); }
+  .blok.klein .persoon, .blok.klein .lamp, .blok.dicht .persoon, .blok.dicht .lamp,
+  .blok.halfdicht .persoon, .blok.halfdicht .lamp { min-height: 0; padding: calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
+  .blok.klein .avatar, .blok.klein .lamp .chip, .blok.dicht .avatar, .blok.dicht .lamp .chip,
+  .blok.halfdicht .avatar, .blok.halfdicht .lamp .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(13px * var(--s)); }
   /* Eén rij hoog: vier lampen (of personen) in twee rijen van twee, dus
      een smalle regel per tegel. Gemeld op 10 september 2026 met een blok
      van 2×1 en "toon 4": "nu passen er maar 2 op." */
@@ -305,9 +316,10 @@ const css = /* css */ `
   .blok.klein .lampen .lamp .chip, .blok.klein .tegels .avatar { width: calc(22px * var(--s)); height: calc(22px * var(--s)); font-size: calc(14px * var(--s)); border-radius: calc(6px * var(--s)); }
   .blok.klein .tegels .avatar { font-size: calc(10px * var(--s)); }
   .blok.klein .lampen .l-naam, .blok.klein .tegels .p-naam { font-size: calc(13px * var(--s)); }
-  .blok.klein .lamp .chip, .blok.dicht .lamp .chip { font-size: calc(18px * var(--s)); }
+  .blok.klein .lamp .chip, .blok.dicht .lamp .chip, .blok.halfdicht .lamp .chip { font-size: calc(18px * var(--s)); }
   .blok.klein .p-functie, .blok.klein .p-status, .blok.klein .l-status,
-  .blok.dicht .p-functie, .blok.dicht .p-status, .blok.dicht .l-status { display: none; }
+  .blok.dicht .p-functie, .blok.dicht .p-status, .blok.dicht .l-status,
+  .blok.halfdicht .p-functie { display: none; }
   .blok.klein .chip { width: calc(34px * var(--s)); height: calc(34px * var(--s)); font-size: calc(18px * var(--s)); }
   .blok.klein.mededeling .m-tekst { font-size: calc(16px * var(--s)); }
   .blok.klein .afspraak, .blok.klein .vj { padding: calc(6px * var(--s)) calc(12px * var(--s)); }
@@ -387,6 +399,7 @@ const css = /* css */ `
      op het vlak en geen icoon: "gewoon de kleuren van de andere kaarten",
      10 september 2026. */
   .blok.mededeling .bi { padding: 0; gap: 0; }
+  .blok.mededeling .leeg { padding: calc(12px * var(--s)) calc(16px * var(--s)); }
   .m-baan {
     display: flex; flex: 1 1 auto; min-height: 0; overflow-x: auto; overflow-y: hidden;
     scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
@@ -1929,18 +1942,19 @@ export class InfoschermCard extends DacCard {
     for (const kind of kinderen) kind.hidden = false;
     let verborgen = 0;
     if (lijst.matches(".ot")) {
-      // De openingstijden zijn geen lijst van tegels. Passen de zeven regels
-      // net niet, dan alles iets kleiner (tot 72%); pas daarna valt er
-      // onderaan iets weg.
-      const laatste = kinderen[kinderen.length - 1];
-      const nodig = laatste ? laatste.getBoundingClientRect().bottom - lijst.getBoundingClientRect().top : 0;
-      const ruimte = onder() - lijst.getBoundingClientRect().top;
-      if (nodig > ruimte && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
-      for (const kind of kinderen) {
-        if (kind.getBoundingClientRect().bottom > onder() + 1) {
-          kind.hidden = true;
-          verborgen += 1;
-        }
+      // Eerst de week dag voor dag. Valt daar iets van weg, dan de dagen met
+      // dezelfde tijden samen (".ot.kort", als die er is), en pas als ook dat
+      // niet past valt er onderaan iets weg.
+      const kort = bi.querySelector(".ot.kort");
+      lijst.hidden = false;
+      if (kort) kort.hidden = true;
+      verborgen = this.pasOt_(el, lijst, onder);
+      if (verborgen && kort) {
+        el.style.removeProperty("--pas");
+        for (const kind of kinderen) kind.hidden = false;
+        lijst.hidden = true;
+        kort.hidden = false;
+        verborgen = this.pasOt_(el, kort, onder);
       }
     } else {
       // Een lijst van tegels: tellen hoeveel rijen er passen, een tikje
@@ -1962,15 +1976,25 @@ export class InfoschermCard extends DacCard {
         const beschikbaar = onder() - lijst.getBoundingClientRect().top;
         return pasLijst({ beschikbaar, hoogte, gap, aantal: kinderen.length, kolommen });
       };
-      el.classList.remove("dicht");
+      el.classList.remove("dicht", "halfdicht");
       let uit = meet();
-      // Passen de gewone tegels niet allemaal, dan de dichte -- maar alleen
-      // als er dan ook echt meer in gaan.
+      // Passen de gewone tegels niet allemaal, dan eerst halfdicht (de status
+      // blijft) en pas daarna dicht -- en alleen als er dan ook echt meer in
+      // gaan.
       if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen") && uit.tonen < kinderen.length) {
-        el.classList.add("dicht");
-        const dicht = meet();
-        if (dicht.tonen > uit.tonen) uit = dicht;
-        else el.classList.remove("dicht");
+        let vorm = "";
+        for (const probeer of ["halfdicht", "dicht"]) {
+          if (uit.tonen >= kinderen.length) break;
+          el.classList.remove("dicht", "halfdicht");
+          el.classList.add(probeer);
+          const m = meet();
+          if (m.tonen > uit.tonen) {
+            uit = m;
+            vorm = probeer;
+          }
+        }
+        el.classList.remove("dicht", "halfdicht");
+        if (vorm) el.classList.add(vorm);
       }
       lijst.style.flex = "";
       if (uit.pas < 1) el.style.setProperty("--pas", String(uit.pas));
@@ -1985,6 +2009,28 @@ export class InfoschermCard extends DacCard {
     if (!sub) return;
     const basis = sub.dataset.basis ?? "";
     this.text(sub, meer > 0 ? `${basis ? `${basis} · ` : ""}nog ${meer}` : basis);
+  }
+
+  /**
+   * De openingstijden zijn geen lijst van tegels. Passen de regels net niet,
+   * dan alles iets kleiner (tot 72%); pas daarna valt er onderaan iets weg.
+   * Geeft terug hoeveel regels er weg zijn gevallen.
+   */
+  pasOt_(el, ot, onder) {
+    const kinderen = [...ot.children];
+    for (const kind of kinderen) kind.hidden = false;
+    const laatste = kinderen[kinderen.length - 1];
+    const nodig = laatste ? laatste.getBoundingClientRect().bottom - ot.getBoundingClientRect().top : 0;
+    const ruimte = onder() - ot.getBoundingClientRect().top;
+    if (nodig > ruimte && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
+    let weg = 0;
+    for (const kind of kinderen) {
+      if (kind.getBoundingClientRect().bottom > onder() + 1) {
+        kind.hidden = true;
+        weg += 1;
+      }
+    }
+    return weg;
   }
 
   htmlKop_(soort) {
@@ -2049,6 +2095,11 @@ export class InfoschermCard extends DacCard {
       }
       case "mededeling": {
         const lijst = actieveMededelingen(this.stand_?.mededelingen, isoDatumTijd(new Date()));
+        if (!lijst.length) {
+          clearInterval(this.mTimer_);
+          zet(`<div class="leeg">Er zijn op dit moment geen mededelingen.</div>`, "");
+          break;
+        }
         const slides = lijst.map((m) => `<div class="m-slide"><div class="m-tekst">${escapeHtml(m.tekst)}</div></div>`).join("");
         const stippen = lijst.length > 1 ? `<div class="m-stippen">${lijst.map((_, k) => `<span class="${k === 0 ? "nu" : ""}"></span>`).join("")}</div>` : "";
         if (this.vul_(bi, `<div class="m-baan">${slides}</div>${stippen}`, false)) {
@@ -2069,7 +2120,6 @@ export class InfoschermCard extends DacCard {
         const p = this.stand_?.praktijk ?? {};
         const nu = new Date();
         const regels = openingsRegels(p, nu);
-        const opening = openingVandaag(p, nu);
         // Twee kolommen als het blok breed is en laag: maandag t/m donderdag
         // links, de rest rechts. Het raster vult van links naar rechts, dus
         // herordenen.
@@ -2078,18 +2128,22 @@ export class InfoschermCard extends DacCard {
         // (gemeten op 10 september 2026 op 1194 px). Laag en smal: één kolom,
         // kleiner, en wat niet past valt onderaan weg.
         const twee = blok.w >= 3;
-        const volgorde = twee ? [0, 4, 1, 5, 2, 6, 3].map((i) => regels[i]) : regels;
         // In twee kolommen is er geen plek voor spaties rond de streepjes.
         const compact = (t) => (twee ? t.replace(/ – /g, "–").replace(/, /g, " · ") : t);
-        const html = `<div class="ot ${twee ? "twee" : ""} ${blok.h <= 2 ? "compact" : ""}">${volgorde
-          .map(
-            (r) => `<div class="${r.vandaag ? "vandaag" : ""} ${r.tekst === "gesloten" ? "dicht" : ""}"><span>${escapeHtml(twee ? r.naam.slice(0, 2) : r.naam)}${
-              r.reden ? ` · ${escapeHtml(r.reden)}` : ""
-            }</span><span class="num">${escapeHtml(compact(r.tekst))}</span></div>`
-          )
-          .join("")}</div>`;
-        const nuTekst = opening.open ? `Nu geopend, tot ${opening.tot}` : opening.straks ? `Nu gesloten, om ${opening.straks} weer open` : "Vandaag gesloten";
-        zet(html, nuTekst);
+        const regel = (r, naam) =>
+          `<div class="${r.vandaag ? "vandaag" : ""} ${r.tekst === "gesloten" ? "dicht" : ""}"><span>${escapeHtml(naam)}${
+            r.reden ? ` · ${escapeHtml(r.reden)}` : ""
+          }</span><span class="num">${escapeHtml(compact(r.tekst))}</span></div>`;
+        const lijst = (rijen, naam, klasse) =>
+          `<div class="ot ${klasse} ${twee ? "twee" : ""} ${blok.h <= 2 ? "compact" : ""}">${(twee ? kolomVolgorde(rijen) : rijen)
+            .map((r) => regel(r, naam(r)))
+            .join("")}</div>`;
+        // De week dag voor dag, en daarnaast dezelfde week met de dagen die
+        // gelijk zijn samen. pasBij_ kiest: de dagen als ze passen, anders de
+        // groepen. Zo staat elke dag erop, ook in een blok van één rij.
+        const groepen = openingsGroepen(regels);
+        const kort = groepen.length < regels.length ? lijst(groepen, (g) => (twee ? g.kort : g.naam), "kort") : "";
+        zet(lijst(regels, (r) => (twee ? r.dag : r.naam), "lang") + kort, openingKop(p, nu));
         break;
       }
       case "verjaardagen": {

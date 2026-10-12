@@ -226,6 +226,70 @@ export function openingsRegels(praktijk, nu) {
   });
 }
 
+/**
+ * Dezelfde regels, maar opeenvolgende dagen met dezelfde tijden samen:
+ * "maandag t/m vrijdag 09:00 – 17:00", "zaterdag en zondag gesloten". Voor
+ * een blok waar de week dag voor dag niet in past. Gevraagd op 12 oktober
+ * 2026, bij een blok van één rij dat drie dagen toonde en "nog 4": *"ik wil
+ * alles op de kaart kunnen zien is dat mogelijk? Dus elke dag"*.
+ *
+ * Een dag met een uitzondering (een reden) blijft apart staan, want de
+ * reden hoort bij die ene dag. `kort` is de naam voor twee smalle kolommen.
+ */
+export function openingsGroepen(regels) {
+  const groepen = [];
+  for (const r of regels) {
+    const vorige = groepen[groepen.length - 1];
+    if (vorige && !vorige.reden && !r.reden && vorige.tekst === r.tekst) {
+      vorige.dagen.push(r);
+      vorige.vandaag ||= r.vandaag;
+    } else {
+      groepen.push({ dagen: [r], tekst: r.tekst, reden: r.reden, vandaag: r.vandaag });
+    }
+  }
+  return groepen.map(({ dagen, tekst, reden, vandaag }) => {
+    const eerste = dagen[0];
+    const laatste = dagen[dagen.length - 1];
+    const tussen = dagen.length === 2 ? " en " : " t/m ";
+    return {
+      naam: dagen.length === 1 ? eerste.naam : `${eerste.naam}${tussen}${laatste.naam}`,
+      kort: dagen.length === 1 ? eerste.dag : `${eerste.dag}${dagen.length === 2 ? ", " : "–"}${laatste.dag}`,
+      tekst,
+      reden,
+      vandaag,
+    };
+  });
+}
+
+/**
+ * De volgorde voor twee kolommen die van links naar rechts vullen: eerst de
+ * linker kolom van boven naar onder, dan de rechter. Zeven dagen worden
+ * ma, vr, di, za, wo, zo, do.
+ */
+export function kolomVolgorde(lijst) {
+  const rijen = Math.ceil(lijst.length / 2);
+  const uit = [];
+  for (let i = 0; i < rijen; i += 1) {
+    uit.push(lijst[i]);
+    if (i + rijen < lijst.length) uit.push(lijst[i + rijen]);
+  }
+  return uit;
+}
+
+/**
+ * De tekst naast de kop van het blok. Na sluitingstijd op een dag dat er
+ * open was is het "Nu gesloten", niet "Vandaag gesloten": dat stond er op
+ * 12 oktober 2026 om 19:00 op een maandag van 09:00 tot 17:00.
+ */
+export function openingKop(praktijk, nu) {
+  const opening = openingVandaag(praktijk, nu);
+  if (opening.open) return `Nu geopend, tot ${opening.tot}`;
+  if (opening.straks) return `Nu gesloten, om ${opening.straks} weer open`;
+  if (!opening.tijden.length) return "Vandaag gesloten";
+  const volgende = volgendeOpening(praktijk, nu);
+  return volgende ? `Nu gesloten, ${volgende.dag} om ${volgende.tijd} weer open` : "Nu gesloten";
+}
+
 /** Heeft de praktijk überhaupt openingstijden ingevuld? Anders geen blok. */
 export const heeftOpeningstijden = (praktijk) =>
   DAGEN.some((dag) => (praktijk?.openingstijden?.[dag] ?? []).length > 0);
@@ -505,7 +569,11 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
     case "weer":
       return s.installatie?.weer ? null : "Geen weerentiteit gekozen (kaartinstellingen van het infoscherm)";
     case "mededeling":
-      return actieveMededelingen(s.mededelingen, vandaag).length ? null : "Geen mededeling die nu geldt";
+      // Altijd op het scherm, ook zonder mededeling: dan zegt het blok dat.
+      // Tot 0.62.0 verdween het, en dan bleef er een gat in het raster. Zijn
+      // woorden op 12 oktober 2026: "als ik geen mededeling heb dan moet hij
+      // dat zo zeggen nu is het vak dan helemaal leeg".
+      return null;
     case "verjaardagen":
       return (s.verjaardagen?.length ?? 0) > 0 ? null : "Nog geen verjaardagen";
     case "openingstijden":
