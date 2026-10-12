@@ -28,7 +28,7 @@
  * `hass.fetchWithAuth`, die het token eerst ververst als het verlopen is.
  */
 
-import { Herkansing, nogNietGereed } from "./herkansing.js";
+import { BlijvendAbonnement, nogNietGereed } from "./herkansing.js";
 
 const PREFIX = "domotiapp_lovelace/infoscherm";
 const URL = "/api/domotiapp_lovelace/infoscherm";
@@ -56,93 +56,12 @@ export const haalStand = (hass) => roep(hass, "get");
 
 /**
  * Blijf op de hoogte: `cb({soort, ...})` krijgt `stand` of `feeds`. Een
- * abonnement dat een herstart van Home Assistant overleeft.
- *
- * WAAROM DIT EEN KLASSE IS
- *
- * Tot 0.62.2 riep een kaart bij een herverbinding gewoon opnieuw
- * `subscribeMessage` aan, en liet het daarbij. Maar vlak na een herstart kent
- * Home Assistant onze commando's nog niet (valkuil 28): het abonneren mislukte
- * met `unknown_command`, stil, en niemand probeerde het opnieuw. Gemeten op
- * 12 oktober 2026: na een herstart zei de server "3 van 8" aanwezig en het
- * scherm na anderhalve minuut nog "2 van 8". Op een iPad die 24/7 aan de muur
- * hangt kwam er daarna geen nieuws, geen mededeling en geen aanmelding meer
- * binnen, tot iemand de pagina herlaadde. De vraag die het boven bracht:
- * *"Blijven de artikelen zo staan tot je handmatig ververst? Want dat moet
- * niet het geval zijn."*
- *
- * Dus:
- * - mislukt het omdat Home Assistant nog opstart (`nogNietGereed`), dan
- *   opnieuw, met de wachttijden van `Herkansing`, en dat houdt niet op;
- * - `resubscribe: false`: de bibliotheek van Home Assistant abonneert NIET
- *   zelf opnieuw bij een herverbinding. Dat doet de kaart (`start` vanuit de
- *   hass-setter), en zo is er nooit meer dan één abonnement;
- * - een nieuwe `start` zegt het vorige abonnement eerst op.
- *
- * Toets NIET op `isConnected` van de kaart (valkuil 42): die is false terwijl
- * `wire()` draait.
+ * abonnement dat een herstart van Home Assistant overleeft; zie
+ * `BlijvendAbonnement` in herkansing.js voor het waarom.
  */
-export class Abonnement {
-  /**
-   * @param {Function} cb  krijgt elk bericht
-   * @param {object} [opties]  doorgegeven aan `Herkansing` (wachttijden, klok)
-   */
+export class Abonnement extends BlijvendAbonnement {
   constructor(cb, opties = {}) {
-    this.cb_ = cb;
-    this.hass_ = null;
-    this.opzeggen_ = null;
-    this.nr_ = 0;
-    this.herkansing_ = new Herkansing(() => this.start(this.hass_), opties);
-  }
-
-  /** (Opnieuw) abonneren met deze `hass`. Een vorig abonnement gaat eerst weg. */
-  async start(hass) {
-    this.hass_ = hass;
-    this.zegOp_();
-    const nr = ++this.nr_;
-    if (!hass?.connection?.subscribeMessage) return;
-    try {
-      const opzeggen = await hass.connection.subscribeMessage(
-        this.cb_,
-        { type: `${PREFIX}/subscribe` },
-        { resubscribe: false }
-      );
-      if (nr !== this.nr_) {
-        stil(opzeggen);
-        return;
-      }
-      this.opzeggen_ = opzeggen;
-      this.herkansing_.herstel();
-    } catch (fout) {
-      if (nr === this.nr_ && nogNietGereed(fout)) this.herkansing_.plan();
-    }
-  }
-
-  /** Opzeggen, en niet meer opnieuw proberen: de kaart gaat van het scherm. */
-  stop() {
-    this.nr_ += 1;
-    this.herkansing_.stop();
-    this.zegOp_();
-  }
-
-  /** Is er nu een abonnement? */
-  get actief() {
-    return this.opzeggen_ !== null;
-  }
-
-  zegOp_() {
-    const opzeggen = this.opzeggen_;
-    this.opzeggen_ = null;
-    if (opzeggen) stil(opzeggen);
-  }
-}
-
-/** Opzeggen mag mislukken: na een herverbinding bestaat het abonnement al niet meer. */
-function stil(opzeggen) {
-  try {
-    Promise.resolve(opzeggen()).catch(() => {});
-  } catch {
-    /* verbinding al weg */
+    super({ type: `${PREFIX}/subscribe` }, cb, opties);
   }
 }
 
