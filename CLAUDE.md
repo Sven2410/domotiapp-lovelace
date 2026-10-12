@@ -1618,6 +1618,25 @@ die daar niet staan:
    goed: een liggende foto wordt door de rij opgerekt, een staande loopt eruit
    en wordt bovenaan uitgesneden.
 
+70. **Een abonnement van een kaart overleeft een herstart van Home Assistant
+   niet vanzelf, en wie dat meet moet de kaart daarna OPNIEUW opzoeken.** Na
+   een herstart kent Home Assistant onze commando's even niet (valkuil 28).
+   Een `subscribeMessage` die op dat moment wordt aangevraagd mislukt stil,
+   en tot 0.62.2 probeerde niemand het opnieuw. Gemeten op 12 oktober 2026:
+   de server zei "3 van 8" aanwezig en het infoscherm bleef "2 van 8" tonen,
+   zonder herladen ook na anderhalve minuut. Voor een iPad die 24/7 aan de
+   muur hangt betekent dat: geen nieuws en geen mededelingen meer tot iemand
+   herlaadt. Gebruik daarom `BlijvendAbonnement` uit `herkansing.js`
+   (`resubscribe: false`, opnieuw proberen bij `nogNietGereed`, opnieuw
+   starten vanuit de hass-setter bij een herverbinding).
+
+   En bij het nameten: **Home Assistant bouwt de kaart na een herstart
+   opnieuw op**, in dezelfde pagina, als een NIEUW element. Een verwijzing
+   van vóór de herstart (`window.__kaart`) wijst daarna naar een losgekoppelde
+   kaart, en die werkt per definitie niet meer bij. De eerste meting van deze
+   fout keek precies daarnaar; pas met de kaart opnieuw opgezocht en de
+   oude bundel teruggezet was het een bewijs.
+
 ---
 
 ## Projectstand

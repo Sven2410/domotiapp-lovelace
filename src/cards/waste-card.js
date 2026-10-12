@@ -22,7 +22,8 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { dayCount, daysBetween, nameOf, parseDate, relativeDay, shortDate, stateOf } from "../ha.js";
 import { korteNamen } from "./afval-namen.js";
-import { eersteOphaaldag, heroWoorden } from "./afval-logica.js";
+import { buitenTekst, eersteOphaaldag, heroWoorden } from "./afval-logica.js";
+import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { opsomming } from "./meldingen-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 
@@ -219,6 +220,12 @@ class WasteCard extends DacCard {
 
     /* Today and tomorrow are the only two states that need to shout. */
     :host([urgency="today"]) .hero { animation: pulse 2.6s ease-in-out infinite; }
+    /* Staat hij buiten (iemand tikte in de melding op "Staat buiten"), dan
+       zegt de regel boven de namen dat, met wie het deed -- en hoeft het vlak
+       niet meer te knipperen: het is gedaan. Groen, want dat is hier een
+       status, geen identiteit. De naam staat zoals hij heet, niet in
+       hoofdletters (zie de vormregels). */
+    .hero .door { color: var(--dac-good); text-transform: none; letter-spacing: .01em; }
     @keyframes pulse {
       0%, 100% { border-color: color-mix(in srgb, var(--tone) 34%, transparent); }
       50%      { border-color: color-mix(in srgb, var(--tone) 72%, transparent); }
@@ -255,7 +262,31 @@ class WasteCard extends DacCard {
     return this.config.sensors.map((s) => s.entity);
   }
 
+  set hass(hass) {
+    const terug = (this.verbinding_ ??= new Verbindingswacht()).herverbonden(hass);
+    super.hass = hass;
+    if (terug && this.wired_) this.buitenAbo_?.start(hass);
+  }
+
+  get hass() {
+    return super.hass;
+  }
+
   wire() {
+    // Wie de bak buiten zette, van de server: dezelfde melding als op de
+    // meldingenkaart (`id`, standaard "afval"; met `melding:` in de YAML een
+    // andere). Overleeft een herstart van Home Assistant (zie herkansing.js).
+    this.buiten_ = null;
+    this.buitenAbo_ = new BlijvendAbonnement(
+      { type: "domotiapp_lovelace/meldingen/subscribe", melding: String(this.config.melding || "afval") },
+      (stand) => {
+        this.buiten_ = stand?.buiten ?? null;
+        if (this.hass) this.paint();
+      }
+    );
+    this.buitenAbo_.start(this.hass);
+    this.teardown_.push(() => this.buitenAbo_.stop());
+
     // Alleen de brede vorm groeit; de lijstvorm staat vast op zijn rijen.
     if (this.breed_()) this.teardown_.push(volgRaster(this.$(".card")));
 
@@ -391,7 +422,7 @@ class WasteCard extends DacCard {
         ${c.show_hero === false ? "" : `<div class="hero" hidden>
           <span class="bins"></span>
           <span class="what">
-            <span class="eyebrow"><span class="dag"></span><span class="bij"></span></span>
+            <span class="eyebrow"><span class="dag"></span><span class="bij"></span><span class="door" hidden></span></span>
             <span class="big"></span>
           </span>
           <span class="when"><span class="n tnum"></span><span class="eyebrow u"></span></span>
@@ -432,9 +463,10 @@ class WasteCard extends DacCard {
         // Eén bak: het vlak in zijn kleur. Meer bakken: het vlak neutraal en
         // elk icoon in zijn eigen kleur (zie de CSS bij .bins).
         hero.style.setProperty("--tone", eerst.length > 1 ? toneValue("neutral") : next.tone);
+        const buiten = buitenTekst(this.buiten_, next.date, (p) => nameOf(this.hass, p));
         this.setAttribute(
           "urgency",
-          next.days === 0 ? "today" : next.days === 1 ? "tomorrow" : "later"
+          buiten ? "buiten" : next.days === 0 ? "today" : next.days === 1 ? "tomorrow" : "later"
         );
 
         const bins = hero.querySelector(".bins");
@@ -448,7 +480,10 @@ class WasteCard extends DacCard {
         }
         const woorden = heroWoorden(next.days);
         this.text(hero.querySelector(".dag"), relativeDay(next.date));
-        this.text(hero.querySelector(".bij"), woorden.bij ? ` · ${woorden.bij}` : "");
+        this.text(hero.querySelector(".bij"), woorden.bij && !buiten ? ` · ${woorden.bij}` : "");
+        const door = hero.querySelector(".door");
+        this.text(door, buiten ? ` · ${buiten}` : "");
+        door.hidden = !buiten;
         this.text(hero.querySelector(".big"), opsomming(eerst.map((i) => i.label)));
         this.text(hero.querySelector(".n"), woorden.n);
         this.text(hero.querySelector(".u"), woorden.u);
@@ -507,13 +542,16 @@ class WasteCard extends DacCard {
   paintBreed_(items, eerst) {
     const vak = this.$(".breed");
     if (!vak) return;
-    const sig = items.map((i) => `${i.label}|${+i.date}|${i.days}|${i.reden ?? ""}`).join(",");
+    const buiten = eerst.length ? buitenTekst(this.buiten_, eerst[0].date, (p) => nameOf(this.hass, p)) : null;
+    const sig = `${items.map((i) => `${i.label}|${+i.date}|${i.days}|${i.reden ?? ""}`).join(",")}|${buiten ?? ""}`;
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
 
     vak.innerHTML = items
       .map((i) => {
-        const wanneer = i.reden
+        const wanneer = buiten && eerst.includes(i)
+          ? buiten
+          : i.reden
           ? REDEN[i.reden] ?? i.reden
           : i.days === 0
             ? "vandaag"

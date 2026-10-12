@@ -198,8 +198,17 @@ class LaadpaalCard extends DacCard {
     .velden { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .veld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .veld .kopje { font-size: 11px; color: var(--dac-ink-3); padding-left: 4px; }
+    /* Op een iPhone liep het tijdveld over het minknopje van Laden tot heen
+       (gemeld op 12 oktober 2026, met een schermafdruk). Safari geeft een
+       time-input zijn eigen vorm met een eigen minimale breedte, en trekt zich
+       dan niets aan van width: 100%. In Chrome gebeurt het niet, dus hier
+       niet na te meten. Twee lagen: appearance none (dan volgt hij de breedte),
+       en het vak knipt af wat er toch nog uitsteekt -- met de focusring naar
+       binnen, anders valt die weg. */
+    .veld.klaar { overflow: hidden; }
     .tijd {
-      width: 100%; min-width: 0; height: 38px;
+      -webkit-appearance: none; appearance: none; display: block;
+      width: 100%; min-width: 0; max-width: 100%; height: 38px;
       font: inherit; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;
       color: var(--dac-ink); color-scheme: var(--dac-scheme);
       background-color: var(--dac-surface);
@@ -209,7 +218,8 @@ class LaadpaalCard extends DacCard {
     @media (hover: hover) { .tijd:hover { border-color: var(--dac-border-hi); } }
     .tijd::-webkit-calendar-picker-indicator { display: none; }
     .tijd::-webkit-datetime-edit { padding: 0; }
-    .tijd:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
+    .tijd::-webkit-date-and-time-value { margin: 0; min-width: 0; text-align: center; }
+    .tijd:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: -2px; }
     .set {
       height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 2px;
       background: rgba(var(--dac-tint), .05); border: 1px solid var(--dac-border);

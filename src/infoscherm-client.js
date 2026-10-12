@@ -28,7 +28,7 @@
  * `hass.fetchWithAuth`, die het token eerst ververst als het verlopen is.
  */
 
-import { nogNietGereed } from "./herkansing.js";
+import { BlijvendAbonnement, nogNietGereed } from "./herkansing.js";
 
 const PREFIX = "domotiapp_lovelace/infoscherm";
 const URL = "/api/domotiapp_lovelace/infoscherm";
@@ -55,11 +55,15 @@ const roep = (hass, type, extra = {}) => hass.connection.sendMessagePromise({ ty
 export const haalStand = (hass) => roep(hass, "get");
 
 /**
- * Blijf op de hoogte. `cb({soort, ...})` krijgt `stand` of `feeds`.
- * @returns {Promise<Function>} opzeggen
+ * Blijf op de hoogte: `cb({soort, ...})` krijgt `stand` of `feeds`. Een
+ * abonnement dat een herstart van Home Assistant overleeft; zie
+ * `BlijvendAbonnement` in herkansing.js voor het waarom.
  */
-export const abonneer = (hass, cb) =>
-  hass.connection.subscribeMessage(cb, { type: `${PREFIX}/subscribe` });
+export class Abonnement extends BlijvendAbonnement {
+  constructor(cb, opties = {}) {
+    super({ type: `${PREFIX}/subscribe` }, cb, opties);
+  }
+}
 
 export const zetAanwezig = (hass, persoon, aanwezig) => roep(hass, "aanwezig", { persoon, aanwezig });
 
