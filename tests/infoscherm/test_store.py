@@ -395,7 +395,10 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         # Een kaart die het veld niet meestuurt krijgt een lege lijst en niet een
         # ontbrekende sleutel -- het scherm leest hem onvoorwaardelijk.
         "afval": [],
-        "verlichting": [{"entity": "light.b", "naam": ""}, {"entity": "light.a", "naam": "Wachtkamer"}],
+        # Sinds 0.61.2 houdt de opslag zijn eigen volgorde (die van de receptie)
+        # en gaat een nieuwe lamp achteraan; tot dan won de volgorde van de
+        # kaartconfig, en stond light.b hier vooraan.
+        "verlichting": [{"entity": "light.a", "naam": "Wachtkamer"}, {"entity": "light.b", "naam": ""}],
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
     # Dezelfde config nog eens: niets gewijzigd.
@@ -405,6 +408,45 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
     assert r["gewijzigd"] is False
     with pytest.raises(InfoFout):
         await store.async_zet_installatie_van_kaart({"weer": "sensor.x"})
+
+
+async def test_de_receptie_zet_de_lampen_in_haar_eigen_volgorde(hass: HomeAssistant) -> None:
+    """NIEUW GEDRAG (0.61.2): de receptie sleept de lampen in het beheer in
+    een andere volgorde, en dat is de volgorde op het scherm. Gevraagd op
+    12 oktober 2026: "ik wil de indeling van de verlichting kunnen aanpassen".
+    Lampen toevoegen of weghalen kan ze nog steeds niet."""
+    store = InfoStore(hass)
+    abc = [{"entity": f"light.{x}", "naam": x.upper()} for x in "abc"]
+    await store.async_zet_installatie({"verlichting": abc}, mag_entiteiten_wijzigen=True)
+    uit = await store.async_zet_installatie(
+        {"verlichting": [abc[2], abc[0], abc[1]]}, mag_entiteiten_wijzigen=False
+    )
+    assert [l["entity"] for l in uit["verlichting"]] == ["light.c", "light.a", "light.b"]
+    # Een onbekende lamp gaat er niet in, en wat ze niet meestuurde gaat
+    # achteraan in de volgorde die er stond.
+    uit = await store.async_zet_installatie(
+        {"verlichting": [{"entity": "light.b", "naam": "B"}, {"entity": "light.x", "naam": "X"}]},
+        mag_entiteiten_wijzigen=False,
+    )
+    assert [l["entity"] for l in uit["verlichting"]] == ["light.b", "light.c", "light.a"]
+
+
+async def test_de_kaartconfig_laat_de_volgorde_van_de_receptie_staan(hass: HomeAssistant) -> None:
+    """NIEUW GEDRAG (0.61.2): de beheerkaart stuurt zijn kaartconfig zodra een
+    beheerder hem ziet. Tot dan won de volgorde van die config, en was een
+    versleepte volgorde bij het volgende bezoek van de installateur weg."""
+    store = InfoStore(hass)
+    await store.async_zet_installatie_van_kaart({"verlichting": ["light.a", "light.b", "light.c"]})
+    await store.async_zet_installatie(
+        {"verlichting": [{"entity": f"light.{x}", "naam": ""} for x in "cab"]}, mag_entiteiten_wijzigen=False
+    )
+    r = await store.async_zet_installatie_van_kaart({"verlichting": ["light.a", "light.b", "light.c"]})
+    assert r["gewijzigd"] is False
+    assert [l["entity"] for l in r["installatie"]["verlichting"]] == ["light.c", "light.a", "light.b"]
+    # Een nieuwe lamp gaat achteraan, een weggehaalde verdwijnt.
+    r = await store.async_zet_installatie_van_kaart({"verlichting": ["light.d", "light.a", "light.c"]})
+    assert r["gewijzigd"] is True
+    assert [l["entity"] for l in r["installatie"]["verlichting"]] == ["light.c", "light.a", "light.d"]
 
 
 # ------------------------------------------------------------- de opslag

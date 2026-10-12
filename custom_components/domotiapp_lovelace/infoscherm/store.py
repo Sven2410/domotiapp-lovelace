@@ -468,6 +468,14 @@ def leeg_installatie() -> dict[str, Any]:
     return {"weer": None, "energie": None, "agendas": [], "verlichting": [], "afval": []}
 
 
+def _in_volgorde_van(lampen: list[dict[str, Any]], volgorde: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """`lampen` in de volgorde waarin hun entiteit in `volgorde` staat. Wat
+    daar niet in staat gaat achteraan, in zijn eigen volgorde (`sorted` is
+    stabiel)."""
+    plek = {l["entity"]: i for i, l in enumerate(volgorde)}
+    return sorted(lampen, key=lambda l: plek.get(l["entity"], len(plek)))
+
+
 def valideer_lamp(rauw: Any) -> dict[str, Any]:
     if isinstance(rauw, str):
         rauw = {"entity": rauw}
@@ -812,9 +820,10 @@ class InfoStore:
 
     async def async_zet_installatie(self, rauw: Any, *, mag_entiteiten_wijzigen: bool) -> dict[str, Any]:
         """De entiteiten kiest de installateur (admin); de receptie mag alleen de
-        NAMEN van de lampen wijzigen. Stuurt een receptie-account een andere
-        lampenlijst, dan blijven de entiteiten zoals ze waren en gaan alleen de
-        namen van de bekende lampen mee."""
+        NAMEN en de VOLGORDE van de lampen wijzigen. Stuurt een receptie-account
+        een andere lampenlijst, dan blijven de entiteiten zoals ze waren: de
+        bekende lampen krijgen de namen en de volgorde die ze meestuurt, en een
+        lamp die ze niet meestuurde gaat achteraan."""
         nieuw = valideer_installatie(rauw)
         if not mag_entiteiten_wijzigen:
             namen = {l["entity"]: l["naam"] for l in nieuw["verlichting"]}
@@ -825,7 +834,7 @@ class InfoStore:
                 "afval": list(self._installatie.get("afval", [])),
                 "verlichting": [
                     {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
-                    for l in self._installatie["verlichting"]
+                    for l in _in_volgorde_van(self._installatie["verlichting"], nieuw["verlichting"])
                 ],
             }
         self._installatie = nieuw
@@ -838,9 +847,10 @@ class InfoStore:
         met die config ziet -- in de editor of op het dashboard -- en alleen
         als ze afwijken van wat hier staat.
 
-        De namen van de lampen blijven staan: die zijn van de receptie. Een
-        lamp die uit de config verdwijnt neemt zijn naam mee; komt hij terug,
-        dan begint hij leeg. Geeft True in `gewijzigd` terug als er iets
+        De namen en de volgorde van de lampen blijven staan: die zijn van de
+        receptie (sinds 0.61.2 kan ze slepen). Een nieuwe lamp gaat achteraan.
+        Een lamp die uit de config verdwijnt neemt zijn naam mee; komt hij
+        terug, dan begint hij leeg. Geeft True in `gewijzigd` terug als er iets
         veranderd is, zodat de aanroeper weet of er een stand rond moet."""
         if not isinstance(rauw, dict):
             raise InfoFout("'installatie' is een object")
@@ -855,7 +865,8 @@ class InfoStore:
         )
         namen = {l["entity"]: l["naam"] for l in self._installatie["verlichting"]}
         nieuw["verlichting"] = [
-            {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])} for l in nieuw["verlichting"]
+            {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
+            for l in _in_volgorde_van(nieuw["verlichting"], self._installatie["verlichting"])
         ]
         kiosk = valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers"))
         gewijzigd = nieuw != self._installatie or kiosk != self._instellingen["kiosk_gebruikers"]

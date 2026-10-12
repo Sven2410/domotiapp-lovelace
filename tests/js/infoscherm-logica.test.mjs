@@ -276,6 +276,10 @@ describe("het raster van het welkomscherm", () => {
     assert.match(blokOntbreekt("verlichting", stand, [], "2026-09-10"), /lampen/);
     assert.equal(blokOntbreekt("welkom", stand, [], "2026-09-10"), null);
     assert.equal(blokOntbreekt("nieuws", stand, [], "2026-09-10"), null);
+    // NIEUW GEDRAG (0.61.2): zonder mededeling blijft het blok staan en zegt
+    // het dat; tot dan verdween het en bleef er een gat in het raster.
+    assert.equal(blokOntbreekt("mededeling", { ...stand, mededelingen: [] }, [], "2026-09-10"), null);
+    assert.equal(blokOntbreekt("mededeling", { ...stand, mededelingen: [{ tekst: "Oud", tot: "2026-09-01" }] }, [], "2026-09-10"), null);
     const vol = {
       personen: [{ naam: "A" }],
       mededelingen: [{ tekst: "Hoi" }],
