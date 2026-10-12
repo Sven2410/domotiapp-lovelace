@@ -400,7 +400,7 @@ export class InfoschermBeheerCard extends DacCard {
       kiosk_gebruikers: c.kiosk_users,
     };
     // De lampen als VERZAMELING: hun volgorde is van de receptie (sinds
-    // 0.61.2 versleepbaar), en een andere volgorde in de kaartconfig is dus
+    // 0.62.0 versleepbaar), en een andere volgorde in de kaartconfig is dus
     // geen verschil. De server houdt die volgorde ook aan.
     const sleutel = JSON.stringify({ ...wens, verlichting: [...(c.lights ?? [])].sort() });
     const i = this.stand_.installatie ?? {};

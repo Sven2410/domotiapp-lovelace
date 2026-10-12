@@ -570,7 +570,7 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
       return s.installatie?.weer ? null : "Geen weerentiteit gekozen (kaartinstellingen van het infoscherm)";
     case "mededeling":
       // Altijd op het scherm, ook zonder mededeling: dan zegt het blok dat.
-      // Tot 0.61.2 verdween het, en dan bleef er een gat in het raster. Zijn
+      // Tot 0.62.0 verdween het, en dan bleef er een gat in het raster. Zijn
       // woorden op 12 oktober 2026: "als ik geen mededeling heb dan moet hij
       // dat zo zeggen nu is het vak dan helemaal leeg".
       return null;

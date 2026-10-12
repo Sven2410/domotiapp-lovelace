@@ -395,7 +395,7 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         # Een kaart die het veld niet meestuurt krijgt een lege lijst en niet een
         # ontbrekende sleutel -- het scherm leest hem onvoorwaardelijk.
         "afval": [],
-        # Sinds 0.61.2 houdt de opslag zijn eigen volgorde (die van de receptie)
+        # Sinds 0.62.0 houdt de opslag zijn eigen volgorde (die van de receptie)
         # en gaat een nieuwe lamp achteraan; tot dan won de volgorde van de
         # kaartconfig, en stond light.b hier vooraan.
         "verlichting": [{"entity": "light.a", "naam": "Wachtkamer"}, {"entity": "light.b", "naam": ""}],
@@ -411,7 +411,7 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
 
 
 async def test_de_receptie_zet_de_lampen_in_haar_eigen_volgorde(hass: HomeAssistant) -> None:
-    """NIEUW GEDRAG (0.61.2): de receptie sleept de lampen in het beheer in
+    """NIEUW GEDRAG (0.62.0): de receptie sleept de lampen in het beheer in
     een andere volgorde, en dat is de volgorde op het scherm. Gevraagd op
     12 oktober 2026: "ik wil de indeling van de verlichting kunnen aanpassen".
     Lampen toevoegen of weghalen kan ze nog steeds niet."""
@@ -432,7 +432,7 @@ async def test_de_receptie_zet_de_lampen_in_haar_eigen_volgorde(hass: HomeAssist
 
 
 async def test_de_kaartconfig_laat_de_volgorde_van_de_receptie_staan(hass: HomeAssistant) -> None:
-    """NIEUW GEDRAG (0.61.2): de beheerkaart stuurt zijn kaartconfig zodra een
+    """NIEUW GEDRAG (0.62.0): de beheerkaart stuurt zijn kaartconfig zodra een
     beheerder hem ziet. Tot dan won de volgorde van die config, en was een
     versleepte volgorde bij het volgende bezoek van de installateur weg."""
     store = InfoStore(hass)

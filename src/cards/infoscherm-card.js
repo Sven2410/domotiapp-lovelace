@@ -296,7 +296,7 @@ const css = /* css */ `
      4 verlichtingen zoals je ziet." */
   .blok.klein .bk { padding: calc(6px * var(--s)) calc(14px * var(--s)); }
   .blok.klein .bi { padding: calc(6px * var(--s)) calc(12px * var(--s)); gap: calc(6px * var(--s)); }
-  /* "Halfdicht" zit ertussen (sinds 0.61.2): dezelfde compacte tegels, maar
+  /* "Halfdicht" zit ertussen (sinds 0.62.0): dezelfde compacte tegels, maar
      alleen de functie gaat eraf en Aanwezig/Afwezig blijft staan. Met twintig
      medewerkers in een blok van 2×6 sprong het blok meteen naar dicht, en
      stond er bij niemand meer of hij er was -- terwijl de tegels daarna over

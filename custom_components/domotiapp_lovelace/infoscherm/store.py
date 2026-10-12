@@ -848,7 +848,7 @@ class InfoStore:
         als ze afwijken van wat hier staat.
 
         De namen en de volgorde van de lampen blijven staan: die zijn van de
-        receptie (sinds 0.61.2 kan ze slepen). Een nieuwe lamp gaat achteraan.
+        receptie (sinds 0.62.0 kan ze slepen). Een nieuwe lamp gaat achteraan.
         Een lamp die uit de config verdwijnt neemt zijn naam mee; komt hij
         terug, dan begint hij leeg. Geeft True in `gewijzigd` terug als er iets
         veranderd is, zodat de aanroeper weet of er een stand rond moet."""
