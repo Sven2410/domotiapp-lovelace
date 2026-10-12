@@ -88,7 +88,7 @@ import {
   standaardIndeling,
   vrijePlek,
 } from "./infoscherm-logica.js";
-import { SCHERM_ACHTERGROND, logoWaarschuwing } from "./infoscherm-logo.js";
+import { logoOndergrond, logoWaarschuwing } from "./infoscherm-logo.js";
 import { analyseerLogo, snijLogoBij } from "./infoscherm-logo-beeld.js";
 
 const TAG = "domotiapp-infoscherm-beheer-card";
@@ -260,12 +260,13 @@ const css = /* css */ `
      onderkant weg. */
   .plaatje.logo { width: auto; min-width: 64px; max-width: 220px; height: 64px; padding: 4px; display: flex; align-items: center; justify-content: center; }
   .plaatje.logo img { width: auto; height: 100%; max-width: 100%; min-width: 0; object-fit: contain; }
-  /* Het voorbeeld staat op de achtergrond van het SCHERM, niet op die van
-     Home Assistant: een zwart logo op een doorzichtige achtergrond zag er hier
-     prima uit en viel op de iPad weg (12 oktober 2026). Vaste kleuren, met
-     opzet: het is een stukje van het scherm, en dat volgt het thema niet. */
-  .plaatje.logo.op-donker { background: ${SCHERM_ACHTERGROND.donker}; }
-  .plaatje.logo.op-licht { background: ${SCHERM_ACHTERGROND.licht}; }
+  /* Het voorbeeld staat op de ondergrond van het SCHERM (het vlak van het
+     welkomblok), niet op die van Home Assistant: een zwart logo op een
+     doorzichtige achtergrond zag er hier prima uit en viel op de iPad weg
+     (12 oktober 2026). Vaste kleuren, met opzet: het is een stukje van het
+     scherm, en dat volgt het thema niet. */
+  .plaatje.logo.op-donker { background: rgb(${logoOndergrond("donker")}); }
+  .plaatje.logo.op-licht { background: rgb(${logoOndergrond("licht")}); }
   .hulp.logo-waarschuwing { color: var(--dac-warn); }
 
   .ot-tabel { display: grid; grid-template-columns: 90px auto 100px 100px 100px 100px; gap: 6px 10px; align-items: center; font-size: 13px; }
@@ -906,7 +907,7 @@ export class InfoschermBeheerCard extends DacCard {
             <button class="knop klein" type="button" data-actie="logo">${resolve("camera")} ${s.logo ? "Ander logo" : "Logo kiezen"}</button>
             ${s.logo ? `<button class="knop klein" type="button" data-actie="logoweg">${resolve("close")} Logo weg</button>` : ""}
           </div>
-          <div class="hulp">Het logo houdt zijn eigen verhouding: lang, breed of vierkant. Het voorbeeld staat op de achtergrond van het scherm (Uiterlijk hieronder). Een doorzichtige rand gaat er bij het uploaden af.</div>
+          <div class="hulp">Het logo houdt zijn eigen verhouding: lang, breed of vierkant. Het voorbeeld staat op de ondergrond van het scherm (Uiterlijk hieronder). Een doorzichtige rand gaat er bij het uploaden af.</div>
           <div class="hulp logo-waarschuwing" hidden></div>
         </div>
         <div class="veld"><label>Accentkleur op het scherm</label>

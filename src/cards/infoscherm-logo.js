@@ -1,37 +1,59 @@
 /**
  * Het rekenwerk aan een logo voor het infoscherm, zonder DOM: waar het
- * zichtbare deel zit, en of het op de achtergrond van het scherm te zien is.
- * Het canvaswerk eromheen staat in `infoscherm-logo-beeld.js`.
+ * zichtbare deel zit, en of het op het welkomblok te zien is. Het canvaswerk
+ * eromheen staat in `infoscherm-logo-beeld.js`.
  *
  * WAAROM DIT BESTAAT
  *
- * Op 12 oktober 2026 bleef het logo van een klant weg op de iPad. De opslag
- * klopte, het bestand kwam gewoon binnen; het lag aan het plaatje zelf. Het
- * was 1410 bij 620 pixels, met een doorzichtige achtergrond (93% van de
- * pixels), zwarte letters en een dunne rode lijn, en het zichtbare deel besloeg
- * maar 45% van de hoogte. Het scherm stond op Donker. De zwarte letters vielen
- * weg tegen #0c0c0a, en van het geheel bleef een rood bloemetje van zo'n 25 px
- * over. In het beheer was dat niet te zien, want daar stond het voorbeeld op
- * het vlak van het thema van Home Assistant.
+ * Op 12 oktober 2026 bleef het logo van een klant weg op de iPad. Dat lag aan
+ * de CSS (zie `.logo` in de infoschermkaart en valkuil 69), maar het plaatje
+ * maakte het erger: 1410 bij 620, 93% doorzichtig, zwarte letters en een
+ * dunne rode lijn, en de tekening besloeg maar 45% van de hoogte. Op een
+ * donker scherm valt zwart weg, en in het beheer was dat niet te zien, want
+ * daar stond het voorbeeld op het vlak van het thema van Home Assistant.
  *
  * Drie dingen volgen daaruit:
- * - het voorbeeld in het beheer staat op de achtergrond van het SCHERM
- *   (`SCHERM_ACHTERGROND`);
+ * - het voorbeeld in het beheer staat op dezelfde ondergrond als op het
+ *   scherm (`logoOndergrond`);
  * - het beheer waarschuwt als het grootste deel van een doorzichtig logo
  *   wegvalt (`logoWaarschuwing`);
  * - bij het uploaden gaat de lege rand eraf (`zichtbaarKader`, `metLucht`),
- *   anders tekent het welkomblok het zichtbare deel op de helft van de hoogte.
+ *   anders is de tekening maar half zo hoog als het vak.
  */
 
+import { tokens } from "../theme.js";
 import { contrast, leesKleur, opOndergrond } from "../thema-logica.js";
 
+/** Eén waarde uit de donkere tokens van `theme.js`. */
+const token = (naam) =>
+  tokens
+    .split(";")
+    .map((regel) => regel.trim())
+    .find((regel) => regel.startsWith(`${naam}:`))
+    ?.slice(naam.length + 1)
+    .trim();
+
 /**
- * De achtergrond van het scherm, per uiterlijk. Het welkomblok heeft geen
- * eigen vlak (`.blok.welkom { background: none }`), dus het logo staat hier
- * rechtstreeks op. Donker is `--dac-bg` uit `theme.js`; een toets houdt die
- * twee gelijk.
+ * De kleuren van het scherm, per uiterlijk: de achtergrond (`--dac-bg`) en
+ * het vlak van een blok erop (`--dac-surface`). Donker zijn de tokens van
+ * de kaarten zelf; licht is van het infoscherm alleen, en gaat van hier het
+ * scherm in (`.scherm.licht`).
  */
-export const SCHERM_ACHTERGROND = { donker: "#0c0c0a", licht: "#f3f1ec" };
+export const SCHERM = {
+  donker: { achtergrond: token("--dac-bg"), vlak: token("--dac-surface") },
+  licht: { achtergrond: "#f3f1ec", vlak: "rgba(20, 20, 10, 0.045)" },
+};
+
+/**
+ * Waar het logo op staat, als `[r, g, b]`: het vlak van het welkomblok over
+ * de achtergrond. Sinds 0.61.1 heeft het welkomblok een vlak en een rand, net
+ * als de andere blokken -- zijn keuze op 12 oktober 2026: *"ja alles met
+ * kader"*. Daarvoor stond het logo rechtstreeks op de achtergrond.
+ */
+export function logoOndergrond(uiterlijk) {
+  const s = SCHERM[uiterlijk === "licht" ? "licht" : "donker"];
+  return opOndergrond(leesKleur(s.vlak), leesKleur(s.achtergrond)).map(Math.round);
+}
 
 /** Onder deze dekking telt een pixel als doorzichtig (0-255). */
 export const DREMPEL_RAND = 10;
@@ -90,18 +112,18 @@ export const moetBijsnijden = (kader, breed, hoog, deel = 0.03) =>
   !!kader && (kader.w <= breed * (1 - deel) || kader.h <= hoog * (1 - deel));
 
 /**
- * Hoe een logo op de twee achtergronden van het scherm staat.
+ * Hoe een logo op het welkomblok staat, bij elk van de twee uiterlijken.
  *
  * `doorzichtig` is het deel van de pixels dat grotendeels doorzichtig is.
  * `wegvallend[uiterlijk]` is het deel van de DEKKENDE pixels dat na het
- * mengen met die achtergrond minder dan `MIN_CONTRAST` contrast heeft.
+ * mengen met die ondergrond minder dan `MIN_CONTRAST` contrast heeft.
  *
  * @returns {{doorzichtig: number, wegvallend: {donker: number, licht: number}} | null}
  */
 export function logoAnalyse(data, breed, hoog) {
   const totaal = breed * hoog;
   if (!totaal) return null;
-  const achter = Object.entries(SCHERM_ACHTERGROND).map(([naam, hex]) => [naam, leesKleur(hex)]);
+  const achter = ["donker", "licht"].map((naam) => [naam, logoOndergrond(naam)]);
   const weg = { donker: 0, licht: 0 };
   let doorzichtig = 0;
   let dekkend = 0;

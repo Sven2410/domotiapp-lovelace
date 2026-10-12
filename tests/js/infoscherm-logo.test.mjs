@@ -19,14 +19,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  SCHERM_ACHTERGROND,
+  SCHERM,
   logoAnalyse,
+  logoOndergrond,
   logoWaarschuwing,
   metLucht,
   moetBijsnijden,
   zichtbaarKader,
 } from "../../src/cards/infoscherm-logo.js";
-import { tokens } from "../../src/theme.js";
+import { leesKleur } from "../../src/thema-logica.js";
 
 /** Een doorzichtig plaatje, met rechthoeken `[x, y, w, h, [r, g, b, a]]` erop. */
 function plaatje(breed, hoog, vlakken = []) {
@@ -135,9 +136,17 @@ describe("logoAnalyse en logoWaarschuwing", () => {
   });
 });
 
-describe("SCHERM_ACHTERGROND", () => {
-  it("donker is --dac-bg van de kaarten, waar het scherm op staat", () => {
-    const bg = /--dac-bg:\s*(#[0-9a-f]+)/i.exec(tokens)[1];
-    assert.equal(SCHERM_ACHTERGROND.donker.toLowerCase(), bg.toLowerCase());
+describe("SCHERM en logoOndergrond", () => {
+  it("donker leest --dac-bg en --dac-surface uit de tokens van de kaarten", () => {
+    assert.equal(SCHERM.donker.achtergrond, "#0c0c0a");
+    assert.deepEqual(leesKleur(SCHERM.donker.vlak), [255, 255, 255, 0.038]);
+  });
+
+  // NIEUW GEDRAG (0.61.1): het welkomblok heeft een vlak, en het logo staat
+  // daarop -- niet meer op de kale achtergrond.
+  it("het logo staat op het vlak van het welkomblok, een tikje anders dan de achtergrond", () => {
+    assert.deepEqual(logoOndergrond("donker"), [21, 21, 19]);
+    assert.deepEqual(logoOndergrond("licht"), [233, 231, 226]);
+    assert.deepEqual(logoOndergrond(undefined), logoOndergrond("donker"));
   });
 });

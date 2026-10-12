@@ -122,10 +122,16 @@ specificiteit; het is nu `.hulp.logo-waarschuwing`.
 
 ### Het token, na een half uur
 
-Nog niet in de browser gezien. Het token van het testtabblad verloopt om 18:39,
-en de uitgave wacht daar niet op: het gedrag is al vastgelegd in de unittests
-(hieronder) en in de bron van de frontend (hierboven). De browsermeting komt
-na de uitgave in dit rapport.
+Gemeten na de uitgave, op dezelfde avond, in het testtabblad dat sinds 18:15
+openstond (de websocket bleef de hele tijd verbonden):
+
+| | gemeten |
+|---|---|
+| het token verliep om | 18:39:19 |
+| om 18:40:22 | `hass.auth.expired` is `true`: de pagina had het niet zelf ververst |
+| de manier van 0.60.1 (`hass.auth.data.access_token` meesturen) | **401**, en in het log van Home Assistant één nieuwe regel *"Login attempt or request with invalid authentication"* (van 14 naar 15) |
+| de manier van 0.61.0 (een upload via de kaart) | eerst `/auth/token` → 200 (`fetchWithAuth` ververst), dan `/upload` → 200 en `/bestand/...` → 200; geen nieuwe regel in het log |
+| daarna | `expired` is `false`, nieuw verloopmoment 19:10:24 |
 
 ## Tests
 
