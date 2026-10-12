@@ -454,6 +454,23 @@ een paar nagebootste toestanden (`sensor.test_gft`, `sensor.test_printer_status`
 een herstart van de container niet overleven; de kaarten tonen dan "niet
 bereikbaar", en dat is geen fout van de kaart.
 
+Sinds 12 oktober 2026 staat het infoscherm er ook zoals bij een klant: twee
+dashboards en drie soorten accounts.
+
+| Wat | Waarvoor |
+|---|---|
+| dashboard `infoscherm-wachtkamer` | het scherm, in de zijbalk; standaard voor het iPad-account |
+| dashboard `infoscherm-beheer` | de beheerkaart, NIET in de zijbalk, "Alleen beheerder" uit |
+| account `dev` | de beheerder (installateur) |
+| account `Receptie` (inlognaam `receptie`) | een gewone gebruiker |
+| account `iPad wachtkamer` (inlognaam `ipad`) | een gewone gebruiker, aangewezen als kioskaccount (`kiosk_users` in BEIDE beheerkaarten, anders zet de ene het terug zodra een beheerder de andere opent) |
+
+De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
+gaat met `dev/inlog_als.py`, elk op een eigen origin
+(`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
+staan in `localStorage`, en dat is per origin. Zo staan alle drie naast elkaar
+in één browser, zonder dat een wachtwoord in het gesprek komt.
+
 In `.ha-dev-config/themes/kopo.yaml` staat het thema van de eigenaar (niet in
 git). Home Assistant omzetten gaat zonder dialoog, vanuit de pagina:
 
@@ -646,6 +663,32 @@ met `action: DOMOTIAPP_AFVAL_BUITEN|<id>|<ophaaldag>`. De persoon komt uit
 notify.persistent_notification}`. Dan komt de melding als melding in Home
 Assistant zelf binnen, met precies de titel en tekst die een telefoon krijgt.
 
+### Het infoscherm bij een klant: wie opent wat
+
+Een klant heeft twee dashboards: het scherm voor de iPad en het beheer voor de
+receptie. De receptie is een GEWONE gebruiker; de grens ligt bij het
+kioskaccount, niet bij de adminvlag van Home Assistant (zie `infoscherm/const.py`).
+Gemeten tegen HA 2026.8 op 12 oktober 2026, met drie echte accounts
+(`docs/receptie-zonder-admin/RAPPORT.md`):
+
+- **Een dashboard met "Alleen beheerder" bestaat niet voor een gewone
+  gebruiker.** Zijn link stuurt haar zonder melding door naar "Thuis", en een
+  tabblad dat er al op stond gaat er meteen weg zodra de schakelaar omgaat.
+- **"Aan zijbalk toevoegen" uit verbergt alleen het menu-item.** De link werkt
+  gewoon, voor iedereen.
+- **Het standaarddashboard volgt eerst het PROFIEL van de gebruiker** (Profiel
+  → Dashboard), dan wat een beheerder voor iedereen instelde ("Als standaard
+  instellen", `frontend/set_system_data` met sleutel `core`), dan de
+  browser, dan "Thuis". Zet je het scherm voor iedereen als standaard, dan
+  komt de receptie daar ook op uit; haar eigen profielkeuze gaat voor. Netter:
+  het scherm alleen als standaard in het profiel van het iPad-account.
+- **Een dashboard dat iemands standaard is, staat bovenaan in ZIJN zijbalk**,
+  ook met "Aan zijbalk toevoegen" uit. De profielkeuzelijst toont ook de
+  dashboards die niet in de zijbalk staan.
+- **Een kioskaccount op de beheerlink** ziet "Dit account mag het infoscherm
+  niet beheren." Beheren vanaf de iPad zelf kan dus niet; dat doet de receptie
+  vanaf haar eigen pc of telefoon.
+
 ### Iconen: `dai:` is van ons, `mdi:` is van Home Assistant
 
 `resolve()` in `icons.js` kent drie vormen, en de VOLGORDE luistert nauw:
@@ -819,7 +862,8 @@ hem dan met `Start-Process` op
 ### De werkbank in `dev/`
 
 `dev/preview.html` is de grote werkbank; `dev/alarmcode.html` en `dev/cijfers.html`
-zijn gerichte proefopstellingen met een vaste hoogte.
+zijn gerichte proefopstellingen met een vaste hoogte. `dev/inlog_als.py` logt een
+tabblad in als een ander account van de testinstance (zie *Testmateriaal*).
 
 - **De werkbank schuift onder je klikken vandaan**: kaarten erboven veranderen
   van hoogte als abonnementen binnenkomen. Voor een gerichte meting hoort er een
