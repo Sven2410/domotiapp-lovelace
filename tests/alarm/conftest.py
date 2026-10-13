@@ -40,8 +40,8 @@ BUNDEL = (
     / CARD_FILENAME
 )
 
-PERSON_ENTITY_ID = "person.sven"
-PERSON_UNIQUE_ID = "sven"
+PERSON_ENTITY_ID = "person.bram"
+PERSON_UNIQUE_ID = "bram"
 
 
 @pytest.fixture(autouse=True)
@@ -77,7 +77,7 @@ def registreer_person(
         unique_id,
         suggested_object_id=entity_id.split(".", 1)[1],
     )
-    hass.states.async_set(entry.entity_id, "home", {"friendly_name": "Sven"})
+    hass.states.async_set(entry.entity_id, "home", {"friendly_name": "Bram"})
     return entry.id
 
 

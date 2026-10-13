@@ -74,7 +74,7 @@ staat los van deze verwijdering.
 
 Statustekst weg, kleuren gebleven. Gemeten in de werkbank: **55px, één
 rasterrij**, waar het er 84px en twee waren. Het `aria-label` noemt de plaats nog
-voluit, inclusief zonenamen ("Peter, Werk").
+voluit, inclusief zonenamen ("Tom, Werk").
 
 De avatar ging van 38 naar 28 en de ring van 3,5px naar 3px. Dat laatste is geen
 smaak: de ring wordt búiten de avatar getekend en zou bij deze maten tegen de

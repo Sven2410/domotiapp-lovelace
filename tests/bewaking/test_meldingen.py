@@ -17,8 +17,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.domotiapp_lovelace.bewaking import meldingen
 
-TRACKER = "device_tracker.telefoon_van_sven"
-PERSOON = "person.sven"
+TRACKER = "device_tracker.telefoon_van_bram"
+PERSOON = "person.bram"
 
 
 @pytest.fixture
@@ -33,23 +33,23 @@ def telefoon(hass: HomeAssistant, device_registry: dr.DeviceRegistry,
     """
     entry = MockConfigEntry(
         domain="mobile_app",
-        data={"device_name": "iPhone van Sven", "webhook_id": "abc"},
+        data={"device_name": "iPhone van Bram", "webhook_id": "abc"},
     )
     entry.add_to_hass(hass)
     apparaat = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={("mobile_app", "toestel-1")},
-        name="iPhone van Sven",
+        name="iPhone van Bram",
     )
     entity_registry.async_get_or_create(
         "device_tracker", "mobile_app", "toestel-1",
-        suggested_object_id="telefoon_van_sven",
+        suggested_object_id="telefoon_van_bram",
         config_entry=entry,
         device_id=apparaat.id,
     )
     hass.states.async_set(
         PERSOON, "not_home",
-        {"friendly_name": "Sven", "device_trackers": [TRACKER]},
+        {"friendly_name": "Bram", "device_trackers": [TRACKER]},
     )
     return entry
 
@@ -57,9 +57,9 @@ def telefoon(hass: HomeAssistant, device_registry: dr.DeviceRegistry,
 async def test_de_dienst_van_een_persoon_wordt_gevonden(
     hass: HomeAssistant, bewaking_op, telefoon
 ) -> None:
-    hass.services.async_register("notify", "mobile_app_iphone_van_sven", lambda call: None)
+    hass.services.async_register("notify", "mobile_app_iphone_van_bram", lambda call: None)
 
-    assert meldingen.dienst_voor(hass, PERSOON) == "mobile_app_iphone_van_sven"
+    assert meldingen.dienst_voor(hass, PERSOON) == "mobile_app_iphone_van_bram"
 
 
 async def test_een_dienst_die_niet_bestaat_wordt_niet_teruggegeven(
@@ -89,11 +89,11 @@ async def test_de_url_bij_een_melding_is_absoluut_en_ondertekend(
     openhad: een melding wordt uren later opengeklikt, en een handtekening van
     een gebruiker die zich inmiddels heeft afgemeld is dan waardeloos.
     """
-    await hass.config.async_update(external_url="https://svenkool.ui.nabu.casa")
+    await hass.config.async_update(external_url="https://voorbeeldhuis.ui.nabu.casa")
 
     url = meldingen.beeld_url(hass, "01AAAAAAAAAAAAAAAAAAAAAAAA")
 
-    assert url.startswith("https://svenkool.ui.nabu.casa/api/domotiapp_lovelace/beeld/")
+    assert url.startswith("https://voorbeeldhuis.ui.nabu.casa/api/domotiapp_lovelace/beeld/")
     assert "authSig=" in url
 
 
@@ -113,20 +113,20 @@ async def test_de_melding_draagt_het_beeld_voor_android_en_ios(
 ) -> None:
     gebeld = []
     hass.services.async_register(
-        "notify", "mobile_app_iphone_van_sven", lambda call: gebeld.append(call.data)
+        "notify", "mobile_app_iphone_van_bram", lambda call: gebeld.append(call.data)
     )
-    await hass.config.async_update(external_url="https://svenkool.ui.nabu.casa")
+    await hass.config.async_update(external_url="https://voorbeeldhuis.ui.nabu.casa")
 
     gelukt = await meldingen.async_stuur(
         hass, ontvangers=[PERSOON], diensten={}, titel="Oprit", tekst="Persoon",
         beeld_id="01AAAAAAAAAAAAAAAAAAAAAAAA", camera="camera.oprit",
     )
 
-    assert gelukt == ["mobile_app_iphone_van_sven"]
+    assert gelukt == ["mobile_app_iphone_van_bram"]
     data = gebeld[0]["data"]
     # `image` leest de Android-app, `attachment` leest iOS. Beide meesturen
     # scheelt een tabel met welk toestel wat kan.
-    assert data["image"].startswith("https://svenkool.ui.nabu.casa/")
+    assert data["image"].startswith("https://voorbeeldhuis.ui.nabu.casa/")
     assert data["attachment"]["url"] == data["image"]
     # Eén regel op het scherm per camera EN melder in plaats van een stapel.
     assert data["tag"] == "domotiapp-camera.oprit"
@@ -143,7 +143,7 @@ async def test_een_telefoon_die_weigert_houdt_de_andere_niet_tegen(
     def stuk(call):
         raise RuntimeError("telefoon staat uit")
 
-    hass.services.async_register("notify", "mobile_app_iphone_van_sven", stuk)
+    hass.services.async_register("notify", "mobile_app_iphone_van_bram", stuk)
     gebeld = []
     hass.services.async_register("notify", "mobile_app_partner", lambda c: gebeld.append(c))
 
@@ -161,19 +161,20 @@ async def test_het_overzicht_toont_wie_er_een_telefoon_heeft(
     hass: HomeAssistant, bewaking_op, telefoon
 ) -> None:
     """De editor toont dit, zodat de klant het kan controleren."""
-    hass.services.async_register("notify", "mobile_app_iphone_van_sven", lambda c: None)
+    hass.services.async_register("notify", "mobile_app_iphone_van_bram", lambda c: None)
     hass.states.async_set("person.gast", "home", {"friendly_name": "Gast"})
 
     overzicht = meldingen.overzicht(hass)
 
+    # Op naam gesorteerd: Bram staat dus voor Gast.
     assert overzicht == [
-        {"entity_id": "person.gast", "naam": "Gast", "dienst": None, "thuis": True},
         {
             "entity_id": PERSOON,
-            "naam": "Sven",
-            "dienst": "mobile_app_iphone_van_sven",
+            "naam": "Bram",
+            "dienst": "mobile_app_iphone_van_bram",
             "thuis": False,
         },
+        {"entity_id": "person.gast", "naam": "Gast", "dienst": None, "thuis": True},
     ]
 
 
@@ -205,7 +206,7 @@ async def test_twee_melders_op_een_camera_overschrijven_elkaars_melding_niet(
     """
     gebeld = []
     hass.services.async_register(
-        "notify", "mobile_app_iphone_van_sven", lambda call: gebeld.append(call.data)
+        "notify", "mobile_app_iphone_van_bram", lambda call: gebeld.append(call.data)
     )
 
     await meldingen.async_stuur(

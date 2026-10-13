@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from homeassistant.core import HomeAssistant
 
-from .conftest import LIEKE, SVEN
+from .conftest import ANNA, BRAM
 
 
 async def test_een_kaart_krijgt_de_stand_en_elke_wijziging(
@@ -17,19 +17,19 @@ async def test_een_kaart_krijgt_de_stand_en_elke_wijziging(
     assert eerste["bekend"] is True
     assert eerste["aan"] == {}
     # De telefoon uit de YAML gaat voor wat er gezocht zou worden.
-    assert eerste["telefoons"][SVEN] == "test_sven"
+    assert eerste["telefoons"][BRAM] == "test_bram"
     # De tijden die de server echt gebruikt (sinds 0.55.0).
     assert eerste["tijden"] == {"vandaag": "07:30", "morgen": "19:30"}
 
     await client.send_json(
-        {"id": 2, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": LIEKE, "aan": False}
+        {"id": 2, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": ANNA, "aan": False}
     )
     # Eerst de wijziging bij de abonnee, dan het antwoord op het commando.
     bericht = await client.receive_json()
     assert bericht["id"] == 1
-    assert bericht["event"]["aan"] == {LIEKE: False}
+    assert bericht["event"]["aan"] == {ANNA: False}
     assert (await client.receive_json())["result"] == {"aan": False}
-    assert motor.opslag.aan("afval", LIEKE) is False
+    assert motor.opslag.aan("afval", ANNA) is False
 
 
 async def test_omzetten_mag_iedereen_een_proef_alleen_de_beheerder(
@@ -37,7 +37,7 @@ async def test_omzetten_mag_iedereen_een_proef_alleen_de_beheerder(
 ) -> None:
     kiosk = await hass_ws_client(hass, hass_read_only_access_token)
     await kiosk.send_json(
-        {"id": 1, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": SVEN, "aan": False}
+        {"id": 1, "type": "domotiapp_lovelace/meldingen/aan", "melding": "afval", "persoon": BRAM, "aan": False}
     )
     assert (await kiosk.receive_json())["success"]
 
@@ -52,9 +52,9 @@ async def test_omzetten_mag_iedereen_een_proef_alleen_de_beheerder(
         {"id": 1, "type": "domotiapp_lovelace/meldingen/proef", "melding": "afval", "moment": "morgen"}
     )
     antwoord = await beheerder.receive_json()
-    # Sven staat uit, dus alleen Lieke.
-    assert antwoord["result"]["verstuurd"] == [LIEKE]
-    assert [d for d, _ in telefoons] == ["test_lieke"]
+    # Bram staat uit, dus alleen Anna.
+    assert antwoord["result"]["verstuurd"] == [ANNA]
+    assert [d for d, _ in telefoons] == ["test_anna"]
 
 
 async def test_alleen_personen(hass: HomeAssistant, motor, hass_ws_client) -> None:
@@ -76,12 +76,12 @@ async def test_een_proef_naar_een_persoon(
             "type": "domotiapp_lovelace/meldingen/proef",
             "melding": "afval",
             "moment": "morgen",
-            "persoon": SVEN,
+            "persoon": BRAM,
         }
     )
     antwoord = await client.receive_json()
-    assert antwoord["result"]["verstuurd"] == [SVEN]
-    assert [d for d, _ in telefoons] == ["test_sven"]
+    assert antwoord["result"]["verstuurd"] == [BRAM]
+    assert [d for d, _ in telefoons] == ["test_bram"]
 
     await client.send_json(
         {"id": 2, "type": "domotiapp_lovelace/meldingen/proef", "melding": "afval", "moment": "morgen", "persoon": "notify.x"}

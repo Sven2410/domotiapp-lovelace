@@ -94,7 +94,7 @@ Nu abonneert de afvalkaart zich op dezelfde melding (`afval`, of `melding:` in
 de YAML voor een andere id), met hetzelfde `BlijvendAbonnement`. Is de bak van
 het uitgelichte vlak buiten gezet, dan:
 
-- staat er in de regel boven de namen *"Morgen · Staat buiten · Sven"*. Het
+- staat er in de regel boven de namen *"Morgen · Staat buiten · Bram"*. Het
   is groen (een status), en de naam staat er zoals hij heet, niet in
   hoofdletters;
 - knippert het vlak niet meer, ook niet op de dag zelf: het is gedaan;

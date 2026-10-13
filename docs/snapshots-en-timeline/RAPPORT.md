@@ -218,7 +218,7 @@ en `header-card.js` al deden.
 `mobile_app`, dus er is geen toestel om naartoe te sturen. Wat er wél vastligt,
 in `tests/bewaking/test_meldingen.py`:
 
-- de vertaling `person.sven` → `notify.mobile_app_iphone_van_sven`, langs de
+- de vertaling `person.bram` → `notify.mobile_app_iphone_van_bram`, langs de
   keten `device_trackers` → entity registry → config entry → `device_name` →
   `slugify(f"mobile_app_{naam}")`. Die laatste stap is niet verzonnen: de legacy
   notify-laag registreert zo (`components/notify/legacy.py:280`) en `mobile_app`
@@ -231,7 +231,7 @@ in `tests/bewaking/test_meldingen.py`:
 - dat een ontbrekend extern adres een melding **zonder** foto oplevert en niet
   géén melding.
 
-**Vraag Sven hier actief naar.** Het is het enige stuk van de keten dat alleen
+**Vraag de eigenaar hier actief naar.** Het is het enige stuk van de keten dat alleen
 op tests en op de broncode van Home Assistant rust.
 
 ## Wat er bewust niet in zit

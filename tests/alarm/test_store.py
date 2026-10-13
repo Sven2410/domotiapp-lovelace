@@ -386,14 +386,14 @@ async def test_hernoemen_van_de_person_behoudt_de_wekkers(
 
     registry = er.async_get(hass)
     nieuw = registry.async_update_entity(
-        PERSON_ENTITY_ID, new_entity_id="person.sven_kool", name="Sven Kool"
+        PERSON_ENTITY_ID, new_entity_id="person.bram_visser", name="Bram Visser"
     )
-    assert nieuw.entity_id == "person.sven_kool"
+    assert nieuw.entity_id == "person.bram_visser"
     assert nieuw.id == registry_id, "het registry-entry-ID verandert niet bij hernoemen"
-    hass.states.async_set("person.sven_kool", "home", {"friendly_name": "Sven Kool"})
+    hass.states.async_set("person.bram_visser", "home", {"friendly_name": "Bram Visser"})
 
     await client.send_json_auto_id(
-        {"type": f"{DOMAIN}/alarms/get", "person": "person.sven_kool"}
+        {"type": f"{DOMAIN}/alarms/get", "person": "person.bram_visser"}
     )
     antwoord = await client.receive_json()
     assert antwoord["success"], antwoord

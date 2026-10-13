@@ -62,7 +62,7 @@ async def test_een_persoon_zonder_telefoon_blijft_in_de_lijst_staan(
     hass: HomeAssistant, bewaking_op, hass_ws_client
 ) -> None:
     """Met `dienst: null`. Hem verbergen levert de vraag op waaróm hij weg is."""
-    hass.states.async_set("person.sven", "home", {"friendly_name": "Sven"})
+    hass.states.async_set("person.bram", "home", {"friendly_name": "Bram"})
     client = await hass_ws_client(hass)
 
     await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/get"})
@@ -70,7 +70,7 @@ async def test_een_persoon_zonder_telefoon_blijft_in_de_lijst_staan(
 
     personen = antwoord["result"]["personen"]
     assert personen == [
-        {"entity_id": "person.sven", "naam": "Sven", "dienst": None, "thuis": True}
+        {"entity_id": "person.bram", "naam": "Bram", "dienst": None, "thuis": True}
     ]
 
 

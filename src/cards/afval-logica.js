@@ -66,8 +66,8 @@ export function heroWoorden(dagen) {
  *
  * @param {{datum: string, door?: string}|null} buiten  van de server
  * @param {Date} ophaaldag  de dag van het uitgelichte vlak
- * @param {(persoon: string) => string} naamVan  `person.x` -> "Sven"
- * @returns {string|null} "Staat buiten · Sven", of null als hij er niet staat
+ * @param {(persoon: string) => string} naamVan  `person.x` -> "Bram"
+ * @returns {string|null} "Staat buiten · Bram", of null als hij er niet staat
  */
 export function buitenTekst(buiten, ophaaldag, naamVan = () => "") {
   if (!buiten?.datum || !(ophaaldag instanceof Date)) return null;

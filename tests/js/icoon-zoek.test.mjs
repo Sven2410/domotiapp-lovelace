@@ -180,7 +180,7 @@ describe("de bewaker", () => {
 
 describe("De weermetingen van 27 augustus 2026 — NIEUW GEDRAG", () => {
   /**
-   * Sven vroeg ze op de woorden die hij zelf gebruikt. Dat is precies waar dit
+   * De eigenaar vroeg ze op de woorden die hij zelf gebruikt. Dat is precies waar dit
    * bestand voor bestaat: de sleutels zijn Engels en hij typt Nederlands. Vindt
    * hij ze niet op zijn eigen woord, dan bestaan ze voor hem niet.
    */

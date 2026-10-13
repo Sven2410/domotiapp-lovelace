@@ -182,7 +182,7 @@ describe("wat een tik doet", () => {
       action: "url",
       url_path: "https://domoti.app",
     });
-    assert.equal(actieVoor("mailto:sven@example.com").action, "url");
+    assert.equal(actieVoor("mailto:bram@example.com").action, "url");
   });
 
   it("doet niets bij een leeg pad, en meldt dat als zodanig", () => {

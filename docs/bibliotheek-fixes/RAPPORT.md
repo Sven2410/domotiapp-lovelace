@@ -8,7 +8,7 @@ De eigenaar installeerde 0.7.0 en meldde twee dingen:
 2. "Als ik een nummer als favoriet maak dan speelt hij gelijk af."
 
 Hij gaf toestemming om zijn eigen Home Assistant te bedienen om het te testen,
-met als voorwaarde: alleen `One SL Sven` als speaker en niet te hard. **Er is
+met als voorwaarde: alleen `One SL Bram` als speaker en niet te hard. **Er is
 niets afgespeeld** — geen enkele meting hier had geluid nodig.
 
 ---

@@ -64,7 +64,7 @@ De melding van 19:30 is wél met beide bakken verstuurd, volgens alles wat in
 zijn Home Assistant te zien is:
 
 - Het logboek laat om 19:30:00 tot 19:30:02 vijf notify-entiteiten na elkaar
-  bijwerken: Sven, Lieke, Peter, Rinette en Bertus. Dat is precies de lijst
+  bijwerken: Bram, Anna, Tom, Sophie en Kees. Dat is precies de lijst
   personen op de meldingenkaart, in dezelfde volgorde.
 - De stand van de melding zegt `verstuurd.morgen = 2026-10-06`.
 - Er is geen eigen automatisering of script meer met "afval" in de naam, en

@@ -13,12 +13,12 @@ import { describe, it } from "node:test";
 import { buitenTekst } from "../../src/cards/afval-logica.js";
 
 const MORGEN = new Date(2026, 9, 13); // dinsdag 13 oktober 2026
-const namen = { "person.sven": "Sven Kool", "person.lieke": "Lieke" };
+const namen = { "person.bram": "Bram Visser", "person.anna": "Anna" };
 const naamVan = (p) => namen[p] ?? p;
 
 describe("buitenTekst", () => {
   it("noemt de voornaam van wie op de knop tikte", () => {
-    assert.equal(buitenTekst({ datum: "2026-10-13", door: "person.sven" }, MORGEN, naamVan), "Staat buiten · Sven");
+    assert.equal(buitenTekst({ datum: "2026-10-13", door: "person.bram" }, MORGEN, naamVan), "Staat buiten · Bram");
   });
 
   it("zonder bekende persoon alleen 'Staat buiten'", () => {
@@ -26,7 +26,7 @@ describe("buitenTekst", () => {
   });
 
   it("een melding voor een andere ophaaldag telt niet", () => {
-    assert.equal(buitenTekst({ datum: "2026-10-06", door: "person.lieke" }, MORGEN, naamVan), null);
+    assert.equal(buitenTekst({ datum: "2026-10-06", door: "person.anna" }, MORGEN, naamVan), null);
   });
 
   it("niets van de server: niets", () => {

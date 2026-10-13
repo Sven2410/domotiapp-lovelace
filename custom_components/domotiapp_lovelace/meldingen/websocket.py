@@ -7,7 +7,7 @@
 | `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
 
 Omzetten mag iedereen: de kaart hangt op een tablet met een kioskaccount, en
-daar hoort Lieke haar eigen meldingen uit te kunnen zetten. Een proefmelding
+daar hoort Anna haar eigen meldingen uit te kunnen zetten. Een proefmelding
 naar het hele huishouden sturen is iets anders, en dat is voorbehouden aan wie
 het dashboard ook mag bewerken.
 """

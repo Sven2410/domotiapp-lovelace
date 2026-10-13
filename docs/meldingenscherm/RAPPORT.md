@@ -30,7 +30,7 @@ schuift open met een transform). Erin staan:
   een vinkje;
 - per soort een regel met een vinkje. Onder Afvalmeldingen staat wat eerst in
   de kop van de kaart stond ("Morgen GFT · melding om 19:30", of "staat buiten
-  (Sven)"), en anders wanneer de melding komt ("De avond ervoor om 19:30 en de
+  (Bram)"), en anders wanneer de melding komt ("De avond ervoor om 19:30 en de
   ochtend zelf om 07:30");
 - staat er geen enkele soort aan op de kaart, dan zegt de pop-up dat, en waar
   je het aanzet.
@@ -65,8 +65,8 @@ wijzigt, wordt `afval: true` weggeschreven en verdwijnt `soort`.
 2. **De tweede keer openen bleef de lijst leeg.** `open()` maakte de lijst leeg,
    maar onthield nog dat hij de regels al gebouwd had. Bij een tweede persoon
    met dezelfde soorten werd dan niets opnieuw gebouwd. Gerepareerd, en daarna
-   vier keer achter elkaar gemeten (Lieke, dev, een kaart zonder soorten, en
-   weer Lieke): alle vier goed.
+   vier keer achter elkaar gemeten (Anna, dev, een kaart zonder soorten, en
+   weer Anna): alle vier goed.
 
 ## Bewijs
 
@@ -102,7 +102,7 @@ voor de Python-wijziging (valkuil 49), bundel vers (sha256 gelijk aan schijf).
 Zonder kliks, met de kaart met de hand in de pagina gehangen (valkuil 21):
 
 - oude config: de server kent hem (`bekend: true`), de kop is weg, dev heeft
-  een telefoon, Lieke niet ("Geen telefoon gevonden");
+  een telefoon, Anna niet ("Geen telefoon gevonden");
 - kaart zonder soorten: dev gedimd;
 - hoogtes 56 / 120 / 184.
 
@@ -111,12 +111,12 @@ klik is gelogd met een capture-luisteraar (`isTrusted: true`):
 
 | stap | uitkomst |
 |---|---|
-| potlood van Lieke | pop-up aan `body`: Lieke, de waarschuwing, Afvalmeldingen met vinkje, "Morgen GFT · melding om 19:30" |
-| vinkje uit | `aria-checked="false"`; de SERVER heeft `person.lieke: false` (eigen abonnement); rij op de kaart `aan=false` |
-| kruisje | dicht; Lieke's icoon grijs, de storing blijft staan |
+| potlood van Anna | pop-up aan `body`: Anna, de waarschuwing, Afvalmeldingen met vinkje, "Morgen GFT · melding om 19:30" |
+| vinkje uit | `aria-checked="false"`; de SERVER heeft `person.anna: false` (eigen abonnement); rij op de kaart `aan=false` |
+| kruisje | dicht; Anna's icoon grijs, de storing blijft staan |
 | tik op de naam "dev" (niet op het potlood) | pop-up van dev, vinkje aan, geen waarschuwing, focus op het vak en niet op het vinkje (valkuil 18) |
 | Escape (echte toets) | dicht |
-| potlood van Lieke, tik op de TEKST van de regel | weer aan; server en kaart volgen |
+| potlood van Anna, tik op de TEKST van de regel | weer aan; server en kaart volgen |
 | naast het vak tikken | dicht |
 | bewerkmodus: kaart openen | editor: Personen, schakelaar Afvalmeldingen aan, blok eronder |
 | schakelaar uit | `afval: false`, `soort` weg, blok weg, voorbeeld gedimd; geen genest blok in de config (valkuil 33) |

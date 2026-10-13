@@ -63,12 +63,12 @@ export function valideerConfig(config) {
     return { ...config };
   }
   if (typeof person !== "string") {
-    throw new Error("'person' moet een entity-ID zijn, zoals person.sven.");
+    throw new Error("'person' moet een entity-ID zijn, zoals person.bram.");
   }
   if (!person.startsWith(`${PERSON_DOMEIN}.`)) {
     throw new Error(
       `'${person}' zit niet in het domein ${PERSON_DOMEIN}. ` +
-        "Kies een persoon, zoals person.sven.",
+        "Kies een persoon, zoals person.bram.",
     );
   }
   return { ...config };
