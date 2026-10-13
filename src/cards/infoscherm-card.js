@@ -99,6 +99,7 @@ import {
   openingsGroepen,
   isTellerstand,
   isoDatumTijd,
+  klimaatBedienbaar,
   klok,
   komendeMededelingen,
   komendeVerjaardagen,
@@ -115,6 +116,23 @@ import {
   vloeiendPad,
 } from "./infoscherm-logica.js";
 import { SCHERM } from "./infoscherm-logo.js";
+import {
+  SOORT_ICOON,
+  aanUitOproep,
+  aircoStand,
+  aircoStanden,
+  doelInstelling,
+  doelOproep,
+  doelTekst,
+  gekozenStand,
+  graden,
+  keuzeNu,
+  keuzeOproep,
+  keuzesVan,
+  standKiezen,
+  statusTekst,
+  volgendeWaarde,
+} from "./airco-logica.js";
 
 const TAG = "domotiapp-infoscherm-card";
 
@@ -137,6 +155,7 @@ const PAGINA_KOP = {
   nieuws: { eyebrow: "Nieuws", titel: "Wat er speelt", onder: "" },
   weer: { eyebrow: "Weer", titel: "Vandaag en de komende dagen", onder: "" },
   verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
+  klimaat: { eyebrow: "Klimaat", titel: "Airco's", onder: "Kies een stand, of tik op – en + voor de temperatuur." },
   agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
   energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
@@ -544,6 +563,114 @@ const css = /* css */ `
   .p-inhoud .l-naam { font-size: calc(19px * var(--s)); }
   .l-status { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); }
 
+  /* klimaat (13 oktober 2026). Alleen het icoon draagt wat de airco doet:
+     verwarmen in de kleur van de zon, koelen, drogen en ventileren blauw,
+     auto in het accent van de klant. Het getal blijft neutrale inkt. */
+  .airco, .k-paneel { --k: var(--dac-ink-3); }
+  [data-soort="warm"] { --k: var(--dac-solar); }
+  [data-soort="koud"], [data-soort="droog"], [data-soort="lucht"] { --k: var(--dac-grid-in); }
+  [data-soort="auto"] { --k: var(--tone); }
+  .aircos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10px * var(--s)); align-content: start; }
+  .aircos.kol-1 { grid-template-columns: minmax(0, 1fr); }
+  .aircos.kol-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .airco {
+    display: flex; align-items: center; gap: calc(12px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s)) calc(12px * var(--s));
+    cursor: pointer; background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
+    box-shadow: var(--dac-shadow); min-height: calc(64px * var(--s)); min-width: 0; -webkit-appearance: none; appearance: none;
+  }
+  .airco:active { background: var(--dac-surface-hi); }
+  .airco:focus-visible, .k-paneel button:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+  .airco .chip, .k-paneel .chip {
+    --tone: var(--k); width: calc(46px * var(--s)); height: calc(46px * var(--s)); font-size: calc(24px * var(--s));
+  }
+  .airco[data-soort="uit"] .chip, .airco[data-soort="dood"] .chip, .airco[data-soort="stil"] .chip,
+  .k-paneel[data-soort="uit"] .chip, .k-paneel[data-soort="dood"] .chip, .k-paneel[data-soort="stil"] .chip {
+    background: var(--dac-surface); border-color: var(--dac-border); color: var(--dac-ink-3);
+  }
+  .airco[data-soort="dood"], .k-paneel[data-soort="dood"] { opacity: 0.5; }
+  .k-tekst { min-width: 0; flex: 1 1 auto; }
+  .k-naam { font-size: calc(16px * var(--s)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .k-status { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .airco .k-nu { flex: 0 0 auto; font-size: calc(26px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .bi > .aircos { flex: 1 1 auto; min-height: 0; }
+  .blok.dicht .aircos, .blok.halfdicht .aircos, .blok.klein .aircos { gap: calc(6px * var(--s)); }
+  .blok.klein .airco, .blok.dicht .airco, .blok.halfdicht .airco { min-height: 0; padding: calc(5px * var(--s)) calc(12px * var(--s)) calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
+  .blok.klein .airco .chip, .blok.dicht .airco .chip, .blok.halfdicht .airco .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(18px * var(--s)); }
+  .blok.klein .airco .k-nu, .blok.dicht .airco .k-nu { font-size: calc(20px * var(--s)); }
+  .blok.klein .k-status, .blok.dicht .k-status { display: none; }
+
+  /* de pagina Klimaat: per airco een paneel */
+  .k-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(440px * var(--s)), 1fr)); gap: calc(14px * var(--s)); align-content: start; }
+  .k-paneel {
+    display: flex; flex-direction: column; gap: calc(16px * var(--s)); padding: calc(18px * var(--s)) calc(20px * var(--s));
+    background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); box-shadow: var(--dac-shadow); min-width: 0;
+  }
+  .k-kop { display: flex; align-items: center; gap: calc(14px * var(--s)); min-width: 0; }
+  .k-paneel .chip { width: calc(56px * var(--s)); height: calc(56px * var(--s)); font-size: calc(28px * var(--s)); }
+  .k-paneel .k-naam { font-size: calc(20px * var(--s)); }
+  .k-paneel .k-status { font-size: calc(15px * var(--s)); }
+  .k-paneel button {
+    font: inherit; color: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
+    background: var(--dac-surface); border: 1px solid var(--dac-border-hi);
+  }
+  .k-paneel button:active { background: var(--dac-surface-hi); }
+  .k-paneel button:disabled { opacity: 0.35; cursor: default; }
+  .k-aan {
+    flex: 0 0 auto; display: flex; align-items: center; gap: calc(8px * var(--s)); height: calc(48px * var(--s));
+    padding: 0 calc(18px * var(--s)) 0 calc(14px * var(--s)); border-radius: var(--dac-radius-pill);
+    font-size: calc(16px * var(--s)) !important; font-weight: 600 !important;
+  }
+  .k-aan .icon { font-size: calc(20px * var(--s)); }
+  .k-paneel .k-aan[aria-pressed="true"] {
+    color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); border-color: color-mix(in srgb, var(--tone) 40%, transparent);
+  }
+  .k-midden { display: flex; align-items: stretch; gap: calc(12px * var(--s)); }
+  .k-meting { display: flex; flex-direction: column; justify-content: center; gap: calc(4px * var(--s)); flex: 0 0 auto; min-width: calc(110px * var(--s)); }
+  .k-getal { font-size: calc(44px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .k-lbl { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); }
+  .k-stellen { display: flex; gap: calc(10px * var(--s)); flex: 1 1 auto; min-width: 0; }
+  .k-stel {
+    display: flex; align-items: center; justify-content: space-between; gap: calc(6px * var(--s)); flex: 1 1 0; min-width: 0;
+    padding: calc(6px * var(--s)); border-radius: var(--dac-radius); background: rgba(var(--dac-tint), 0.05); border: 1px solid var(--dac-border);
+  }
+  .k-stel button { width: calc(56px * var(--s)); height: calc(56px * var(--s)); flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; }
+  .k-stel button .icon { font-size: calc(24px * var(--s)); }
+  .k-doel { display: flex; flex-direction: column; align-items: center; gap: calc(4px * var(--s)); min-width: 0; flex: 1 1 auto; }
+  .k-doel .k-getal { font-size: calc(34px * var(--s)); font-weight: 400; }
+  .k-stel.rust .k-doel { opacity: 0.45; }
+  .k-doel.wacht .k-getal { color: var(--tone); }
+  .k-standen { display: flex; flex-wrap: wrap; gap: calc(8px * var(--s)); }
+  .k-seg {
+    flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: calc(7px * var(--s));
+    min-height: calc(48px * var(--s)); padding: 0 calc(14px * var(--s)); border-radius: var(--dac-radius-pill);
+    font-size: calc(15px * var(--s)) !important; font-weight: 500; color: var(--dac-ink-2) !important; white-space: nowrap;
+  }
+  .k-seg .icon { font-size: calc(19px * var(--s)); }
+  .k-paneel .k-seg[aria-pressed="true"] {
+    color: var(--k) !important; background: color-mix(in srgb, var(--k) 14%, transparent); border-color: color-mix(in srgb, var(--k) 42%, transparent);
+  }
+  /* De standen in één rij van gelijke vakken, het icoon boven het woord. Als
+     pillen naast elkaar liep de vijfde (Ventileren) op een eigen regel over
+     de hele breedte (gemeten op 13 oktober 2026). */
+  .k-standen.modi { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: calc(8px * var(--s)); }
+  .k-standen.modi .k-seg {
+    flex-direction: column; gap: calc(4px * var(--s)); min-height: calc(64px * var(--s)); padding: calc(6px * var(--s)) calc(4px * var(--s));
+    border-radius: var(--dac-radius-sm); font-size: calc(13px * var(--s)) !important; min-width: 0;
+  }
+  .k-standen.modi .k-seg span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .k-standen.modi .k-seg .icon { font-size: calc(22px * var(--s)); }
+  /* Twee stelknoppen (een bereik, Van en Tot) naast elkaar: kleiner, anders
+     liep het getal onder de knoppen door. */
+  .k-stellen.twee .k-stel { padding: calc(4px * var(--s)); gap: calc(2px * var(--s)); }
+  .k-stellen.twee .k-stel button { width: calc(42px * var(--s)); height: calc(42px * var(--s)); }
+  .k-stellen.twee .k-stel button .icon { font-size: calc(20px * var(--s)); }
+  .k-stellen.twee .k-doel .k-getal { font-size: calc(26px * var(--s)); }
+  .k-rij { display: flex; align-items: center; gap: calc(12px * var(--s)); }
+  .k-rij .k-lbl { flex: 0 0 auto; min-width: calc(80px * var(--s)); font-size: calc(14px * var(--s)); }
+  .k-rij .k-standen { flex: 1 1 auto; }
+  .k-rij .k-seg { min-height: calc(42px * var(--s)); padding: 0 calc(10px * var(--s)); }
+  .k-feit { font-size: calc(15px * var(--s)); color: var(--dac-ink-2); }
+
   .afspraken { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(8px * var(--s)); align-content: start; }
   .afspraak { display: flex; box-sizing: border-box; align-items: center; gap: calc(14px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)); background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); min-width: 0; }
   .p-inhoud .afspraak { padding: calc(14px * var(--s)) calc(20px * var(--s)); }
@@ -795,6 +922,12 @@ export class InfoschermCard extends DacCard {
        aanraakt dat niet veranderd is -- ook niet als er intussen een foto
        in het vak is gezet. Zonder dit knipperden de foto's bij elke tik. */
     this.html_ = new Map();
+    /* Wat er op de klimaatpagina getikt is en nog niet terug is van de airco,
+       per entiteit. Een airco in de cloud (MELCloud) meldt zich hooguit eens
+       per minuut; zonder dit sprong een getikte 22° na een tel terug naar 24°
+       en een minuut later weer naar 22°. Zie wachtVan_. */
+    this.kWacht_ = new Map();
+    this.kTimers_ = new Map();
     this.weerEntiteit_ = null;
     this.weerOpzeggen_ = [];
     this.agendaSleutel_ = "";
@@ -833,6 +966,7 @@ export class InfoschermCard extends DacCard {
       agendas: Array.isArray(i.agendas) ? i.agendas : [],
       afval: Array.isArray(i.afval) ? i.afval : [],
       verlichting: Array.isArray(i.verlichting) ? i.verlichting : [],
+      klimaat: Array.isArray(i.klimaat) ? i.klimaat : [],
     };
   }
 
@@ -846,7 +980,14 @@ export class InfoschermCard extends DacCard {
     // De afvalsensoren horen erbij: zonder hen kwam een nieuwe ophaaldatum pas
     // in beeld als er toevallig iets anders veranderde. Gevonden op 6 oktober
     // 2026 bij het nameten van twee bakken op één dag.
-    return [i.weer, i.energie, "sun.sun", ...i.verlichting.map((l) => l.entity), ...(i.afval ?? [])].filter(Boolean);
+    return [
+      i.weer,
+      i.energie,
+      "sun.sun",
+      ...i.verlichting.map((l) => l.entity),
+      ...(i.afval ?? []),
+      ...i.klimaat.map((a) => a.entity),
+    ].filter(Boolean);
   }
 
   getCardSize() {
@@ -928,6 +1069,9 @@ export class InfoschermCard extends DacCard {
       if (persoon) return this.tikPersoon_(persoon.dataset.id);
       const lamp = doel.closest(".lamp[data-id]");
       if (lamp) return this.tikLamp_(lamp.dataset.id);
+      const kKnop = doel.closest(".k-paneel button[data-actie]");
+      if (kKnop) return kKnop.disabled ? undefined : this.tikAirco_(kKnop.closest(".k-paneel").dataset.airco, kKnop);
+      if (doel.closest(".airco[data-airco]")) return this.gaNaar_("klimaat");
       const bericht = doel.closest(".bericht[data-id]");
       if (bericht) return this.openBericht_(bericht.dataset.id);
       return undefined;
@@ -1002,6 +1146,10 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => this.dashHerkansing_.stop());
     this.teardown_.push(() => this.zegWeerOp_());
     this.teardown_.push(() => this.abo_.stop());
+    this.teardown_.push(() => {
+      for (const t of this.kTimers_.values()) clearTimeout(t);
+      this.kTimers_.clear();
+    });
 
     this.haal_();
     this.abo_.start(this.hass);
@@ -1709,6 +1857,144 @@ export class InfoschermCard extends DacCard {
     this.hass.callService("homeassistant", "toggle", { entity_id: id });
   }
 
+  /* ------------------------------------------------------------ klimaat */
+
+  /**
+   * Een knop op de klimaatpagina. Alleen als de receptie bedienen niet heeft
+   * uitgezet; de knoppen staan er dan ook niet, maar een pagina die nog open
+   * stond toen ze het uitzette mag niet stiekem blijven werken.
+   */
+  tikAirco_(id, knop) {
+    if (!this.hass || !klimaatBedienbaar(this.stand_)) return;
+    const st = stateOf(this.hass, id);
+    if (!st) return;
+    const roep = (oproep, wacht) => {
+      if (!oproep) return;
+      this.hass.callService(oproep[0], oproep[1], oproep[2]);
+      if (wacht) this.wacht_(id, wacht);
+    };
+    switch (knop.dataset.actie) {
+      case "aanuit": {
+        const aan = !(this.wachtVan_(id, st).aan ?? aircoStand(st).aan);
+        return roep(aanUitOproep(st, aan), { aan, stand: undefined });
+      }
+      case "stand":
+        return roep(standKiezen(st, knop.dataset.waarde), { stand: knop.dataset.waarde, aan: undefined });
+      case "ventilator":
+        return roep(keuzeOproep(st, "ventilator", knop.dataset.waarde), { ventilator: knop.dataset.waarde });
+      case "min":
+      case "plus":
+        return this.stelAirco_(id, knop.closest(".k-stel")?.dataset.welk ?? "doel", knop.dataset.actie === "plus" ? 1 : -1);
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Het doel verzetten. De tikken lopen voor op de airco, en pas als je
+   * klaar bent gaat er één aanroep uit: zes tikken op + zijn drie graden, en
+   * één opdracht naar de cloud in plaats van zes.
+   */
+  stelAirco_(id, welk, richting) {
+    const st = stateOf(this.hass, id);
+    const inst = doelInstelling(st, this.eenheid_());
+    if (!inst) return;
+    const nu = { ...inst, ...this.doelWacht_(id, st) };
+    const waarde = volgendeWaarde(nu, welk, nu[welk], richting);
+    if (waarde == null) return;
+    this.wacht_(id, { [welk]: waarde }, false);
+    clearTimeout(this.kTimers_.get(id));
+    this.kTimers_.set(
+      id,
+      setTimeout(() => {
+        this.kTimers_.delete(id);
+        const st2 = stateOf(this.hass, id);
+        const inst2 = doelInstelling(st2, this.eenheid_());
+        if (!inst2) return;
+        const w = { ...inst2, ...this.doelWacht_(id, st2) };
+        const oproep = doelOproep(st2, inst2.soort === "bereik" ? { laag: w.laag, hoog: w.hoog } : { doel: w.doel });
+        if (oproep) this.hass.callService(oproep[0], oproep[1], oproep[2]);
+        this.wacht_(id, {});
+      }, 450)
+    );
+  }
+
+  /** De eenheid van temperatuur in deze Home Assistant. */
+  eenheid_() {
+    return this.hass?.config?.unit_system?.temperature ?? "°C";
+  }
+
+  /**
+   * Onthoud wat er getikt is. `uitlopen` zet de klok op anderhalve minuut:
+   * zo lang mag een airco in de cloud erover doen om het te melden. Daarna
+   * geldt weer wat hij zelf zegt, ook als dat iets anders is.
+   */
+  wacht_(id, waarden, uitlopen = true) {
+    const oud = this.kWacht_.get(id) ?? {};
+    const nieuw = { ...oud, ...waarden };
+    for (const [k, v] of Object.entries(nieuw)) if (v === undefined) delete nieuw[k];
+    if (uitlopen) nieuw.tot = Date.now() + 90_000;
+    else nieuw.tot ??= Date.now() + 90_000;
+    this.kWacht_.set(id, nieuw);
+    if (uitlopen) setTimeout(() => this.paintPagina_("klimaat"), 90_500);
+    this.paintPagina_("klimaat");
+  }
+
+  /**
+   * Wat er voor deze airco nog onderweg is. Wat de airco intussen zelf
+   * meldt valt eraf; is de tijd om, dan alles.
+   */
+  wachtVan_(id, st) {
+    const w = this.kWacht_.get(id);
+    if (!w) return {};
+    if (!st || Date.now() > w.tot) {
+      this.kWacht_.delete(id);
+      return {};
+    }
+    const a = st.attributes ?? {};
+    const zelfde = (x, y) => Number.isFinite(Number(x)) && Math.abs(Number(x) - Number(y)) < 0.01;
+    // Een doel dat nog getikt wordt (de timer loopt) blijft altijd staan.
+    const tikt = this.kTimers_.has(id);
+    if (!tikt && "doel" in w && zelfde(a.temperature, w.doel)) delete w.doel;
+    if (!tikt && "laag" in w && zelfde(a.target_temp_low, w.laag)) delete w.laag;
+    if (!tikt && "hoog" in w && zelfde(a.target_temp_high, w.hoog)) delete w.hoog;
+    if ("stand" in w && st.state === w.stand) delete w.stand;
+    if ("aan" in w && (st.state !== "off") === w.aan) delete w.aan;
+    if ("ventilator" in w && a.fan_mode === w.ventilator) delete w.ventilator;
+    if (Object.keys(w).length <= 1) {
+      this.kWacht_.delete(id);
+      return {};
+    }
+    return w;
+  }
+
+  /** Alleen de doelen uit wat er onderweg is. */
+  doelWacht_(id, st) {
+    const w = this.wachtVan_(id, st);
+    const uit = {};
+    for (const k of ["doel", "laag", "hoog"]) if (k in w) uit[k] = w[k];
+    return uit;
+  }
+
+  /**
+   * De airco zoals hij straks is: wat hij meldt, met daaroverheen wat er
+   * getikt is en nog onderweg is. Alles op de pagina tekent hiervan, zodat
+   * een getikte stand meteen oplicht.
+   */
+  aircoStraks_(id, st) {
+    const w = this.wachtVan_(id, st);
+    if (!st || !Object.keys(w).length) return { st, w };
+    const a = { ...st.attributes };
+    if ("doel" in w) a.temperature = w.doel;
+    if ("laag" in w) a.target_temp_low = w.laag;
+    if ("hoog" in w) a.target_temp_high = w.hoog;
+    if ("ventilator" in w) a.fan_mode = w.ventilator;
+    let state = st.state;
+    if ("stand" in w) state = w.stand;
+    else if (w.aan === false) state = "off";
+    return { st: { ...st, state, attributes: a }, w };
+  }
+
   openBericht_(id) {
     const item = this.nieuws_().find((n) => n.id === id);
     if (!item) return;
@@ -1904,7 +2190,7 @@ export class InfoschermCard extends DacCard {
       if (nodig > ruimte + 1 && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
       uren.hidden = uren.getBoundingClientRect().bottom > onder() + 1;
     }
-    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .afspraken, .ot, .vj-lijst");
+    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .aircos, .afspraken, .ot, .vj-lijst");
     if (!lijst) return;
     const kinderen = [...lijst.children];
     for (const kind of kinderen) kind.hidden = false;
@@ -1949,7 +2235,7 @@ export class InfoschermCard extends DacCard {
       // Passen de gewone tegels niet allemaal, dan eerst halfdicht (de status
       // blijft) en pas daarna dicht -- en alleen als er dan ook echt meer in
       // gaan.
-      if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen") && uit.tonen < kinderen.length) {
+      if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen, .aircos") && uit.tonen < kinderen.length) {
         let vorm = "";
         for (const probeer of ["halfdicht", "dicht"]) {
           if (uit.tonen >= kinderen.length) break;
@@ -2147,6 +2433,17 @@ export class InfoschermCard extends DacCard {
         const tonen = aantal > 0 ? lampen.slice(0, aantal) : lampen;
         el.dataset.meer = String(lampen.length - tonen.length);
         zet(`<div class="lampen ${kolommen(blok.w)}">${tonen.map((l) => this.htmlLamp_(l)).join("")}</div>`, "");
+        break;
+      }
+      case "klimaat": {
+        // Een airco-tegel heeft een getal rechts, en dat past niet twee keer
+        // naast elkaar in een blok van twee breed. Dus pas vanaf drie breed
+        // twee kolommen, en vanaf vijf drie.
+        const aircos = this.installatie_().klimaat;
+        const tonen = aantal > 0 ? aircos.slice(0, aantal) : aircos;
+        el.dataset.meer = String(aircos.length - tonen.length);
+        const kol = blok.w >= 5 ? "kol-3" : blok.w >= 3 ? "" : "kol-1";
+        zet(`<div class="aircos ${kol}">${tonen.map((a) => this.htmlAirco_(a)).join("")}</div>`, "");
         break;
       }
       case "agenda": {
@@ -2362,6 +2659,115 @@ export class InfoschermCard extends DacCard {
     </div>`;
   }
 
+  /**
+   * Eén airco op het welkomscherm: de naam, wat er ingesteld is, en rechts
+   * groot de temperatuur in de ruimte. Gevraagd op 13 oktober 2026: "op de
+   * ipad moet gewoon de room temp en de ingestelde temp laten zien".
+   */
+  htmlAirco_(item) {
+    const id = item.entity;
+    const st = stateOf(this.hass, id);
+    const s = aircoStand(st);
+    const taal = this.hass?.locale?.language ?? "nl";
+    const doel = doelTekst(s, (n) => graden(n, taal));
+    const status = !s.beschikbaar ? "Niet bereikbaar" : !s.aan ? "Uit" : doel ? `Ingesteld ${doel}` : statusTekst(s);
+    const naam = item.naam || st?.attributes?.friendly_name || id;
+    const nu = s.huidig == null ? "" : `${fmtNumber(this.hass, s.huidig, 1)}°`;
+    return `<div class="airco" data-soort="${s.soort}" role="button" tabindex="0" data-airco="${escapeHtml(id)}" aria-label="${escapeHtml(`${naam}: ${nu || "geen meting"}, ${status}`)}">
+      <div class="chip">${resolve(SOORT_ICOON[s.soort] ?? "airco")}</div>
+      <div class="k-tekst"><div class="k-naam">${escapeHtml(naam)}</div><div class="k-status">${escapeHtml(status)}</div></div>
+      <div class="k-nu">${nu}</div>
+    </div>`;
+  }
+
+  /**
+   * Eén airco op de klimaatpagina, om te bedienen. Zonder `bedienen` staan
+   * er geen knoppen: dan is het een paneel om te kijken.
+   */
+  htmlAircoPaneel_(item, bedienen) {
+    const id = item.entity;
+    const echt = stateOf(this.hass, id);
+    const { st, w } = this.aircoStraks_(id, echt);
+    const s = aircoStand(st);
+    const taal = this.hass?.locale?.language ?? "nl";
+    const fmt = (n) => graden(n, taal);
+    const naam = item.naam || st?.attributes?.friendly_name || id;
+    const dood = !s.beschikbaar;
+    const onderweg = Object.keys(w).some((k) => k !== "tot");
+
+    let status = statusTekst(s);
+    if (w.aan === true && !("stand" in w) && echt?.state === "off") status = "Wordt aangezet…";
+    else if (w.aan === false) status = "Wordt uitgezet…";
+
+    const aanKnop =
+      bedienen && !dood
+        ? `<button type="button" class="k-aan" data-actie="aanuit" aria-pressed="${s.aan || w.aan === true}">${resolve("power")}<span>${
+            s.aan || w.aan === true ? "Aan" : "Uit"
+          }</span></button>`
+        : "";
+
+    const inst = doelInstelling(st, this.eenheid_());
+    const stel = (welk, label) => {
+      const waarde = inst[welk];
+      const knop = (actie, icoon, grens) =>
+        bedienen ? `<button type="button" data-actie="${actie}" aria-label="${actie === "plus" ? "Warmer" : "Kouder"}"${grens ? " disabled" : ""}>${resolve(icoon)}</button>` : "";
+      return `<div class="k-stel ${s.aan ? "" : "rust"}" data-welk="${welk}">
+        ${knop("min", "minus", dood || waarde <= inst.min)}
+        <div class="k-doel ${welk in w ? "wacht" : ""}"><span class="k-getal">${fmt(waarde)}°</span><span class="k-lbl">${label}</span></div>
+        ${knop("plus", "plus", dood || waarde >= inst.max)}
+      </div>`;
+    };
+    const stellen = !inst
+      ? ""
+      : inst.soort === "bereik"
+        ? stel("laag", "Van") + stel("hoog", "Tot")
+        : stel("doel", "Ingesteld");
+    const twee = inst?.soort === "bereik" ? " twee" : "";
+
+    const ICOON_STAND = { heat: "flame", cool: "snowflake", auto: "airco", heat_cool: "airco", dry: "drop", fan_only: "fan" };
+    const gekozen = s.aan ? gekozenStand(st) : "";
+    // Eén stand is geen keuze (een warmtepomp die alleen verwarmt): dan is
+    // de aan-knop genoeg.
+    const opties = aircoStanden(st);
+    const knopStand = (o) =>
+      `<button type="button" class="k-seg" data-actie="stand" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="${o.waarde === gekozen}"${dood ? " disabled" : ""}>${
+        ICOON_STAND[o.waarde] ? resolve(ICOON_STAND[o.waarde]) : ""
+      }<span>${escapeHtml(o.label)}</span></button>`;
+    const standen =
+      bedienen && opties.length > 1
+        ? `<div class="k-standen modi" style="--n:${opties.length}">${opties.map(knopStand).join("")}</div>`
+        : "";
+
+    // De ventilator als knoppen, alleen als de airco aan staat: een
+    // ventilatorstand van een airco die uit staat doet niets.
+    const vent = keuzesVan(st, "ventilator");
+    const ventNu = keuzeNu(st, "ventilator");
+    const ventilator =
+      bedienen && s.aan && vent.length > 1
+        ? `<div class="k-rij"><span class="k-lbl">Ventilator</span><div class="k-standen">${vent
+            .map(
+              (o) =>
+                `<button type="button" class="k-seg" data-actie="ventilator" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="${o.waarde === ventNu}">${escapeHtml(o.label)}</button>`
+            )
+            .join("")}</div></div>`
+        : "";
+    // Zonder bediening wel zeggen hoe de ventilator staat.
+    const feit = !bedienen && s.aan && ventNu ? `<div class="k-feit">Ventilator ${escapeHtml(vent.find((o) => o.waarde === ventNu)?.label ?? ventNu)}</div>` : "";
+
+    return `<div class="k-paneel" data-soort="${s.soort}" data-airco="${escapeHtml(id)}"${onderweg ? " data-onderweg" : ""}>
+      <div class="k-kop">
+        <div class="chip">${resolve(SOORT_ICOON[s.soort] ?? "airco")}</div>
+        <div class="k-tekst"><div class="k-naam">${escapeHtml(naam)}</div><div class="k-status">${escapeHtml(status)}</div></div>
+        ${aanKnop}
+      </div>
+      <div class="k-midden">
+        <div class="k-meting"><span class="k-getal">${s.huidig == null ? "–" : `${fmtNumber(this.hass, s.huidig, 1)}°`}</span><span class="k-lbl">Nu in de ruimte</span></div>
+        <div class="k-stellen${twee}">${stellen}</div>
+      </div>
+      ${standen}${ventilator}${feit}
+    </div>`;
+  }
+
   htmlAfspraak_(ev) {
     const heleDag = !String(ev.start).includes("T");
     const tijd = heleDag ? "hele dag" : `${klok(new Date(ev.start))}${ev.end ? ` – ${klok(new Date(ev.end))}` : ""}`;
@@ -2431,6 +2837,13 @@ export class InfoschermCard extends DacCard {
       case "verlichting": {
         const lampen = this.installatie_().verlichting;
         this.vul_(vak, `<div class="lampen kol-3">${lampen.map((l) => this.htmlLamp_(l)).join("")}</div>`, false);
+        break;
+      }
+      case "klimaat": {
+        const aircos = this.installatie_().klimaat;
+        const bedienen = klimaatBedienbaar(this.stand_);
+        this.text(".pagina[data-p='klimaat'] .onder", bedienen ? PAGINA_KOP.klimaat.onder : "");
+        this.vul_(vak, `<div class="k-raster">${aircos.map((a) => this.htmlAircoPaneel_(a, bedienen)).join("")}</div>`, false);
         break;
       }
       case "verjaardagen": {

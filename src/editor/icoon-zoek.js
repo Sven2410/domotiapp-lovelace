@@ -37,7 +37,7 @@ export const GROEPEN = [
   ["Apparaten", ["tv", "speaker", "camera", "cctv", "car", "van", "washer", "dishwasher", "koelkast", "oven", "magnetron", "printer", "printer3d", "fan", "airco", "radio", "boiler"]],
   ["Media", ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
   ["Afval", ["bin", "binWheeled", "calendar"]],
-  ["Verwarming en klimaat", ["floorHeating", "heatPump", "circulatiepomp", "boiler", "thermo", "homeThermo", "celsius", "gas", "pressure", "refill"]],
+  ["Verwarming en klimaat", ["airco", "flame", "snowflake", "floorHeating", "heatPump", "circulatiepomp", "boiler", "thermo", "homeThermo", "celsius", "gas", "pressure", "refill"]],
   ["Auto en tanken", ["car", "petrol", "diesel", "gas", "fuelStation", "raceCar", "plug"]],
   ["Weer", ["sun", "cloud", "cloudSun", "rain", "snow", "fog", "wind", "drop", "uv", "sunrise", "sunset", "thermo"]],
   ["Weermetingen", ["humidity", "lux", "windSpeed", "rainfall", "weatherCode", "forecast", "weatherStation", "rainRadar", "pollenradar", "uv", "pressure", "thermo"]],
@@ -159,6 +159,8 @@ export const TERMEN = {
   printer3d: ["3d printer", "3d-printer", "bambu", "prusa", "filament", "printer", "nozzle", "printen"],
   fan: ["ventilator", "fan", "ventilatie", "afzuiging", "wtw", "luchtverversing", "koelen"],
   airco: ["airco", "airconditioning", "koeling", "warmtepomp", "klimaat", "verwarming", "hvac"],
+  flame: ["vlam", "verwarmen", "warm", "vuur", "haard", "heat", "flame", "stoken"],
+  snowflake: ["sneeuwvlok", "koelen", "koud", "vorst", "cool", "snowflake", "ijs"],
   radio: ["radio", "zender", "fm", "stream", "muziek", "antenne"],
 
   /* Media */

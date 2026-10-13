@@ -1,0 +1,687 @@
+{
+ "_bron": "MELCloud Home (melcloud_home), twee Mitsubishi-binnenunits bij een klant, read-only gelezen op 13-10-2026 ~20:00. Namen en id's vervangen; attributen, translation_keys en categorieen zoals ze waren. Beide stonden uit.",
+ "devices": {
+  "apparaat_airco_1": {
+   "id": "apparaat_airco_1",
+   "manufacturer": "Mitsubishi Electric",
+   "model": null,
+   "name": "Kantoor raam",
+   "name_by_user": null
+  },
+  "apparaat_airco_2": {
+   "id": "apparaat_airco_2",
+   "manufacturer": "Mitsubishi Electric",
+   "model": null,
+   "name": "Kantoor deur",
+   "name_by_user": null
+  }
+ },
+ "entities": {
+  "binary_sensor.kantoor_raam_error": {
+   "entity_id": "binary_sensor.kantoor_raam_error",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "error",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_deur_error": {
+   "entity_id": "binary_sensor.kantoor_deur_error",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "error",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_raam_standby": {
+   "entity_id": "binary_sensor.kantoor_raam_standby",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "standby",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_deur_standby": {
+   "entity_id": "binary_sensor.kantoor_deur_standby",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "standby",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_raam_holiday_mode": {
+   "entity_id": "binary_sensor.kantoor_raam_holiday_mode",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "holiday_mode",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_deur_holiday_mode": {
+   "entity_id": "binary_sensor.kantoor_deur_holiday_mode",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "holiday_mode",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_raam_frost_protection": {
+   "entity_id": "binary_sensor.kantoor_raam_frost_protection",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_deur_frost_protection": {
+   "entity_id": "binary_sensor.kantoor_deur_frost_protection",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_raam_overheat_protection": {
+   "entity_id": "binary_sensor.kantoor_raam_overheat_protection",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.kantoor_deur_overheat_protection": {
+   "entity_id": "binary_sensor.kantoor_deur_overheat_protection",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "climate.kantoor_raam": {
+   "entity_id": "climate.kantoor_raam",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "ata_unit",
+   "entity_category": null,
+   "hidden": false
+  },
+  "climate.kantoor_deur": {
+   "entity_id": "climate.kantoor_deur",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "ata_unit",
+   "entity_category": null,
+   "hidden": false
+  },
+  "number.kantoor_raam_frost_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_raam_frost_protection_minimum_temperature",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection_min_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_deur_frost_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_deur_frost_protection_minimum_temperature",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection_min_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_raam_frost_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_raam_frost_protection_maximum_temperature",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection_max_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_deur_frost_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_deur_frost_protection_maximum_temperature",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection_max_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_raam_overheat_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_raam_overheat_protection_minimum_temperature",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection_min_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_deur_overheat_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_deur_overheat_protection_minimum_temperature",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection_min_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_raam_overheat_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_raam_overheat_protection_maximum_temperature",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection_max_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.kantoor_deur_overheat_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_deur_overheat_protection_maximum_temperature",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection_max_temp",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "sensor.kantoor_raam_room_temperature": {
+   "entity_id": "sensor.kantoor_raam_room_temperature",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "room_temperature",
+   "entity_category": null,
+   "hidden": false
+  },
+  "sensor.kantoor_deur_room_temperature": {
+   "entity_id": "sensor.kantoor_deur_room_temperature",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "room_temperature",
+   "entity_category": null,
+   "hidden": false
+  },
+  "sensor.kantoor_raam_energy_consumed_monthly": {
+   "entity_id": "sensor.kantoor_raam_energy_consumed_monthly",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "energy_consumed",
+   "entity_category": null,
+   "hidden": false
+  },
+  "sensor.kantoor_deur_energy_consumed_monthly": {
+   "entity_id": "sensor.kantoor_deur_energy_consumed_monthly",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "energy_consumed",
+   "entity_category": null,
+   "hidden": false
+  },
+  "switch.kantoor_raam_frost_protection": {
+   "entity_id": "switch.kantoor_raam_frost_protection",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.kantoor_deur_frost_protection": {
+   "entity_id": "switch.kantoor_deur_frost_protection",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "frost_protection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.kantoor_raam_overheat_protection": {
+   "entity_id": "switch.kantoor_raam_overheat_protection",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.kantoor_deur_overheat_protection": {
+   "entity_id": "switch.kantoor_deur_overheat_protection",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "overheat_protection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.kantoor_raam_standby": {
+   "entity_id": "switch.kantoor_raam_standby",
+   "device_id": "apparaat_airco_1",
+   "platform": "melcloud_home",
+   "translation_key": "standby",
+   "entity_category": null,
+   "hidden": false
+  },
+  "switch.kantoor_deur_standby": {
+   "entity_id": "switch.kantoor_deur_standby",
+   "device_id": "apparaat_airco_2",
+   "platform": "melcloud_home",
+   "translation_key": "standby",
+   "entity_category": null,
+   "hidden": false
+  }
+ },
+ "states": {
+  "binary_sensor.kantoor_raam_error": {
+   "entity_id": "binary_sensor.kantoor_raam_error",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Kantoor raam Error"
+   },
+   "last_changed": "2026-10-13T09:49:59.499510+00:00",
+   "last_updated": "2026-10-13T09:49:59.499510+00:00"
+  },
+  "binary_sensor.kantoor_deur_error": {
+   "entity_id": "binary_sensor.kantoor_deur_error",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Kantoor deur Error"
+   },
+   "last_changed": "2026-10-13T09:49:59.500083+00:00",
+   "last_updated": "2026-10-13T09:49:59.500083+00:00"
+  },
+  "binary_sensor.kantoor_raam_standby": {
+   "entity_id": "binary_sensor.kantoor_raam_standby",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Kantoor raam Standby"
+   },
+   "last_changed": "2026-10-13T09:49:59.500495+00:00",
+   "last_updated": "2026-10-13T09:49:59.500495+00:00"
+  },
+  "binary_sensor.kantoor_deur_standby": {
+   "entity_id": "binary_sensor.kantoor_deur_standby",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Kantoor deur Standby"
+   },
+   "last_changed": "2026-10-13T09:49:59.500892+00:00",
+   "last_updated": "2026-10-13T09:49:59.500892+00:00"
+  },
+  "binary_sensor.kantoor_raam_holiday_mode": {
+   "entity_id": "binary_sensor.kantoor_raam_holiday_mode",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor raam Holiday mode"
+   },
+   "last_changed": "2026-10-13T09:49:59.501285+00:00",
+   "last_updated": "2026-10-13T09:49:59.501285+00:00"
+  },
+  "binary_sensor.kantoor_deur_holiday_mode": {
+   "entity_id": "binary_sensor.kantoor_deur_holiday_mode",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor deur Holiday mode"
+   },
+   "last_changed": "2026-10-13T09:49:59.501652+00:00",
+   "last_updated": "2026-10-13T09:49:59.501652+00:00"
+  },
+  "binary_sensor.kantoor_raam_frost_protection": {
+   "entity_id": "binary_sensor.kantoor_raam_frost_protection",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor raam Frost protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.502014+00:00",
+   "last_updated": "2026-10-13T09:49:59.502014+00:00"
+  },
+  "binary_sensor.kantoor_deur_frost_protection": {
+   "entity_id": "binary_sensor.kantoor_deur_frost_protection",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor deur Frost protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.502375+00:00",
+   "last_updated": "2026-10-13T09:49:59.502375+00:00"
+  },
+  "binary_sensor.kantoor_raam_overheat_protection": {
+   "entity_id": "binary_sensor.kantoor_raam_overheat_protection",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor raam Overheat protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.502732+00:00",
+   "last_updated": "2026-10-13T09:49:59.502732+00:00"
+  },
+  "binary_sensor.kantoor_deur_overheat_protection": {
+   "entity_id": "binary_sensor.kantoor_deur_overheat_protection",
+   "state": "unknown",
+   "attributes": {
+    "friendly_name": "Kantoor deur Overheat protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.503054+00:00",
+   "last_updated": "2026-10-13T09:49:59.503054+00:00"
+  },
+  "climate.kantoor_raam": {
+   "entity_id": "climate.kantoor_raam",
+   "state": "off",
+   "attributes": {
+    "hvac_modes": [
+     "off",
+     "heat",
+     "cool",
+     "auto",
+     "dry",
+     "fan_only"
+    ],
+    "min_temp": 7,
+    "max_temp": 35,
+    "fan_modes": [
+     "auto",
+     "speed_1",
+     "speed_2",
+     "speed_3",
+     "speed_4",
+     "speed_5"
+    ],
+    "swing_modes": [
+     "auto",
+     "swing",
+     "position_1",
+     "position_2",
+     "position_3",
+     "position_4",
+     "position_5"
+    ],
+    "swing_horizontal_modes": [
+     "auto",
+     "swing",
+     "left",
+     "left_centre",
+     "centre",
+     "right_centre",
+     "right"
+    ],
+    "current_temperature": 17.5,
+    "temperature": 24.0,
+    "fan_mode": "auto",
+    "swing_mode": "auto",
+    "swing_horizontal_mode": "centre",
+    "friendly_name": "Kantoor raam",
+    "supported_features": 937
+   },
+   "last_changed": "2026-10-13T09:52:10.058941+00:00",
+   "last_updated": "2026-10-13T17:53:10.766001+00:00"
+  },
+  "climate.kantoor_deur": {
+   "entity_id": "climate.kantoor_deur",
+   "state": "off",
+   "attributes": {
+    "hvac_modes": [
+     "off",
+     "heat",
+     "cool",
+     "auto",
+     "dry",
+     "fan_only"
+    ],
+    "min_temp": 7,
+    "max_temp": 35,
+    "fan_modes": [
+     "auto",
+     "speed_1",
+     "speed_2",
+     "speed_3",
+     "speed_4",
+     "speed_5"
+    ],
+    "swing_modes": [
+     "auto",
+     "swing",
+     "position_1",
+     "position_2",
+     "position_3",
+     "position_4",
+     "position_5"
+    ],
+    "swing_horizontal_modes": [
+     "auto",
+     "swing",
+     "left",
+     "left_centre",
+     "centre",
+     "right_centre",
+     "right"
+    ],
+    "current_temperature": 18.0,
+    "temperature": 24.0,
+    "fan_mode": "auto",
+    "swing_mode": "auto",
+    "swing_horizontal_mode": "centre",
+    "friendly_name": "Kantoor deur",
+    "supported_features": 937
+   },
+   "last_changed": "2026-10-13T09:51:32.968612+00:00",
+   "last_updated": "2026-10-13T17:50:10.777792+00:00"
+  },
+  "number.kantoor_raam_frost_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_raam_frost_protection_minimum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 0.0,
+    "max": 30.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor raam Frost protection minimum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.505355+00:00",
+   "last_updated": "2026-10-13T09:49:59.505355+00:00"
+  },
+  "number.kantoor_deur_frost_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_deur_frost_protection_minimum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 0.0,
+    "max": 30.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor deur Frost protection minimum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.505659+00:00",
+   "last_updated": "2026-10-13T09:49:59.505659+00:00"
+  },
+  "number.kantoor_raam_frost_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_raam_frost_protection_maximum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 0.0,
+    "max": 30.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor raam Frost protection maximum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.505939+00:00",
+   "last_updated": "2026-10-13T09:49:59.505939+00:00"
+  },
+  "number.kantoor_deur_frost_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_deur_frost_protection_maximum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 0.0,
+    "max": 30.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor deur Frost protection maximum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.506221+00:00",
+   "last_updated": "2026-10-13T09:49:59.506221+00:00"
+  },
+  "number.kantoor_raam_overheat_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_raam_overheat_protection_minimum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 31.0,
+    "max": 40.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor raam Overheat protection minimum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.509535+00:00",
+   "last_updated": "2026-10-13T09:49:59.509535+00:00"
+  },
+  "number.kantoor_deur_overheat_protection_minimum_temperature": {
+   "entity_id": "number.kantoor_deur_overheat_protection_minimum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 31.0,
+    "max": 40.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor deur Overheat protection minimum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.509912+00:00",
+   "last_updated": "2026-10-13T09:49:59.509912+00:00"
+  },
+  "number.kantoor_raam_overheat_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_raam_overheat_protection_maximum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 31.0,
+    "max": 40.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor raam Overheat protection maximum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.510209+00:00",
+   "last_updated": "2026-10-13T09:49:59.510209+00:00"
+  },
+  "number.kantoor_deur_overheat_protection_maximum_temperature": {
+   "entity_id": "number.kantoor_deur_overheat_protection_maximum_temperature",
+   "state": "unavailable",
+   "attributes": {
+    "min": 31.0,
+    "max": 40.0,
+    "step": 0.5,
+    "mode": "auto",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor deur Overheat protection maximum temperature"
+   },
+   "last_changed": "2026-10-13T09:49:59.510486+00:00",
+   "last_updated": "2026-10-13T09:49:59.510486+00:00"
+  },
+  "sensor.kantoor_raam_room_temperature": {
+   "entity_id": "sensor.kantoor_raam_room_temperature",
+   "state": "17.5",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor raam Room temperature"
+   },
+   "last_changed": "2026-10-13T17:53:10.766394+00:00",
+   "last_updated": "2026-10-13T17:53:10.766394+00:00"
+  },
+  "sensor.kantoor_deur_room_temperature": {
+   "entity_id": "sensor.kantoor_deur_room_temperature",
+   "state": "18.0",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Kantoor deur Room temperature"
+   },
+   "last_changed": "2026-10-13T17:50:10.778186+00:00",
+   "last_updated": "2026-10-13T17:50:10.778186+00:00"
+  },
+  "sensor.kantoor_raam_energy_consumed_monthly": {
+   "entity_id": "sensor.kantoor_raam_energy_consumed_monthly",
+   "state": "0.0",
+   "attributes": {
+    "state_class": "total",
+    "last_reset": "2026-10-01T00:00:00+00:00",
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "friendly_name": "Kantoor raam Energy consumed (monthly)"
+   },
+   "last_changed": "2026-10-13T09:49:59.512150+00:00",
+   "last_updated": "2026-10-13T09:49:59.512150+00:00"
+  },
+  "sensor.kantoor_deur_energy_consumed_monthly": {
+   "entity_id": "sensor.kantoor_deur_energy_consumed_monthly",
+   "state": "0.0",
+   "attributes": {
+    "state_class": "total",
+    "last_reset": "2026-10-01T00:00:00+00:00",
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "friendly_name": "Kantoor deur Energy consumed (monthly)"
+   },
+   "last_changed": "2026-10-13T09:49:59.512548+00:00",
+   "last_updated": "2026-10-13T09:49:59.512548+00:00"
+  },
+  "switch.kantoor_raam_frost_protection": {
+   "entity_id": "switch.kantoor_raam_frost_protection",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor raam Frost protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.512980+00:00",
+   "last_updated": "2026-10-13T09:49:59.512980+00:00"
+  },
+  "switch.kantoor_deur_frost_protection": {
+   "entity_id": "switch.kantoor_deur_frost_protection",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor deur Frost protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.513236+00:00",
+   "last_updated": "2026-10-13T09:49:59.513236+00:00"
+  },
+  "switch.kantoor_raam_overheat_protection": {
+   "entity_id": "switch.kantoor_raam_overheat_protection",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor raam Overheat protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.513494+00:00",
+   "last_updated": "2026-10-13T09:49:59.513494+00:00"
+  },
+  "switch.kantoor_deur_overheat_protection": {
+   "entity_id": "switch.kantoor_deur_overheat_protection",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor deur Overheat protection"
+   },
+   "last_changed": "2026-10-13T09:49:59.513744+00:00",
+   "last_updated": "2026-10-13T09:49:59.513744+00:00"
+  },
+  "switch.kantoor_raam_standby": {
+   "entity_id": "switch.kantoor_raam_standby",
+   "state": "off",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor raam Standby"
+   },
+   "last_changed": "2026-10-13T09:49:59.514002+00:00",
+   "last_updated": "2026-10-13T09:49:59.514002+00:00"
+  },
+  "switch.kantoor_deur_standby": {
+   "entity_id": "switch.kantoor_deur_standby",
+   "state": "off",
+   "attributes": {
+    "device_class": "switch",
+    "friendly_name": "Kantoor deur Standby"
+   },
+   "last_changed": "2026-10-13T09:49:59.514645+00:00",
+   "last_updated": "2026-10-13T09:49:59.514645+00:00"
+  }
+ }
+}

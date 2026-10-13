@@ -115,11 +115,13 @@ const BLOKKEN = [
   { key: "praktijk", titel: "Openingstijden", icoon: "clock", secties: ["praktijk"] },
   { key: "indeling", titel: "Indeling van het scherm", icoon: "layout", secties: ["indeling"] },
   { key: "verlichting", titel: "Verlichting", icoon: "bulb", secties: ["installatie", "instellingen"] },
+  // 13 oktober 2026: de airco's, net als de lampen.
+  { key: "klimaat", titel: "Klimaat", icoon: "airco", secties: ["installatie", "instellingen"] },
   { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
 ];
 
 /* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
-const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "calendars", "waste", "kiosk_users"];
+const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "calendars", "waste", "kiosk_users"];
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const STANDAARD = {
@@ -127,6 +129,7 @@ const STANDAARD = {
   weather: "",
   energy: "",
   lights: [],
+  climates: [],
   calendars: [],
   waste: [],
   kiosk_users: [],
@@ -136,6 +139,7 @@ const STANDAARD = {
   show_praktijk: true,
   show_indeling: true,
   show_verlichting: true,
+  show_klimaat: true,
   show_instellingen: true,
   open: "personen",
 };
@@ -235,10 +239,10 @@ const css = /* css */ `
   .item.verjaardag { grid-template-columns: minmax(0, 2fr) 170px auto auto; }
   .item.feed { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
   .item.uitz { grid-template-columns: 150px auto 110px 110px minmax(0, 1fr) auto; }
-  .item.lamp { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
-  .item.lamp .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .item.lamp .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item.lamp .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.lamp, .item.airco { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
+  .item.lamp .ent, .item.airco .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .item.lamp .ent b, .item.airco .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.lamp .ent span, .item.airco .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .knoppen { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
   /* De greep om een rij te verslepen: echte pointer-events, geen pijltjes.
      Gevraagd op 10 september 2026: "drag en drop ipv pijltjes". */
@@ -379,6 +383,7 @@ export class InfoschermBeheerCard extends DacCard {
       weather: typeof config.weather === "string" ? config.weather : "",
       energy: typeof config.energy === "string" ? config.energy : "",
       lights: lijstVan(config.lights),
+      climates: lijstVan(config.climates),
       calendars: lijstVan(config.calendars),
       waste: lijstVan(config.waste),
       kiosk_users: lijstVan(config.kiosk_users),
@@ -405,12 +410,17 @@ export class InfoschermBeheerCard extends DacCard {
       agendas: c.calendars,
       afval: c.waste,
       verlichting: c.lights,
+      klimaat: c.climates,
       kiosk_gebruikers: c.kiosk_users,
     };
     // De lampen als VERZAMELING: hun volgorde is van de receptie (sinds
     // 0.62.0 versleepbaar), en een andere volgorde in de kaartconfig is dus
     // geen verschil. De server houdt die volgorde ook aan.
-    const sleutel = JSON.stringify({ ...wens, verlichting: [...(c.lights ?? [])].sort() });
+    const sleutel = JSON.stringify({
+      ...wens,
+      verlichting: [...(c.lights ?? [])].sort(),
+      klimaat: [...(c.climates ?? [])].sort(),
+    });
     const i = this.stand_.installatie ?? {};
     const nu = JSON.stringify({
       weer: i.weer ?? null,
@@ -418,6 +428,7 @@ export class InfoschermBeheerCard extends DacCard {
       agendas: i.agendas ?? [],
       afval: i.afval ?? [],
       verlichting: (i.verlichting ?? []).map((l) => l.entity).sort(),
+      klimaat: (i.klimaat ?? []).map((a) => a.entity).sort(),
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
     if (sleutel === nu || sleutel === this.laatstGesynct_) return;
@@ -644,6 +655,7 @@ export class InfoschermBeheerCard extends DacCard {
       praktijk: () => this.htmlPraktijk_(this.werk_.praktijk),
       indeling: () => this.htmlIndeling_(this.werk_.indeling),
       verlichting: () => this.htmlVerlichting_(this.werk_.installatie, this.werk_.instellingen),
+      klimaat: () => this.htmlKlimaat_(this.werk_.installatie, this.werk_.instellingen),
       instellingen: () => this.htmlInstellingen_(this.werk_.scherm, this.werk_.instellingen),
     }[blok]();
     const inhoud = sec.querySelector(".inhoud");
@@ -674,6 +686,11 @@ export class InfoschermBeheerCard extends DacCard {
       praktijk: () => "",
       indeling: () => `${(w.indeling?.blokken ?? []).length} blokken`,
       verlichting: () => `${(w.installatie?.verlichting ?? []).length} lampen${w.instellingen?.verlichting_tonen === false ? " · uit" : ""}`,
+      klimaat: () => {
+        const n = (w.installatie?.klimaat ?? []).length;
+        const uit = w.instellingen?.klimaat_tonen === false ? " · uit" : w.instellingen?.klimaat_bedienen === false ? " · alleen kijken" : "";
+        return `${n === 1 ? "1 airco" : `${n} airco's`}${uit}`;
+      },
       instellingen: () => `${(w.instellingen?.feeds ?? []).length} nieuwsbron(nen)`,
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
@@ -880,6 +897,30 @@ export class InfoschermBeheerCard extends DacCard {
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
   }
 
+  /**
+   * De airco's: dezelfde vorm als de lampen. De namen en de volgorde zijn van
+   * de receptie, welke airco's erbij horen kiest de installateur. Daarnaast
+   * twee schakelaars: op het scherm tonen, en daar laten bedienen.
+   */
+  htmlKlimaat_(inst = {}, instellingen = {}) {
+    const aircos = inst.klimaat ?? [];
+    const rijen = aircos
+      .map((k, i) => {
+        const a = this.hass?.states?.[k.entity]?.attributes ?? {};
+        return `<div class="item airco" data-i="${i}" data-lijst="klimaat">
+          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
+          <div class="ent"><b>${at(a.friendly_name ?? k.entity)}</b><span>${at(k.entity)}</span></div>
+          ${this.veld_("Naam op het scherm", "k_naam", k.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+        </div>`;
+      })
+      .join("");
+    return `
+      ${this.schakel_("klimaat_tonen", instellingen.klimaat_tonen !== false, { label: "Airco's op het scherm tonen", s: "instellingen" })}
+      ${this.schakel_("klimaat_bedienen", instellingen.klimaat_bedienen !== false, { label: "Op het scherm laten bedienen", s: "instellingen" })}
+      <div class="hulp">Op het welkomscherm staat per airco de temperatuur in de ruimte en wat er ingesteld is. Wie op het blok tikt, kan de airco's daar aan- en uitzetten en bijstellen; zet "laten bedienen" uit als bezoekers alleen mogen kijken. Het blok zelf zet je op het scherm met Indeling, Blok toevoegen. De namen hieronder zijn die op het scherm (leeg = de naam uit Home Assistant), en slepen aan de greep bepaalt de volgorde. Welke airco's erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart.</div>
+      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen airco's gekozen.</div>`}</div>`;
+  }
+
   htmlInstellingen_(s = {}, instellingen = {}) {
     const feeds = (instellingen.feeds ?? [])
       .map(
@@ -1057,6 +1098,9 @@ export class InfoschermBeheerCard extends DacCard {
       if (veld === "l_naam") {
         const l = w.verlichting?.[Number(i)];
         if (l) l.naam = waarde;
+      } else if (veld === "k_naam") {
+        const k = w.klimaat?.[Number(i)];
+        if (k) k.naam = waarde;
       }
     } else if (sectie === "instellingen") {
       if (veld.startsWith("f_")) {
@@ -1539,6 +1583,7 @@ const LABELS = {
   weather: "Weerentiteit",
   energy: "Energiesensor (vermogen of tellerstand)",
   lights: "Lampen en schakelaars op het scherm",
+  climates: "Airco's op het scherm",
   calendars: "Agenda's (de afspraken van vandaag)",
   kiosk_users: "Kioskaccounts",
   show_personen: "Blok Medewerkers",
@@ -1547,6 +1592,7 @@ const LABELS = {
   show_praktijk: "Blok Openingstijden",
   show_indeling: "Blok Indeling",
   show_verlichting: "Blok Verlichting",
+  show_klimaat: "Blok Klimaat",
   show_instellingen: "Blok Instellingen en logo",
   open: "Staat open bij het laden",
 };
@@ -1556,8 +1602,10 @@ const HELPERS = {
   energy:
     "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
   lights: "De namen en de volgorde op het scherm stelt de receptie in het blok Verlichting in; daar staat ook de schakelaar om ze te tonen. Een nieuwe lamp komt achteraan.",
+  climates:
+    "Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in.",
   kiosk_users:
-    "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen schakelen, en niets beheren. Alleen een beheerder ziet deze lijst.",
+    "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen en airco's bedienen, en niets beheren. Alleen een beheerder ziet deze lijst.",
   show_instellingen:
     "Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.",
 };
@@ -1607,6 +1655,7 @@ export class InfoschermBeheerEditor extends DacEditor {
             weather: i.weer ?? "",
             energy: i.energie ?? "",
             lights: (i.verlichting ?? []).map((l) => l.entity),
+            climates: (i.klimaat ?? []).map((a) => a.entity),
             calendars: i.agendas ?? [],
             kiosk_users: r.stand?.instellingen?.kiosk_gebruikers ?? [],
           };
@@ -1635,6 +1684,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       { name: "weather", selector: sel.entity("weather") },
       { name: "energy", selector: sel.entity("sensor") },
       { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
+      { name: "climates", selector: { entity: { multiple: true, domain: "climate" } } },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
       { name: "waste", selector: { entity: { multiple: true, domain: "sensor" } } },
     ];

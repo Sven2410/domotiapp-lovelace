@@ -19,7 +19,8 @@ tweehonderd namen is nog altijd kleiner dan één foto.
 - `scherm`: wat de receptie over het uiterlijk beslist (logo, accent, licht of
   donker, terugvaltijd, hoe de aanwezigen staan, wat er in het welkomblok
   staat, hoe snel de mededelingen wisselen);
-- `installatie`: de entiteiten (weer, energie, lampen, agenda's). Sinds ronde 3 kiest
+- `installatie`: de entiteiten (weer, energie, lampen, agenda's, afval, en sinds
+  13 oktober 2026 de airco's onder `klimaat`). Sinds ronde 3 kiest
   de installateur die in de KAARTEDITOR van het infoscherm; de kaart stuurt ze
   hierheen (`async_zet_installatie_van_kaart`) zodat het beheer de lampen kent
   en de receptie hun NAMEN kan wijzigen. Het blok Installatie in het beheer is
@@ -61,6 +62,7 @@ from .const import (
     DAGEN,
     KOLOMMEN,
     MAX_AFVAL,
+    MAX_AIRCOS,
     MAX_AGENDAS,
     MAX_BESTANDEN,
     MAX_BLOKKEN,
@@ -468,7 +470,7 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
 
 
 def leeg_installatie() -> dict[str, Any]:
-    return {"weer": None, "energie": None, "agendas": [], "verlichting": [], "afval": []}
+    return {"weer": None, "energie": None, "agendas": [], "verlichting": [], "afval": [], "klimaat": []}
 
 
 def _in_volgorde_van(lampen: list[dict[str, Any]], volgorde: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -490,6 +492,51 @@ def valideer_lamp(rauw: Any) -> dict[str, Any]:
     }
 
 
+def valideer_airco(rauw: Any) -> dict[str, Any]:
+    """Een airco (of een andere climate-entiteit) op het scherm, net als een
+    lamp: de entiteit kiest de installateur, de naam en de volgorde de
+    receptie. Sinds 13 oktober 2026."""
+    if isinstance(rauw, str):
+        rauw = {"entity": rauw}
+    if not isinstance(rauw, dict):
+        raise InfoFout("een airco is een object met 'entity' en 'naam'")
+    return {
+        "entity": _entiteit(rauw.get("entity"), "klimaat.entity", ("climate",)),
+        "naam": _tekst(rauw.get("naam"), "klimaat.naam", MAX_KORT),
+    }
+
+
+def _uniek(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """De eerste van elke entiteit; een dubbele valt weg."""
+    gezien: set[str] = set()
+    uit = []
+    for item in items:
+        if item["entity"] not in gezien:
+            gezien.add(item["entity"])
+            uit.append(item)
+    return uit
+
+
+def _namen_en_volgorde(oud: list[dict[str, Any]], gestuurd: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Wat een receptie-account mag: de entiteiten blijven die van `oud`, met
+    de namen en de volgorde uit `gestuurd`."""
+    namen = {l["entity"]: l["naam"] for l in gestuurd}
+    return [
+        {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
+        for l in _in_volgorde_van(oud, gestuurd)
+    ]
+
+
+def _houd_namen(nieuw: list[dict[str, Any]], oud: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Wat de kaartconfig mag: de entiteiten uit `nieuw`, met de namen en de
+    volgorde die de receptie al had. Een nieuwe gaat achteraan."""
+    namen = {l["entity"]: l["naam"] for l in oud}
+    return [
+        {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
+        for l in _in_volgorde_van(nieuw, oud)
+    ]
+
+
 def valideer_installatie(rauw: Any) -> dict[str, Any]:
     if rauw is None:
         rauw = {}
@@ -498,13 +545,8 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     weer = rauw.get("weer") or None
     # Ronde 4 (10 september 2026): een energiesensor voor het blok Energie.
     energie = rauw.get("energie") or None
-    lampen = [valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)]
-    gezien: set[str] = set()
-    uniek = []
-    for lamp in lampen:
-        if lamp["entity"] not in gezien:
-            gezien.add(lamp["entity"])
-            uniek.append(lamp)
+    lampen = _uniek([valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)])
+    aircos = _uniek([valideer_airco(a) for a in _lijst(rauw.get("klimaat"), "klimaat", MAX_AIRCOS)])
     agendas = [
         _entiteit(a, "agendas", ("calendar",))
         for a in _lijst(rauw.get("agendas"), "agendas", MAX_AGENDAS)
@@ -522,8 +564,9 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
         "weer": _entiteit(weer, "weer", ("weather",)) if weer else None,
         "energie": _entiteit(energie, "energie", ("sensor",)) if energie else None,
         "agendas": list(dict.fromkeys(agendas)),
-        "verlichting": uniek,
+        "verlichting": lampen,
         "afval": list(dict.fromkeys(afval)),
+        "klimaat": aircos,
     }
 
 
@@ -619,6 +662,11 @@ def valideer_feed(rauw: Any) -> dict[str, str]:
 def leeg_instellingen() -> dict[str, Any]:
     return {
         "verlichting_tonen": True,
+        # De airco's: op het scherm tonen, en daar laten bedienen. Dat tweede
+        # is een eigen schakelaar, want in een wachtkamer kan een receptie
+        # willen dat bezoekers wel kijken maar niet aan de knoppen zitten.
+        "klimaat_tonen": True,
+        "klimaat_bedienen": True,
         "feeds": [],
         "kiosk_gebruikers": [],
     }
@@ -637,6 +685,8 @@ def valideer_instellingen(rauw: Any) -> dict[str, Any]:
         raise InfoFout("'instellingen' is een object")
     return {
         "verlichting_tonen": bool(rauw.get("verlichting_tonen", True)),
+        "klimaat_tonen": bool(rauw.get("klimaat_tonen", True)),
+        "klimaat_bedienen": bool(rauw.get("klimaat_bedienen", True)),
         "feeds": [valideer_feed(f) for f in _lijst(rauw.get("feeds"), "feeds", MAX_FEEDS)],
         "kiosk_gebruikers": valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers")),
     }
@@ -754,6 +804,7 @@ class InfoStore:
                 "agendas": list(self._installatie["agendas"]),
                 "afval": list(self._installatie.get("afval", [])),
                 "verlichting": [dict(l) for l in self._installatie["verlichting"]],
+                "klimaat": [dict(a) for a in self._installatie.get("klimaat", [])],
             },
             "indeling": {"blokken": [dict(b) for b in self._indeling["blokken"]]},
             "instellingen": dict(self._instellingen),
@@ -823,22 +874,19 @@ class InfoStore:
 
     async def async_zet_installatie(self, rauw: Any, *, mag_entiteiten_wijzigen: bool) -> dict[str, Any]:
         """De entiteiten kiest de installateur (admin); de receptie mag alleen de
-        NAMEN en de VOLGORDE van de lampen wijzigen. Stuurt een receptie-account
-        een andere lampenlijst, dan blijven de entiteiten zoals ze waren: de
-        bekende lampen krijgen de namen en de volgorde die ze meestuurt, en een
-        lamp die ze niet meestuurde gaat achteraan."""
+        NAMEN en de VOLGORDE van de lampen en de airco's wijzigen. Stuurt een
+        receptie-account een andere lijst, dan blijven de entiteiten zoals ze
+        waren: de bekende krijgen de namen en de volgorde die ze meestuurt, en
+        een die ze niet meestuurde gaat achteraan."""
         nieuw = valideer_installatie(rauw)
         if not mag_entiteiten_wijzigen:
-            namen = {l["entity"]: l["naam"] for l in nieuw["verlichting"]}
             nieuw = {
                 "weer": self._installatie["weer"],
                 "energie": self._installatie.get("energie"),
                 "agendas": list(self._installatie["agendas"]),
                 "afval": list(self._installatie.get("afval", [])),
-                "verlichting": [
-                    {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
-                    for l in _in_volgorde_van(self._installatie["verlichting"], nieuw["verlichting"])
-                ],
+                "verlichting": _namen_en_volgorde(self._installatie["verlichting"], nieuw["verlichting"]),
+                "klimaat": _namen_en_volgorde(self._installatie.get("klimaat", []), nieuw["klimaat"]),
             }
         self._installatie = nieuw
         await self._async_save()
@@ -850,8 +898,9 @@ class InfoStore:
         met die config ziet -- in de editor of op het dashboard -- en alleen
         als ze afwijken van wat hier staat.
 
-        De namen en de volgorde van de lampen blijven staan: die zijn van de
-        receptie (sinds 0.62.0 kan ze slepen). Een nieuwe lamp gaat achteraan.
+        De namen en de volgorde van de lampen en de airco's blijven staan: die
+        zijn van de receptie (sinds 0.62.0 kan ze slepen). Een nieuwe gaat
+        achteraan.
         Een lamp die uit de config verdwijnt neemt zijn naam mee; komt hij
         terug, dan begint hij leeg. Geeft True in `gewijzigd` terug als er iets
         veranderd is, zodat de aanroeper weet of er een stand rond moet."""
@@ -864,13 +913,11 @@ class InfoStore:
                 "agendas": rauw.get("agendas"),
                 "afval": rauw.get("afval"),
                 "verlichting": rauw.get("verlichting"),
+                "klimaat": rauw.get("klimaat"),
             }
         )
-        namen = {l["entity"]: l["naam"] for l in self._installatie["verlichting"]}
-        nieuw["verlichting"] = [
-            {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
-            for l in _in_volgorde_van(nieuw["verlichting"], self._installatie["verlichting"])
-        ]
+        nieuw["verlichting"] = _houd_namen(nieuw["verlichting"], self._installatie["verlichting"])
+        nieuw["klimaat"] = _houd_namen(nieuw["klimaat"], self._installatie.get("klimaat", []))
         kiosk = valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers"))
         gewijzigd = nieuw != self._installatie or kiosk != self._instellingen["kiosk_gebruikers"]
         if gewijzigd:

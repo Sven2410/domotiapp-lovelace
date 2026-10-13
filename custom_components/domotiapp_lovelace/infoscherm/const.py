@@ -72,7 +72,12 @@ MAX_AGENDAS: Final = 10
 # Afvalsensoren voor de afvalkalender. Tien is ruim: een gemeente kent er
 # doorgaans vier tot zes (rest, gft, papier, pmd, kerstboom, textiel).
 MAX_AFVAL: Final = 10
-MAX_BLOKKEN: Final = 12
+# Airco's en andere climate-entiteiten (13 oktober 2026). Een praktijk heeft er
+# een paar; twintig is ruim voor een verdieping vol kantoren.
+MAX_AIRCOS: Final = 20
+# Elk soort blok hooguit één keer. Met het klimaatblok zijn er twaalf soorten,
+# dus de grens kreeg wat ruimte voor de volgende.
+MAX_BLOKKEN: Final = 16
 
 MAX_KORT: Final = 120
 MAX_MIDDEL: Final = 500
@@ -105,6 +110,9 @@ BLOK_SOORTEN: Final = (
     # Ronde 5 (17 september 2026): de afvalkalender, op verzoek van de eigenaar
     # ("zodat de beheerder die ook kan toevoegen op het kiosk scherm").
     "afval",
+    # 13 oktober 2026: de airco's. Op het blok de temperatuur in de kamer en
+    # wat er ingesteld is; op de pagina erachter bedienen.
+    "klimaat",
 )
 AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 
