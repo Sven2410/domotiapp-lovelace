@@ -305,6 +305,23 @@ export function verlichtingZichtbaar(stand) {
 }
 
 /**
+ * Staan de airco's op het scherm? Net als de verlichting: de installateur
+ * heeft ze gekozen (kaarteditor van het beheer, sinds 13 oktober 2026), en de
+ * receptie heeft het blok niet uitgezet.
+ */
+export function klimaatZichtbaar(stand) {
+  if (!((stand?.installatie?.klimaat?.length ?? 0) > 0)) return false;
+  return stand?.instellingen?.klimaat_tonen !== false;
+}
+
+/**
+ * Mag je de airco's op het scherm bedienen? Zonder die schakelaar is de
+ * pagina alleen om te kijken. Een stand van vóór 13 oktober 2026 kent de
+ * sleutel niet: dan mag het, net als de lampen.
+ */
+export const klimaatBedienbaar = (stand) => stand?.instellingen?.klimaat_bedienen !== false;
+
+/**
  * Welke pagina's er achter de koppen zitten. Welkom is het scherm zelf; de
  * rest is er alleen als er iets te tonen valt.
  */
@@ -317,6 +334,7 @@ export function paginas(stand, feeds, nu = null) {
   if (stand?.installatie?.energie) uit.push("energie");
   if ((stand?.installatie?.afval?.length ?? 0) > 0) uit.push("afval");
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
+  if (klimaatZichtbaar(stand)) uit.push("klimaat");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
   if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
   return uit;
@@ -415,14 +433,15 @@ export const BLOK_INFO = {
   verjaardagen: { naam: "Verjaardagen", icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
   energie: { naam: "Energie", icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
   afval: { naam: "Afvalkalender", icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
+  klimaat: { naam: "Klimaat", icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
 };
 
 /**
  * De blokken die een LIJST tonen (tegels, berichten, lampen, afspraken,
- * verjaardagen). Die schalen alleen met de breedte: een hoger blok toont
+ * verjaardagen, airco's). Die schalen alleen met de breedte: een hoger blok toont
  * meer, geen groter. Alle andere blokken schalen met allebei.
  */
-export const LIJSTBLOKKEN = new Set(["aanwezig", "nieuws", "verlichting", "agenda", "verjaardagen"]);
+export const LIJSTBLOKKEN = new Set(["aanwezig", "nieuws", "verlichting", "agenda", "verjaardagen", "klimaat"]);
 
 /* De schaal per breedte en per hoogte in rastercellen; 2 cellen is 1. */
 const SCHAAL_BREEDTE = [0, 0.85, 1, 1.12, 1.25, 1.35, 1.45];
@@ -573,6 +592,9 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
     case "verlichting":
       if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (kaartinstellingen van het infoscherm)";
       return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
+    case "klimaat":
+      if (!((s.installatie?.klimaat?.length ?? 0) > 0)) return "Geen airco's gekozen (kaartinstellingen van het beheer)";
+      return klimaatZichtbaar(s) ? null : "Klimaat staat uit in het beheer";
     case "agenda":
       return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
     case "afval":

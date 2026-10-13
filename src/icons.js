@@ -536,6 +536,14 @@ export const icons = {
     <path d="M6.6 9.6h10.8"/>
     <path d="M7.4 16.2c1.6 0 1.6 2.2 3.2 2.2M13.4 16.2c1.6 0 1.6 2.2 3.2 2.2"/>`),
 
+  /* Verwarmen en koelen op de airco (13 oktober 2026). `snow` is het weer,
+     een wolk met vlokken; een airco die koelt is een losse vlok. */
+  flame: draw(`<path d="M12 20.6a6 6 0 0 0 6-6c0-3.6-2.6-5.6-3.6-9.2-.4 2-1.6 3.4-2.8 3.4-.4-1.8-.2-3.6.6-5.4C8.6 5 6 8.6 6 14.6a6 6 0 0 0 6 6z"/>
+    <path d="M12 20.6a2.6 2.6 0 0 1-2.6-2.6c0-1.6 1.2-2.6 2.6-4.4 1.4 1.8 2.6 2.8 2.6 4.4a2.6 2.6 0 0 1-2.6 2.6z"/>`),
+
+  snowflake: draw(`<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>
+    <path d="M9.7 4.4 12 6.4l2.3-2M9.7 19.6l2.3-2 2.3 2M6.5 6.2l.7 3-3 1M19.8 13.8l-3 1 .7 3M6.5 17.8l.7-3-3-1M19.8 10.2l-3-1 .7-3"/>`),
+
   tv: draw(`<rect x="2.8" y="4.4" width="18.4" height="12.2" rx="1.8"/>
     <path d="M8.4 20.2h7.2M12 16.6v3.6"/>`),
 

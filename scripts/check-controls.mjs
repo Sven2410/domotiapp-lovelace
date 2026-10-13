@@ -75,7 +75,7 @@ if (/\.vak select[^{]*\{[^}]*background(-color)?:\s*transparent/.test(bron)) {
 //    bewaakt moet worden: elk bestand dat een `.keuze` tekent hoort erin. Zet
 //    iemand er een select bij zonder dit bestand aan te vullen, dan is dat de
 //    volgende plek waar de fout van fase 12 terugkomt.
-const KAARTEN = ["entities-card.js", "dishwasher-card.js"];
+const KAARTEN = ["entities-card.js", "dishwasher-card.js", "airco-card.js"];
 let keuzelijsten = 0;
 
 for (const naam of KAARTEN) {

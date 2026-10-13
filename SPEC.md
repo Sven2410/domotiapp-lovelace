@@ -2516,7 +2516,7 @@ de beheerkaart wél een kleine kopregel.
 
 De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
 staat sinds ronde 4 in de kaartconfig van de BEHEERKAART (`weather`,
-`energy`, `lights`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
+`energy`, `lights`, `climates`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
 de opslag gestuurd zodra een beheerder hem met die config ziet
 (`infoscherm/installatie/sync`, alleen admin, alleen bij verschil, en alleen
 als de config die velden heeft; een beheerkaart zonder laat de opslag met
@@ -2529,23 +2529,24 @@ weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
 mededeling, en wat er in het welkomblok staat: tekst en logo verbergen;
 `welkom_onder` wordt sinds 0.62.1 niet meer gebruikt),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
-receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
+receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender, en sinds
+13 oktober 2026 `klimaat`, de airco's, elk met een naam van de receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
-(verlichting tonen, feeds, kioskaccounts) en de lijst van bestanden. Een
+(verlichting tonen, klimaat tonen, klimaat bedienen, feeds, kioskaccounts) en de lijst van bestanden. Een
 opslag van vóór ronde 3 wordt bij het laden eenmalig bijgewerkt: berichten van
 het pand worden mededelingen, de eerste welkomsttekst wordt de tekst van het
 welkomblok. Rechten:
 
 | handeling | wie |
 |---|---|
-| lezen, abonneren, aanwezigheid omzetten, lampen schakelen | iedere ingelogde gebruiker |
-| personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN van de lampen wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| de entiteiten (weer, energie, agenda's, lampen) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
+| lezen, abonneren, aanwezigheid omzetten, lampen schakelen, airco's bedienen | iedere ingelogde gebruiker |
+| personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN en de VOLGORDE van de lampen en de airco's wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
+| de entiteiten (weer, energie, agenda's, lampen, airco's) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
 Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
 typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
-andere lampenlijst stuurt houdt de lampen van de installateur en wijzigt
-alleen hun namen.
+andere lampen- of aircolijst stuurt houdt de lampen en airco's van de
+installateur en wijzigt alleen hun namen en hun volgorde.
 
 Een kioskgebruiker die een beheercommando stuurt krijgt `unauthorized`; de
 beheerkaart toont dan een uitleg in plaats van de blokken. De
@@ -2576,7 +2577,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
   met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
-  nieuws, verlichting, agenda, verjaardagen, afval) op de plek en maat uit
+  nieuws, verlichting, agenda, verjaardagen, afval, klimaat) op de plek en maat uit
   `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
   Een blok met een pagina erachter heeft een kop die een knop is ("Alles
   bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
@@ -2585,7 +2586,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   maat van plek als het ene op het andere wordt losgelaten.
 - **Alles in een blok schaalt met de maat van het blok** (ronde 4): een blok
   van 2×2 is de maat 1, groter wordt groter en kleiner kleiner. Een blok met
-  een lijst (aanwezig, nieuws, verlichting, agenda, verjaardagen) schaalt
+  een lijst (aanwezig, nieuws, verlichting, agenda, verjaardagen, klimaat) schaalt
   alleen met zijn breedte en toont in de hoogte MEER: de rijen die passen
   zijn even hoog en vullen het blok; blijft er bijna een rij over, dan gaat
   alles een tikje kleiner zodat die rij erbij past. Wat er niet in past
@@ -2654,6 +2655,26 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   opgehaald, altijd met afbeelding als de bron er een geeft.
 - Verlichting: de installateur kiest de lampen in de kaarteditor; de receptie
   bepaalt met één schakelaar of ze op het scherm staan en hoe ze heten.
+- **Het blok Klimaat** (13 oktober 2026, op verzoek van de eigenaar: *"op de
+  ipad moet gewoon de room temp en de ingestelde temp laten zien en als je op
+  meer klikt dan opent hij een andere tab net als alle andere tabs zoals
+  nieuws etc en dan kan je de airco's bedienen"*). De installateur kiest de
+  airco's in de kaarteditor van het beheer (`climates`, elke
+  `climate`-entiteit, ten hoogste twintig). Het blok toont per airco de naam,
+  wat er ingesteld is (of "Uit") en groot de temperatuur in de ruimte; een
+  tik op een airco of op de kop opent de pagina Klimaat. Daar staat per airco
+  een paneel met aan/uit, de temperatuur nu, de ingestelde temperatuur met
+  − en + (bij een bereik twee: van en tot), de standen die de airco zelf
+  aanbiedt (`hvac_modes`, zonder Uit) en, als hij aan staat, de ventilator.
+  Alleen het icoon draagt wat de airco doet: verwarmen in de kleur van de zon,
+  koelen, drogen en ventileren blauw, auto in het accent. Wat er getikt is
+  blijft zichtbaar tot de airco het zelf meldt, ten hoogste anderhalve minuut,
+  omdat een airco in de cloud zich hooguit eens per minuut meldt; meerdere
+  tikken op − of + zijn samen één aanroep. De receptie bepaalt met twee
+  schakelaars of het blok op het scherm staat en of je er op het scherm aan
+  mag bedienen; zonder bediening is de pagina alleen om te kijken. Het blok
+  staat niet in de standaardindeling (die is vol) en komt erbij via Indeling,
+  Blok toevoegen.
 
 ### 20.8 Foutgedrag
 

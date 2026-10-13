@@ -36,6 +36,7 @@ import "./cards/terug-card.js";
 import "./cards/light-card.js";
 import "./cards/climate-card.js";
 import "./cards/hvac-card.js";
+import "./cards/airco-card.js";
 import "./cards/entities-card.js";
 import "./cards/media-card.js";
 import "./cards/smoke-card.js";

@@ -465,6 +465,15 @@ dashboards en drie soorten accounts.
 | account `Receptie` (inlognaam `receptie`) | een gewone gebruiker |
 | account `iPad wachtkamer` (inlognaam `ipad`) | een gewone gebruiker, aangewezen als kioskaccount (`kiosk_users` in BEIDE beheerkaarten, anders zet de ene het terug zodra een beheerder de andere opent) |
 
+Sinds 13 oktober 2026 hebben beide beheerkaarten ook `climates` (om dezelfde
+reden in BEIDE): de demo-airco's `climate.hvac`, `climate.ecobee` (een bereik
+in plaats van een doel, en `heat_cool` naast `auto`), `climate.heatpump`
+(alleen verwarmen) en `climate.kantoor_raam`. Die laatste is NAGEBOOTST met
+`POST /api/states` en de attributen van de echte MELCloud-dump
+(`tests/js/vaste-invoer/melcloud-home-airco.json`): hij tekent, maar is niet
+te bedienen, en een herstart haalt hem weg. Het infoscherm heeft een blok
+Klimaat, en `kaart-test` een view `airco` met de airco-kaart van alle vier.
+
 De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
 gaat met `dev/inlog_als.py`, elk op een eigen origin
 (`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
@@ -1691,7 +1700,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **vierentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **zevenentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -1700,7 +1709,7 @@ met **vierentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
-| Apparatuur | **3D-printer**, **auto**, **camera** |
+| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`) |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 

@@ -399,6 +399,9 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         # en gaat een nieuwe lamp achteraan; tot dan won de volgorde van de
         # kaartconfig, en stond light.b hier vooraan.
         "verlichting": [{"entity": "light.a", "naam": "Wachtkamer"}, {"entity": "light.b", "naam": ""}],
+        # 13 oktober 2026: de airco's. Net als het afval een lege lijst als de
+        # kaart ze niet meestuurt.
+        "klimaat": [],
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
     # Dezelfde config nog eens: niets gewijzigd.
