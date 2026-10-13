@@ -184,7 +184,7 @@ Twee dingen moet ik van je weten voordat ze in de kaart gaan:
 - **Mag het?** De repo is publiek. Voor Alfen, Easee en Anker heb je gezegd dat
   het mocht omdat je installateur bent. Voor Mitsubishi (of een ander merk) heb
   ik dat nog niet van je.
-- **Welke modellen?** Bijvoorbeeld de binnenunit bij Dovida. MELCloud Home
+- **Welke modellen?** Bijvoorbeeld de binnenunit bij de klant. MELCloud Home
   geeft geen model door: `model` is leeg, de fabrikant is "Mitsubishi
   Electric".
 
@@ -214,7 +214,7 @@ Grenzen in het voorstel:
 - liefst alleen het doel schuiven;
 - wie het laatst bewoog wint.
 
-**Bij Dovida mist een vermogensmeting.** `energy_consumed` per maand is geen
+**Bij de klant met MELCloud mist een vermogensmeting.** `energy_consumed` per maand is geen
 vermogen. Zonder vermogen en zonder `hvac_action` ziet de coach niet of de
 compressor draait.
 
@@ -409,16 +409,16 @@ npm run verify             OK: bundel is actueel
 python -m pytest -q        805 passed in 164.12s (na de reparatie van _uniek; ervoor 9 failed, 796 passed)
 ```
 
-## Bij de klant (Dovida): wat er na de update moet gebeuren
+## Wat er na de update bij een klant moet gebeuren
 
-Niets daarvan heb ik gedaan; het is een wijziging bij de klant.
+Een wijziging bij de klant, dus niet door ons gedaan. De stappen per klant
+staan in de privénotities, niet hier: deze repo is publiek.
 
 1. 0.63.0 installeren via HACS en Home Assistant herstarten.
-2. In **Tablet Beheer**, in de kaarteditor van de beheerkaart: bij *Airco's op
-   het scherm* de twee airco's kiezen.
-3. In het beheer, bij **Indeling**: *Blok toevoegen*, dan **Klimaat**. Zet het
-   op een plek met ruimte: het raster is vol, dus er moet een blok kleiner of
-   weg.
+2. In het dashboard met de beheerkaart, in de kaarteditor: bij *Airco's op het
+   scherm* de airco's kiezen.
+3. In het beheer, bij **Indeling**: *Blok toevoegen*, dan **Klimaat**. Is het
+   raster vol, dan moet er een blok kleiner of weg.
 4. In het blok **Klimaat** van het beheer:
    - eventueel namen geven;
    - beslissen of bezoekers mogen bedienen (*Op het scherm laten bedienen*).
@@ -426,7 +426,7 @@ Niets daarvan heb ik gedaan; het is een wijziging bij de klant.
 ## Wat niet lukte of niet gedaan is
 
 - **Niet bij de klant gemeten.** Daar staat 0.63.0 nog niet, en het zijn
-  echte airco's in een praktijk. Gemeten is in de testinstance, met de demo-
+  echte airco's bij een klant. Gemeten is in de testinstance, met de demo-
   airco's en een nagebootste MELCloud-airco. Die laatste is een `POST
   /api/states` met de echte attributen: hij tekent wel, maar is niet te
   bedienen.
