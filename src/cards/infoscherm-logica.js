@@ -341,12 +341,12 @@ export function paginas(stand, feeds, nu = null) {
 }
 
 /**
- * 'Sven Kool' -> 'SK', 'Dennis van den dam' -> 'DD'.
+ * 'Sven Kool' -> 'SK', 'Ruben van der lee' -> 'RL'.
  *
  * De eerste letter van het EERSTE woord en de eerste letter van het LAATSTE
  * woord, hoofdletter of niet. Tot 0.36.0 telden alleen woorden met een
  * hoofdletter mee, en dan werd een tussenvoegsel in kleine letters
- * overgeslagen: 'van den dam' viel weg en er stond 'DE'. Gemeld op
+ * overgeslagen: 'van der lee' viel weg en er stond 'RU'. Gemeld op
  * 10 september 2026. Tweeling van `initialen` in store.py.
  */
 export function initialen(naam) {
