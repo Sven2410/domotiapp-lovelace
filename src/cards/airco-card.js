@@ -110,10 +110,17 @@ class AircoCard extends DacCard {
     }
 
     /* Een binnenunit is breed en laag; geen vaste verhouding, want merken
-       verschillen. */
+       verschillen. De foto staat op een eigen vlak in de tint van het thema:
+       een zwarte unit (de Premium in Onyx Black) was op een donkere kaart
+       zonder dat vlak een donker streepje van 88 bij 33 (gemeten op
+       13 oktober 2026). In licht keert de tint om, en staat een witte unit
+       op zachtgrijs. */
     .foto {
-      display: block; width: 88px; height: 56px;
-      object-fit: contain; object-position: center;
+      display: block; width: 104px; height: 56px; box-sizing: border-box;
+      padding: 7px 8px; object-fit: contain; object-position: center;
+      border-radius: var(--dac-radius-sm);
+      background: radial-gradient(ellipse at 50% 45%, rgba(var(--dac-tint), .2), rgba(var(--dac-tint), .06) 75%);
+      border: 1px solid var(--dac-border);
       transition: opacity 220ms ease;
     }
     :host([uit]) .foto { opacity: .55; }
@@ -266,7 +273,7 @@ class AircoCard extends DacCard {
     /* ------------------------------------------------------------ smal */
 
     @container (max-width: 360px) {
-      .foto { width: 64px; height: 44px; }
+      .foto { width: 84px; height: 46px; padding: 5px 6px; }
       .graden { font-size: 21px; }
     }
     @container (max-width: 340px) {
