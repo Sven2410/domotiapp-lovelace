@@ -506,7 +506,7 @@ def valideer_airco(rauw: Any) -> dict[str, Any]:
     }
 
 
-def _uniek(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _eerste_per_entiteit(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """De eerste van elke entiteit; een dubbele valt weg."""
     gezien: set[str] = set()
     uit = []
@@ -545,8 +545,8 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     weer = rauw.get("weer") or None
     # Ronde 4 (10 september 2026): een energiesensor voor het blok Energie.
     energie = rauw.get("energie") or None
-    lampen = _uniek([valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)])
-    aircos = _uniek([valideer_airco(a) for a in _lijst(rauw.get("klimaat"), "klimaat", MAX_AIRCOS)])
+    lampen = _eerste_per_entiteit([valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)])
+    aircos = _eerste_per_entiteit([valideer_airco(a) for a in _lijst(rauw.get("klimaat"), "klimaat", MAX_AIRCOS)])
     agendas = [
         _entiteit(a, "agendas", ("calendar",))
         for a in _lijst(rauw.get("agendas"), "agendas", MAX_AGENDAS)
