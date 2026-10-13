@@ -1690,6 +1690,30 @@ die daar niet staan:
    fout keek precies daarnaar; pas met de kaart opnieuw opgezocht en de
    oude bundel teruggezet was het een bewijs.
 
+71. **Een klantnaam hoort niet in deze repo, ook niet in een rapport.** Deze
+   repo is publiek. De eis van de eigenaar (21 september 2026, in de
+   coach-repo): *"alles moet universeel en niet te linken zijn aan mij of mijn
+   klanten"*. Op 13 oktober 2026 stond in `docs/airco/RAPPORT.md` toch drie keer
+   de naam van een klant, met een hoofdstuk stappen voor die klant onder zijn
+   dashboardnaam. De naam kwam uit het gesprek en uit een bericht van de
+   coach-sessie. De coach-sessie zag het na de uitgave. De huidige stand is
+   gerepareerd in #105, maar de naam staat nog in de geschiedenis (tag 0.63.0).
+   Daarom:
+   - Draai vóór elke PR `git grep -n -i` op de klantnamen, PER WOORD en over
+     de HELE repo, deze CLAUDE.md incluis. Een map `naam-plaats` in
+     `C:\dev\notities\klanten\` geeft twee zoekwoorden, en een naam met een
+     tussenvoegsel ook de vorm met spaties. `thuis` en `demohuis` zijn de
+     eigenaar zelf en de demo; die geven alleen ruis. Noem in deze repo ook
+     als VOORBEELD nooit een echte klantmap. Pas op met `ls`: in deze shell
+     zet hij een `/` achter elke map, en een grep op "naam/" vindt niets. Zo
+     vond de eerste controle op
+     13 oktober 2026 niets, terwijl er in twee commentaren een persoonsnaam
+     stond die bij een klantmap hoort. Die is in dezelfde PR vervangen door een
+     verzonnen naam.
+   - Testinvoer uit een klantinstallatie gaat geanonimiseerd: namen, id's,
+     ruimtes.
+   - Wat per klant te doen is, staat in de notities van die klant.
+
 ---
 
 ## Projectstand

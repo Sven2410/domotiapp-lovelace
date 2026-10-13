@@ -219,12 +219,12 @@ def _entiteit(rauw: Any, veld: str, domeinen: tuple[str, ...]) -> str:
 
 
 def initialen(naam: str) -> str:
-    """'Dennis van den dam' -> 'DD', 'Sven Kool' -> 'SK'.
+    """'Ruben van der lee' -> 'RL', 'Sven Kool' -> 'SK'.
 
     De eerste letter van het EERSTE woord en de eerste letter van het LAATSTE
     woord, hoofdletter of niet. Tot 0.36.0 telden alleen woorden met een
     hoofdletter mee, en dan werd een naam met een tussenvoegsel in kleine
-    letters ('van den dam') gewoon 'DE'. Gemeld op 10 september 2026.
+    letters ('van der lee') gewoon 'RU'. Gemeld op 10 september 2026.
     """
     delen = naam.split()
     if not delen:
