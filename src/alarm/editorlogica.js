@@ -149,7 +149,7 @@ export function geldigeTijd(tijd) {
  * De naam wordt met `trim()` beoordeeld maar **niet** getrimd opgeslagen door
  * deze functie — trimmen gebeurt bij het opslaan (`naarAlarm`), niet bij het
  * typen. Dat is CLAUDE.md valkuil 14: `.trim()` in een controlled input eet de
- * spatie op, en dan kan de klant geen "Wekker van Sven" typen.
+ * spatie op, en dan kan de klant geen "Wekker van Bram" typen.
  */
 export function magOpslaan(concept) {
   const ontbreekt = [];
@@ -388,8 +388,8 @@ const vergelijkbaar = (tekst) =>
  * Alleen de naam, en niet het entity_id. In 0.52.0 zocht hij op allebei en
  * stond het entity_id naast de naam; de eigenaar wilde dat niet zien (*"ik wil
  * niet de entiteit naam zien alleen de friendly name"*). Wie het entity_id niet
- * ziet, snapt ook niet waarom "sven" de lamp "Bureaulamp" vindt -- omdat die
- * `light.bureaulamp_sven_switch_0` heet. Zoeken en zien horen gelijk op te gaan.
+ * ziet, snapt ook niet waarom "bram" de lamp "Bureaulamp" vindt -- omdat die
+ * `light.bureaulamp_bram_switch_0` heet. Zoeken en zien horen gelijk op te gaan.
  *
  * @param {{entity_id: string, name?: string}[]} lijst
  * @param {string} term

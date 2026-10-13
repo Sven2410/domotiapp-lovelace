@@ -24,7 +24,7 @@ proberen van 0.36.0. Uit elkaar getrokken:
 | 11 | "Het weer Forecast Home" moet gewoon "Weer" zijn | kop van het weerblok |
 | 12 | bewegende weericonen (regen, bewolkt, …) | `src/weer-animatie.js` |
 | 13 | aanwezig en afwezig staan door elkaar; ze moeten naast elkaar kunnen | pagina Aanwezig: twee kolommen naast elkaar, of per functie naast elkaar |
-| 14 | initialen: "Sven Kool" wordt SK, een naam met een tussenvoegsel in kleine letters neemt het laatste woord | `initialen()` in JS en Python |
+| 14 | initialen: "Bram Visser" wordt BV, een naam met een tussenvoegsel in kleine letters neemt het laatste woord | `initialen()` in JS en Python |
 | 15 | geen namen in de documentatie op GitHub | dit rapport en het vorige zonder namen |
 | 16 | één logo-invulveld bij de instellingen | beheer, blok *Instellingen en logo* |
 | 17 | de achtergrond van een geopend nieuwsbericht niet geblurd | `.detail` op een dichte achtergrond |

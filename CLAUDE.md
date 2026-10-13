@@ -1714,6 +1714,23 @@ die daar niet staan:
      ruimtes.
    - Wat per klant te doen is, staat in de notities van die klant.
 
+   **Dat geldt net zo goed voor de eigenaar zelf en zijn huisgenoten.** Zijn
+   woorden op 13 oktober 2026: *"geen namen in een publieke repo"*. Tot 0.63.1
+   stonden zijn voor- en achternaam, het adres van zijn Nabu Casa en de
+   voornamen van zijn huisgenoten in tests, in de werkbank, in rapporten en in
+   twee foutmeldingen van de kaart (dus ook in de bundel). Uit de huidige stand
+   gehaald; de geschiedenis is op zijn keuze NIET herschreven.
+   - **Testgegevens gebruiken verzonnen namen,** en altijd dezelfde:
+     - Bram Visser (`person.bram`, initialen BV);
+     - Anna, Tom, Sophie, Kees en Mien;
+     - `voorbeeldhuis.ui.nabu.casa`.
+   - **In proza heet hij "de eigenaar".**
+   - **Zijn GitHub-naam blijft:** die staat in elke URL van de repo.
+   - **De echte namen staan in de privénotities van de eigenaar.** Neem ze mee
+     in de grep van hierboven, en kijk na een vervanging of een test op
+     VOLGORDE leunde: een lijst op naam sorteert anders als "Gast" ineens na
+     "Bram" komt in plaats van vóór de echte naam.
+
 ---
 
 ## Projectstand

@@ -235,11 +235,11 @@ describe("magOpslaan (SPEC 5.1)", () => {
 describe("naarAlarm (SPEC 15.2)", () => {
   it("trimt de naam bij het opslaan en niet bij het typen (NIEUW GEDRAG)", () => {
     // CLAUDE.md valkuil 14. Trimmen tijdens het typen eet de spatie op en dan
-    // kan de klant geen "Wekker van Sven" intikken. Het concept houdt de spatie;
+    // kan de klant geen "Wekker van Bram" intikken. Het concept houdt de spatie;
     // de payload niet.
-    const c = volledigConcept({ name: "Wekker van Sven " });
-    assert.equal(c.name, "Wekker van Sven ", "het concept houdt de spatie");
-    assert.equal(naarAlarm(c).name, "Wekker van Sven");
+    const c = volledigConcept({ name: "Wekker van Bram " });
+    assert.equal(c.name, "Wekker van Bram ", "het concept houdt de spatie");
+    assert.equal(naarAlarm(c).name, "Wekker van Bram");
     // En een naam mét spaties erin blijft heel.
     assert.equal(naarAlarm(volledigConcept({ name: "Trein naar Utrecht" })).name, "Trein naar Utrecht");
   });

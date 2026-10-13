@@ -68,7 +68,7 @@ describe("de regel onder de titel", () => {
 
   it("zegt wie het al buiten zette, in plaats van de tijd van de melding", () => {
     const buiten = { datum: "2026-09-27" };
-    assert.equal(kopRegel({ morgen: "gft", tijdMorgen: "19:30", buiten, door: "Sven", nu: NU }), "Morgen GFT · staat buiten (Sven)");
+    assert.equal(kopRegel({ morgen: "gft", tijdMorgen: "19:30", buiten, door: "Bram", nu: NU }), "Morgen GFT · staat buiten (Bram)");
     assert.equal(kopRegel({ vandaag: "gft", buiten: { datum: "2026-09-26" }, nu: NU }), "Vandaag GFT · staat buiten");
   });
 
@@ -96,17 +96,17 @@ describe("de regel onder de titel", () => {
 
 describe("wie er aan staat", () => {
   it("staat aan tot hij is uitgezet, net als aan de serverkant", () => {
-    assert.equal(staatAan(null, "person.sven"), true);
-    assert.equal(staatAan({ aan: {} }, "person.sven"), true);
-    assert.equal(staatAan({ aan: { "person.sven": false } }, "person.sven"), false);
+    assert.equal(staatAan(null, "person.bram"), true);
+    assert.equal(staatAan({ aan: {} }, "person.bram"), true);
+    assert.equal(staatAan({ aan: { "person.bram": false } }, "person.bram"), false);
   });
 
   it("neemt alleen personen, zonder dubbelen", () => {
-    assert.deepEqual(personenUit({ personen: ["person.sven", "notify.x", "person.sven", 3, "person.lieke"] }), [
-      "person.sven",
-      "person.lieke",
+    assert.deepEqual(personenUit({ personen: ["person.bram", "notify.x", "person.bram", 3, "person.anna"] }), [
+      "person.bram",
+      "person.anna",
     ]);
-    assert.deepEqual(personenUit({ personen: "person.sven" }), ["person.sven"]);
+    assert.deepEqual(personenUit({ personen: "person.bram" }), ["person.bram"]);
     assert.deepEqual(personenUit({}), []);
   });
 

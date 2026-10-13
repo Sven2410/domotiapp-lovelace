@@ -37,8 +37,8 @@ describe("valideerConfig (SPEC 16.1 en 16.3)", () => {
   it("laat een geldige person door (NIEUW GEDRAG)", () => {
     // Positieve controle: zonder deze zou een implementatie die áltijd gooit
     // door de volgende test heen komen.
-    const config = valideerConfig({ type: TYPE, person: "person.sven" });
-    assert.equal(config.person, "person.sven");
+    const config = valideerConfig({ type: TYPE, person: "person.bram" });
+    assert.equal(config.person, "person.bram");
   });
 
   it("gooit bij een person in het verkeerde domein (NIEUW GEDRAG)", () => {
@@ -47,8 +47,8 @@ describe("valideerConfig (SPEC 16.1 en 16.3)", () => {
     for (const verkeerd of [
       "light.bedlamp",
       "media_player.slaapkamer",
-      "sven",
-      "personx.sven",
+      "bram",
+      "personx.bram",
     ]) {
       assert.throws(
         () => valideerConfig({ type: TYPE, person: verkeerd }),
@@ -60,7 +60,7 @@ describe("valideerConfig (SPEC 16.1 en 16.3)", () => {
 
   it("gooit bij een person die geen tekst is (NIEUW GEDRAG)", () => {
     assert.throws(() => valideerConfig({ type: TYPE, person: 42 }));
-    assert.throws(() => valideerConfig({ type: TYPE, person: ["person.sven"] }));
+    assert.throws(() => valideerConfig({ type: TYPE, person: ["person.bram"] }));
   });
 
   it("gooit als de config zelf onbruikbaar is (NIEUW GEDRAG)", () => {
@@ -76,7 +76,7 @@ describe("valideerConfig (SPEC 16.1 en 16.3)", () => {
     // weg bij de eerstvolgende bewerking.
     const binnen = {
       type: TYPE,
-      person: "person.sven",
+      person: "person.bram",
       grid_options: { columns: 6, rows: "auto" },
       layout_options: { grid_columns: 6 },
       view_layout: { position: "sidebar" },
@@ -108,12 +108,12 @@ describe("personToestand (SPEC 16.3)", () => {
       "direct na toevoegen is geen storing en mag er niet als storing uitzien",
     );
 
-    const weg = personToestand("person.sven", false);
+    const weg = personToestand("person.bram", false);
     assert.equal(weg.soort, "weg");
     assert.equal(weg.tekst, TEKST_PERSOON_WEG);
     assert.equal(weg.isFout, true);
 
-    const goed = personToestand("person.sven", true);
+    const goed = personToestand("person.bram", true);
     assert.equal(goed.soort, "ok");
     assert.equal(goed.tekst, null);
     assert.equal(goed.isFout, false);
@@ -145,7 +145,7 @@ describe("personToestand (SPEC 16.3)", () => {
 
 describe("foutTekst (SPEC 18.1 en 19.2)", () => {
   it("vertaalt de foutcodes naar de teksten uit SPEC (NIEUW GEDRAG)", () => {
-    assert.equal(foutTekst("not_found", "person.sven niet gevonden"), TEKST_PERSOON_WEG);
+    assert.equal(foutTekst("not_found", "person.bram niet gevonden"), TEKST_PERSOON_WEG);
     assert.equal(foutTekst("home_assistant_error", "kapot"), TEKST_ONLEESBAAR);
   });
 

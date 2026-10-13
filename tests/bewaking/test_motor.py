@@ -215,14 +215,14 @@ async def test_de_rustperiode_overleeft_een_herstart(
 async def test_de_melding_gaat_naar_de_gekozen_personen(
     hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding
 ) -> None:
-    hass.states.async_set("person.sven", "not_home", {"friendly_name": "Sven"})
-    await zet_regel(ontvangers=["person.sven"])
+    hass.states.async_set("person.bram", "not_home", {"friendly_name": "Bram"})
+    await zet_regel(ontvangers=["person.bram"])
 
     await detecteer(hass, MELDER_PERSOON)
 
     stuur_melding.assert_awaited_once()
     argumenten = stuur_melding.await_args.kwargs
-    assert argumenten["ontvangers"] == ["person.sven"]
+    assert argumenten["ontvangers"] == ["person.bram"]
     assert argumenten["titel"] == "Oprit"
     assert argumenten["tekst"] == "Persoon"
     assert argumenten["camera"] == CAMERA
@@ -244,8 +244,8 @@ async def test_alleen_afwezig_houdt_de_melding_tegen_maar_niet_het_beeld(
     hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding, index
 ) -> None:
     """De timeline blijft compleet; alleen de telefoon blijft stil."""
-    hass.states.async_set("person.sven", "home", {"friendly_name": "Sven"})
-    await zet_regel(ontvangers=["person.sven"], alleen_afwezig=True)
+    hass.states.async_set("person.bram", "home", {"friendly_name": "Bram"})
+    await zet_regel(ontvangers=["person.bram"], alleen_afwezig=True)
 
     await detecteer(hass, MELDER_PERSOON)
 
@@ -256,8 +256,8 @@ async def test_alleen_afwezig_houdt_de_melding_tegen_maar_niet_het_beeld(
 async def test_alleen_afwezig_meldt_wel_als_er_niemand_thuis_is(
     hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding
 ) -> None:
-    hass.states.async_set("person.sven", "not_home", {"friendly_name": "Sven"})
-    await zet_regel(ontvangers=["person.sven"], alleen_afwezig=True)
+    hass.states.async_set("person.bram", "not_home", {"friendly_name": "Bram"})
+    await zet_regel(ontvangers=["person.bram"], alleen_afwezig=True)
 
     await detecteer(hass, MELDER_PERSOON)
 
@@ -270,7 +270,7 @@ async def test_de_stilschakelaar_houdt_de_melding_tegen_maar_niet_het_beeld(
     """NIEUW GEDRAG (10 september 2026): een schakelaar die aanstaat houdt de
     telefoon stil; de timeline blijft compleet."""
     hass.states.async_set("input_boolean.camera_stil", "on")
-    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil")
+    await zet_regel(ontvangers=["person.bram"], stil_schakelaar="input_boolean.camera_stil")
 
     await detecteer(hass, MELDER_PERSOON)
 
@@ -282,14 +282,14 @@ async def test_de_stilschakelaar_uit_of_onbekend_laat_de_melding_door(
     hass: HomeAssistant, bewaking_op, zet_regel, stuur_melding
 ) -> None:
     hass.states.async_set("input_boolean.camera_stil", "off")
-    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil")
+    await zet_regel(ontvangers=["person.bram"], stil_schakelaar="input_boolean.camera_stil")
     await detecteer(hass, MELDER_PERSOON)
     stuur_melding.assert_awaited_once()
 
     # Een schakelaar die (nog) niet bestaat houdt niets tegen. Een andere
     # melder, want de eerste zit in zijn rustperiode.
     stuur_melding.reset_mock()
-    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="switch.bestaat_niet")
+    await zet_regel(ontvangers=["person.bram"], stil_schakelaar="switch.bestaat_niet")
     await detecteer(hass, MELDER_VOERTUIG)
     stuur_melding.assert_awaited_once()
 
@@ -300,7 +300,7 @@ async def test_de_omgekeerde_stilschakelaar_houdt_stil_als_hij_uit_staat(
     """NIEUW GEDRAG (10 september 2026): "een optie om de schakelaar te
     inverteren." Uit = stil, aan = melden; onbekend = melden."""
     hass.states.async_set("input_boolean.camera_stil", "off")
-    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.camera_stil", stil_omgekeerd=True)
+    await zet_regel(ontvangers=["person.bram"], stil_schakelaar="input_boolean.camera_stil", stil_omgekeerd=True)
     await detecteer(hass, MELDER_PERSOON)
     assert len(index().alle()) == 1
     stuur_melding.assert_not_awaited()
@@ -311,7 +311,7 @@ async def test_de_omgekeerde_stilschakelaar_houdt_stil_als_hij_uit_staat(
 
     stuur_melding.reset_mock()
     await herstel(hass, MELDER_PERSOON)
-    await zet_regel(ontvangers=["person.sven"], stil_schakelaar="input_boolean.bestaat_niet", stil_omgekeerd=True, rustperiode=0)
+    await zet_regel(ontvangers=["person.bram"], stil_schakelaar="input_boolean.bestaat_niet", stil_omgekeerd=True, rustperiode=0)
     await detecteer(hass, MELDER_PERSOON)
     stuur_melding.assert_awaited_once()
 

@@ -112,7 +112,7 @@ def valideer_regel(rauw: Any) -> Regel:
     ontvangers = _lijst_van_ids(rauw.get("ontvangers"), "ontvangers")
     for persoon in ontvangers:
         if not persoon.startswith("person."):
-            raise RegelFout(f"{persoon!r} is geen persoon, zoals person.sven")
+            raise RegelFout(f"{persoon!r} is geen persoon, zoals person.bram")
 
     namen_rauw = rauw.get("namen") or {}
     if not isinstance(namen_rauw, dict):

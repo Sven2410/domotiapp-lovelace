@@ -11,7 +11,7 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from custom_components.domotiapp_lovelace.meldingen.motor import lees_actie
 
 from ..conftest import zet_integratie_op
-from .conftest import KAART, LIEKE, SVEN, zet_dashboard
+from .conftest import KAART, ANNA, BRAM, zet_dashboard
 
 AMS = dt_util.get_time_zone("Europe/Amsterdam")
 
@@ -26,7 +26,7 @@ async def test_om_half_acht_s_avonds_krijgt_iedereen_de_melding(
     hass.states.async_set("sensor.afval_morgen", "gft")
     await motor._tik(om(26, 19, 30))
 
-    assert [d for d, _ in telefoons] == ["test_sven", "test_lieke"]
+    assert [d for d, _ in telefoons] == ["test_bram", "test_anna"]
     data = telefoons[0][1]
     assert data["title"] == "Morgen GFT"
     assert data["message"] == "Morgen wordt GFT opgehaald. Zet de container vanavond aan de straat."
@@ -50,7 +50,7 @@ async def test_twee_bakken_op_een_dag_staan_samen_in_een_melding(
     hass.states.async_set("sensor.afval_morgen", "Papier, Restafval")
     await motor._tik(om(26, 19, 30))
 
-    assert [d for d, _ in telefoons] == ["test_sven", "test_lieke"]
+    assert [d for d, _ in telefoons] == ["test_bram", "test_anna"]
     data = telefoons[0][1]
     assert data["title"] == "Morgen Papier en Restafval"
     assert data["message"] == (
@@ -60,9 +60,9 @@ async def test_twee_bakken_op_een_dag_staan_samen_in_een_melding(
 
 async def test_wie_uit_staat_krijgt_niets(hass: HomeAssistant, motor, telefoons) -> None:
     hass.states.async_set("sensor.afval_morgen", "gft")
-    motor.opslag.zet_aan("afval", LIEKE, False)
+    motor.opslag.zet_aan("afval", ANNA, False)
     await motor._tik(om(26, 19, 30))
-    assert [d for d, _ in telefoons] == ["test_sven"]
+    assert [d for d, _ in telefoons] == ["test_bram"]
 
 
 async def test_geen_afval_is_geen_melding(hass: HomeAssistant, motor, telefoons) -> None:
@@ -91,20 +91,20 @@ async def test_staat_buiten_slaat_de_ochtend_over_en_wist_bij_de_rest(
     await motor._tik(om(26, 19, 30))
     telefoons.clear()
 
-    # Sven tikt op "Staat buiten" in zijn melding.
+    # Bram tikt op "Staat buiten" in zijn melding.
     hass.bus.async_fire(
         "mobile_app_notification_action",
         {"action": "DOMOTIAPP_AFVAL_BUITEN|afval|2026-09-27"},
-        context=Context(user_id="gebruiker-sven"),
+        context=Context(user_id="gebruiker-bram"),
     )
     await hass.async_block_till_done()
 
     buiten = motor.opslag.buiten("afval")
     assert buiten["datum"] == "2026-09-27"
-    assert buiten["door"] == SVEN
-    # Bij Lieke verdwijnt de melding; bij Sven zelf is hij al weg door de tik.
+    assert buiten["door"] == BRAM
+    # Bij Anna verdwijnt de melding; bij Bram zelf is hij al weg door de tik.
     assert telefoons == [
-        ("test_lieke", {"message": "clear_notification", "data": {"tag": "domotiapp-afval-2026-09-27"}})
+        ("test_anna", {"message": "clear_notification", "data": {"tag": "domotiapp-afval-2026-09-27"}})
     ]
     telefoons.clear()
 
@@ -147,8 +147,8 @@ async def test_de_klok_van_home_assistant_tikt_echt(
     """
     await hass.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to(datetime(2026, 9, 26, 19, 29, 50, tzinfo=AMS))
-    hass.states.async_set(SVEN, "home", {"friendly_name": "Sven"})
-    hass.states.async_set(LIEKE, "home", {"friendly_name": "Lieke"})
+    hass.states.async_set(BRAM, "home", {"friendly_name": "Bram"})
+    hass.states.async_set(ANNA, "home", {"friendly_name": "Anna"})
     await zet_integratie_op(hass)
     await zet_dashboard(hass, [KAART])
     hass.states.async_set("sensor.afval_morgen", "papier")
@@ -169,7 +169,7 @@ def test_een_knop_van_een_ander_is_niet_de_onze() -> None:
 async def test_een_proef_stuurt_ook_zonder_afval(hass: HomeAssistant, motor, telefoons) -> None:
     hass.states.async_set("sensor.afval_morgen", "Geen")
     uitkomst = await motor.async_verstuur("afval", "morgen", om(26, 12, 0), proef=True)
-    assert uitkomst["verstuurd"] == [SVEN, LIEKE]
+    assert uitkomst["verstuurd"] == [BRAM, ANNA]
     assert telefoons[0][1]["title"] == "Proef · Morgen GFT"
     # Een proef telt niet als "vandaag al verstuurd".
     assert motor.opslag.verstuurd("afval", "morgen") is None
@@ -265,11 +265,11 @@ async def test_een_proef_naar_een_persoon(hass: HomeAssistant, motor, telefoons)
     met een eigen tag, zodat hij de echte melding op de telefoon niet vervangt.
     """
     hass.states.async_set("sensor.afval_morgen", "Papier, Restafval")
-    motor.opslag.zet_aan("afval", LIEKE, False)
-    uitkomst = await motor.async_verstuur("afval", "morgen", om(26, 22, 0), proef=True, alleen=LIEKE)
+    motor.opslag.zet_aan("afval", ANNA, False)
+    uitkomst = await motor.async_verstuur("afval", "morgen", om(26, 22, 0), proef=True, alleen=ANNA)
 
-    assert uitkomst["verstuurd"] == [LIEKE]
-    assert [d for d, _ in telefoons] == ["test_lieke"]
+    assert uitkomst["verstuurd"] == [ANNA]
+    assert [d for d, _ in telefoons] == ["test_anna"]
     data = telefoons[0][1]
     assert data["title"] == "Proef · Morgen Papier en Restafval"
     assert data["data"]["tag"] == "domotiapp-afval-proef"
@@ -284,7 +284,7 @@ async def test_staat_buiten_in_een_proef_doet_niets(hass: HomeAssistant, motor, 
     hass.bus.async_fire(
         "mobile_app_notification_action",
         {"action": "DOMOTIAPP_AFVAL_BUITEN|afval|proef"},
-        context=Context(user_id="gebruiker-sven"),
+        context=Context(user_id="gebruiker-bram"),
     )
     await hass.async_block_till_done()
     assert motor.opslag.buiten("afval") is None

@@ -14,8 +14,8 @@ from custom_components.domotiapp_lovelace.meldingen.const import DATA_MOTOR, KAA
 
 from ..conftest import zet_integratie_op
 
-SVEN = "person.sven"
-LIEKE = "person.lieke"
+BRAM = "person.bram"
+ANNA = "person.anna"
 
 KAART: dict[str, Any] = {
     "type": KAART_TYPE,
@@ -25,9 +25,9 @@ KAART: dict[str, Any] = {
     "afval_morgen": "sensor.afval_morgen",
     "tijd_vandaag": "07:30:00",
     "tijd_morgen": "19:30:00",
-    "personen": [SVEN, LIEKE],
+    "personen": [BRAM, ANNA],
     # De testharnas heeft geen companion-app; de telefoon komt uit de YAML.
-    "diensten": {SVEN: "notify.test_sven", LIEKE: "test_lieke"},
+    "diensten": {BRAM: "notify.test_bram", ANNA: "test_anna"},
 }
 
 
@@ -47,7 +47,7 @@ def telefoons(hass: HomeAssistant) -> list[tuple[str, dict[str, Any]]]:
     async def ontvang(call: ServiceCall) -> None:
         aanroepen.append((call.service, dict(call.data)))
 
-    for naam in ("test_sven", "test_lieke"):
+    for naam in ("test_bram", "test_anna"):
         hass.services.async_register("notify", naam, ontvang)
     return aanroepen
 
@@ -56,8 +56,8 @@ def telefoons(hass: HomeAssistant) -> list[tuple[str, dict[str, Any]]]:
 async def motor(hass: HomeAssistant):
     """De integratie opgezet in Nederlandse tijd, met de kaart op een dashboard."""
     await hass.config.async_set_time_zone("Europe/Amsterdam")
-    hass.states.async_set(SVEN, "home", {"friendly_name": "Sven", "user_id": "gebruiker-sven"})
-    hass.states.async_set(LIEKE, "home", {"friendly_name": "Lieke", "user_id": "gebruiker-lieke"})
+    hass.states.async_set(BRAM, "home", {"friendly_name": "Bram", "user_id": "gebruiker-bram"})
+    hass.states.async_set(ANNA, "home", {"friendly_name": "Anna", "user_id": "gebruiker-anna"})
     await zet_integratie_op(hass)
     await zet_dashboard(hass, [KAART])
     return hass.data[DOMAIN][DATA_MOTOR]

@@ -63,6 +63,9 @@ VASTE_WEBP = [
     # de eigenaar als installateur (11 oktober 2026).
     "thuisbatterijen/anker-solarbank-max-ac.webp",
     "thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp",
+    # Sinds 0.63.1: de airco-kaart. Productfoto van Mitsubishi Electric, met
+    # toestemming van de eigenaar als installateur (13 oktober 2026).
+    "aircos/mitsubishi-premium-onyx-black.webp",
 ]
 
 

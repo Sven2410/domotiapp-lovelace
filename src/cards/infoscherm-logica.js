@@ -341,7 +341,7 @@ export function paginas(stand, feeds, nu = null) {
 }
 
 /**
- * 'Sven Kool' -> 'SK', 'Ruben van der lee' -> 'RL'.
+ * 'Bram Visser' -> 'BV', 'Ruben van der lee' -> 'RL'.
  *
  * De eerste letter van het EERSTE woord en de eerste letter van het LAATSTE
  * woord, hoofdletter of niet. Tot 0.36.0 telden alleen woorden met een

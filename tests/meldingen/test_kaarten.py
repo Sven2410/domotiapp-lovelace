@@ -14,7 +14,7 @@ from custom_components.domotiapp_lovelace.meldingen import kaarten
 from custom_components.domotiapp_lovelace.meldingen.const import KAART_TYPE
 
 from ..conftest import zet_integratie_op
-from .conftest import KAART, LIEKE, SVEN, zet_dashboard
+from .conftest import KAART, ANNA, BRAM, zet_dashboard
 
 
 def test_de_kaart_wordt_overal_gevonden() -> None:
@@ -32,7 +32,7 @@ def test_de_kaart_wordt_overal_gevonden() -> None:
 
 
 def test_een_lege_kaart_krijgt_de_tijden_van_zijn_automatisering() -> None:
-    melding = kaarten.melding_uit({"type": KAART_TYPE, "afval_morgen": "sensor.x", "personen": [SVEN]})
+    melding = kaarten.melding_uit({"type": KAART_TYPE, "afval_morgen": "sensor.x", "personen": [BRAM]})
     assert melding.id == "afval"
     assert melding.tijden == {"vandaag": "07:30", "morgen": "19:30"}
     # Geen sensor voor vandaag: dan is er geen ochtendmelding.
@@ -41,9 +41,9 @@ def test_een_lege_kaart_krijgt_de_tijden_van_zijn_automatisering() -> None:
 
 def test_alleen_personen_tellen() -> None:
     melding = kaarten.melding_uit(
-        {"type": KAART_TYPE, "personen": [SVEN, "notify.iphone", SVEN, 5, LIEKE]}
+        {"type": KAART_TYPE, "personen": [BRAM, "notify.iphone", BRAM, 5, ANNA]}
     )
-    assert melding.personen == [SVEN, LIEKE]
+    assert melding.personen == [BRAM, ANNA]
 
 
 def test_een_onbekende_soort_verstuurt_niets() -> None:
@@ -51,11 +51,11 @@ def test_een_onbekende_soort_verstuurt_niets() -> None:
 
 
 def test_twee_kaarten_zijn_een_melding_met_alle_personen() -> None:
-    telefoon = {**KAART, "personen": [SVEN]}
-    tablet = {**KAART, "personen": [LIEKE, SVEN], "tijd_morgen": "20:00"}
+    telefoon = {**KAART, "personen": [BRAM]}
+    tablet = {**KAART, "personen": [ANNA, BRAM], "tijd_morgen": "20:00"}
     samen = kaarten.voeg_samen([("telefoon", telefoon), ("tablet", tablet)])
     assert list(samen) == ["afval"]
-    assert samen["afval"].personen == [SVEN, LIEKE]
+    assert samen["afval"].personen == [BRAM, ANNA]
     # De instellingen van de eerste gaan voor.
     assert samen["afval"].tijden["morgen"] == "19:30"
     assert samen["afval"].dashboards == ["telefoon", "tablet"]
@@ -118,8 +118,8 @@ async def test_leest_de_echte_lovelace(hass: HomeAssistant) -> None:
     await zet_dashboard(hass, [{"type": "vertical-stack", "cards": [KAART]}])
     gelezen = await kaarten.async_lees(hass)
     assert list(gelezen) == ["afval"]
-    assert gelezen["afval"].personen == [SVEN, LIEKE]
-    assert gelezen["afval"].diensten == {SVEN: "test_sven", LIEKE: "test_lieke"}
+    assert gelezen["afval"].personen == [BRAM, ANNA]
+    assert gelezen["afval"].diensten == {BRAM: "test_bram", ANNA: "test_anna"}
 
 
 # ---------------------------------------------------------------------------

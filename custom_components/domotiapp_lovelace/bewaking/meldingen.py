@@ -5,13 +5,13 @@ meldingen ontvangen."*
 
 ## Waarom je een PERSOON kiest en geen dienst
 
-`notify.mobile_app_iphone_van_sven` is geen naam die iemand onthoudt, en hij
+`notify.mobile_app_iphone_van_bram` is geen naam die iemand onthoudt, en hij
 verandert zodra de telefoon anders gaat heten. Een persoon is wat er in het
 huishouden bestaat. De vertaling van het een naar het ander doet deze module.
 
 ## Hoe die vertaling loopt, en waarom precies zo
 
-    person.sven
+    person.bram
       -> attribuut `device_trackers`
       -> de tracker die van de integratie `mobile_app` komt
       -> de config entry van die tracker

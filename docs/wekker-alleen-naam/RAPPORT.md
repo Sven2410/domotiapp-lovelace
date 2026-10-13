@@ -1,7 +1,7 @@
 # Alleen de naam in de zoeklijst van de wekker (0.52.1)
 
 29 september 2026, direct na 0.52.0, met een schermafdruk van de lijst
-(Bureaulamp met `light.bureaulamp_sven_switch_0` ernaast):
+(Bureaulamp met `light.bureaulamp_bram_switch_0` ernaast):
 *"ik wil niet de entiteit naam zien alleen de friendly name snap je (...) zelfde
 geld voor de speakers"*.
 
@@ -10,8 +10,8 @@ geld voor de speakers"*.
 - In de zoeklijst van het wake-up light en de speaker staat alleen nog de
   **naam** (de friendly name). Het entity_id rechts ervan is weg.
 - **Zoeken gaat alleen nog op die naam.** Wie het entity_id niet ziet, snapt
-  niet waarom "sven" de lamp "Bureaulamp" vindt (omdat die
-  `light.bureaulamp_sven_switch_0` heet). Wat je ziet en wat je vindt gaan nu
+  niet waarom "bram" de lamp "Bureaulamp" vindt (omdat die
+  `light.bureaulamp_bram_switch_0` heet). Wat je ziet en wat je vindt gaan nu
   gelijk op.
 - Heeft een entiteit geen naam, dan staat het entity_id er wél, want een
   regel zonder tekst is niet te kiezen (`naamVan` in `editorlogica.js`).

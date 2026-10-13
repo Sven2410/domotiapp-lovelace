@@ -25,8 +25,8 @@ aangeroepen):
 
 En over de installatie zelf: **alle acht gelabelde MA-speakers melden
 `GROUPING`**, en **geen enkele MA-entiteit heeft `TURN_ON`/`TURN_OFF`** — die zit
-alleen op de native entiteiten (`media_player.slaapkamer_sven` van Cast wél,
-`media_player.arc_sven` van Sonos niet). Dat is precies wat de eigenaar zei, en
+alleen op de native entiteiten (`media_player.slaapkamer_bram` van Cast wél,
+`media_player.arc_bram` van Sonos niet). Dat is precies wat de eigenaar zei, en
 de kaart leest het al per speler uit.
 
 ## 2. Wat er gebouwd is

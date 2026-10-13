@@ -7,7 +7,7 @@ Ronde van 27 augustus 2026 — uitgave **0.24.0**. Eén icoon.
 ## Waarom `away` het niet was
 
 Dat bestond al, maar het is een PERSOON die weggaat: een figuurtje met een pijl.
-Dat is het goede beeld voor een bewoner die niet thuis is — `person.sven` op
+Dat is het goede beeld voor een bewoner die niet thuis is — `person.bram` op
 `not_home`.
 
 Dit gaat over het huis zelf: de knop of de scene waarmee je vertrekt, en die

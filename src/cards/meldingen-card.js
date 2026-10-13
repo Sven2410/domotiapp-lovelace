@@ -28,7 +28,7 @@
  *
  * ## Waarom een persoon en geen telefoon
  *
- * Zelfde afspraak als bij de camera: `notify.mobile_app_iphone_van_sven` is
+ * Zelfde afspraak als bij de camera: `notify.mobile_app_iphone_van_bram` is
  * geen naam die iemand onthoudt, en hij verandert zodra de telefoon anders gaat
  * heten. De serverkant zoekt de telefoon bij de persoon. Vindt hij er geen, dan
  * staat dat op de rij -- anders krijgt iemand stil niets en ziet niemand waarom.
@@ -406,7 +406,7 @@ class MeldingenCard extends DacCard {
   }
 }
 
-/** "Sven Kool" -> "Sven": in een regel van één zin is de voornaam genoeg. */
+/** "Bram Visser" -> "Bram": in een regel van één zin is de voornaam genoeg. */
 const voornaam = (naam) => String(naam ?? "").trim().split(/\s+/)[0] ?? "";
 
 class MeldingenEditor extends DacEditor {

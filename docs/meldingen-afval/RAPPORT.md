@@ -63,7 +63,7 @@ server leest die uit de opgeslagen dashboards. Daardoor:
 ### De kaart
 
 - Kop met het icoon, de titel en eronder wat er komt: *"Morgen GFT · melding om
-  19:30"*, *"Vandaag PMD"*, *"Morgen GFT · staat buiten (Sven)"*. Komt er niets,
+  19:30"*, *"Vandaag PMD"*, *"Morgen GFT · staat buiten (Bram)"*. Komt er niets,
   dan staat er ook niets (vormregel: statusregels weglaten).
 - Per persoon een rij: foto (of het persoonsicoon), naam, schakelaar. De hele
   rij is klikbaar. Alleen het icoon draagt de toestand: een foto wordt grijs
@@ -73,16 +73,16 @@ server leest die uit de opgeslagen dashboards. Daardoor:
 ### Waarom de telefoon bij een persoon gezocht wordt, en niet als notify-entiteit
 
 Zijn automatisering gebruikte `notify.send_message` met de notify-ENTITEIT
-(`notify.iphone_van_sven`). Die neemt alleen een titel en een tekst, dus geen
+(`notify.iphone_van_bram`). Die neemt alleen een titel en een tekst, dus geen
 knop en geen tag. De knop "Staat buiten" en het vervangen van de avondmelding
 kunnen alleen via de notify-DIENST van de companion-app
-(`notify.mobile_app_iphone_van_sven`). Die wordt bij de persoon gezocht, net
+(`notify.mobile_app_iphone_van_bram`). Die wordt bij de persoon gezocht, net
 als bij de camerakaart. Wie het anders wil (een Telegram-bot, een tweede
 telefoon), zet in de YAML:
 
 ```yaml
 diensten:
-  person.bertus: notify.mobile_app_ipad_van_bertus
+  person.kees: notify.mobile_app_ipad_van_kees
 ```
 
 ---
@@ -105,7 +105,7 @@ Python veranderde deze ronde, dus de container is herstart (valkuil 49).
 
 ### Het testmateriaal
 
-- `person.dev` (de ingelogde gebruiker) en `person.lieke` (nieuw, zonder
+- `person.dev` (de ingelogde gebruiker) en `person.anna` (nieuw, zonder
   telefoon).
 - `sensor.mijnafvalwijzer_vandaag` = `Geen`, `sensor.mijnafvalwijzer_morgen` =
   `gft`.
@@ -119,7 +119,7 @@ Python veranderde deze ronde, dus de container is herstart (valkuil 49).
 kop       "Afvalmeldingen"
 regel     "Morgen GFT · melding om 19:30"
 rijen     person.dev    aan   (telefoon: persistent_notification)
-          person.lieke  aan   "Geen telefoon gevonden"
+          person.anna  aan   "Geen telefoon gevonden"
 stand     {"bekend": true, "aan": {}, "buiten": null, ...}
 hoogte    184   (drie rasterrijen)
 ```
@@ -127,13 +127,13 @@ hoogte    184   (drie rasterrijen)
 ### Omzetten, met echte kliks
 
 ```
-click  isTrusted=true  (1302,253)  button.toggle <- div.rij        schakelaar van Lieke
-  kaart   person.lieke aan=false
-  server  {"person.lieke": false}          (via een tweede, losse abonnee)
+click  isTrusted=true  (1302,253)  button.toggle <- div.rij        schakelaar van Anna
+  kaart   person.anna aan=false
+  server  {"person.anna": false}          (via een tweede, losse abonnee)
 
-click  isTrusted=true  (931,246)   span.pn <- span.txt <- div.rij  de naam van Lieke
-  kaart   person.lieke aan=true
-  server  {"person.lieke": true}
+click  isTrusted=true  (931,246)   span.pn <- span.txt <- div.rij  de naam van Anna
+  kaart   person.anna aan=true
+  server  {"person.anna": true}
 ```
 
 ### Echt versturen, op de minuut
@@ -145,7 +145,7 @@ lezen.
 ```
 21:54:00.434  persistent notification  "Morgen GFT"
               "Morgen wordt GFT opgehaald. Zet de container vanavond aan de straat."
-21:54:00.434  WARNING  Geen telefoon gevonden voor person.lieke; die krijgt geen afvalmelding
+21:54:00.434  WARNING  Geen telefoon gevonden voor person.anna; die krijgt geen afvalmelding
 stand         verstuurd.morgen = "2026-09-26"
 ```
 
@@ -281,7 +281,7 @@ Alles is **NIEUW GEDRAG**; er bestond niets van.
    het dashboard **opslaan** (tot dan zegt de kaart "Actief zodra het dashboard
    is opgeslagen").
 4. Staat er bij iemand **"Geen telefoon gevonden"**, dan heeft die persoon geen
-   companion-app als apparaat. Dat is bij hem mogelijk Bertus met de iPad; zie
+   companion-app als apparaat. Dat is bij hem mogelijk Kees met de iPad; zie
    `diensten:` hierboven.
 5. **De automatisering "Afval Notificaties" uitzetten**, anders komt alles
    dubbel. De vijf `input_boolean.afval_notificatie_*` zijn daarna niet meer

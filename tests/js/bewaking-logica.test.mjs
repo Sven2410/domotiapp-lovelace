@@ -121,9 +121,9 @@ describe("regelsVoorKaart — NIEUW GEDRAG", () => {
   it("laat alleen personen door als ontvanger", () => {
     const [regel] = regelsVoorKaart(HASS, {
       ...BASIS,
-      snapshot_ontvangers: ["person.sven", "notify.mobile_app_iets", "light.aan"],
+      snapshot_ontvangers: ["person.bram", "notify.mobile_app_iets", "light.aan"],
     });
-    assert.deepEqual(regel.ontvangers, ["person.sven"]);
+    assert.deepEqual(regel.ontvangers, ["person.bram"]);
   });
 
   it("valt terug op de standaard bij een onzinnig getal", () => {
@@ -145,7 +145,7 @@ describe("verschilt en teVersturen — NIEUW GEDRAG", () => {
 
   it("negeert velden die alleen de server kent", () => {
     const [regel] = regelsVoorKaart(HASS, BASIS);
-    const opServer = { ...regel, diensten: { "person.sven": "notify.iets" } };
+    const opServer = { ...regel, diensten: { "person.bram": "notify.iets" } };
     assert.equal(verschilt(regel, opServer), false);
   });
 

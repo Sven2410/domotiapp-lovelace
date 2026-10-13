@@ -55,18 +55,18 @@ describe("meldingId() per soort — NIEUW GEDRAG", () => {
 });
 
 describe("krijgtIets() — NIEUW GEDRAG", () => {
-  const standen = { afval: { aan: { "person.lieke": false } } };
+  const standen = { afval: { aan: { "person.anna": false } } };
 
   it("iemand die een soort aan heeft staan, krijgt iets", () => {
-    assert.equal(fn("krijgtIets")(standen, ["afval"], "person.sven"), true);
+    assert.equal(fn("krijgtIets")(standen, ["afval"], "person.bram"), true);
   });
 
   it("iemand die alles uit heeft staan, krijgt niets", () => {
-    assert.equal(fn("krijgtIets")(standen, ["afval"], "person.lieke"), false);
+    assert.equal(fn("krijgtIets")(standen, ["afval"], "person.anna"), false);
   });
 
   it("op een kaart zonder soorten krijgt niemand iets", () => {
-    assert.equal(fn("krijgtIets")(standen, [], "person.sven"), false);
+    assert.equal(fn("krijgtIets")(standen, [], "person.bram"), false);
   });
 });
 
@@ -92,10 +92,10 @@ describe("afvalRegel() — NIEUW GEDRAG", () => {
   });
 
   it("zegt wie hem buiten zette", () => {
-    const buiten = { ...stand, buiten: { datum: "2026-09-30", door: "person.sven" } };
+    const buiten = { ...stand, buiten: { datum: "2026-09-30", door: "person.bram" } };
     assert.equal(
-      fn("afvalRegel")({ config, stand: buiten, morgen: "GFT", vandaag: "geen", door: "Sven", nu }),
-      "Morgen GFT · staat buiten (Sven)"
+      fn("afvalRegel")({ config, stand: buiten, morgen: "GFT", vandaag: "geen", door: "Bram", nu }),
+      "Morgen GFT · staat buiten (Bram)"
     );
   });
 
@@ -155,21 +155,21 @@ describe("afvalRegel() na 6 oktober 2026 — NIEUW GEDRAG", () => {
 describe("proefUitkomst() — NIEUW GEDRAG", () => {
   it("verstuurd: met de titel, en de vraag om te kijken", () => {
     assert.deepEqual(
-      fn("proefUitkomst")({ verstuurd: ["person.sven"], zonder_telefoon: [], titel: "Proef · Morgen GFT" }, "Sven"),
-      { tekst: "Verstuurd naar Sven: “Proef · Morgen GFT”. Kijk op de telefoon.", fout: false }
+      fn("proefUitkomst")({ verstuurd: ["person.bram"], zonder_telefoon: [], titel: "Proef · Morgen GFT" }, "Bram"),
+      { tekst: "Verstuurd naar Bram: “Proef · Morgen GFT”. Kijk op de telefoon.", fout: false }
     );
   });
 
   it("geen telefoon", () => {
     assert.deepEqual(
-      fn("proefUitkomst")({ verstuurd: [], zonder_telefoon: ["person.sven"], titel: "x" }, "Sven"),
-      { tekst: "Niet verstuurd: geen werkende telefoon gevonden voor Sven.", fout: true }
+      fn("proefUitkomst")({ verstuurd: [], zonder_telefoon: ["person.bram"], titel: "x" }, "Bram"),
+      { tekst: "Niet verstuurd: geen werkende telefoon gevonden voor Bram.", fout: true }
     );
   });
 
   it("de reden van de server komt er letterlijk te staan", () => {
     assert.deepEqual(
-      fn("proefUitkomst")({ reden: "Deze melding staat op geen enkel opgeslagen dashboard" }, "Sven"),
+      fn("proefUitkomst")({ reden: "Deze melding staat op geen enkel opgeslagen dashboard" }, "Bram"),
       { tekst: "Deze melding staat op geen enkel opgeslagen dashboard", fout: true }
     );
   });

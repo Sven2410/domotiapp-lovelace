@@ -59,7 +59,7 @@ toets gelogd, allemaal `isTrusted: true`:
 | opnieuw open, "ceil", Ceiling Lights aangeklikt | gekozen |
 | opnieuw open, Escape | alleen de lijst dicht; de editor blijft open en de keuze staat |
 | opnieuw open (Ceiling Lights gemarkeerd), Geen lamp aangeklikt | geen lamp, schuif weg |
-| speaker: veld aantikken, "slaap li" getypt, Slaapkamer Lieke aangeklikt | gekozen (1 van 12) |
+| speaker: veld aantikken, "slaap li" getypt, Slaapkamer Anna aangeklikt | gekozen (1 van 12) |
 | Escape met de lijst dicht | de wekker sluit, zoals eerst |
 
 Het keuzeveld staat op dezelfde plek en breedte als het naamveld (links 584,

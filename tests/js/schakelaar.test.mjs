@@ -45,7 +45,7 @@ describe("kanSchakelen()", () => {
       "cover.rolluik",
       "climate.woonkamer",
       "media_player.sonos",
-      "person.sven",
+      "person.bram",
       "weather.buienradar",
     ]) {
       assert.equal(kanSchakelen(id), false, id);

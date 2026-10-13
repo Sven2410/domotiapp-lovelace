@@ -645,18 +645,28 @@ export function aircoFeiten(hass, st, { delen = {}, energie = "" } = {}, taal = 
 const AFBEELDINGEN_BASIS = "/domotiapp_lovelace/afbeeldingen/";
 
 /**
- * Productfoto's per model, net als `LAADPAAL_FOTOS`. Nog LEEG: de foto's
- * komen later (de eigenaar legt ze in `_ref/aircos`). Een foto erbij is één
- * regel hier, plus het bestand onder `afbeeldingen/aircos/`:
- *
- *   mitsubishi_ln: { label: "Mitsubishi LN", pad: "aircos/mitsubishi-ln.webp",
- *                    merk: "mitsubishi", model: "msz-ln" },
+ * Productfoto's per model, net als `LAADPAAL_FOTOS`. Productfoto's van de
+ * fabrikant, gebruikt met toestemming van de eigenaar als installateur
+ * (Mitsubishi Electric: 13 oktober 2026). De bron staat in `_ref/aircos`; hier
+ * staat een bijgesneden WebP onder `afbeeldingen/aircos/`. Die adressen staan
+ * straks in dashboards: alleen aanvullen, nooit hernoemen.
  *
  * `merk` en `model` worden als STUK van de tekst gezocht in de fabrikant en
  * het model van het apparaat (kleine letters). Zonder `model` is het de foto
- * voor dat merk als er geen betere is.
+ * voor dat merk als er geen betere is. Zonder `merk` kiest Automatisch hem
+ * NOOIT: dan moet hij in de editor gekozen worden.
+ *
+ * De Premium in Onyx Black heeft met opzet geen `merk`. MELCloud Home geeft
+ * geen model door, en een Mitsubishi kan ook een witte of zilveren unit zijn.
+ * Op merk zou elke Mitsubishi als een zwarte Premium verschijnen. Zijn keuze
+ * op 13 oktober 2026: "Alleen als ik hem kies".
  */
-export const AIRCO_FOTOS = {};
+export const AIRCO_FOTOS = {
+  mitsubishi_premium_onyx: {
+    label: "Mitsubishi Electric Premium (Onyx Black)",
+    pad: "aircos/mitsubishi-premium-onyx-black.webp",
+  },
+};
 
 /**
  * Welke foto er bij een apparaat hoort, of null. Een foto met een passend
