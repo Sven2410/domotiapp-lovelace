@@ -169,12 +169,55 @@ opgave, auto zonder sensor), met de number nagebootst. Gemeten op 380, 320 en
 | 320 | 142 | 97 | ja | ja |
 | 280 | 102 | 97 | ja | ja |
 
-## Wat nog moet: de echte dump
+## De echte dump van coach 0.117.0
 
-**Deze ronde gaat pas uit na een echte dump van coach v0.117.0** (CLAUDE.md,
-*Het contract met DomotiApp Coach*). De coach-sessie meldt zich met de dump als
-v0.117.0 uit is; die komt dan als vaste testinvoer in
-`tests/js/vaste-invoer/coach-0.117.0-laadpaal.json`, met een test erop.
+De coach-sessie haalde hem op 14 oktober 2026 om 16:20:31 uit de Home Assistant
+van de eigenaar, een halve minuut na de herstart met v0.117.0. De integratie
+van de auto stond uit; de eigenaar gaf om 15:38 16% op, en de stand was
+meegelopen naar 21. Hij staat als vaste testinvoer in
+`tests/js/vaste-invoer/coach-0.117.0-laadpaal.json`.
+
+**Nagekeken voor de commit** (valkuil 71): alle entity_id's zijn `laadpaal_*`
+plus `sensor.auto_soc` (de accusensor van de auto, door de coach-sessie
+vervangen, net als het serienummer van de paal); geen cijferreeks van vijf of
+meer die geen kommagetal is; geen namen; de friendly_names zijn allemaal
+"Laadpaal ...".
+
+**Wat de dump laat zien:**
+
+- `vragen` `true`, `wacht` `false`, `sensor` `true`: echte booleans.
+- De toestand is `"21.0"`, een kommagetal als tekst. De kaart toont "21".
+- **De entity_id is `number.laadpaal_accustand_auto`**, niet `..._accustand`:
+  Home Assistant maakt hem van de naam "Accustand auto". De kaart zoekt op
+  `translation_key` en vindt hem.
+- Op de coach-sensor `soc` 21.0 en `soc_geschat` `true`: in de kop "± 21%".
+
+`tests/js/laadpaal-dump-0117.test.mjs`, 7 tests, allemaal **REGRESSIEWACHT**:
+de kaart is gebouwd op wat de coach-sessie over deze vorm zei, en de dump
+bevestigt dat. Tegen 0.63.1 falen er vier (daar bestaan `accustandVeld` en
+`accustandInvoer` niet); de vorm van de dump, het zoeken op translation_key en
+de schatting in de kop slagen daar ook, want dat deed de kaart al:
+
+```
+  ✔ zo staat het er echt: echte booleans, een kommagetal als toestand, 0 tot 100 per 1
+  ✔ vindt de number op translation_key, ook al heet hij number.laadpaal_accustand_auto
+  ✖ toont het veld met de stand van de coach en de uitleg na een opgave
+  ✔ de kop zegt hetzelfde getal, als schatting
+  ✖ wat er naar de coach gaat, binnen het bereik van de echte entiteit
+  ✖ zonder opgave (dezelfde entiteit, toestand unknown): de zin over de sensor en dan 'Geef dit door'
+  ✖ een coach zonder deze entiteit (0.112.3): geen veld
+ℹ pass 3
+ℹ fail 4
+```
+
+**De echte kaart tegen de echte dump** (`dev/laadpaal.html`, situatie 7): veld
+"21", kop "± 21%", de uitleg na een opgave, hoogtes 568 / 568 / 632 op 380 /
+320 / 280. Een echte driedubbele klik in het veld, `2`, spatie, `5` (alle
+`isTrusted: true`, de spatie geweigerd) en een echte klik op Doorgeven gaven:
+
+```
+callService number.set_value {"entity_id":"number.laadpaal_accustand_auto","value":25}
+```
 
 ## Samenvatting
 
@@ -182,20 +225,23 @@ De laadpaalkaart vraagt "Hoe vol is de auto nu?" zodra de coach dat wil
 (`vragen`), met dezelfde zinnen als de coachkaart, en geeft het door met
 `number.set_value`. In Home Assistant nagemeten met echte kliks en
 toetsaanslagen; daarbij kwam een fout met Escape boven, die is gerepareerd en
-opnieuw gemeten.
+opnieuw gemeten. De echte dump van coach 0.117.0 bevestigt de vorm, en de kaart
+vindt de entiteit ook onder zijn echte naam `number.laadpaal_accustand_auto`.
 
 ## Wat niet lukte
 
-- Niet gemeten tegen de echte coach: v0.117.0 is er nog niet. Alles is gemeten
-  tegen een nagebootste entiteit volgens de beschrijving van de coach-sessie.
+- Niet bij de eigenaar zelf gemeten: zijn Home Assistant mag hier niet
+  aangeraakt worden. Het gedrag in Home Assistant is gemeten tegen een
+  nagebootste entiteit in de testinstance; de echte vorm tegen de dump, in de
+  proefopstelling.
 - Niet op een iPhone gemeten (het lettertype van 16 px tegen inzoomen, het
   numerieke toetsenbord).
 
 ## Aannames
 
-- Dat de echte number de attributen `vragen`, `wacht` en `sensor` als echte
-  booleans geeft, zoals beschreven. De kaart leest alleen `=== true`. Dat wordt
-  nagekeken in de dump.
+- Dat de echte coach `wacht` op `true` zet zoals beschreven. In de dump is hij
+  `false` (er stond al een opgave); de zin bij `wacht` is alleen nagebootst
+  gemeten.
 - Dat een lege toestand of `unknown` geen opgave is, en `0` wel.
 
 ## git status --porcelain

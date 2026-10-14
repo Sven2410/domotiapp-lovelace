@@ -37,7 +37,8 @@
   2. coach 0.112.3: een auto aan de paal, planning voor vandaag, alleen Snel;
   3. coach 0.112.3: geen planning vandaag, voorkeur Goedkoopst, drie knoppen.
   4-6. coach 0.117.0: "Hoe vol is de auto nu?" (de number `accustand`,
-     nagebootst zoals de coach-sessie hem op 14 oktober 2026 beschreef).
+     nagebootst zoals de coach-sessie hem op 14 oktober 2026 beschreef);
+  7. de echte dump van coach 0.117.0 (auto aan de paal, 21% na een opgave).
 -->
 <div id="situaties"></div>
 <div id="log"></div>
@@ -53,6 +54,7 @@ const log = (t) => {
 };
 
 const dump = await (await fetch(`../tests/js/vaste-invoer/coach-0.112.1-laadpaal.json?t=${Date.now()}`)).json();
+const dump0117 = await (await fetch(`../tests/js/vaste-invoer/coach-0.117.0-laadpaal.json?t=${Date.now()}`)).json();
 
 /** Een hass uit een lijst entiteiten zoals de dump ze heeft. */
 function hassUit(lijst, wijzig = {}) {
@@ -109,6 +111,7 @@ const SITUATIES = [
     attributes: { stand: "wacht", soc: null, modus_keuzes: ["snel"], modus_actief: "planning", planning_nu: true, klaar_om_volgende: morgen6, expected_done: morgen6 },
     accustand: { state: "unknown", attributes: { vragen: true, wacht: false, sensor: false } },
   }],
+  ["7. Echte dump coach 0.117.0: auto aan de paal, 21% na een opgave", { lijst: dump0117 }],
 ];
 
 const doel = document.getElementById("situaties");
@@ -125,7 +128,7 @@ for (const [titel, wijzig] of SITUATIES) {
     const kaart = document.createElement("domotiapp-laadpaal-card");
     kaart.dataset.breed = String(breed);
     kaart.setConfig({ type: "custom:domotiapp-laadpaal-card" });
-    kaart.hass = hassUit(dump, structuredClone(wijzig));
+    kaart.hass = wijzig.lijst ? hassUit(wijzig.lijst) : hassUit(dump, structuredClone(wijzig));
     vak.appendChild(kaart);
     rij.appendChild(vak);
   }
