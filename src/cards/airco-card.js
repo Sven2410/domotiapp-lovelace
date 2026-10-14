@@ -40,7 +40,9 @@
  *               Wacht op zon of een goedkoop uur.            <- de regel van de coach
  *   ( Uit ) ( Verwarmen ) ( Koelen ) ...
  *   [-]                 22° doel                [+]          <- ook als hij uit staat
- *   ( ☀ Alleen op zon )  ( ⏸ Pauze )
+ *   Aan op
+ *   ( Zon ) ( Goedkoop ) ( Beide )                           <- alleen bij een dynamisch contract
+ *   ( ⏸ Pauze )
  *
  * Stuurt de coach deze airco, dan vindt de kaart dat zelf (`aircoCoach`), en
  * is het doel de temperatuur die de BEWONER wil: de coach zet de airco aan
@@ -66,6 +68,8 @@ import {
   aircoCoach,
   aircoCoachStand,
   aircoFeiten,
+  aanOpKeuzes,
+  aanOpOproep,
   aircoStand,
   alsKnoppen,
   apparaatDelen,
@@ -372,7 +376,7 @@ class AircoCard extends DacCard {
       c.energy,
       ...Object.values(this.delen_()),
       r.doeltemperatuur,
-      r.alleen_zon,
+      r.aan_op,
       r.pauze,
       // De sensor van ELKE airco van de coach: welke bij deze airco hoort staat
       // in zijn toestand, en een coach die net opstart krijgt `klimaat` pas
@@ -471,6 +475,11 @@ class AircoCard extends DacCard {
 
         <div class="doelen" hidden>${stel("doel")}${stel("laag")}${stel("hoog")}</div>
 
+        <div class="blok aanop" hidden>
+          <span class="kopje">Aan op</span>
+          <div class="segs" role="group" aria-label="Aan op"></div>
+        </div>
+
         <div class="schakels" role="group" aria-label="Coach" hidden></div>
 
         <div class="blok vent" hidden>
@@ -534,7 +543,14 @@ class AircoCard extends DacCard {
       this.stel_(knop.closest(".set").dataset.welk, Number(knop.dataset.d));
     });
 
-    // Alleen op zon en Pauze: schakelaars van de coach, niet van de airco.
+    // Aan op: de select van de coach, niet iets van de airco.
+    this.on(this.$(".aanop .segs"), "click", (e) => {
+      const knop = e.target?.closest?.(".seg");
+      if (!knop || knop.disabled) return;
+      this.roep_(aanOpOproep(stateOf(this.hass_, this.coach_()?.rollen.aan_op), knop.dataset.waarde));
+    });
+
+    // Pauze: een schakelaar van de coach, niet van de airco.
     this.on(this.$(".schakels"), "click", (e) => {
       const knop = e.target?.closest?.(".schakel");
       if (!knop?.dataset.id) return;
@@ -635,9 +651,10 @@ class AircoCard extends DacCard {
     const coach = this.coach_();
     const cs = coach ? aircoCoachStand(stateOf(hass, coach.rollen.coach)) : null;
     const knoppen = coach ? coachKnoppen(hass, coach.rollen, cs) : [];
-    const regel = coachRegel(cs, { alleenZon: knoppen.some((k) => k.rol === "alleen_zon" && k.aan) });
+    const regel = coachRegel(cs);
     this.text(".reden", regel);
     this.$(".reden").hidden = !regel;
+    this.paintAanOp_(coach ? aanOpKeuzes(stateOf(hass, coach.rollen.aan_op), cs) : null);
     this.paintSchakels_(knoppen);
 
     // ----- foto of chip, en de aan-knop
@@ -727,8 +744,30 @@ class AircoCard extends DacCard {
   }
 
   /**
-   * Alleen op zon en Pauze. Alleen opnieuw bouwen als de knoppen zelf
-   * veranderen, zodat een knop met de focus die houdt.
+   * Aan op: zon, goedkope uren of beide. Net als de ventilator drie knoppen
+   * op een regel; de kaart bouwt ze alleen opnieuw als de opties veranderen.
+   */
+  paintAanOp_(keuze) {
+    const blok = this.$(".aanop");
+    blok.hidden = !keuze;
+    if (!keuze) return;
+    const segs = blok.querySelector(".segs");
+    const sig = JSON.stringify(keuze.opties);
+    if (segs.dataset.sig !== sig) {
+      segs.dataset.sig = sig;
+      segs.innerHTML = keuze.opties
+        .map(
+          (o) =>
+            `<button type="button" class="seg" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="false" aria-label="Aan op ${escapeHtml(o.naam.toLowerCase())}" title="${escapeHtml(o.naam)}">${escapeHtml(o.label)}</button>`
+        )
+        .join("");
+    }
+    for (const knop of segs.children) knop.setAttribute("aria-pressed", String(knop.dataset.waarde === keuze.gekozen));
+  }
+
+  /**
+   * Pauze. Alleen opnieuw bouwen als de knoppen zelf veranderen, zodat een
+   * knop met de focus die houdt.
    */
   paintSchakels_(knoppen) {
     const vak = this.$(".schakels");
@@ -942,7 +981,7 @@ class AircoEditor extends DacEditor {
   helper(s) {
     return {
       entity:
-        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Alleen op zon en Pauze erbij.",
+        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij.",
       name: "Leeg laten: de naam van de airco in Home Assistant.",
       afbeelding:
         "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit.",

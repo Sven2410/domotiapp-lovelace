@@ -720,15 +720,24 @@ export function aircoAfbeelding(keuze, apparaat, eigen = "", fotos = AIRCO_FOTOS
  * Zet de bewoner hem zelf aan of uit, dan blijft de coach er tot middernacht
  * af. Ventilator en lamellen raakt hij nooit aan.
  *
+ * Diezelfde avond stelde hij bij (coach v0.119.1): *"goedkoop uur mag de
+ * bewoner zelf kiezen dus 3 opties of op zon of goedkope uren of beide"*. De
+ * schakelaar "Alleen op zon" van 0.65.0 is daarmee een keuze uit drie
+ * geworden.
+ *
  * Het contract, afgesproken met de coach-sessie (contract blijft 1):
  *
  * | rol | wat |
  * |---|---|
  * | apparaat | fabrikant DomotiApp Coach, model "Airco", een per airco |
- * | sensor `coach` | `klimaat` (de climate), `stand`, `modus`, `reason`, `dynamisch`, `bewoner_tot`, `ruimte` |
+ * | sensor `coach` | `klimaat` (de climate), `stand`, `modus`, `reason`, `dynamisch`, `aan_op`, `bewoner_tot`, `ruimte` |
  * | number `doeltemperatuur` | wat de bewoner wil; min, max en step zijn die van de climate |
- * | switch `alleen_zon` | niet op goedkope uren, alleen op zon |
+ * | select `aan_op` | `zon`, `goedkoop` of `beide`: waarop de coach hem aanzet (sinds v0.119.1) |
  * | switch `pauze` | de coach doet niets |
+ *
+ * Coach v0.119.0 had in plaats van de select een switch `alleen_zon`. Er hing
+ * toen nog nergens een airco aan de coach, en die switch leest deze kaart
+ * niet meer.
  *
  * WAAR HET DOEL HEEN GAAT
  *
@@ -801,7 +810,7 @@ function moment(s) {
  *
  * @param {object|null} st de state van de sensor `coach`
  * @returns {null | {contract: number, stand: string, modus: ""|"heat"|"cool",
- *                   reden: string, dynamisch: boolean, bewonerTot: Date|null, ruimte: string}}
+ *                   reden: string, dynamisch: boolean, aanOp: string, bewonerTot: Date|null, ruimte: string}}
  */
 export function aircoCoachStand(st) {
   const a = st?.attributes;
@@ -811,8 +820,10 @@ export function aircoCoachStand(st) {
     stand: typeof a.stand === "string" ? a.stand : "",
     modus: a.modus === "heat" || a.modus === "cool" ? a.modus : "",
     reden: typeof a.reason === "string" ? a.reason.trim() : "",
-    // Alleen echt waar telt: zonder dit attribuut is "alleen op zon" geen keuze.
+    // Alleen echt waar telt: zonder dit attribuut zijn er geen goedkope uren.
     dynamisch: a.dynamisch === true,
+    // Waarop de coach hem aanzet (v0.119.1); "" bij een coach zonder.
+    aanOp: typeof a.aan_op === "string" ? a.aan_op : "",
     bewonerTot: moment(a.bewoner_tot),
     ruimte: typeof a.ruimte === "string" ? a.ruimte : "",
   };
@@ -844,17 +855,62 @@ function klok(d) {
  * een nieuwe stand is toevoegen, en dan zegt de kaart liever niets dan iets
  * verkeerds.
  *
+ * Bij wachten zegt hij waarop: wat de bewoner bij "Aan op" koos. Zonder
+ * dynamisch contract zijn er geen goedkope uren, en wacht hij op zon.
+ *
  * @param {ReturnType<typeof aircoCoachStand>} s
- * @param {{alleenZon?: boolean}} [opties] staat "Alleen op zon" aan?
  */
-export function coachRegel(s, { alleenZon = false } = {}) {
+export function coachRegel(s) {
   if (!s) return "";
   if (s.reden) return s.reden;
   if (s.stand === "bewoner") {
     return s.bewonerTot ? `Zelf bediend. De coach doet weer mee vanaf ${klok(s.bewonerTot)}.` : COACH_STANDEN.bewoner;
   }
-  if (s.stand === "uit" && s.dynamisch && !alleenZon) return "Wacht op zon of een goedkoop uur.";
+  if (s.stand === "uit" && s.dynamisch) {
+    if (s.aanOp === "goedkoop") return "Wacht op een goedkoop uur.";
+    if (s.aanOp === "beide") return "Wacht op zon of een goedkoop uur.";
+  }
   return COACH_STANDEN[s.stand] ?? "";
+}
+
+/**
+ * De drie keuzes van "Aan op", met een kort woord voor de knop en de naam
+ * zoals de coach hem gebruikt. Kort, want drie knoppen moeten op een kaart van
+ * 280 pixels passen: "Zon en goedkope uren" past daar niet in een knop.
+ */
+export const AAN_OP = {
+  zon: { label: "Zon", naam: "Zon over" },
+  goedkoop: { label: "Goedkoop", naam: "Goedkope uren" },
+  beide: { label: "Beide", naam: "Zon en goedkope uren" },
+};
+
+/**
+ * De keuze "Aan op" voor de kaart, of null als er niets te kiezen is.
+ *
+ * Alleen bij een dynamisch contract: bij een vast contract is geen uur
+ * goedkoper dan een ander, en kiest de coach dus altijd zon. De opties komen
+ * uit de select zelf; een optie die deze kaart niet kent staat er met zijn
+ * eigen naam bij, zodat een keuze die de coach later toevoegt niet verdwijnt.
+ *
+ * @param {object|null} st de select `aan_op`
+ * @param {ReturnType<typeof aircoCoachStand>} s
+ * @returns {null | {id: string, gekozen: string, opties: Array<{waarde: string, label: string, naam: string}>}}
+ */
+export function aanOpKeuzes(st, s) {
+  if (!s?.dynamisch || !st || leeg(st.state)) return null;
+  const opties = lijst(st.attributes?.options).map((w) => ({
+    waarde: w,
+    label: AAN_OP[w]?.label ?? standLabel(w),
+    naam: AAN_OP[w]?.naam ?? standLabel(w),
+  }));
+  if (opties.length < 2) return null;
+  return { id: st.entity_id, gekozen: st.state, opties };
+}
+
+/** Een keuze van "Aan op" opsturen, of null als die er niet bij hoort. */
+export function aanOpOproep(st, waarde) {
+  if (!st || leeg(st.state) || !lijst(st.attributes?.options).includes(waarde)) return null;
+  return ["select", "select_option", { entity_id: st.entity_id, option: waarde }];
 }
 
 /**
@@ -896,10 +952,11 @@ export function doelOproepVoor(st, doelSt, waarden) {
 }
 
 /**
- * De knoppen van de coach onder het doel: Alleen op zon en Pauze, elk alleen
- * als de schakelaar er is. Alleen op zon ook alleen bij een dynamisch
- * contract: bij een vast contract zijn er geen goedkope uren, en is het altijd
- * alleen op zon.
+ * De schakelaars van de coach onder het doel: Pauze, als die er is.
+ *
+ * In 0.65.0 stond hier ook "Alleen op zon" (switch `alleen_zon` van coach
+ * v0.119.0). Sinds v0.119.1 is dat de keuze "Aan op" (`aanOpKeuzes`), en die
+ * switch bestaat niet meer.
  *
  * @param {object} hass
  * @param {Record<string, string>} rollen
@@ -913,7 +970,6 @@ export function coachKnoppen(hass, rollen, s) {
     if (!st || st.state === "unavailable") return;
     uit.push({ rol, id: st.entity_id, aan: st.state === "on", label, icoon });
   };
-  if (s?.dynamisch) knop("alleen_zon", "Alleen op zon", "sun");
   if (s) knop("pauze", "Pauze", "pause");
   return uit;
 }
