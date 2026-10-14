@@ -551,9 +551,10 @@ klant, en dus voor een beheersessie, niet voor ons.
 
 **Configureren begint met een menu** (sinds 0.54.0): *Uiterlijk* en *Opgeslagen
 scenes opruimen*. De config flow vraagt bij het toevoegen om het thema. Dat
-wijkt af van de letter van SPEC 15.2 en 19 (lege config flow, options flow
-alleen als opruimoverzicht), op zijn verzoek; `SPEC.md` is er niet op
-aangepast. Twee dingen die daarbij horen:
+week tot 14 oktober 2026 af van de letter van SPEC 15.2 en 19 (lege config
+flow, options flow alleen als opruimoverzicht); die dag vroeg hij `SPEC.md`
+bij te werken, en dat staat nu in SPEC 15.1, 15.5 en 19. Twee dingen die
+daarbij horen:
 
 - **`async_create_entry` van een options flow VERVANGT de options.** De
   opruimstap sloot af met `data={}`, en dat zou de themakeuze wissen bij elke
