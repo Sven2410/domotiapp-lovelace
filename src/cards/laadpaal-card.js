@@ -14,6 +14,8 @@
  *    de auto, groot, met het doel ernaast.
  * 2. Een balk met de accustand en een streepje op het doel, en daaronder wat
  *    er verder te weten is: klaar om, nog zoveel kWh, het vermogen nu.
+ *    Weet de coach de accustand niet, dan de vraag "Hoe vol is de auto nu?"
+ *    met een veld en Doorgeven (coach 0.117.0).
  * 3. De modus (Planning / Snel / Continu / Zon) en Pauze. Een modus anders dan
  *    planning, en pauze, gelden tot de kabel eruit gaat; dat staat erbij.
  * 4. Het schema: aan/uit, klaar om, en laden tot. Met een weekschema toont de
@@ -51,6 +53,8 @@ import {
 import {
   LAADPAAL_FOTOS,
   LAADPAAL_MODELLEN,
+  accustandInvoer,
+  accustandVeld,
   getalTekst,
   laadpaalAfbeelding,
   laadpaalStand,
@@ -142,6 +146,54 @@ class LaadpaalCard extends DacCard {
       font-size: 11.5px; color: var(--dac-ink-2); font-variant-numeric: tabular-nums;
     }
     .feiten b { font-weight: 500; color: var(--dac-ink); }
+
+    /* ------------------------------------------------ hoe vol is de auto */
+
+    /* Zoals Klaar om en Laden tot: de vraag erboven, een veld en een knop van
+       dezelfde hoogte, en de uitleg eronder. */
+    .vraag { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .vraag .kopje { font-size: 11px; color: var(--dac-ink-3); padding-left: 4px; }
+    .invoer { display: flex; gap: 6px; min-width: 0; }
+    .getalvak {
+      flex: 1 1 auto; min-width: 0; height: 38px;
+      display: flex; align-items: center; gap: 4px; padding: 0 14px;
+      background-color: var(--dac-surface);
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      cursor: text;
+    }
+    @media (hover: hover) { .getalvak:hover { border-color: var(--dac-border-hi); } }
+    /* De rand van het vak is de focusring; het veld zelf heeft er geen. */
+    .getalvak:focus-within { border-color: var(--dac-accent-hi); }
+    .pct:focus-visible { outline: none; }
+    .pct {
+      -webkit-appearance: none; appearance: none; -moz-appearance: textfield;
+      flex: 1 1 auto; width: 100%; min-width: 0; height: 100%; padding: 0; margin: 0;
+      border: 0; outline: 0; background: transparent;
+      font: inherit; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;
+      color: var(--dac-ink); color-scheme: var(--dac-scheme);
+    }
+    .pct::-webkit-outer-spin-button, .pct::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    /* Onder 16px zoomt Safari op een telefoon in zodra het veld focus krijgt. */
+    @media (pointer: coarse) { .pct { font-size: 16px; } }
+    @supports (-webkit-touch-callout: none) { .pct { font-size: 16px; } }
+    .getalvak .eenheid { flex: 0 0 auto; font-size: 14px; color: var(--dac-ink-2); }
+    .doorgeven {
+      flex: 0 0 auto; height: 38px; padding: 0 16px; cursor: pointer;
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      background: var(--dac-surface);
+      font: inherit; font-size: 12.5px; font-weight: 500; color: var(--dac-ink);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+    @media (hover: hover) { .doorgeven:hover { border-color: var(--dac-border-hi); } }
+    .doorgeven:active { transform: scale(.97); }
+    /* Iets ingetypt dat nog niet is doorgegeven: de knop draagt het accent. */
+    .vraag[data-bewerkt] .doorgeven {
+      color: var(--dac-accent-hi);
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
+      background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
+    }
+    .vraag .uitleg { margin: 0 4px; font-size: 11px; line-height: 1.4; color: var(--dac-ink-3); }
 
     /* ------------------------------------------------------- de bediening */
 
@@ -311,7 +363,7 @@ class LaadpaalCard extends DacCard {
 
   watched() {
     const r = this.coach_()?.rollen ?? {};
-    return [r.coach, r.modus, r.pauze, r.schema, r.klaar_om, r.laden_tot, this.vermogenId_()].filter(Boolean);
+    return [r.coach, r.modus, r.pauze, r.schema, r.klaar_om, r.laden_tot, r.accustand, this.vermogenId_()].filter(Boolean);
   }
 
   /** Het apparaat en zijn entiteiten per rol, vastgehouden zolang het register gelijk blijft. */
@@ -360,6 +412,19 @@ class LaadpaalCard extends DacCard {
 
         <div class="lijn" hidden><span class="vul"></span><span class="mik" hidden></span></div>
         <div class="feiten" hidden></div>
+
+        <div class="vraag" hidden>
+          <label class="kopje" for="accustand">Hoe vol is de auto nu?</label>
+          <div class="invoer">
+            <label class="getalvak">
+              <input id="accustand" class="pct" type="number" min="0" max="100" step="1"
+                     inputmode="numeric" enterkeyhint="done" autocomplete="off" />
+              <span class="eenheid" aria-hidden="true">%</span>
+            </label>
+            <button type="button" class="doorgeven">Doorgeven</button>
+          </div>
+          <p class="uitleg"></p>
+        </div>
 
         <div class="rij modi" hidden><span class="modusregel" hidden></span><span class="knoppen"></span></div>
         <div class="rij schakels" hidden>
@@ -450,6 +515,35 @@ class LaadpaalCard extends DacCard {
       if (knop) this.stap_(Number(knop.dataset.d));
     });
 
+    // Hoe vol is de auto nu. Wat de bewoner intypt blijft staan tot hij het
+    // doorgeeft (`data-bewerkt`), net als op de coachkaart; Escape zet het
+    // terug. Een Escape die iets terugzet gaat niet verder omhoog: in een
+    // pop-up zou hij die anders meteen sluiten.
+    const pct = this.$(".pct");
+    const vraag = this.$(".vraag");
+    this.verstuurd_ = null;
+    this.on(pct, "input", () => {
+      vraag.dataset.bewerkt = "";
+    });
+    this.on(pct, "keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.doorgeven_();
+      } else if (e.key === "Escape" && "bewerkt" in vraag.dataset) {
+        // Terug naar wat de coach NU zegt, niet naar wat er stond toen het
+        // typen begon: de stand loopt ondertussen mee met de paal.
+        e.stopPropagation();
+        delete vraag.dataset.bewerkt;
+        const veld = accustandVeld(stateOf(this.hass, this.coach_()?.rollen.accustand));
+        pct.value = pct.dataset.stand = veld?.waarde ?? "";
+      }
+    });
+    // Alleen aangetikt en niets getypt: bij het loslaten meteen de stand van nu.
+    this.on(pct, "blur", () => {
+      if (this.hass_) this.paintAccustand_(this.coach_()?.rollen ?? {});
+    });
+    this.on(this.$(".doorgeven"), "click", () => this.doorgeven_());
+
     this.teardown_.push(volgRaster(this.$(".card")));
     this.teardown_.push(() => {
       clearTimeout(timer);
@@ -479,6 +573,35 @@ class LaadpaalCard extends DacCard {
         this.paint();
       }, 1500);
     }, 450);
+  }
+
+  /**
+   * De accustand naar de coach. Daarna toont het veld wat er doorgegeven is,
+   * tot de coach met een nieuwe stand komt (hooguit tien tellen): anders wist
+   * een herteken tussendoor het veld, want de oude toestand is `unknown`.
+   */
+  doorgeven_() {
+    const id = this.coach_()?.rollen.accustand;
+    const st = stateOf(this.hass, id);
+    const pct = this.$(".pct");
+    const vraag = this.$(".vraag");
+    const waarde = accustandInvoer(pct.value, st);
+    if (!st || waarde == null) {
+      pct.focus();
+      return;
+    }
+    pct.value = String(waarde);
+    pct.dataset.stand = String(waarde);
+    delete vraag.dataset.bewerkt;
+    this.verstuurd_ = { oud: st.state, tot: Date.now() + 10_000 };
+    // Op een telefoon gaat het toetsenbord dan dicht.
+    pct.blur();
+    this.hass.callService("number", "set_value", { entity_id: id, value: waarde }).catch((err) => {
+      // Niet aangekomen: wat er stond blijft staan, zodat het nog een keer kan.
+      console.warn("[DomotiApp] kon de accustand niet doorgeven", err);
+      this.verstuurd_ = null;
+      vraag.dataset.bewerkt = "";
+    });
   }
 
   moreInfo_(entityId) {
@@ -551,6 +674,7 @@ class LaadpaalCard extends DacCard {
       this.$(".feiten").innerHTML = feiten.map((f) => `<span>${f}</span>`).join("");
     }
 
+    this.paintAccustand_(r);
     this.paintBediening_(r, s);
     this.paintPlan_(s);
     this.paintSessie_(s);
@@ -582,6 +706,30 @@ class LaadpaalCard extends DacCard {
     const toon = Boolean(bron) && img.dataset.kapot !== "1";
     img.hidden = !toon;
     geen.hidden = toon;
+  }
+
+  /** De vraag hoe vol de auto is, alleen als de coach erom vraagt. */
+  paintAccustand_(r) {
+    const st = stateOf(this.hass, r.accustand);
+    const veld = accustandVeld(st);
+    const vraag = this.$(".vraag");
+    vraag.hidden = !veld;
+    const pct = this.$(".pct");
+    if (!veld) {
+      // Weg (de auto zegt het weer zelf, of de kabel is eruit): wat er half
+      // ingetypt stond hoort niet terug te komen bij de volgende auto.
+      delete vraag.dataset.bewerkt;
+      this.verstuurd_ = null;
+      return;
+    }
+    const v = this.verstuurd_;
+    if (v && (st.state !== v.oud || Date.now() > v.tot)) this.verstuurd_ = null;
+    const bezig = this.shadowRoot.activeElement === pct || "bewerkt" in vraag.dataset || this.verstuurd_;
+    if (!bezig && pct.dataset.stand !== veld.waarde) {
+      pct.dataset.stand = veld.waarde;
+      pct.value = veld.waarde;
+    }
+    this.text(".vraag .uitleg", veld.uitleg);
   }
 
   paintBediening_(r, s) {
