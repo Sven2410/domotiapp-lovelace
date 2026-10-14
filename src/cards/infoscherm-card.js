@@ -119,16 +119,19 @@ import { SCHERM } from "./infoscherm-logo.js";
 import {
   SOORT_ICOON,
   aanUitOproep,
+  aircoCoach,
   aircoStand,
   aircoStanden,
+  coachAircos,
   doelInstelling,
-  doelOproep,
+  doelOproepVoor,
   doelTekst,
   gekozenStand,
   graden,
   keuzeNu,
   keuzeOproep,
   keuzesVan,
+  metCoachDoel,
   standKiezen,
   statusTekst,
   volgendeWaarde,
@@ -986,7 +989,10 @@ export class InfoschermCard extends DacCard {
       "sun.sun",
       ...i.verlichting.map((l) => l.entity),
       ...(i.afval ?? []),
-      ...i.klimaat.map((a) => a.entity),
+      // Met de coach ook zijn doel, en de sensor van elke airco van de coach:
+      // welke bij welke airco hoort staat in zijn toestand (`klimaat`).
+      ...i.klimaat.flatMap((a) => [a.entity, this.aircoCoach_(a.entity)?.rollen.doeltemperatuur]),
+      ...(this.coachMemo_?.aircos ?? []).map((a) => a.rollen.coach),
     ].filter(Boolean);
   }
 
@@ -1866,7 +1872,7 @@ export class InfoschermCard extends DacCard {
    */
   tikAirco_(id, knop) {
     if (!this.hass || !klimaatBedienbaar(this.stand_)) return;
-    const st = stateOf(this.hass, id);
+    const st = this.aircoSt_(id);
     if (!st) return;
     const roep = (oproep, wacht) => {
       if (!oproep) return;
@@ -1896,7 +1902,7 @@ export class InfoschermCard extends DacCard {
    * één opdracht naar de cloud in plaats van zes.
    */
   stelAirco_(id, welk, richting) {
-    const st = stateOf(this.hass, id);
+    const st = this.aircoSt_(id);
     const inst = doelInstelling(st, this.eenheid_());
     if (!inst) return;
     const nu = { ...inst, ...this.doelWacht_(id, st) };
@@ -1908,15 +1914,44 @@ export class InfoschermCard extends DacCard {
       id,
       setTimeout(() => {
         this.kTimers_.delete(id);
-        const st2 = stateOf(this.hass, id);
+        const st2 = this.aircoSt_(id);
         const inst2 = doelInstelling(st2, this.eenheid_());
         if (!inst2) return;
         const w = { ...inst2, ...this.doelWacht_(id, st2) };
-        const oproep = doelOproep(st2, inst2.soort === "bereik" ? { laag: w.laag, hoog: w.hoog } : { doel: w.doel });
+        // Met een coach naar zijn number, niet naar de airco: anders zet de
+        // coach bij het aanzetten het oude doel terug.
+        const doel = stateOf(this.hass, this.aircoCoach_(id)?.rollen.doeltemperatuur);
+        const oproep = doelOproepVoor(st2, doel, inst2.soort === "bereik" ? { laag: w.laag, hoog: w.hoog } : { doel: w.doel });
         if (oproep) this.hass.callService(oproep[0], oproep[1], oproep[2]);
         this.wacht_(id, {});
       }, 450)
     );
+  }
+
+  /**
+   * Het coach-apparaat dat deze airco stuurt, of null (zie het coachdeel
+   * van airco-logica.js). De airco's van de coach worden vastgehouden zolang
+   * het register gelijk blijft.
+   */
+  aircoCoach_(id) {
+    const hass = this.hass;
+    if (!hass || !id) return null;
+    const m = this.coachMemo_;
+    if (!m || m.entities !== hass.entities || m.devices !== hass.devices) {
+      this.coachMemo_ = { entities: hass.entities, devices: hass.devices, aircos: coachAircos(hass) };
+    }
+    return aircoCoach(hass, id, this.coachMemo_.aircos);
+  }
+
+  /**
+   * De airco zoals het scherm hem tekent: met het doel van de coach erin als
+   * die hem stuurt. Dat doel is wat de bewoner wil, ook als de airco uit
+   * staat; de coach zet het erop zodra hij hem aanzet.
+   */
+  aircoSt_(id) {
+    const st = stateOf(this.hass, id);
+    const doel = this.aircoCoach_(id)?.rollen.doeltemperatuur;
+    return doel ? metCoachDoel(st, stateOf(this.hass, doel)) : st;
   }
 
   /** De eenheid van temperatuur in deze Home Assistant. */
@@ -2666,7 +2701,7 @@ export class InfoschermCard extends DacCard {
    */
   htmlAirco_(item) {
     const id = item.entity;
-    const st = stateOf(this.hass, id);
+    const st = this.aircoSt_(id);
     const s = aircoStand(st);
     const taal = this.hass?.locale?.language ?? "nl";
     const doel = doelTekst(s, (n) => graden(n, taal));
@@ -2686,7 +2721,7 @@ export class InfoschermCard extends DacCard {
    */
   htmlAircoPaneel_(item, bedienen) {
     const id = item.entity;
-    const echt = stateOf(this.hass, id);
+    const echt = this.aircoSt_(id);
     const { st, w } = this.aircoStraks_(id, echt);
     const s = aircoStand(st);
     const taal = this.hass?.locale?.language ?? "nl";
@@ -2707,11 +2742,14 @@ export class InfoschermCard extends DacCard {
         : "";
 
     const inst = doelInstelling(st, this.eenheid_());
+    // Met een coach is het doel wat de bewoner wil, en dat telt juist als de
+    // airco uit staat: niet gedimd.
+    const metCoach = Boolean(this.aircoCoach_(id));
     const stel = (welk, label) => {
       const waarde = inst[welk];
       const knop = (actie, icoon, grens) =>
         bedienen ? `<button type="button" data-actie="${actie}" aria-label="${actie === "plus" ? "Warmer" : "Kouder"}"${grens ? " disabled" : ""}>${resolve(icoon)}</button>` : "";
-      return `<div class="k-stel ${s.aan ? "" : "rust"}" data-welk="${welk}">
+      return `<div class="k-stel ${s.aan || metCoach ? "" : "rust"}" data-welk="${welk}">
         ${knop("min", "minus", dood || waarde <= inst.min)}
         <div class="k-doel ${welk in w ? "wacht" : ""}"><span class="k-getal">${fmt(waarde)}°</span><span class="k-lbl">${label}</span></div>
         ${knop("plus", "plus", dood || waarde >= inst.max)}

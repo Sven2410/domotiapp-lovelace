@@ -37,6 +37,8 @@
 import { huidigeStand, standLabel, standOproep, standen, volgendDoel } from "./hvac-logica.js";
 // Voor de tegels van de airco-kaart (onderaan dit bestand).
 import { formatteer } from "./hvac-logica.js";
+// Voor de coach (helemaal onderaan).
+import { coachApparaten, coachRollen, contractVan } from "./coach-logica.js";
 
 /** `ClimateEntityFeature` van Home Assistant. */
 export const FUNCTIE = {
@@ -707,4 +709,211 @@ export function aircoAfbeelding(keuze, apparaat, eigen = "", fotos = AIRCO_FOTOS
   const foto = lijstFotos[keuze] ?? (!eigen ? lijstFotos[fotoBijAirco(apparaat, lijstFotos)] : null);
   if (foto?.pad) return AFBEELDINGEN_BASIS + foto.pad;
   return eigen || "";
+}
+
+/* ======================================================================
+ * DomotiApp Coach (14 oktober 2026)
+ *
+ * De eigenaar koos die dag wat de coach met een airco mag: hem aan- en
+ * uitzetten op zon die over is of op een goedkoop uur, met de temperatuur die
+ * de bewoner op de KAART koos, en zelf kiezen tussen verwarmen en koelen.
+ * Zet de bewoner hem zelf aan of uit, dan blijft de coach er tot middernacht
+ * af. Ventilator en lamellen raakt hij nooit aan.
+ *
+ * Het contract, afgesproken met de coach-sessie (contract blijft 1):
+ *
+ * | rol | wat |
+ * |---|---|
+ * | apparaat | fabrikant DomotiApp Coach, model "Airco", een per airco |
+ * | sensor `coach` | `klimaat` (de climate), `stand`, `modus`, `reason`, `dynamisch`, `bewoner_tot`, `ruimte` |
+ * | number `doeltemperatuur` | wat de bewoner wil; min, max en step zijn die van de climate |
+ * | switch `alleen_zon` | niet op goedkope uren, alleen op zon |
+ * | switch `pauze` | de coach doet niets |
+ *
+ * WAAR HET DOEL HEEN GAAT
+ *
+ * Stuurt een coach de airco, dan schrijft de kaart het doel naar de number en
+ * NIET naar de climate. De coach is de enige die de climate schrijft: staat de
+ * airco aan, dan zet hij het nieuwe doel er meteen op; staat hij uit, dan
+ * bewaart hij het voor de volgende keer dat hij hem aanzet. Schreef de kaart
+ * de climate, dan zette de coach bij het aanzetten het oude doel terug.
+ *
+ * Een temperatuur op de afstandsbediening of in de app van de airco neemt de
+ * coach over in de number: wie het laatst bewoog wint.
+ *
+ * `metCoachDoel` maakt daarom van de climate een climate met het doel van de
+ * coach erin. Alles wat het doel tekent of verzet (`aircoStand`,
+ * `doelInstelling`, `volgendeWaarde`) werkt daarmee zonder te weten dat er een
+ * coach is; alleen het OPSTUREN kiest (`doelOproepVoor`).
+ *
+ * WAT DE KAART NIET DOET
+ *
+ * Hij beslist niets op de toestandstekst (valkuil 67) of op `reason`: die zin
+ * is om te tonen. Wat hij kiest, kiest hij op `stand` en `dynamisch`.
+ * ==================================================================== */
+
+/** De modellen van de coach die een airco zijn. */
+export const AIRCO_MODELLEN = ["Airco"];
+
+/**
+ * De apparaten van de coach met model Airco, elk met zijn rollen.
+ *
+ * Los van `aircoCoach`, zodat een kaart dit kan vasthouden zolang het register
+ * gelijk blijft: het register verandert zelden, de toestanden elke seconde.
+ *
+ * @returns {{id: string, rollen: Record<string, string>}[]}
+ */
+export function coachAircos(hass) {
+  return coachApparaten(hass, AIRCO_MODELLEN).map((a) => ({ id: a.id, rollen: coachRollen(hass, a.id) }));
+}
+
+/**
+ * Het coach-apparaat dat deze airco stuurt, of null.
+ *
+ * Gevonden aan het attribuut `klimaat` van zijn sensor `coach`, zodat er in de
+ * editor niets extra te kiezen is: wie de airco kiest, krijgt de coach erbij.
+ * Is die sensor onbereikbaar, dan is er geen `klimaat` en werkt de kaart als
+ * een gewone airco-kaart. Dat is goed: een coach die er niet is, stuurt niets.
+ *
+ * @param {object} hass
+ * @param {string} climateId
+ * @param {{id: string, rollen: Record<string, string>}[]} [aircos] uit `coachAircos`
+ * @returns {{id: string, rollen: Record<string, string>}|null}
+ */
+export function aircoCoach(hass, climateId, aircos = coachAircos(hass)) {
+  if (!climateId) return null;
+  for (const a of aircos ?? []) {
+    const st = a?.rollen?.coach ? hass?.states?.[a.rollen.coach] : null;
+    if (st && st.state !== "unavailable" && st.attributes?.klimaat === climateId) return a;
+  }
+  return null;
+}
+
+/** Een tijdstip met zone als `Date`, of null. */
+function moment(s) {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(s)) return null;
+  const d = new Date(s);
+  return Number.isNaN(+d) ? null : d;
+}
+
+/**
+ * Wat de coach over de airco zegt, uit de attributen van zijn sensor.
+ *
+ * @param {object|null} st de state van de sensor `coach`
+ * @returns {null | {contract: number, stand: string, modus: ""|"heat"|"cool",
+ *                   reden: string, dynamisch: boolean, bewonerTot: Date|null, ruimte: string}}
+ */
+export function aircoCoachStand(st) {
+  const a = st?.attributes;
+  if (!a || st.state === "unavailable") return null;
+  return {
+    contract: contractVan(st),
+    stand: typeof a.stand === "string" ? a.stand : "",
+    modus: a.modus === "heat" || a.modus === "cool" ? a.modus : "",
+    reden: typeof a.reason === "string" ? a.reason.trim() : "",
+    // Alleen echt waar telt: zonder dit attribuut is "alleen op zon" geen keuze.
+    dynamisch: a.dynamisch === true,
+    bewonerTot: moment(a.bewoner_tot),
+    ruimte: typeof a.ruimte === "string" ? a.ruimte : "",
+  };
+}
+
+/**
+ * Per stand het woord als de coach geen zin meestuurt. De coach stuurt er
+ * altijd een (`reason`), net als bij de laadpaal; dit is het vangnet.
+ */
+export const COACH_STANDEN = {
+  zon: "Aan op zon.",
+  goedkoop: "Aan op een goedkoop uur.",
+  op_temperatuur: "Op temperatuur.",
+  uit: "Wacht op zon.",
+  bewoner: "Zelf bediend.",
+  pauze: "De coach is gepauzeerd.",
+  geen_meting: "De coach mist een meting.",
+};
+
+/** "middernacht" of "14:30". */
+function klok(d) {
+  if (d.getHours() === 0 && d.getMinutes() === 0) return "middernacht";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * De regel van de coach op de kaart: zijn eigen zin, en anders een woord bij
+ * de stand. Leeg zonder coach, en bij een stand die deze kaart niet kent:
+ * een nieuwe stand is toevoegen, en dan zegt de kaart liever niets dan iets
+ * verkeerds.
+ *
+ * @param {ReturnType<typeof aircoCoachStand>} s
+ * @param {{alleenZon?: boolean}} [opties] staat "Alleen op zon" aan?
+ */
+export function coachRegel(s, { alleenZon = false } = {}) {
+  if (!s) return "";
+  if (s.reden) return s.reden;
+  if (s.stand === "bewoner") {
+    return s.bewonerTot ? `Zelf bediend. De coach doet weer mee vanaf ${klok(s.bewonerTot)}.` : COACH_STANDEN.bewoner;
+  }
+  if (s.stand === "uit" && s.dynamisch && !alleenZon) return "Wacht op zon of een goedkoop uur.";
+  return COACH_STANDEN[s.stand] ?? "";
+}
+
+/**
+ * De climate met het doel van de coach erin, of de climate zoals hij is.
+ *
+ * Het doel wordt `temperature`, en de grenzen die van de number. Een bereik
+ * (`target_temp_low`/`_high`) valt weg: de coach kiest zelf verwarmen of
+ * koelen, en heeft dus één doel. Weet de number niets (de climate zei bij de
+ * eerste keer zelf niets), dan blijft de climate zoals hij is.
+ *
+ * @param {object|null} st de climate
+ * @param {object|null} doelSt de number `doeltemperatuur`
+ */
+export function metCoachDoel(st, doelSt) {
+  const doel = getal(doelSt?.state);
+  if (!st || doel == null) return st;
+  const n = doelSt.attributes ?? {};
+  const a = { ...(st.attributes ?? {}), temperature: doel };
+  delete a.target_temp_low;
+  delete a.target_temp_high;
+  if (getal(n.min) != null) a.min_temp = getal(n.min);
+  if (getal(n.max) != null) a.max_temp = getal(n.max);
+  if (getal(n.step) > 0) a.target_temp_step = getal(n.step);
+  return { ...st, attributes: a };
+}
+
+/**
+ * Het doel opsturen: naar de coach als die er is, anders naar de airco.
+ *
+ * @param {object|null} st de climate
+ * @param {object|null} doelSt de number `doeltemperatuur`, of null zonder coach
+ * @param {{doel?: number, laag?: number, hoog?: number}} waarden
+ */
+export function doelOproepVoor(st, doelSt, waarden) {
+  if (doelSt?.entity_id && doelSt.state !== "unavailable" && Number.isFinite(waarden?.doel)) {
+    return ["number", "set_value", { entity_id: doelSt.entity_id, value: waarden.doel }];
+  }
+  return doelOproep(st, waarden);
+}
+
+/**
+ * De knoppen van de coach onder het doel: Alleen op zon en Pauze, elk alleen
+ * als de schakelaar er is. Alleen op zon ook alleen bij een dynamisch
+ * contract: bij een vast contract zijn er geen goedkope uren, en is het altijd
+ * alleen op zon.
+ *
+ * @param {object} hass
+ * @param {Record<string, string>} rollen
+ * @param {ReturnType<typeof aircoCoachStand>} s
+ * @returns {Array<{rol: string, id: string, aan: boolean, label: string, icoon: string}>}
+ */
+export function coachKnoppen(hass, rollen, s) {
+  const uit = [];
+  const knop = (rol, label, icoon) => {
+    const st = rollen?.[rol] ? hass?.states?.[rollen[rol]] : null;
+    if (!st || st.state === "unavailable") return;
+    uit.push({ rol, id: st.entity_id, aan: st.state === "on", label, icoon });
+  };
+  if (s?.dynamisch) knop("alleen_zon", "Alleen op zon", "sun");
+  if (s) knop("pauze", "Pauze", "pause");
+  return uit;
 }
