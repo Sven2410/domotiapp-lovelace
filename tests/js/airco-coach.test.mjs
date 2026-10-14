@@ -12,6 +12,13 @@
  * NIEUW GEDRAG: elke test hier faalt op 0.64.0, want `aircoCoach`,
  * `aircoCoachStand`, `coachRegel`, `metCoachDoel`, `doelOproepVoor` en
  * `coachKnoppen` bestaan daar niet.
+ *
+ * Sinds 0.65.1 (coach v0.119.1) is de schakelaar "Alleen op zon" de keuze
+ * "Aan op": zon, goedkope uren of beide. Negen tests daarvan falen op 0.65.0
+ * (`aanOpKeuzes` en `aanOpOproep` bestaan daar niet, en `aircoCoachStand` en
+ * `coachRegel` kennen `aan_op` niet). Twee slagen daar ook en zijn dus
+ * REGRESSIEWACHT voor 0.65.0: alleen Pauze als knop (0.65.0 zocht de switch
+ * `alleen_zon`, die er niet meer is), en de wachtzin bij een vast contract.
  */
 
 import assert from "node:assert/strict";
@@ -44,6 +51,7 @@ const COACH = (attributen = {}) => ({
     modus: "heat",
     reason: "",
     dynamisch: true,
+    aan_op: "zon",
     klimaat: "climate.kantoor",
     ruimte: "Kantoor",
     ...attributen,
@@ -58,13 +66,19 @@ const DOEL = (state = "22.5", attributen = {}) => ({
 
 const SCHAKEL = (id, state) => ({ entity_id: id, state, attributes: {} });
 
+const AAN_OP = (state = "zon", options = ["zon", "goedkoop", "beide"]) => ({
+  entity_id: "select.kantoor_airco_aan_op",
+  state,
+  attributes: { options },
+});
+
 /** Een hass met één airco van de coach, plus een laadpaal die er niet bij hoort. */
-function maakHass({ coach = COACH(), doel = DOEL(), zon = "off", pauze = "off" } = {}) {
+function maakHass({ coach = COACH(), doel = DOEL(), aanOp = AAN_OP(), pauze = "off" } = {}) {
   const states = {
     "climate.kantoor": KLIMAAT,
     "sensor.kantoor_airco_coach": coach,
     "number.kantoor_airco_doeltemperatuur": doel,
-    "switch.kantoor_airco_alleen_zon": SCHAKEL("switch.kantoor_airco_alleen_zon", zon),
+    "select.kantoor_airco_aan_op": aanOp,
     "switch.kantoor_airco_pauze": SCHAKEL("switch.kantoor_airco_pauze", pauze),
     "sensor.oprit_coach": { entity_id: "sensor.oprit_coach", state: "Laadt", attributes: { contract: 1, klimaat: "climate.kantoor" } },
   };
@@ -75,7 +89,7 @@ function maakHass({ coach = COACH(), doel = DOEL(), zon = "off", pauze = "off" }
       rol("climate.kantoor", "unit", null, "melcloud_home"),
       rol("sensor.kantoor_airco_coach", "ac", "coach"),
       rol("number.kantoor_airco_doeltemperatuur", "ac", "doeltemperatuur"),
-      rol("switch.kantoor_airco_alleen_zon", "ac", "alleen_zon"),
+      rol("select.kantoor_airco_aan_op", "ac", "aan_op"),
       rol("switch.kantoor_airco_pauze", "ac", "pauze"),
       rol("sensor.oprit_coach", "lp", "coach"),
     ]),
@@ -94,7 +108,7 @@ describe("NIEUW GEDRAG: de coach bij een airco vinden", () => {
     assert.equal(c.id, "ac");
     assert.equal(c.rollen.coach, "sensor.kantoor_airco_coach");
     assert.equal(c.rollen.doeltemperatuur, "number.kantoor_airco_doeltemperatuur");
-    assert.equal(c.rollen.alleen_zon, "switch.kantoor_airco_alleen_zon");
+    assert.equal(c.rollen.aan_op, "select.kantoor_airco_aan_op");
     assert.equal(c.rollen.pauze, "switch.kantoor_airco_pauze");
   });
 
@@ -128,6 +142,7 @@ describe("NIEUW GEDRAG: wat de coach zegt", () => {
     assert.equal(s.modus, "cool");
     assert.equal(s.reden, "Er is zon over.");
     assert.equal(s.dynamisch, true);
+    assert.equal(s.aanOp, "zon");
     assert.equal(s.bewonerTot, null);
     assert.equal(s.ruimte, "Kantoor");
   });
@@ -152,7 +167,7 @@ describe("NIEUW GEDRAG: wat de coach zegt", () => {
 });
 
 describe("NIEUW GEDRAG: de regel van de coach op de kaart", () => {
-  const regel = (attributen, opties) => A.coachRegel(A.aircoCoachStand(COACH(attributen)), opties);
+  const regel = (attributen) => A.coachRegel(A.aircoCoachStand(COACH(attributen)));
 
   it("de zin van de coach gaat voor", () => {
     assert.equal(regel({ stand: "zon", reason: "Er is 1,4 kW zon over." }), "Er is 1,4 kW zon over.");
@@ -166,10 +181,15 @@ describe("NIEUW GEDRAG: de regel van de coach op de kaart", () => {
     assert.equal(regel({ stand: "geen_meting" }), "De coach mist een meting.");
   });
 
-  it("wachten: op zon, of ook op een goedkoop uur als dat mag", () => {
-    assert.equal(regel({ stand: "uit", dynamisch: true }), "Wacht op zon of een goedkoop uur.");
-    assert.equal(regel({ stand: "uit", dynamisch: true }, { alleenZon: true }), "Wacht op zon.");
-    assert.equal(regel({ stand: "uit", dynamisch: false }), "Wacht op zon.");
+  it("wachten: op wat de bewoner bij Aan op koos", () => {
+    assert.equal(regel({ stand: "uit", aan_op: "zon" }), "Wacht op zon.");
+    assert.equal(regel({ stand: "uit", aan_op: "goedkoop" }), "Wacht op een goedkoop uur.");
+    assert.equal(regel({ stand: "uit", aan_op: "beide" }), "Wacht op zon of een goedkoop uur.");
+  });
+
+  it("REGRESSIEWACHT op 0.65.0: wachten bij een vast contract is altijd op zon, want er is geen goedkoop uur", () => {
+    assert.equal(regel({ stand: "uit", dynamisch: false, aan_op: "beide" }), "Wacht op zon.");
+    assert.equal(regel({ stand: "uit", dynamisch: false, aan_op: "goedkoop" }), "Wacht op zon.");
   });
 
   it("zelf bediend: tot wanneer de coach eraf blijft", () => {
@@ -189,7 +209,7 @@ describe("NIEUW GEDRAG: de regel van de coach op de kaart", () => {
 
   it("geen gedachtestreepjes in tekst die de klant leest", () => {
     for (const stand of [...Object.keys(A.COACH_STANDEN), "bewoner"]) {
-      for (const extra of [{}, { bewoner_tot: "2026-10-15T00:00:00" }, { dynamisch: false }]) {
+      for (const extra of [{}, { bewoner_tot: "2026-10-15T00:00:00" }, { dynamisch: false }, { aan_op: "goedkoop" }, { aan_op: "beide" }]) {
         assert.doesNotMatch(regel({ stand, ...extra }), /[–—]| - |--/);
       }
     }
@@ -251,34 +271,79 @@ describe("NIEUW GEDRAG: het doel gaat naar de coach, niet naar de airco", () => 
   });
 });
 
-describe("NIEUW GEDRAG: de knoppen van de coach", () => {
+describe("NIEUW GEDRAG op 0.64.0, REGRESSIEWACHT op 0.65.0: de knoppen van de coach", () => {
   const knoppen = (opties, attributen) => {
     const hass = maakHass({ coach: COACH(attributen), ...opties });
     const c = A.aircoCoach(hass, "climate.kantoor");
     return A.coachKnoppen(hass, c.rollen, A.aircoCoachStand(hass.states[c.rollen.coach]));
   };
 
-  it("Alleen op zon en Pauze, met hun stand", () => {
+  it("Pauze, met zijn stand; Alleen op zon is er niet meer", () => {
+    assert.deepEqual(knoppen({ pauze: "on" }).map((k) => [k.rol, k.aan, k.label]), [["pauze", true, "Pauze"]]);
+    assert.deepEqual(knoppen({}, { dynamisch: false }).map((k) => k.rol), ["pauze"]);
+  });
+
+  it("een schakelaar die er niet is of onbereikbaar is: geen knop", () => {
+    assert.deepEqual(knoppen({ pauze: "unavailable" }), []);
+    const hass = maakHass();
+    assert.deepEqual(A.coachKnoppen(hass, {}, A.aircoCoachStand(COACH())), []);
+    assert.deepEqual(A.coachKnoppen(hass, A.aircoCoach(hass, "climate.kantoor").rollen, null), []);
+  });
+});
+
+describe("NIEUW GEDRAG: Aan op, zon, goedkope uren of beide (coach v0.119.1)", () => {
+  const keuze = (aanOp = AAN_OP(), attributen = {}) => A.aanOpKeuzes(aanOp, A.aircoCoachStand(COACH(attributen)));
+
+  it("drie knoppen met een kort woord, en de gekozen", () => {
+    const k = keuze(AAN_OP("goedkoop"));
+    assert.equal(k.id, "select.kantoor_airco_aan_op");
+    assert.equal(k.gekozen, "goedkoop");
     assert.deepEqual(
-      knoppen({ zon: "on", pauze: "off" }).map((k) => [k.rol, k.aan, k.label]),
+      k.opties.map((o) => [o.waarde, o.label, o.naam]),
       [
-        ["alleen_zon", true, "Alleen op zon"],
-        ["pauze", false, "Pauze"],
+        ["zon", "Zon", "Zon over"],
+        ["goedkoop", "Goedkoop", "Goedkope uren"],
+        ["beide", "Beide", "Zon en goedkope uren"],
       ]
     );
   });
 
-  it("bij een vast contract geen Alleen op zon: dan is het altijd alleen op zon", () => {
-    assert.deepEqual(
-      knoppen({}, { dynamisch: false }).map((k) => k.rol),
-      ["pauze"]
-    );
+  it("niet bij een vast contract: dan is er geen goedkoop uur om te kiezen", () => {
+    assert.equal(keuze(AAN_OP(), { dynamisch: false }), null);
+    assert.equal(keuze(AAN_OP(), { dynamisch: undefined }), null);
   });
 
-  it("een schakelaar die er niet is of onbereikbaar is: geen knop", () => {
-    assert.deepEqual(knoppen({ pauze: "unavailable" }).map((k) => k.rol), ["alleen_zon"]);
-    const hass = maakHass();
-    assert.deepEqual(A.coachKnoppen(hass, {}, A.aircoCoachStand(COACH())), []);
-    assert.deepEqual(A.coachKnoppen(hass, A.aircoCoach(hass, "climate.kantoor").rollen, null), []);
+  it("niet zonder select, en niet als hij onbereikbaar is of maar één keuze heeft", () => {
+    assert.equal(keuze(null), null);
+    assert.equal(keuze(AAN_OP("unavailable")), null);
+    assert.equal(keuze(AAN_OP("zon", ["zon"])), null);
+    assert.equal(A.aanOpKeuzes(AAN_OP(), null), null);
+  });
+
+  it("een keuze die de kaart niet kent blijft staan, met zijn eigen naam", () => {
+    const k = keuze(AAN_OP("zon", ["zon", "goedkoop", "beide", "nacht"]));
+    assert.equal(k.opties.length, 4);
+    assert.equal(k.opties[3].waarde, "nacht");
+    assert.ok(k.opties[3].label);
+  });
+
+  it("kiezen is select.select_option op de select van de coach", () => {
+    assert.deepEqual(A.aanOpOproep(AAN_OP(), "beide"), [
+      "select",
+      "select_option",
+      { entity_id: "select.kantoor_airco_aan_op", option: "beide" },
+    ]);
+  });
+
+  it("een keuze die er niet bij hoort, of een select die er niet is: niets", () => {
+    assert.equal(A.aanOpOproep(AAN_OP(), "altijd"), null);
+    assert.equal(A.aanOpOproep(null, "zon"), null);
+    assert.equal(A.aanOpOproep(AAN_OP("unavailable"), "zon"), null);
+  });
+
+  it("geen gedachtestreepjes in de woorden", () => {
+    for (const o of Object.values(A.AAN_OP)) {
+      assert.doesNotMatch(`${o.label} ${o.naam}`, /[–—]| - |--/);
+    }
   });
 });
