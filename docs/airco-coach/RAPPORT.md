@@ -1,4 +1,4 @@
-# De airco-kaart met DomotiApp Coach (nog niet uitgebracht)
+# 0.65.0: de airco-kaart met DomotiApp Coach
 
 ## De vraag
 
@@ -119,9 +119,10 @@ vaste map, HEAD = 45b9537) falen ze alle 24:
 
 De laatste is `Object.keys(A.COACH_STANDEN)`, dat in 0.64.0 niet bestaat.
 
-Op deze tak: **1671 JS-tests groen** (was 1647). `npm run verify`,
-`check:registratie`, `check:css` en `check:controls` zijn OK. De
-Python-tests (de Python is niet veranderd) staan onder *Samenvatting*.
+Met de dumptest erbij (zie *De dump van coach 0.119.0*): **1678 JS-tests
+groen** (was 1647). `npm run verify`, `check:registratie`, `check:css` en
+`check:controls` zijn OK. De Python-tests (de Python is niet veranderd) staan
+onder *Samenvatting*.
 
 ### In Home Assistant
 
@@ -199,22 +200,88 @@ alles leesbaar. Daarna is het thema teruggezet op het standaard donkere.
 
   Een gewone gebruiker kan dit dus.
 
-## Wat er nog moet voor de uitgave
+**De bundel van 0.65.0**, na de versiesprong (alleen het versienummer is
+veranderd):
+
+- geladen met `?v=66259c07e019`, de sha256 van de gebouwde bundel;
+- de nep-coach stond zoals de dump: vast contract, stand `zon`;
+- de kaart toonde de zin van de coach en alleen de knop Pauze;
+- één echte klik op "Doeltemperatuur hoger" (`isTrusted: true`) gaf één
+  `number.set_value` 20. De climate bleef op 19 en "off".
+
+**Een misklik bij die laatste meting.** De eerste klik in het nieuwe tabblad
+landde op "Drogen" van de demo-airco (`climate.set_hvac_mode` "dry"), niet op +.
+In dat tabblad was nog geen schermafdruk gemaakt, en dan leest de browsertool
+de coördinaten in CSS-pixels. Mijn al omgerekende coördinaten werden zo nog een
+keer verkleind (847 → 690). De demo-airco is teruggezet op "off", zoals hij
+volgens zijn geschiedenis stond. Daarna kwam eerst een schermafdruk, en de klik
+landde goed. Toegevoegd aan valkuil 47.
+
+## De dump van coach 0.119.0, en waarom die niet echt is
 
 **Afspraak met de eigenaar (12 oktober 2026): er gaat niets uit dat een
-attribuut van de coach leest voordat het in een echte dump heeft gestaan.** Dit
-is gebouwd op wat de coach-sessie over de vorm schreef, vóór haar uitgave.
-Daarom:
+attribuut van de coach leest voordat het in een echte dump heeft gestaan. Kan
+iets niet in een dump gezien worden, lees dan de bron van de coach op dat
+moment en zet dat in het rapport.** Het tweede deel geldt hier.
 
-1. de coach-sessie meldt zich na haar uitgave met een dump van een
-   Airco-apparaat;
-2. die komt als `tests/js/vaste-invoer/coach-<versie>-airco.json` erbij, met een
-   test zoals `laadpaal-dump-0117.test.mjs`. Daarbij nagaan:
-   - de entity_id's (de kaart zoekt op translation_key);
-   - of `klimaat` echt de entity_id van de climate is;
-   - of `dynamisch` en `bewoner_tot` er zo staan;
-   - de vorm van `reason`;
-3. pas dan de versie omhoog, de PR mergen en uitbrengen.
+Coach v0.119.0 is op 14 oktober 2026 uitgekomen, de eerste die een airco
+stuurt. De coach-sessie stuurde een dump, en zei er eerlijk bij dat die **niet
+uit een echte installatie** komt:
+
+- bij de eigenaar thuis hangt geen airco;
+- nergens hangt er al een aan de coach.
+
+De dump komt uit de nagebouwde Home Assistant van de proeven van de coach:
+
+- de echte entiteitklassen van v0.119.0;
+- een climate met de attributen zoals ze bij een klantwoning met twee
+  cloud-airco's gemeten zijn;
+- entity_id's zoals Home Assistant ze maakt bij een apparaat "Airco woonkamer".
+
+Er staan twee momenten in: "aan op zon" en "door de bewoner bediend". Hij staat
+als `tests/js/vaste-invoer/coach-0.119.0-airco.json`, met
+`tests/js/airco-dump-0119.test.mjs` erop.
+
+**Gelezen in de bron van de coach, tag v0.119.0** (alleen gelezen met
+`git show`, niets uitgecheckt in de map van de coach):
+
+| Wat de kaart leest | Waar het in de coach vandaan komt |
+|---|---|
+| fabrikant "DomotiApp Coach", model "Airco" | `apparaat_info` en `MODELLEN` in entiteit.py |
+| translation_keys `coach`, `doeltemperatuur`, `alleen_zon`, `pauze` | `CoachEntiteit.__init__` zet `sleutel` als translation_key; `AircoCoachSensor`, `DoeltemperatuurNumber`, `AircoSchakelaar(…, "alleen_zon")` en `(…, "pauze")` |
+| `klimaat` | `device.entities.climate`: de entity_id als tekst, of None |
+| `stand` | `airco_stand`: alleen de zeven sleutels; iets onbekends wordt `geen_meting` |
+| `reason` | `st.get("reason") or ""`; de coach-sessie: altijd gevuld |
+| `dynamisch` | `bool(st.get("dynamic"))` |
+| `bewoner_tot` | `met_zone(...)`: ISO met de zone van het huis, of None |
+| min, max en step van de number | `min_temp`, `max_temp` en `target_temp_step` van de climate, anders 7, 35 en 0,5 |
+| de waarde van de number | de keuze van de bewoner, anders `target_c` van de coach, anders de `temperature` van de climate |
+
+Elke rij klopt met wat de kaart verwacht. Twee dingen die de dump liet zien en
+het contract niet zei:
+
+- **De number heet `number.airco_woonkamer_gewenste_temperatuur`** (naar zijn
+  naam "Gewenste temperatuur") en niet `..._doeltemperatuur`. De kaart zoekt
+  op translation_key, en de test laat zien dat hij hem vindt.
+- **De sensor heeft ook `kamer`, `doel`, `alleen_zon`, `pauze` en
+  `entiteiten`.** De kaart gebruikt ze niet: de schakelaars en de number zelf
+  zijn de bron.
+
+De dumptest heeft 7 tests, **REGRESSIEWACHT**: de kaart was al gebouwd vóór
+de dump. Op 0.64.0 falen er 6:
+
+```
+      2   TypeError: A.aircoCoach is not a function
+      3   TypeError: A.aircoCoachStand is not a function
+      1   TypeError: A.metCoachDoel is not a function
+      1 ℹ fail 6
+      1 ℹ pass 1
+```
+
+De ene die daar slaagt is de vorm van de dump zelf.
+
+**Komt er een echte dump** (de coach-sessie stuurt die zodra er ergens een
+airco aan de coach hangt), dan komt die ernaast, met een test.
 
 ## Samenvatting
 
@@ -227,17 +294,24 @@ Daarom:
   - Alleen op zon (alleen bij een dynamisch contract) en Pauze staan eronder.
 - Het infoscherm leest en schrijft het doel ook via de coach.
 - Zonder coach is er niets veranderd.
-- 24 nieuwe tests, die alle 24 falen op 0.64.0. 1671 JS-tests zijn groen.
+- 24 nieuwe tests, die alle 24 falen op 0.64.0.
+- 7 tests tegen de dump van coach 0.119.0. Die dump is nagebouwd, niet echt,
+  en daarom is ook de bron van de coach gelezen; alles klopt.
+- 1678 JS-tests zijn groen.
 - Gemeten in Home Assistant met echte kliks tegen een nep-coach: als beheerder
   en als het iPad-account, donker en licht, en op 280 px.
 - 807 Python-tests zijn groen (in Docker, `python:3.14-slim`), al is de Python
   niet veranderd.
-- **Nog niet uitgebracht:** wacht op de echte dump van de coach.
+- Uitgebracht als 0.65.0.
 
 ## Wat niet lukte
 
-- Geen meting tegen de echte coach: die is er nog niet. Alles is gemeten tegen
-  de nep-coach, die het contract nadoet zoals het beschreven is.
+- **Geen echte dump:** nergens hangt al een airco aan de coach. Gemeten is
+  tegen de nep-coach en tegen de nagebouwde dump van de coach-sessie. De bron
+  van de coach is gelezen, zoals de afspraak zegt voor wat niet in een dump te
+  zien is. Komt er een echte dump, dan komt die ernaast.
+- **Een misklik op de demo-airco** bij de laatste meting (zie *Bewijs*). Die is
+  teruggezet.
 - Niet op een iPhone of een echte iPad gemeten.
 - Het aan- en uitzetten door de coach zelf is niet gemeten: dat is de kant van
   de coach. De nep-coach zet de stand met de hand.
@@ -246,19 +320,22 @@ Daarom:
 
 ## Aannames
 
-- `klimaat` is de entity_id van de climate als tekst, zoals de coach-sessie
-  schreef. Staat er in de dump iets anders, dan vindt de kaart de coach niet,
-  en is het een gewone airco-kaart.
-- `reason` is altijd een zin om te tonen, net als bij de laadpaal en de batterij
-  (in elke dump tot nu toe). De zinnen van de kaart zelf zijn een vangnet.
-- `bewoner_tot` heeft een tijdzone. Middernacht wordt lokaal gelezen; in een
-  test staat het daarom zonder zone.
+- **Een echte installatie geeft dezelfde vorm als de nagebouwde dump.** De bron
+  van de coach zegt dat, want de dump komt uit dezelfde entiteitklassen. Wat
+  daar niet in zit is een climate van een ander merk; daarom zoekt de kaart op
+  translation_key en niet op entity_id.
+- `reason` is altijd een zin om te tonen. De coach-sessie zegt dat hij altijd
+  gevuld is. De zinnen van de kaart zelf zijn een vangnet.
+- `bewoner_tot` heeft de zone van het huis. De kaart leest middernacht in de
+  tijd van de browser. Die verschilt alleen als iemand van buiten de tijdzone
+  van het huis kijkt, en ook dan alleen in het vangnet: de coach stuurt altijd
+  een zin.
 - Twee airco's in één ruimte (`ruimte`) krijgen elk hun eigen kaart. Groeperen
   per ruimte is niet gevraagd.
 
 ## git status --porcelain
 
-Vóór de commit:
+Vóór de eerste commit (de kaart, 8f9308b):
 
 ```
  M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
@@ -269,4 +346,15 @@ Vóór de commit:
 ?? tests/js/airco-coach.test.mjs
 ```
 
-Na de commit van dit rapport: leeg.
+Vóór de commit van de dump en 0.65.0:
+
+```
+ M CLAUDE.md
+ M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
+ M custom_components/domotiapp_lovelace/manifest.json
+ M docs/airco-coach/RAPPORT.md
+?? tests/js/airco-dump-0119.test.mjs
+?? tests/js/vaste-invoer/coach-0.119.0-airco.json
+```
+
+Na die commit: leeg.
