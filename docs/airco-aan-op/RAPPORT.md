@@ -1,4 +1,4 @@
-# 0.65.1: "Aan op" op de airco-kaart (wacht op coach v0.119.1)
+# 0.65.1: "Aan op" op de airco-kaart
 
 ## De vraag
 
@@ -159,17 +159,52 @@ precies zoals bij een klant na de update.
 - **Licht thema:** leesbaar, de gekozen knop in het accent. Daarna is het
   thema teruggezet op donker.
 
-## Wat er nog moet voor de uitgave
+## De dump van coach 0.119.1, en de bron
 
-Coach v0.119.1 is nog niet uit. Zodra hij uit is:
+Coach v0.119.1 kwam later die avond uit. De dump die de coach-sessie stuurde
+is weer **nagebouwd**: de echte entiteitklassen in de Home Assistant van de
+proeven van de coach. Er hangt nog nergens een echte airco aan de coach. Er
+staan twee momenten in, "aan op zon" en "bewoner"; bij het tweede verandert
+alleen de sensor. Hij staat als
+`tests/js/vaste-invoer/coach-0.119.1-airco.json`. De climate staat er niet in;
+die is volgens de coach-sessie gelijk aan die van v0.119.0.
 
-1. de dump (nagebouwd, net als die van v0.119.0) als
-   `tests/js/vaste-invoer/coach-0.119.1-airco.json`, met een test;
-2. de bron van de coach op tag v0.119.1 lezen:
-   - de select `aan_op` (translation_key en opties);
-   - het attribuut `aan_op` op de sensor;
-   - dat de switch `alleen_zon` weg is;
-3. dan mergen en 0.65.1 uitbrengen.
+**Zelf gelezen in de bron op tag v0.119.1**, alleen met `git show`:
+
+| Wat de kaart leest | In de coach |
+|---|---|
+| select met translation_key `aan_op` | `AanOpSelect.__init__`: `super().__init__(device, stand, "aan_op")` |
+| de opties | `_attr_options = list(AIRCO_AAN_OP)`, en in planner.py `AIRCO_AAN_OP = ("zon", "goedkoop", "beide")` |
+| de keuze | `current_option`: `run_on` als die bij de opties hoort, anders "zon" |
+| `aan_op` op de sensor | `"aan_op": st.get("run_on") or "zon"` |
+| geen switch `alleen_zon` meer | switch.py maakt voor een airco alleen `AircoSchakelaar(..., "pauze", ...)` |
+
+Alles klopt met wat de kaart leest.
+
+`tests/js/airco-dump-01191.test.mjs`, 6 tests, **REGRESSIEWACHT** (de kaart
+was er al vóór de dump):
+
+- de vorm van de dump;
+- de rollen: `aan_op` erbij, `alleen_zon` weg;
+- vast contract, zoals de dump staat: geen "Aan op", alleen Pauze, de zin van
+  de coach;
+- dynamisch contract (alleen `dynamisch` omgezet): de drie opties, en kiezen
+  gaat naar de select;
+- het doel gaat nog naar de number;
+- het moment "bewoner".
+
+Op 0.65.0 falen er 2, de twee die "Aan op" lezen:
+
+```
+ℹ tests 6
+ℹ pass 4
+ℹ fail 2
+  ✖ dynamisch contract: Aan op met de drie opties uit de select, en kiezen gaat naar die select
+  ✖ vast contract (zo staat het in de dump): geen Aan op, alleen Pauze, en de zin van de coach
+```
+
+De andere vier slagen daar ook. Dat is precies het terugvallen van 0.65.0
+hierboven.
 
 ## Samenvatting
 
@@ -178,14 +213,17 @@ Coach v0.119.1 is nog niet uit. Zodra hij uit is:
 - 0.65.0 valt netjes terug op alleen Pauze, ook met de oude switch onbereikbaar
   in het register. Nagekeken met de logica van 0.65.0 en in de testinstance.
 - De wachtzin van de kaart volgt de keuze.
-- 1685 JS-tests zijn groen.
+- De nagebouwde dump van coach v0.119.1 staat erbij met 6 tests, en de bron op
+  die tag is gelezen; alles klopt.
+- 1691 JS-tests zijn groen.
 - Gemeten met een echte klik, op 280 px, licht en donker.
-- **Nog niet uitgebracht:** wacht op coach v0.119.1 en zijn dump.
+- Uitgebracht als 0.65.1.
 
 ## Wat niet lukte
 
-- Niet tegen de echte coach v0.119.1 gemeten, want die is er nog niet. Wel
-  tegen de nep-coach op het nieuwe contract.
+- Geen echte dump, en geen meting tegen de echte coach v0.119.1: nergens hangt
+  nog een airco aan de coach. Gemeten is tegen de nep-coach op het nieuwe
+  contract, met de nagebouwde dump en de bron als controle.
 - Niet op een iPhone of een echte iPad gemeten.
 
 ## Aannames
@@ -206,6 +244,14 @@ Vóór de commit van de kaart:
  M src/cards/airco-logica.js
  M tests/js/airco-coach.test.mjs
 ?? docs/airco-aan-op/
+```
+
+Vóór de commit van de dump:
+
+```
+ M docs/airco-aan-op/RAPPORT.md
+?? tests/js/airco-dump-01191.test.mjs
+?? tests/js/vaste-invoer/coach-0.119.1-airco.json
 ```
 
 Na die commit: leeg.
