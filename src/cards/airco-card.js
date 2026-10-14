@@ -32,6 +32,23 @@
  *
  * Een airco die UIT staat toont alleen de kop, de standen en de tegels: een
  * doel, een ventilator en lamellen zeggen dan niets.
+ *
+ * MET DOMOTIAPP COACH (14 oktober 2026)
+ *
+ *   [foto/chip] Kantoor raam                         17,5°
+ *               Uit                                  binnen
+ *               Wacht op zon of een goedkoop uur.            <- de regel van de coach
+ *   ( Uit ) ( Verwarmen ) ( Koelen ) ...
+ *   [-]                 22° doel                [+]          <- ook als hij uit staat
+ *   ( ☀ Alleen op zon )  ( ⏸ Pauze )
+ *
+ * Stuurt de coach deze airco, dan vindt de kaart dat zelf (`aircoCoach`), en
+ * is het doel de temperatuur die de BEWONER wil: de coach zet de airco aan
+ * als er zon of een goedkoop uur is, en zet dan dit doel erop. Het gaat dus
+ * naar de coach en niet naar de airco, en staat er ook als de airco uit staat.
+ * De aan-knop en de standen gaan gewoon naar de airco; zelf aan- of uitzetten
+ * is voor de coach "de bewoner wint", tot middernacht. Zie het coachdeel van
+ * airco-logica.js.
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -46,16 +63,22 @@ import {
   SOORT_TOON,
   aanUitOproep,
   aircoAfbeelding,
+  aircoCoach,
+  aircoCoachStand,
   aircoFeiten,
   aircoStand,
   alsKnoppen,
   apparaatDelen,
+  coachAircos,
+  coachKnoppen,
+  coachRegel,
   doelInstelling,
-  doelOproep,
+  doelOproepVoor,
   graden,
   keuzeNu,
   keuzeOproep,
   keuzesVan,
+  metCoachDoel,
   standKnopOproep,
   standKnoppen,
   statusTekst,
@@ -141,6 +164,8 @@ class AircoCard extends DacCard {
     /* Een storing blijft altijd staan, en is rood: dat is status. */
     .st .storing { flex: 0 0 auto; color: var(--dac-bad); font-weight: 600; }
     .st .storing::before { content: "·"; margin-right: 6px; color: var(--dac-ink-3); font-weight: 400; }
+    /* De zin van de coach: heel, niet afgekapt, net als op de laadpaal. */
+    .reden { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); }
 
     /* De kamertemperatuur: groot, en in neutrale inkt. */
     .binnen { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
@@ -215,6 +240,36 @@ class AircoCard extends DacCard {
     .set .target small { font-size: 10.5px; color: var(--dac-ink-3); margin-left: 5px; font-weight: 400; letter-spacing: 0; }
     /* Terwijl je tikt loopt het getal voor op de airco. Dat mag je zien. */
     .set .target.pending { color: var(--dac-accent-hi); }
+
+    /* -------------------------------------------- de knoppen van de coach
+       Dezelfde vorm als Pauze en Schema op de laadpaal. */
+
+    .schakels { display: flex; gap: 6px; min-width: 0; }
+    .schakel {
+      flex: 1 1 0; min-width: 0;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 8px; cursor: pointer;
+      border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
+      background: var(--dac-surface);
+      font: inherit; font-size: 12.5px; font-weight: 500; color: var(--dac-ink-2);
+      -webkit-tap-highlight-color: transparent;
+      transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+    .schakel .icon { width: 15px; height: 15px; flex: 0 0 auto; }
+    .schakel .lb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (hover: hover) { .schakel:hover { color: var(--dac-ink); border-color: var(--dac-border-hi); } }
+    .schakel:active { transform: scale(.97); }
+    .schakel[aria-pressed="true"] {
+      color: var(--dac-accent-hi);
+      border-color: color-mix(in srgb, var(--dac-accent-hi) 42%, transparent);
+      background: color-mix(in srgb, var(--dac-accent-hi) 14%, transparent);
+    }
+    /* Pauze is een waarschuwing en geen keuze: de coach doet niets. */
+    .schakel[data-rol="pauze"][aria-pressed="true"] {
+      color: var(--dac-warn);
+      border-color: color-mix(in srgb, var(--dac-warn) 42%, transparent);
+      background: color-mix(in srgb, var(--dac-warn) 12%, transparent);
+    }
 
     /* ------------------------------------------- ventilator en keuzelijsten */
 
@@ -310,12 +365,49 @@ class AircoCard extends DacCard {
 
   watched() {
     const c = this.config;
-    return [c.entity, c.temperature, c.energy, ...Object.values(this.delen_())].filter(Boolean);
+    const r = this.coach_()?.rollen ?? {};
+    return [
+      c.entity,
+      c.temperature,
+      c.energy,
+      ...Object.values(this.delen_()),
+      r.doeltemperatuur,
+      r.alleen_zon,
+      r.pauze,
+      // De sensor van ELKE airco van de coach: welke bij deze airco hoort staat
+      // in zijn toestand, en een coach die net opstart krijgt `klimaat` pas
+      // als hij bereikbaar wordt.
+      ...(this.coachMemo_?.aircos ?? []).map((a) => a.rollen.coach),
+    ].filter(Boolean);
   }
 
-  /** De climate-state, of null. */
+  /**
+   * De climate-state, of null. Stuurt de coach hem, dan met het doel van de
+   * coach erin (`metCoachDoel`): alles wat het doel tekent of verzet, rekent
+   * dan met wat de bewoner wil.
+   */
   st_() {
-    return stateOf(this.hass_, this.config?.entity);
+    const st = stateOf(this.hass_, this.config?.entity);
+    const doel = this.coach_()?.rollen.doeltemperatuur;
+    return doel ? metCoachDoel(st, stateOf(this.hass_, doel)) : st;
+  }
+
+  /**
+   * Het coach-apparaat dat deze airco stuurt, of null. De lijst van
+   * airco's van de coach wordt vastgehouden zolang het register gelijk
+   * blijft; welke ervan bij DEZE airco hoort staat in een toestand, en wordt
+   * dus elke keer opnieuw bekeken.
+   */
+  coach_() {
+    const hass = this.hass_;
+    if (!hass || !this.config?.entity) return null;
+    const m = this.coachMemo_;
+    let aircos = m?.aircos;
+    if (!m || m.entities !== hass.entities || m.devices !== hass.devices) {
+      aircos = coachAircos(hass);
+      this.coachMemo_ = { entities: hass.entities, devices: hass.devices, aircos };
+    }
+    return aircoCoach(hass, this.config.entity, aircos);
   }
 
   /** De rest van het apparaat, vastgehouden zolang het register gelijk blijft. */
@@ -370,6 +462,7 @@ class AircoCard extends DacCard {
           <span class="txt">
             <span class="nm"></span>
             <span class="st"><span class="stip" hidden></span><span class="woord"></span><span class="storing" hidden>Storing</span></span>
+            <span class="reden" hidden></span>
           </span>
           <span class="binnen" hidden><span class="graden"></span><span class="onder">binnen</span></span>
         </div>
@@ -377,6 +470,8 @@ class AircoCard extends DacCard {
         <div class="standen" role="group" aria-label="Stand" hidden></div>
 
         <div class="doelen" hidden>${stel("doel")}${stel("laag")}${stel("hoog")}</div>
+
+        <div class="schakels" role="group" aria-label="Coach" hidden></div>
 
         <div class="blok vent" hidden>
           <span class="kopje">${escapeHtml(KEUZES.ventilator.naam)}</span>
@@ -439,6 +534,14 @@ class AircoCard extends DacCard {
       this.stel_(knop.closest(".set").dataset.welk, Number(knop.dataset.d));
     });
 
+    // Alleen op zon en Pauze: schakelaars van de coach, niet van de airco.
+    this.on(this.$(".schakels"), "click", (e) => {
+      const knop = e.target?.closest?.(".schakel");
+      if (!knop?.dataset.id) return;
+      const aan = stateOf(this.hass_, knop.dataset.id)?.state === "on";
+      this.roep_(["switch", aan ? "turn_off" : "turn_on", { entity_id: knop.dataset.id }]);
+    });
+
     this.on(this.$(".vent .segs"), "click", (e) => {
       const knop = e.target?.closest?.(".seg");
       if (!knop || knop.disabled) return;
@@ -491,7 +594,10 @@ class AircoCard extends DacCard {
       const inst2 = doelInstelling(st2, this.eenheid_());
       if (inst2 && this.pending_) {
         const w = { ...inst2, ...this.pending_ };
-        this.roep_(doelOproep(st2, inst2.soort === "bereik" ? { laag: w.laag, hoog: w.hoog } : { doel: w.doel }));
+        // Met een coach naar zijn number: hij zet het op de airco als die
+        // aanstaat, en bewaart het anders voor straks.
+        const doel = stateOf(this.hass_, this.coach_()?.rollen.doeltemperatuur);
+        this.roep_(doelOproepVoor(st2, doel, inst2.soort === "bereik" ? { laag: w.laag, hoog: w.hoog } : { doel: w.doel }));
       }
       // Nog even vasthouden: de airco mag eerst zelf melden.
       this.loslaatTimer_ = setTimeout(() => {
@@ -525,6 +631,15 @@ class AircoCard extends DacCard {
     this.$(".storing").hidden = !storing;
     this.$(".kop").setAttribute("aria-label", `${naam}, ${status}${storing ? ", storing" : ""}`);
 
+    // ----- de coach: zijn zin onder de status, en zijn knoppen onder het doel
+    const coach = this.coach_();
+    const cs = coach ? aircoCoachStand(stateOf(hass, coach.rollen.coach)) : null;
+    const knoppen = coach ? coachKnoppen(hass, coach.rollen, cs) : [];
+    const regel = coachRegel(cs, { alleenZon: knoppen.some((k) => k.rol === "alleen_zon" && k.aan) });
+    this.text(".reden", regel);
+    this.$(".reden").hidden = !regel;
+    this.paintSchakels_(knoppen);
+
     // ----- foto of chip, en de aan-knop
     const icoon = c.icon || SOORT_ICOON[s.soort] || "airco";
     const metFoto = this.paintFoto_();
@@ -552,7 +667,7 @@ class AircoCard extends DacCard {
     if (s.huidig != null) this.text(".graden", `${graden(s.huidig, taal)}°`);
 
     this.paintStanden_(st, !s.beschikbaar);
-    this.paintDoel_(st, s);
+    this.paintDoel_(st, s, Boolean(coach));
     this.paintKeuzes_(st, s);
     this.paintTegels_(st, delen, taal);
 
@@ -611,10 +726,35 @@ class AircoCard extends DacCard {
     }
   }
 
-  /** Het doel, of twee bij een bereik. Weg als de airco uit staat. */
-  paintDoel_(st, s = aircoStand(st)) {
+  /**
+   * Alleen op zon en Pauze. Alleen opnieuw bouwen als de knoppen zelf
+   * veranderen, zodat een knop met de focus die houdt.
+   */
+  paintSchakels_(knoppen) {
+    const vak = this.$(".schakels");
+    vak.hidden = knoppen.length === 0;
+    const sig = JSON.stringify(knoppen.map((k) => [k.rol, k.id]));
+    if (vak.dataset.sig !== sig) {
+      vak.dataset.sig = sig;
+      vak.innerHTML = knoppen
+        .map(
+          (k) =>
+            `<button type="button" class="schakel" data-rol="${escapeHtml(k.rol)}" data-id="${escapeHtml(k.id)}" aria-pressed="false">${resolve(k.icoon)}<span class="lb">${escapeHtml(k.label)}</span></button>`
+        )
+        .join("");
+    }
+    const aan = new Map(knoppen.map((k) => [k.id, k.aan]));
+    for (const knop of vak.children) knop.setAttribute("aria-pressed", String(aan.get(knop.dataset.id) === true));
+  }
+
+  /**
+   * Het doel, of twee bij een bereik. Weg als de airco uit staat, behalve met
+   * een coach: dan is het wat de bewoner wil, en dat stel je juist in als hij
+   * uit staat.
+   */
+  paintDoel_(st, s = aircoStand(st), metCoach = Boolean(this.coach_())) {
     const vak = this.$(".doelen");
-    const inst = s.aan ? doelInstelling(st, this.eenheid_()) : null;
+    const inst = s.aan || (metCoach && s.beschikbaar) ? doelInstelling(st, this.eenheid_()) : null;
     vak.hidden = !inst;
     if (!inst) return;
     vak.dataset.soort = inst.soort;
@@ -802,7 +942,7 @@ class AircoEditor extends DacEditor {
   helper(s) {
     return {
       entity:
-        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf.",
+        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Alleen op zon en Pauze erbij.",
       name: "Leeg laten: de naam van de airco in Home Assistant.",
       afbeelding:
         "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit.",
@@ -816,7 +956,7 @@ registerEditor("domotiapp-airco-card-editor", AircoEditor);
 registerCard("domotiapp-airco-card", AircoCard, {
   name: "DomotiApp Airco",
   description:
-    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat.",
+    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren.",
 });
 
 export { AircoCard };

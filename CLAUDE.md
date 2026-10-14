@@ -1435,6 +1435,13 @@ die daar niet staan:
    klikpunt dat je uit `getBoundingClientRect()` haalt en controleer met een
    capture-luisteraar waar de klik landde (valkuil 14).
 
+   **Maak in een NIEUW tabblad eerst een schermafdruk voordat je klikt.**
+   Zonder afdruk is er nog geen schaal, en dan leest de browsertool de
+   coördinaten als CSS-pixels. Op 14 oktober 2026 werd een al omgerekend
+   klikpunt zo nog een keer verkleind (847 werd 690). De klik landde op een
+   andere knop van dezelfde kaart en zette een airco op Drogen. Na één
+   schermafdruk klopte hetzelfde klikpunt wel.
+
 48. **Een MCP-tabblad sluiten kan de hele tabgroep laten verdwijnen.** Na
    `tabs_close_mcp` op het oude tabblad meldde `tabs_context_mcp` "No tab
    group exists", ook al stond het nieuwe tabblad nog open; daarna waren alle
