@@ -230,6 +230,8 @@ Daarom:
 - 24 nieuwe tests, die alle 24 falen op 0.64.0. 1671 JS-tests zijn groen.
 - Gemeten in Home Assistant met echte kliks tegen een nep-coach: als beheerder
   en als het iPad-account, donker en licht, en op 280 px.
+- 807 Python-tests zijn groen (in Docker, `python:3.14-slim`), al is de Python
+  niet veranderd.
 - **Nog niet uitgebracht:** wacht op de echte dump van de coach.
 
 ## Wat niet lukte
