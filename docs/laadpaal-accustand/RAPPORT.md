@@ -88,7 +88,9 @@ kladmap, met dit testbestand erbij; geen worktree, zie valkuil 68):
   TypeError: L.accustandVeld is not a function
 ```
 
-Op deze tak: 17 van 17 groen. Alle JS-tests: 1640 groen.
+Op deze tak: 17 van 17 groen. Alle JS-tests: 1640 groen. Python-tests (in
+Docker, `python:3.14-slim`): 807 groen. Bundel actueel, registratieregel,
+`check:css` en `check:controls`: OK.
 
 ### In Home Assistant, met echte kliks en echte toetsen
 
@@ -195,3 +197,9 @@ opnieuw gemeten.
   booleans geeft, zoals beschreven. De kaart leest alleen `=== true`. Dat wordt
   nagekeken in de dump.
 - Dat een lege toestand of `unknown` geen opgave is, en `0` wel.
+
+## git status --porcelain
+
+```
+(leeg na de commit van dit rapport)
+```
