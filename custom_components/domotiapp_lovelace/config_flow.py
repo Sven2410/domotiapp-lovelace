@@ -11,11 +11,12 @@ en *Opgeslagen scenes opruimen* (SPEC 15). Dat laatste is de enige plek waar
 een admin opgeslagen scenes van een light group kan weggooien. Twee stappen:
 een keuzelijst en een bevestiging.
 
-**Dit wijkt af van de letter van SPEC 15.2 en 19**, die een lege config flow en
-een options flow met alleen het opruimoverzicht beschrijven. De opruimstappen
-zelf zijn ongewijzigd; er staat een menu voor, en de eerste stap heet `scenes`
-in plaats van `init`. Zo stond het ook in 0.5.0, toen er een stap Alarmcode
-naast stond. Zie `docs/licht-thema/RAPPORT.md`.
+De opruimstappen zelf zijn die van SPEC 15.2; er staat een menu voor, en de
+eerste stap heet `scenes` in plaats van `init`. Zo stond het ook in 0.5.0, toen
+er een stap Alarmcode naast stond. Tot 14 oktober 2026 week dit af van de
+letter van de SPEC (een lege config flow, een options flow met alleen het
+opruimoverzicht); die dag is de SPEC op verzoek van de eigenaar bijgewerkt
+(15.1, 15.5 en 19). Zie ook `docs/licht-thema/RAPPORT.md`.
 
 Twee dingen die deze flow niet zelf doet, en dat is met opzet:
 

@@ -92,7 +92,7 @@ om één bestand.
 custom_components/domotiapp_lovelace/          de integratie (Python)
 ├── manifest.json      version = enige bron van het versienummer
 ├── __init__.py        static path + add_extra_js_url + Store + WS-commando's
-├── config_flow.py     lege flow + options flow = het opruimoverzicht (15)
+├── config_flow.py     themakeuze + options flow: Uiterlijk en opruimen (15)
 ├── const.py
 ├── store.py           Store-laag, validatie, migratie
 ├── websocket.py       de commando's uit sectie 11
@@ -1807,8 +1807,19 @@ en verschijnt hij in de foutmelding van
 ### 15.1 Vorm: een options flow
 
 Het opruimoverzicht wordt een **options flow** op de config entry: Instellingen
-→ Apparaten & diensten → DomotiApp Scene → **Configureren**. **Admin-only**;
+→ Apparaten & diensten → DomotiApp Lovelace → **Configureren**. **Admin-only**;
 HA laat het knopje voor een niet-admin niet zien.
+
+**Sinds 0.54.0 begint Configureren met een menu** (stap `init`, een
+`async_show_menu`) met twee keuzes:
+
+- **Uiterlijk**: het thema van de kaarten, zie [sectie 15.5](#155-uiterlijk-licht-of-donker);
+- **Opgeslagen scenes opruimen**: het opruimoverzicht hieronder.
+
+Het opruimoverzicht zelf is daardoor niet veranderd. Alleen heet zijn eerste
+stap nu `scenes` en niet `init`. Bijgewerkt op verzoek van de eigenaar op
+14 oktober 2026; tot dan beschreef deze sectie een options flow met alleen het
+opruimoverzicht.
 
 Een options flow is een formulier en geen lijst met verwijderknoppen, dus dit
 is niet de mooiste vorm die denkbaar is. Het is wel de vorm die binnen HA's
@@ -1819,7 +1830,7 @@ elegantie.
 
 ### 15.2 De stappen
 
-**Stap `init` — de keuzelijst**
+**Stap `scenes` — de keuzelijst** (tot 0.54.0 heette deze stap `init`)
 
 - Toont één `select` met alle opgeslagen groepen, gevuld uit dezelfde data als
   `domotiapp_lovelace/storage/list` ([sectie 11.3](#113-domotiapp_lovelacestoragelist)).
@@ -1848,15 +1859,18 @@ elegantie.
   backup terug te halen is.
 - Bij bevestiging: dezelfde handeling als
   `domotiapp_lovelace/storage/delete` ([sectie 11.4](#114-domotiapp_lovelacestoragedelete)),
-  en daarna `async_create_entry(title="", data={})` om de flow te sluiten.
+  en daarna `async_create_entry(title="", data=<de bestaande options>)` om de
+  flow te sluiten. **Met de bestaande options, niet `data={}`:**
+  `async_create_entry` van een options flow VERVANGT de options, en een lege
+  dict zou de themakeuze wissen bij elke kamer die wordt opgeruimd.
 
 **Annuleren**
 
-- Sluit de gebruiker de dialoog op stap `init` of stap `confirm` — met de X,
+- Sluit de gebruiker de dialoog op stap `scenes` of stap `confirm` — met de X,
   met Escape, of door weg te klikken — dan gebeurt er **niets**. Er is geen
   tussenstaat: de verwijdering vindt pas plaats bij het verzenden van stap
   `confirm` met het vinkje aan.
-- Terug van `confirm` naar `init` is niet nodig; opnieuw beginnen is één klik
+- Terug van `confirm` naar `scenes` is niet nodig; opnieuw beginnen is één klik
   op Configureren.
 
 **Meerdere kamers achter elkaar**
@@ -1894,6 +1908,29 @@ in de klantdocumentatie**, samen met de manier om het alsnog kwijt te raken:
 eerst de kamers opruimen via [sectie 15.2](#152-de-stappen), dán de integratie
 verwijderen. Anders staat er een bestand in `.storage/` waarvan niemand meer
 weet waar het vandaan komt.
+
+### 15.5 Uiterlijk: licht of donker
+
+Sinds 0.54.0 (30 september 2026) heeft de integratie precies één instelling:
+het **thema** van de kaarten. Er zijn drie keuzes: **Automatisch**, **Licht** of
+**Donker**. De eigenaar vroeg erom met *"kan je er ook nog een light theme van
+maken? (...) En dan als we de integratie toevoegen dat je de optie krijgt of
+light of dark theme"*.
+
+- **Bij het toevoegen** heeft de config flow één stap (`user`) met deze keuze;
+  Automatisch staat voor.
+- **Achteraf** staat dezelfde keuze onder Configureren → Uiterlijk (stap
+  `uiterlijk`).
+- **De keuze staat in `entry.options["thema"]`**, niet in `entry.data`, zodat
+  hij te verzetten is zonder de integratie opnieuw toe te voegen. Een entry
+  van vóór 0.54.0 heeft geen keuze, en dat geldt als Automatisch.
+- **Een gewijzigde keuze herlaadt de integratie niet.** Een update-listener
+  zet alleen de waarde die de lader doorgeeft; de kaarten halen de lader zelf
+  opnieuw op.
+
+Hoe de kaart Automatisch beslist, en welke tokens er bij licht horen, staat in
+`CLAUDE.md` onder *Licht en donker*: dat is hoe het gebouwd is, en dat hoort
+niet twee keer beschreven te staan.
 
 ---
 
@@ -2449,7 +2486,7 @@ Elk punt met één regel waarom.
 | Automatisch opruimen van verweesde opslag | Zou "kaart even weghalen" onomkeerbaar maken ([sectie 15](#15-opruimoverzicht)). |
 | Import/export van scenes | Geen vraag naar; de opslag zit in HA's backup. |
 | Undo na Opslaan | Annuleren dekt de bewerksessie; undo daarna vergt historie in de opslag. |
-| Instellingen op de integratie | De config flow is bewust leeg; er valt niets in te stellen. De options flow bestaat wél, maar uitsluitend als opruimoverzicht ([sectie 15](#15-opruimoverzicht)) — het is geen instellingenscherm. |
+| Instellingen op de integratie, op het thema na | Er is één instelling: het thema van de kaarten ([sectie 15.5](#155-uiterlijk-licht-of-donker), sinds 0.54.0). Verder valt er niets in te stellen; de rest van Configureren is het opruimoverzicht ([sectie 15](#15-opruimoverzicht)). |
 | Meertaligheid buiten NL en EN | Het product is Nederlandstalig; `en.json` is er alleen zodat een niet-Nederlandse installatie geen ruwe sleutels toont. |
 
 ### 19.1 Bekende beperking: twee editors tegelijk op dezelfde kamer
