@@ -86,7 +86,7 @@ const css = /* css */ `
     border-radius: var(--dac-radius-pill); border: 1px solid var(--dac-border);
     background: transparent; color: var(--dac-ink-2);
   }
-  @media (hover: hover) { button:hover { background: var(--dac-surface); color: var(--dac-ink); } }
+  @media (hover: hover) { button:hover { background: var(--dac-hover); color: var(--dac-ink); } }
   button.ja {
     border-color: transparent; color: var(--dac-on-accent-hi);
     background: var(--dac-accent-hi);

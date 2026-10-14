@@ -245,14 +245,28 @@ voor zijn eigen thema, dat donker is. De kaart meet de tekstkleur van het thema
 donker dashboard.
 
 **Het lichte thema is geen omgekeerd donker.** Een donkere kaart is lichter dan
-zijn ondergrond, een lichte een tikje donkerder: zachtgrijs op wit, met een
-haarlijn. Accent, status en lampgeel zijn in licht DONKERDER (het heldere accent
-haalt op een lichte kaart 3,1:1, het lampgeel 1,5:1); de contrasten staan als
-toets in `tests/js/thema-contrast.test.mjs`. De zes identiteitskleuren zijn
-niet aangepast.
+zijn ondergrond. Een lichte kaart is WIT met een rand, net als een tegel in het
+paneel van de Coach. Wat erin ligt (knoppen, pillen) is ook wit met een rand;
+een vlak zonder rand krijgt een tint. Accent, status en lampgeel zijn in licht
+DONKERDER (het heldere accent haalt op wit 3,1:1, het lampgeel 1,5:1); de
+contrasten staan als toets in `tests/js/thema-contrast.test.mjs`. De zes
+identiteitskleuren zijn niet aangepast.
 
-Vijf regels voor elke kaart die je schrijft of aanraakt. De eerste twee bewaakt
-`check:css` (bewaker 5), de rest niet:
+**De lichte waarden zijn die van de Coach** (sinds 0.66.0). Gevraagd op
+14 oktober 2026 of kaarten en paneel in licht hetzelfde moeten zijn: *"ja
+gelijktrekken"*. Het gaat om:
+- grond, vlak en rand;
+- de inktladder;
+- het accent;
+- de drie statuskleuren.
+
+Ze staan letterlijk zoals in `lightTokens` van
+`domotiapp-coach/.../frontend/src/theme.js`, en de test vergelijkt ze. Tot dan
+was het een eigen set, met een zachtgrijs kaartvlak. Eén bewuste afwijking:
+geen slagschaduw onder een kaart, ook niet in licht (valkuil 22).
+
+Zes regels voor elke kaart die je schrijft of aanraakt. Regel 1, 2 en 6 bewaakt
+`check:css` (bewaker 5 en 6), de rest niet:
 
 1. **Geen `rgba(255, 255, 255, ...)` als tint.** Dat is `rgba(var(--dac-tint),
    ...)`; de tint keert om in licht. Wit over een BEELD of een gekleurd vlak
@@ -266,6 +280,10 @@ Vijf regels voor elke kaart die je schrijft of aanraakt. De eerste twee bewaakt
 5. **Een lampkleur gaat door `lampkleurCss(rgb, this.licht_, color_mode)`** (of
    `lightTone(st, this.licht_)`). Een lamp die wit licht maakt krijgt in licht
    het lampgeel; een gekleurde lamp wordt donkerder tot hij te zien is.
+6. **`var(--dac-surface)` als achtergrond heeft een rand.** In licht is het
+   kaartvlak wit, en dan is een vlak zonder rand wit op wit. Een hover zonder
+   rand is `var(--dac-hover)` (in donker het kaartvlak, in licht een tint); een
+   ander vlak zonder rand `var(--dac-surface-hi)` of `rgba(var(--dac-tint), ...)`.
 
 Wat GEEN `DacCard` is moet het thema zelf volgen: `themaCss` in zijn stijlblad
 en `volgThema(this)`. Een scherm dat aan `document.body` hangt doet dat in zijn
@@ -277,15 +295,26 @@ Assistant, wat onze instelling ook zegt.
 **Het infoscherm doet niet mee** (`static volgtThema = false`). Dat hangt aan
 een muur en heeft zijn eigen keuze Uiterlijk in het beheer.
 
-**Licht of Donker vastzetten maakt de kaart niet dicht.** De kaartvlakken blijven
-doorschijnend, dus op een pagina van de andere soort zijn ze niet te lezen. Dat
-is met opzet: vastzetten is er voor een dashboard met een foto als achtergrond,
-en daar hoort de foto door de kaart heen te blijven komen.
+**Donker vastzetten maakt de kaart niet dicht, Licht sinds 0.66.0 wel.** Een
+donkere kaart is doorschijnend (wit op 3,8%). Op een lichte pagina is hij dus
+niet te lezen, en op een dashboard met een foto als achtergrond komt de foto
+erdoorheen; daar is vastzetten voor. Een lichte kaart is sinds 0.66.0 dicht
+wit, net als bij de Coach. Licht vastzetten op een donkere pagina geeft dus
+een leesbare witte kaart, en op een foto een witte kaart zonder de foto erdoor.
+Dat laatste was tot dan juist de bedoeling (de open vraag van 30 september 2026
+was of het andersom moest). Het is gevolgd uit "gelijktrekken" en zo aan de
+eigenaar gemeld.
 
-**De tokens van de Coach zijn hier niet meer letterlijk dezelfde.** De donkere
-waarden wel; de lichte set en de tokens die omkeren (`--dac-tint`,
-`--dac-scheme`, `--dac-diepte`, `--dac-on-accent*`, `--dac-knob*`, `--dac-veld`)
-bestaan alleen hier. Krijgt de Coach een licht thema, neem ze dan daar over.
+**De tokens van de Coach zijn hier letterlijk dezelfde**, in donker en in licht,
+op twee dingen na:
+- de slagschaduw, die hier in geen van beide staat (valkuil 22);
+- de tokens die alleen hier bestaan: `--dac-scheme`, `--dac-diepte`,
+  `--dac-on-accent*`, `--dac-knob*`, `--dac-veld`, `--dac-hover` en `--dac-lit`
+  in licht.
+
+`--dac-tint` heet bij de Coach `--dac-veil`. Verandert er daar een waarde,
+dan hoort hij hier mee te gaan, en dan valt de test in
+`tests/js/thema-contrast.test.mjs` om.
 
 ---
 
