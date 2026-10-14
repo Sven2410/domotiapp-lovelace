@@ -92,7 +92,7 @@ class PersonCard extends DacCard {
       font: inherit; color: inherit; border-radius: var(--dac-radius-sm);
       transition: background 200ms ease;
     }
-    @media (hover: hover) { .p:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .p:hover { background: var(--dac-hover); } }
     .nm {
       font-size: 11px; font-weight: 500; line-height: 1.15; text-align: center;
       max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

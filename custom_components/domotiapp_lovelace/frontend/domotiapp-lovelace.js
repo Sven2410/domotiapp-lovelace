@@ -104,48 +104,57 @@ var yf=Object.defineProperty;var jf=(a,e,t)=>e in a?yf(a,e,{enumerable:!0,config
      waarde, zodat het veld leesbaar blijft als onze instelling en het thema
      van Home Assistant het niet eens zijn. */
   --dac-veld:          #1b1b19;
-`,zf=`
-  --dac-bg:            #f6f5f2;
-  --dac-bg-raise:      #ffffff;
-  --dac-surface:       rgba(20, 20, 10, 0.045);
-  --dac-surface-hi:    rgba(20, 20, 10, 0.080);
-  --dac-border:        rgba(20, 20, 10, 0.11);
-  --dac-border-hi:     rgba(20, 20, 10, 0.22);
 
-  --dac-ink:           #1a1a17;
-  --dac-ink-2:         rgba(26, 26, 23, 0.68);
-  --dac-ink-3:         rgba(26, 26, 23, 0.50);
+  /* Het vlak onder iets waar de muis boven hangt, als dat geen eigen rand
+     heeft (een regel in een menu, een rij in een lijst). In donker het
+     kaartvlak, zoals het tot 0.66.0 letterlijk stond; in licht zou dat wit op
+     een witte kaart zijn, en dan zie je niets. */
+  --dac-hover:         var(--dac-surface);
+`,zf=`
+  --dac-bg:            #f1f0ec;
+  --dac-bg-raise:      #ffffff;
+  --dac-surface:       #ffffff;
+  --dac-surface-hi:    rgba(20, 20, 15, 0.045);
+  --dac-border:        rgba(20, 20, 15, 0.11);
+  --dac-border-hi:     rgba(20, 20, 15, 0.22);
+
+  --dac-ink:           #1c1b18;
+  --dac-ink-2:         rgba(28, 27, 24, 0.74);
+  --dac-ink-3:         rgba(28, 27, 24, 0.60);
 
   --dac-accent:        #026fa1;
-  --dac-accent-hi:     #0672a8;
+  --dac-accent-hi:     #0a6aa6;
   --dac-accent-soft:   rgba(2, 111, 161, 0.12);
-  --dac-accent-glow:   rgba(2, 111, 161, 0.22);
+  --dac-accent-glow:   rgba(10, 106, 166, 0.20);
 
-  --dac-good:          #0b850b;
-  --dac-warn:          #b07400;
-  --dac-bad:           #c62f2f;
+  --dac-good:          #0a8a0a;
+  --dac-warn:          #946200;
+  --dac-bad:           #c63131;
 
   --dac-lit:           #c98d00;
 
-  /* Op wit is er geen haarlijn bovenlangs nodig: de rand doet het werk. */
+  /* Geen slagschaduw, en op wit ook geen haarlijn bovenlangs: de rand doet
+     het werk. Zie de kop hierboven: met opzet anders dan de Coach. */
   --dac-shadow:        none;
 
-  --dac-tint:          20, 20, 10;
+  --dac-tint:          20, 20, 15;
   --dac-scheme:        light;
 
   --dac-on-accent:     #ffffff;
   --dac-on-accent-hi:  #ffffff;
 
-  --dac-scrim:         rgba(20, 20, 10, 0.34);
+  --dac-scrim:         rgba(20, 20, 15, 0.34);
   --dac-diepte:        0.3;
 
   --dac-knob:          #ffffff;
   --dac-knob-uit:      #ffffff;
-  --dac-knob-schaduw:  0 1px 2px rgba(20, 20, 10, 0.30);
+  --dac-knob-schaduw:  0 1px 2px rgba(20, 20, 15, 0.30);
   --dac-spoor-aan:     82%;
   --dac-spoor-rand:    82%;
 
   --dac-veld:          #ffffff;
+
+  --dac-hover:         var(--dac-surface-hi);
 `,X=`
   :host {
     column-rule-color: var(--primary-text-color, transparent);
@@ -2003,7 +2012,7 @@ var yf=Object.defineProperty;var jf=(a,e,t)=>e in a?yf(a,e,{enumerable:!0,config
       transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
       touch-action: manipulation;
     }
-    @media (hover: hover) { .it:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .it:hover { background: var(--dac-hover); } }
     /* Draagt de plek zelf het vlak, dan hoort hij ook zelf te reageren -- en
        met dezelfde ronding als elke andere kaart in de familie.
 
@@ -2281,7 +2290,7 @@ var yf=Object.defineProperty;var jf=(a,e,t)=>e in a?yf(a,e,{enumerable:!0,config
     border-radius: var(--dac-radius-pill); border: 1px solid var(--dac-border);
     background: transparent; color: var(--dac-ink-2);
   }
-  @media (hover: hover) { button:hover { background: var(--dac-surface); color: var(--dac-ink); } }
+  @media (hover: hover) { button:hover { background: var(--dac-hover); color: var(--dac-ink); } }
   button.ja {
     border-color: transparent; color: var(--dac-on-accent-hi);
     background: var(--dac-accent-hi);
@@ -3668,7 +3677,7 @@ var yf=Object.defineProperty;var jf=(a,e,t)=>e in a?yf(a,e,{enumerable:!0,config
       font: inherit; color: inherit; border-radius: var(--dac-radius-sm);
       transition: background 200ms ease;
     }
-    @media (hover: hover) { .p:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .p:hover { background: var(--dac-hover); } }
     .nm {
       font-size: 11px; font-weight: 500; line-height: 1.15; text-align: center;
       max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -4160,7 +4169,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     @media (min-width: 620px) {
       .knop { flex: 0 0 auto; min-width: 66px; }
     }
-    @media (hover: hover) { .knop:hover { background: var(--dac-surface); color: var(--dac-ink); } }
+    @media (hover: hover) { .knop:hover { background: var(--dac-hover); color: var(--dac-ink); } }
     .knop:active { transform: scale(.96); }
     .knop[aria-expanded="true"] { background: var(--dac-surface-hi); color: var(--tone); }
 
@@ -4248,7 +4257,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       font: inherit; font-size: 13.5px; color: var(--dac-ink);
       -webkit-tap-highlight-color: transparent;
     }
-    @media (hover: hover) { .regel:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .regel:hover { background: var(--dac-hover); } }
     .regel:active { background: var(--dac-surface-hi); }
     .regel .mi { display: flex; flex: 0 0 auto; color: var(--dac-ink); }
     .regel .icon, .regel ha-icon {
@@ -4558,7 +4567,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       background: transparent; color: var(--dac-accent-hi); text-align: center;
     }
     @media (hover: hover) {
-      .voegtoe:hover { background: var(--dac-surface); }
+      .voegtoe:hover { background: var(--dac-hover); }
     }
 
     .leeg {
@@ -6370,7 +6379,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     .filters .dagmenu button[data-leeg] { color: var(--dac-ink-3); }
     .filters .dagmenu .telling { margin-left: auto; font-size: 11px; color: var(--dac-ink-3); }
     @media (hover: hover) {
-      .filters .dagmenu button:hover { background: var(--dac-surface); }
+      .filters .dagmenu button:hover { background: var(--dac-hover); }
     }
 
     .filters .opslag, .filters .stil {
@@ -8145,7 +8154,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       ha-tab-group {
         --ha-tab-group-indicator-color: var(--dac-accent-hi);
       }
-    `]);var sw="0.65.1",lw=["type","entity","name_overrides","bare"],Nr="laden",ma="klaar",bd="leeg",vd="geen-groep",Vm="opslagfout",Bm="fout",fa=class extends De(ge){constructor(){super();j(this,"_opnieuw",()=>{this._herkansing.herstel(),this._haalScenesOp()});this._scenes=null,this._leden=[],this._toestand=Nr,this._melding="",this._bezig=!1,this._editorOpen=!1,this._opgehaaldVoor=null,this._bestondVorigeKeer=!1,this._herkansing=new ue(()=>this._haalScenesOp()),this._verbinding=new xe}static getConfigElement(){return document.createElement(ud)}static getStubConfig(t){return{entity:Object.keys(t?.states??{}).find(i=>i.startsWith("light.")&&Array.isArray(t.states[i].attributes?.entity_id))??""}}updated(){let t=this.renderRoot?.querySelector(".card, .needs");t!==this._rasterVak&&(this._rasterUit?.(),this._rasterVak=t,this._rasterUit=t?I(t):null),C(t)}disconnectedCallback(){super.disconnectedCallback(),this._herkansing.stop(),this._rasterUit?.(),this._rasterUit=null,this._rasterVak=null}setConfig(t){if(!t?.entity)throw new Error("Kies een lichtgroep bij 'entity'.");let n=Object.keys(t).filter(i=>!lw.includes(i)&&!Cm.includes(i));n.length&&console.warn(`${Er}: onbekende sleutels in de configuratie: ${n.join(", ")}`),this._config=t,this.toggleAttribute("bare",!!t.bare)}getCardSize(){return 1}getGridOptions(){return{rows:"auto",columns:"full",min_columns:6,min_rows:Zt(this.renderRoot?.querySelector?.(".card"),1)}}willUpdate(){let t=this._config?.entity;if(!this.hass||!t)return;let n=!!this.hass.states[t];if(this._opgehaaldVoor!==t){this._opgehaaldVoor=t,this._bestondVorigeKeer=n,this._haalScenesOp();return}if(this._verbinding.herverbonden(this.hass)){this._bestondVorigeKeer=n,this._herkansing.herstel(),this._haalScenesOp();return}if(n&&!this._bestondVorigeKeer&&this._toestand===vd){this._bestondVorigeKeer=!0,this._haalScenesOp();return}this._bestondVorigeKeer=n}async _haalScenesOp(){let t=this._config.entity;this._toestand=Nr,this._melding="";try{let n=await this.hass.callWS({type:"domotiapp_lovelace/scenes/get",entity_id:t});this._scenes=n.scenes,this._leden=n.member_entity_ids??[],this._toestand=this._leden.length===0?bd:ma,this._herkansing.herstel()}catch(n){this._verwerkFout(n,t)}}_verwerkFout(t,n){let i=t?.code;if(this._melding=t?.message??String(t),he(t)&&this._herkansing.plan()){this._toestand=Nr;return}if(i==="home_assistant_error"){this._toestand=Vm;return}if(!this.hass.states[n]){this._toestand=vd;return}this._toestand=Bm}_naam(t){return this._config?.name_overrides?.[t]||this.hass?.states?.[t]?.attributes?.friendly_name||t}async _pasSceneToe(t){if(this._bezig||this._toestand!==ma)return;let{oproepen:n}=jr({scene:this._scenes?.[t],memberEntityIds:this._leden,states:this.hass.states});if(n.length){this._bezig=!0;try{let i=await zr((r,o)=>this.hass.callService("light",r,o),n);i.length&&this._meldMislukking(i.map(r=>r.entityId))}finally{this._bezig=!1}}}_meldMislukking(t){let n=t.map(r=>this._naam(r)).join(", "),i=t.length===1?`${n} reageerde niet.`:`Deze lampen reageerden niet: ${n}.`;this.dispatchEvent(new CustomEvent("hass-notification",{detail:{message:i},bubbles:!0,composed:!0}))}_bewerk(){this._toestand===ma&&(this._editorOpen=!0)}_sluitEditor(){this._editorOpen=!1}_scenesOpgeslagen(t){t.stopPropagation(),this._scenes=t.detail.scenes,this._leden=t.detail.member_entity_ids??[],this._toestand=this._leden.length===0?bd:ma}render(){if(!this._config)return M;switch(this._toestand){case vd:return this._renderFout(`Lichtgroep ${this._config.entity} bestaat niet (meer). Pas de kaart aan.`);case Vm:return this._renderFout("De opgeslagen scenes van deze kamer zijn onleesbaar.",this._melding);case Bm:return this._renderFout("De scenes konden niet geladen worden.",this._melding,!0);default:return this._renderKaart()}}_renderFout(t,n,i=!1){return A`
+    `]);var sw="0.66.0",lw=["type","entity","name_overrides","bare"],Nr="laden",ma="klaar",bd="leeg",vd="geen-groep",Vm="opslagfout",Bm="fout",fa=class extends De(ge){constructor(){super();j(this,"_opnieuw",()=>{this._herkansing.herstel(),this._haalScenesOp()});this._scenes=null,this._leden=[],this._toestand=Nr,this._melding="",this._bezig=!1,this._editorOpen=!1,this._opgehaaldVoor=null,this._bestondVorigeKeer=!1,this._herkansing=new ue(()=>this._haalScenesOp()),this._verbinding=new xe}static getConfigElement(){return document.createElement(ud)}static getStubConfig(t){return{entity:Object.keys(t?.states??{}).find(i=>i.startsWith("light.")&&Array.isArray(t.states[i].attributes?.entity_id))??""}}updated(){let t=this.renderRoot?.querySelector(".card, .needs");t!==this._rasterVak&&(this._rasterUit?.(),this._rasterVak=t,this._rasterUit=t?I(t):null),C(t)}disconnectedCallback(){super.disconnectedCallback(),this._herkansing.stop(),this._rasterUit?.(),this._rasterUit=null,this._rasterVak=null}setConfig(t){if(!t?.entity)throw new Error("Kies een lichtgroep bij 'entity'.");let n=Object.keys(t).filter(i=>!lw.includes(i)&&!Cm.includes(i));n.length&&console.warn(`${Er}: onbekende sleutels in de configuratie: ${n.join(", ")}`),this._config=t,this.toggleAttribute("bare",!!t.bare)}getCardSize(){return 1}getGridOptions(){return{rows:"auto",columns:"full",min_columns:6,min_rows:Zt(this.renderRoot?.querySelector?.(".card"),1)}}willUpdate(){let t=this._config?.entity;if(!this.hass||!t)return;let n=!!this.hass.states[t];if(this._opgehaaldVoor!==t){this._opgehaaldVoor=t,this._bestondVorigeKeer=n,this._haalScenesOp();return}if(this._verbinding.herverbonden(this.hass)){this._bestondVorigeKeer=n,this._herkansing.herstel(),this._haalScenesOp();return}if(n&&!this._bestondVorigeKeer&&this._toestand===vd){this._bestondVorigeKeer=!0,this._haalScenesOp();return}this._bestondVorigeKeer=n}async _haalScenesOp(){let t=this._config.entity;this._toestand=Nr,this._melding="";try{let n=await this.hass.callWS({type:"domotiapp_lovelace/scenes/get",entity_id:t});this._scenes=n.scenes,this._leden=n.member_entity_ids??[],this._toestand=this._leden.length===0?bd:ma,this._herkansing.herstel()}catch(n){this._verwerkFout(n,t)}}_verwerkFout(t,n){let i=t?.code;if(this._melding=t?.message??String(t),he(t)&&this._herkansing.plan()){this._toestand=Nr;return}if(i==="home_assistant_error"){this._toestand=Vm;return}if(!this.hass.states[n]){this._toestand=vd;return}this._toestand=Bm}_naam(t){return this._config?.name_overrides?.[t]||this.hass?.states?.[t]?.attributes?.friendly_name||t}async _pasSceneToe(t){if(this._bezig||this._toestand!==ma)return;let{oproepen:n}=jr({scene:this._scenes?.[t],memberEntityIds:this._leden,states:this.hass.states});if(n.length){this._bezig=!0;try{let i=await zr((r,o)=>this.hass.callService("light",r,o),n);i.length&&this._meldMislukking(i.map(r=>r.entityId))}finally{this._bezig=!1}}}_meldMislukking(t){let n=t.map(r=>this._naam(r)).join(", "),i=t.length===1?`${n} reageerde niet.`:`Deze lampen reageerden niet: ${n}.`;this.dispatchEvent(new CustomEvent("hass-notification",{detail:{message:i},bubbles:!0,composed:!0}))}_bewerk(){this._toestand===ma&&(this._editorOpen=!0)}_sluitEditor(){this._editorOpen=!1}_scenesOpgeslagen(t){t.stopPropagation(),this._scenes=t.detail.scenes,this._leden=t.detail.member_entity_ids??[],this._toestand=this._leden.length===0?bd:ma}render(){if(!this._config)return M;switch(this._toestand){case vd:return this._renderFout(`Lichtgroep ${this._config.entity} bestaat niet (meer). Pas de kaart aan.`);case Vm:return this._renderFout("De opgeslagen scenes van deze kamer zijn onleesbaar.",this._melding);case Bm:return this._renderFout("De scenes konden niet geladen worden.",this._melding,!0);default:return this._renderKaart()}}_renderFout(t,n,i=!1){return A`
       <div class="needs">
         <span class="mark">${this._icoon("question")}</span>
         <span>
@@ -8924,7 +8933,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     .voet .voorbeeld {
       margin-right: auto;
     }
-  `]);var ef="person",_w="Kies een persoon in de kaartinstellingen.",tf="De gekozen persoon is niet gevonden.",yw="De opgeslagen wekkers van deze persoon zijn onleesbaar.",b4=Object.freeze(["grid_options","layout_options","view_layout","visibility"]);function nf(a){if(!a||typeof a!="object"||Array.isArray(a))throw new Error("De kaartconfig ontbreekt of is geen object.");let e=a.person;if(e==null||e==="")return{...a};if(typeof e!="string")throw new Error("'person' moet een entity-ID zijn, zoals person.bram.");if(!e.startsWith(`${ef}.`))throw new Error(`'${e}' zit niet in het domein ${ef}. Kies een persoon, zoals person.bram.`);return{...a}}function af(a){return{type:`custom:${a}`}}function rf(a,e){return a?e?{soort:"ok",tekst:null,isFout:!1}:{soort:"weg",tekst:tf,isFout:!0}:{soort:"ontbreekt",tekst:_w,isFout:!1}}function of(a,e){return a==="not_found"?tf:a==="home_assistant_error"?yw:e||"Er ging iets mis bij het ophalen van de wekkers."}var jw=["ma","di","wo","do","vr","za","zo"],zw="Geen wekkers ingesteld",$w="Eenmalig",Aw="Eenmalig \u2014 afgelopen",Ew="Geen wekker actief",sf="Stoppen",Sw="Er is een melding over deze wekker, maar de tekst ontbreekt.";function Mw(a){return!Array.isArray(a)||a.length===0?$w:[...new Set(a)].sort((t,n)=>t-n).map(t=>jw[t-1]??"?").join(" ")}function Nw(a,e){return!a||Array.isArray(a.days)&&a.days.length>0?!1:Date.parse(a?.one_shot_at??"")<=e}function lf(a,e){return Nw(a,e)?Aw:Mw(a?.days)}function df(a){let e=a?.last_message;return!e||typeof e!="object"||Array.isArray(e)?null:{tekst:typeof e.text=="string"&&e.text.trim()?e.text:Sw,severity:e.severity==="error"?"error":"notice",isFout:e.severity==="error",kind:typeof e.kind=="string"?e.kind:null}}function cf(a){let e=a?.alarms;if(!Array.isArray(e)||e.length===0)return zw;let t=a?.next_fire?.text;return typeof t=="string"&&t.trim()?t:Ew}function pf(a,e){let t=[...new Set((e??[]).filter(o=>typeof o=="string"))];if(t.length===0)return null;let n=t.map(o=>(a??[]).find(s=>s?.id===o)).filter(Boolean),i=n.map(o=>o.name).filter(Boolean),r=[...new Set(n.map(o=>o.time).filter(Boolean))];return{ids:t,naam:i.length?i.join(" en "):"Wekker",tijd:r.join(" en ")}}var Dw="0.65.1",Tw="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",Lw="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z",hf="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",Ow="M13,14H11V9H13M13,18H11V16H13M1,21H23L12,2L1,21Z",Cr=(a,e="icoon")=>A`<svg class=${e} viewBox="0 0 24 24" aria-hidden="true">
+  `]);var ef="person",_w="Kies een persoon in de kaartinstellingen.",tf="De gekozen persoon is niet gevonden.",yw="De opgeslagen wekkers van deze persoon zijn onleesbaar.",b4=Object.freeze(["grid_options","layout_options","view_layout","visibility"]);function nf(a){if(!a||typeof a!="object"||Array.isArray(a))throw new Error("De kaartconfig ontbreekt of is geen object.");let e=a.person;if(e==null||e==="")return{...a};if(typeof e!="string")throw new Error("'person' moet een entity-ID zijn, zoals person.bram.");if(!e.startsWith(`${ef}.`))throw new Error(`'${e}' zit niet in het domein ${ef}. Kies een persoon, zoals person.bram.`);return{...a}}function af(a){return{type:`custom:${a}`}}function rf(a,e){return a?e?{soort:"ok",tekst:null,isFout:!1}:{soort:"weg",tekst:tf,isFout:!0}:{soort:"ontbreekt",tekst:_w,isFout:!1}}function of(a,e){return a==="not_found"?tf:a==="home_assistant_error"?yw:e||"Er ging iets mis bij het ophalen van de wekkers."}var jw=["ma","di","wo","do","vr","za","zo"],zw="Geen wekkers ingesteld",$w="Eenmalig",Aw="Eenmalig \u2014 afgelopen",Ew="Geen wekker actief",sf="Stoppen",Sw="Er is een melding over deze wekker, maar de tekst ontbreekt.";function Mw(a){return!Array.isArray(a)||a.length===0?$w:[...new Set(a)].sort((t,n)=>t-n).map(t=>jw[t-1]??"?").join(" ")}function Nw(a,e){return!a||Array.isArray(a.days)&&a.days.length>0?!1:Date.parse(a?.one_shot_at??"")<=e}function lf(a,e){return Nw(a,e)?Aw:Mw(a?.days)}function df(a){let e=a?.last_message;return!e||typeof e!="object"||Array.isArray(e)?null:{tekst:typeof e.text=="string"&&e.text.trim()?e.text:Sw,severity:e.severity==="error"?"error":"notice",isFout:e.severity==="error",kind:typeof e.kind=="string"?e.kind:null}}function cf(a){let e=a?.alarms;if(!Array.isArray(e)||e.length===0)return zw;let t=a?.next_fire?.text;return typeof t=="string"&&t.trim()?t:Ew}function pf(a,e){let t=[...new Set((e??[]).filter(o=>typeof o=="string"))];if(t.length===0)return null;let n=t.map(o=>(a??[]).find(s=>s?.id===o)).filter(Boolean),i=n.map(o=>o.name).filter(Boolean),r=[...new Set(n.map(o=>o.time).filter(Boolean))];return{ids:t,naam:i.length?i.join(" en "):"Wekker",tijd:r.join(" en ")}}var Dw="0.66.0",Tw="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",Lw="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z",hf="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",Ow="M13,14H11V9H13M13,18H11V16H13M1,21H23L12,2L1,21Z",Cr=(a,e="icoon")=>A`<svg class=${e} viewBox="0 0 24 24" aria-hidden="true">
     <path d=${a} />
   </svg>`,xa=class extends De(ge){constructor(){super(),this._toestand=null,this._fout=null,this._bevestigVoor=null,this._bezig=!1,this._tijdelijkeMelding=null,this._editorVoor=void 0,this._entiteiten=null,this._abonnementVoor=null,this._afmelden=null,this._herkansing=new ue(()=>this._haalOp()),this._verbinding=new xe}setConfig(e){let t=nf(e),n=t.person!==this._config?.person;this._config=t,this.toggleAttribute("bare",!!e?.bare),n&&(this._toestand=null,this._fout=null,this._bevestigVoor=null,this._herstartAbonnement())}static getConfigElement(){return document.createElement(kd)}static getStubConfig(){return af(Ut)}getGridOptions(){return{rows:"auto",columns:12,min_columns:6,min_rows:Zt(this.renderRoot?.querySelector?.(".card"),1)}}getCardSize(){if(this._stop())return 3;let e=this._toestand?.alarms?.length??0;return 1+Math.max(e,1)}connectedCallback(){super.connectedCallback(),this._herstartAbonnement()}disconnectedCallback(){super.disconnectedCallback(),this._herkansing.stop(),this._stopAbonnement(),this._rasterUit?.(),this._rasterUit=null,this._rasterVak=null}updated(e){e.has("hass")&&this.hass&&(this._startAbonnement(),this._verbinding.herverbonden(this.hass)&&(this._herkansing.herstel(),this._haalOp())),this._volgRaster()}_volgRaster(){let e=this.renderRoot?.querySelector(".card, .needs");e!==this._rasterVak&&(this._rasterUit?.(),this._rasterVak=e,this._rasterUit=e?I(e):null),C(e)}async _startAbonnement(){let e=this._config?.person;if(!(!this.hass||!e||!this.isConnected)&&this._abonnementVoor!==e){this._abonnementVoor=e;try{let t=await this.hass.connection.subscribeMessage(n=>this._opGebeurtenis(n),{type:Ee.subscribe,person:e});if(this._abonnementVoor!==e){t();return}this._afmelden=t}catch(t){console.warn(`${Ut}: abonneren mislukt: ${t?.message??t}`)}await this._haalOp()}}_stopAbonnement(){if(this._afmelden){try{this._afmelden()}catch(e){console.warn(`${Ut}: afmelden mislukt: ${e?.message??e}`)}this._afmelden=null}this._abonnementVoor=null}_herstartAbonnement(){this._stopAbonnement(),this._startAbonnement()}_opGebeurtenis(e){let t=e?.alarm_id,n=e?.event;if(typeof t=="string"&&this._toestand){let i=new Set(this._toestand.ringing??[]);n==="started"?i.add(t):i.delete(t),this._toestand={...this._toestand,ringing:[...i]}}this._haalOp()}async _haalOp(){let e=this._config?.person;if(!(!this.hass||!e))try{let t=await this.hass.callWS({type:Ee.get,person:e});if(this._config?.person!==e)return;this._toestand=t,this._fout=null,this._herkansing.herstel()}catch(t){if(this._config?.person!==e||he(t)&&this._herkansing.plan())return;this._toestand=null,this._fout=of(t?.code,t?.message)}}async _roep(e){if(!(!this.hass||this._bezig)){this._bezig=!0;try{let t=await this.hass.callWS(e);t&&typeof t=="object"&&(this._toestand=t,this._fout=null)}catch(t){this._toon(t?.message??"De opdracht is niet gelukt.")}finally{this._bezig=!1}}}async _openEditor(e){if(this._bevestigVoor=null,this._editorVoor=e,!!this.hass)try{this._entiteiten=await this.hass.callWS({type:Ee.entities})}catch(t){this._entiteiten=null,console.warn(`${Ut}: entiteitenlijst ophalen mislukt: ${t?.message??t}`)}}_sluitEditor(){this._editorVoor=void 0}_toon(e){this._tijdelijkeMelding=e,clearTimeout(this._meldingTimer),this._meldingTimer=setTimeout(()=>{this._tijdelijkeMelding=null},6e3)}_person(){return this._config?.person}_zetAan(e,t){this._roep({type:Ee.setEnabled,person:this._person(),alarm_id:e.id,enabled:t})}_verwijder(e){this._bevestigVoor=null,this._roep({type:Ee.delete,person:this._person(),alarm_id:e.id})}_begrepen(e){this._roep({type:Ee.clearMessage,person:this._person(),alarm_id:e.id})}async _stopAlles(e){for(let t of e)await this._roep({type:Ee.stop,person:this._person(),alarm_id:t})}_stop(){return this._toestand?pf(this._toestand.alarms,this._toestand.ringing):null}render(){if(!this._config)return M;let e=this._config.person,t=!!(e&&this.hass?.states?.[e]),n=rf(e,t);if(n.soort!=="ok")return this._mededeling(n.tekst,n.isFout);if(this._fout)return this._mededeling(this._fout,!0);if(!this._toestand)return this._mededeling("Wekkers ophalen\u2026",!1);let i=this._stop();return this._editorVoor!==void 0&&!i?A`<div class="card surface">
         <domotiapp-alarm-editor
@@ -9580,4 +9589,4 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
           <span class="melding" hidden></span>
         </span>
       </div>
-      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" />`,this.gebouwd_=!0;let e=this.$('input[type="file"]');this.$(".kies").addEventListener("click",()=>e.click()),e.addEventListener("change",()=>{let n=e.files?.[0];e.value="",this.upload_(n)}),this.$(".leeg").addEventListener("click",()=>this.zet_(""));let t=this.$('input[type="text"]');t.addEventListener("change",()=>this.zet_(t.value.trim()))}teken_(){this.$(".kop").textContent=this.label_??"Afbeelding";let e=this.$('input[type="text"]');!(this.shadowRoot.activeElement===e)&&e.value!==this.value&&(e.value=this.value);let n=this.$(".voorbeeld");if(this.value){if(n.dataset.bron!==this.value){n.dataset.bron=this.value;let i=document.createElement("img");i.src=this.value,i.alt="",i.onerror=()=>{n.dataset.bron="",n.innerHTML=b(this.fallback_||"car")},n.replaceChildren(i)}}else n.dataset.bron!==""&&(n.dataset.bron="",n.innerHTML=b(this.fallback_||"car"))}zet_(e){this.value_=e,this.teken_(),this.dispatchEvent(new CustomEvent("value-changed",{detail:{value:e},bubbles:!0,composed:!0}))}melding_(e,t=!1){let n=this.$(".melding");n.textContent=e,n.dataset.fout=String(t),n.hidden=!e}async upload_(e){let t=xf(e);if(t)return this.melding_(t,!0);this.melding_("Bezig met uploaden\u2026"),this.$(".kies").disabled=!0;try{let n=new FormData;n.append("file",e);let i=this.hass?.auth?.data?.access_token??this.hass?.auth?.accessToken,r=await fetch("/api/image/upload",{method:"POST",body:n,headers:i?{Authorization:`Bearer ${i}`}:{}});if(!r.ok)throw new Error(`Home Assistant antwoordde met ${r.status}`);let o=await r.json();if(!o?.id)throw new Error("Home Assistant gaf geen id terug.");this.zet_(kf(o.id)),this.melding_("Ge\xFCpload.")}catch(n){this.melding_(`${n?.message??"Uploaden lukte niet"}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/afbeelding.png.`,!0)}finally{this.$(".kies").disabled=!1}}};V("dac-foto-picker",zd);var Gw="0.65.1";Zd(a=>console.warn(`domotiapp-lovelace: ${a}`));Cd({eigenUrl:import.meta.url});console.info(`%c DOMOTIAPP-LOVELACE %c ${Gw} `,"background:#026fa1;color:#e8e4de;font-weight:600;border-radius:3px 0 0 3px;padding:2px 6px","background:#12120f;color:#e8e4de;border-radius:0 3px 3px 0;padding:2px 6px");export{Gw as VERSION};
+      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" />`,this.gebouwd_=!0;let e=this.$('input[type="file"]');this.$(".kies").addEventListener("click",()=>e.click()),e.addEventListener("change",()=>{let n=e.files?.[0];e.value="",this.upload_(n)}),this.$(".leeg").addEventListener("click",()=>this.zet_(""));let t=this.$('input[type="text"]');t.addEventListener("change",()=>this.zet_(t.value.trim()))}teken_(){this.$(".kop").textContent=this.label_??"Afbeelding";let e=this.$('input[type="text"]');!(this.shadowRoot.activeElement===e)&&e.value!==this.value&&(e.value=this.value);let n=this.$(".voorbeeld");if(this.value){if(n.dataset.bron!==this.value){n.dataset.bron=this.value;let i=document.createElement("img");i.src=this.value,i.alt="",i.onerror=()=>{n.dataset.bron="",n.innerHTML=b(this.fallback_||"car")},n.replaceChildren(i)}}else n.dataset.bron!==""&&(n.dataset.bron="",n.innerHTML=b(this.fallback_||"car"))}zet_(e){this.value_=e,this.teken_(),this.dispatchEvent(new CustomEvent("value-changed",{detail:{value:e},bubbles:!0,composed:!0}))}melding_(e,t=!1){let n=this.$(".melding");n.textContent=e,n.dataset.fout=String(t),n.hidden=!e}async upload_(e){let t=xf(e);if(t)return this.melding_(t,!0);this.melding_("Bezig met uploaden\u2026"),this.$(".kies").disabled=!0;try{let n=new FormData;n.append("file",e);let i=this.hass?.auth?.data?.access_token??this.hass?.auth?.accessToken,r=await fetch("/api/image/upload",{method:"POST",body:n,headers:i?{Authorization:`Bearer ${i}`}:{}});if(!r.ok)throw new Error(`Home Assistant antwoordde met ${r.status}`);let o=await r.json();if(!o?.id)throw new Error("Home Assistant gaf geen id terug.");this.zet_(kf(o.id)),this.melding_("Ge\xFCpload.")}catch(n){this.melding_(`${n?.message??"Uploaden lukte niet"}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/afbeelding.png.`,!0)}finally{this.$(".kies").disabled=!1}}};V("dac-foto-picker",zd);var Gw="0.66.0";Zd(a=>console.warn(`domotiapp-lovelace: ${a}`));Cd({eigenUrl:import.meta.url});console.info(`%c DOMOTIAPP-LOVELACE %c ${Gw} `,"background:#026fa1;color:#e8e4de;font-weight:600;border-radius:3px 0 0 3px;padding:2px 6px","background:#12120f;color:#e8e4de;border-radius:0 3px 3px 0;padding:2px 6px");export{Gw as VERSION};

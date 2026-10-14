@@ -391,7 +391,7 @@ class CameraCard extends DacCard {
     .filters .dagmenu button[data-leeg] { color: var(--dac-ink-3); }
     .filters .dagmenu .telling { margin-left: auto; font-size: 11px; color: var(--dac-ink-3); }
     @media (hover: hover) {
-      .filters .dagmenu button:hover { background: var(--dac-surface); }
+      .filters .dagmenu button:hover { background: var(--dac-hover); }
     }
 
     .filters .opslag, .filters .stil {

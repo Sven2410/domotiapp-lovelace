@@ -155,7 +155,7 @@ class EntitiesCard extends DacCard {
       transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
       touch-action: manipulation;
     }
-    @media (hover: hover) { .it:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .it:hover { background: var(--dac-hover); } }
     /* Draagt de plek zelf het vlak, dan hoort hij ook zelf te reageren -- en
        met dezelfde ronding als elke andere kaart in de familie.
 

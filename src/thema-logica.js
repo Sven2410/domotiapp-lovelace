@@ -161,8 +161,11 @@ export function themaVoor(instelling, gemeten) {
 
 /* ------------------------------------------------------------ lampkleur */
 
-/** Het lichte kaartvlak op wit: rgba(20, 20, 10, .045) over #fff. */
-export const LICHT_VLAK = [244.4, 244.4, 244];
+/**
+ * Het lichte kaartvlak: wit, net als een tegel van de Coach (sinds 0.66.0).
+ * Tot dan was het rgba(20, 20, 10, .045) over wit, [244.4, 244.4, 244].
+ */
+export const LICHT_VLAK = [255, 255, 255];
 
 /**
  * De donkerste helderheid die een lampkleur op een lichte kaart mag hebben.

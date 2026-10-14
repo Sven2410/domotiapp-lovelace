@@ -215,7 +215,7 @@ class NavbarCard extends DacCard {
     @media (min-width: 620px) {
       .knop { flex: 0 0 auto; min-width: 66px; }
     }
-    @media (hover: hover) { .knop:hover { background: var(--dac-surface); color: var(--dac-ink); } }
+    @media (hover: hover) { .knop:hover { background: var(--dac-hover); color: var(--dac-ink); } }
     .knop:active { transform: scale(.96); }
     .knop[aria-expanded="true"] { background: var(--dac-surface-hi); color: var(--tone); }
 
@@ -303,7 +303,7 @@ class NavbarCard extends DacCard {
       font: inherit; font-size: 13.5px; color: var(--dac-ink);
       -webkit-tap-highlight-color: transparent;
     }
-    @media (hover: hover) { .regel:hover { background: var(--dac-surface); } }
+    @media (hover: hover) { .regel:hover { background: var(--dac-hover); } }
     .regel:active { background: var(--dac-surface-hi); }
     .regel .mi { display: flex; flex: 0 0 auto; color: var(--dac-ink); }
     .regel .icon, .regel ha-icon {

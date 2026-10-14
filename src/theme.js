@@ -8,9 +8,10 @@
  * If a value changes there, change it here in the same commit.
  *
  * Sinds 0.54.0 staat hier MEER dan bij de Coach: een lichte set (lichtTokens)
- * en een handvol tokens die tussen donker en licht omkeren. De Coach heeft
- * alleen een donker paneel. De donkere waarden die ze delen zijn nog steeds
- * letterlijk dezelfde, en dat bewaakt tests/js/thema-contrast.test.mjs.
+ * en een handvol tokens die tussen donker en licht omkeren. Sinds 0.66.0 zijn
+ * de lichte waarden die de Coach ook heeft (zijn `lightTokens`, v0.113.0) hier
+ * letterlijk dezelfde, net als de donkere: de eigenaar op 14 oktober 2026,
+ * "ja gelijktrekken". Beide bewaakt tests/js/thema-contrast.test.mjs.
  *
  * The energy-stream hues were searched against the #12120f card surface under
  * the categorical rules (OKLCH lightness band, chroma floor, all-pairs CVD
@@ -131,78 +132,97 @@ export const tokens = /* css */ `
      waarde, zodat het veld leesbaar blijft als onze instelling en het thema
      van Home Assistant het niet eens zijn. */
   --dac-veld:          #1b1b19;
+
+  /* Het vlak onder iets waar de muis boven hangt, als dat geen eigen rand
+     heeft (een regel in een menu, een rij in een lijst). In donker het
+     kaartvlak, zoals het tot 0.66.0 letterlijk stond; in licht zou dat wit op
+     een witte kaart zijn, en dan zie je niets. */
+  --dac-hover:         var(--dac-surface);
 `;
 
 /**
  * Het lichte thema: dezelfde namen, andere waarden.
  *
  * GEEN OMGEKEERD DONKER. Een donkere kaart zet zich af door LICHTER te zijn dan
- * zijn ondergrond, een lichte door een tikje donkerder: op een witte pagina is
- * de kaart een zachtgrijs vlak met een haarlijn, en alles wat erin ligt stapelt
- * daar nog een tint bovenop. De inkt is bijna zwart met een warme zweem, net
- * zoals de lichte inkt geen zuiver wit is.
+ * zijn ondergrond. Een lichte kaart is WIT met een rand, net als een tegel in
+ * het paneel van de Coach. Wat erin ligt (knoppen, pillen) is ook wit met een
+ * rand, en een tint (`--dac-surface-hi`, `--dac-tint`) zet een vlak zonder rand
+ * af. De inkt is bijna zwart met een warme zweem, net zoals de lichte inkt geen
+ * zuiver wit is.
  *
  * WAAR DE WAARDEN VANDAAN KOMEN
  *
- * Vlak, rand en inkt zijn die van het infoscherm, dat sinds 0.36.0 een lichte
- * uitvoering heeft en bij een klant op een iPad hangt. De inktladder is een
- * stap zwaarder gezet (68% en 50% in plaats van 66% en 42%): het infoscherm
- * heeft grote letters, een kaart van 56 pixels niet. De grond (wat een scherm
- * dat over de pagina ligt als achtergrond krijgt) is lichter dan daar, zodat
- * hij op een witte pagina niet als een beige vlak afsteekt.
+ * Alles wat de Coach ook heeft, is LETTERLIJK zijn `lightTokens` (v0.113.0,
+ * domotiapp-coach/frontend/src/theme.js). De eigenaar op 14 oktober 2026,
+ * gevraagd of kaarten en paneel in licht hetzelfde moeten zijn: *"ja
+ * gelijktrekken"*. Het gaat om:
+ * - grond, vlak en rand;
+ * - de inktladder;
+ * - het accent;
+ * - de drie statuskleuren.
+ * `--dac-tint` is zijn `--dac-veil`. Tot 0.66.0 stond hier een eigen set, met
+ * een zachtgrijs kaartvlak (wit met 4,5% tint) en een lichtere grond.
+ *
+ * Eén ding wijkt met opzet af: `--dac-shadow`. De Coach geeft een tegel in
+ * licht een zachte slagschaduw. Hier heeft een kaart in donker al sinds 0.14.0
+ * GEEN slagschaduw (zie `tokens`): onder een kaart van één rij werd dat een
+ * vlek, en drie kaarten onder elkaar gaven banden. Dat geldt op wit net zo; de
+ * rand doet het werk.
  *
  * Accent, status en lampgeel zijn DONKERDER dan in donker. Het heldere accent
- * (#198fd9) haalt op een lichte kaart 3,1:1 en de lamp (#f5c451) 1,5:1 -- op
- * donker zijn dat de kleuren die het best lezen, op wit de slechtste. De
- * waarden hieronder zijn uitgerekend tegen het lichte kaartvlak op wit; de
- * toets staat in tests/js/thema-contrast.test.mjs.
+ * (#198fd9) haalt op wit 3,1:1 en de lamp (#f5c451) 1,5:1 -- op donker zijn dat
+ * de kleuren die het best lezen, op wit de slechtste. De toets staat in
+ * tests/js/thema-contrast.test.mjs.
  *
  * De zes identiteitskleuren (zon, huis, net, apparaten) zijn NIET aangepast.
  * Die zijn als set doorgezocht op onderlinge afstand, en die afstand verandert
  * niet van de achtergrond. Ze staan daarom niet in deze lijst.
  */
 export const lichtTokens = /* css */ `
-  --dac-bg:            #f6f5f2;
+  --dac-bg:            #f1f0ec;
   --dac-bg-raise:      #ffffff;
-  --dac-surface:       rgba(20, 20, 10, 0.045);
-  --dac-surface-hi:    rgba(20, 20, 10, 0.080);
-  --dac-border:        rgba(20, 20, 10, 0.11);
-  --dac-border-hi:     rgba(20, 20, 10, 0.22);
+  --dac-surface:       #ffffff;
+  --dac-surface-hi:    rgba(20, 20, 15, 0.045);
+  --dac-border:        rgba(20, 20, 15, 0.11);
+  --dac-border-hi:     rgba(20, 20, 15, 0.22);
 
-  --dac-ink:           #1a1a17;
-  --dac-ink-2:         rgba(26, 26, 23, 0.68);
-  --dac-ink-3:         rgba(26, 26, 23, 0.50);
+  --dac-ink:           #1c1b18;
+  --dac-ink-2:         rgba(28, 27, 24, 0.74);
+  --dac-ink-3:         rgba(28, 27, 24, 0.60);
 
   --dac-accent:        #026fa1;
-  --dac-accent-hi:     #0672a8;
+  --dac-accent-hi:     #0a6aa6;
   --dac-accent-soft:   rgba(2, 111, 161, 0.12);
-  --dac-accent-glow:   rgba(2, 111, 161, 0.22);
+  --dac-accent-glow:   rgba(10, 106, 166, 0.20);
 
-  --dac-good:          #0b850b;
-  --dac-warn:          #b07400;
-  --dac-bad:           #c62f2f;
+  --dac-good:          #0a8a0a;
+  --dac-warn:          #946200;
+  --dac-bad:           #c63131;
 
   --dac-lit:           #c98d00;
 
-  /* Op wit is er geen haarlijn bovenlangs nodig: de rand doet het werk. */
+  /* Geen slagschaduw, en op wit ook geen haarlijn bovenlangs: de rand doet
+     het werk. Zie de kop hierboven: met opzet anders dan de Coach. */
   --dac-shadow:        none;
 
-  --dac-tint:          20, 20, 10;
+  --dac-tint:          20, 20, 15;
   --dac-scheme:        light;
 
   --dac-on-accent:     #ffffff;
   --dac-on-accent-hi:  #ffffff;
 
-  --dac-scrim:         rgba(20, 20, 10, 0.34);
+  --dac-scrim:         rgba(20, 20, 15, 0.34);
   --dac-diepte:        0.3;
 
   --dac-knob:          #ffffff;
   --dac-knob-uit:      #ffffff;
-  --dac-knob-schaduw:  0 1px 2px rgba(20, 20, 10, 0.30);
+  --dac-knob-schaduw:  0 1px 2px rgba(20, 20, 15, 0.30);
   --dac-spoor-aan:     82%;
   --dac-spoor-rand:    82%;
 
   --dac-veld:          #ffffff;
+
+  --dac-hover:         var(--dac-surface-hi);
 `;
 
 /**

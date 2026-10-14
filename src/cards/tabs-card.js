@@ -192,7 +192,7 @@ class TabsCard extends DacCard {
       background: transparent; color: var(--dac-accent-hi); text-align: center;
     }
     @media (hover: hover) {
-      .voegtoe:hover { background: var(--dac-surface); }
+      .voegtoe:hover { background: var(--dac-hover); }
     }
 
     .leeg {

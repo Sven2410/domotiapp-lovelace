@@ -392,6 +392,43 @@ let alleenDonker = 0;
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Bewaker 6: een vlak in de kaartkleur ZONDER rand.
+ *
+ * Sinds 0.66.0 is het kaartvlak in licht WIT, net als een tegel in het paneel
+ * van de Coach (de eigenaar op 14 oktober 2026: "ja gelijktrekken"). Een knop
+ * of een regel met `background: var(--dac-surface)` is dan wit op een witte
+ * kaart; met een rand zie je hem, zonder rand niet. In donker is datzelfde vlak
+ * een tint, en daar zie je het verschil dus niet aan.
+ *
+ * Een hover zonder eigen rand is `var(--dac-hover)`: in donker het kaartvlak,
+ * in licht een tint. Een ander vlak zonder rand: `var(--dac-surface-hi)` of
+ * `rgba(var(--dac-tint), ...)`.
+ *
+ * Grof gemeten: elk CSS-blok zonder geneste accolades dat `var(--dac-surface)`
+ * als achtergrond heeft, moet ook een rand hebben (of een box-shadow met
+ * `--dac-border` erin, wat ook een rand is). Bij de invoering vond dit zeven
+ * hover-regels; die zijn `var(--dac-hover)` geworden.
+ */
+const VLAK_ACHTERGROND = /background(-color)?\s*:\s*var\(--dac-surface\)/;
+const EIGEN_RAND = /(^|[;{\s])border(-[a-z]+)?\s*:\s*(?!0\b|0px\b|none\b)[^;]+/;
+const RAND_ALS_SCHADUW = /box-shadow\s*:\s*(?!none)[^;]*var\(--dac-border/;
+let vlakZonderRand = 0;
+{
+  for (const pad of alleBronbestanden()) {
+    const bron = readFileSync(pad, "utf8");
+    const naam = relative(WORTEL, pad).split(sep).join("/");
+    for (const m of bron.matchAll(/[^{}]*\{([^{}]*)\}/g)) {
+      const body = m[1];
+      if (!VLAK_ACHTERGROND.test(body)) continue;
+      if (EIGEN_RAND.test(body) || RAND_ALS_SCHADUW.test(body)) continue;
+      vlakZonderRand += 1;
+      const regel = bron.slice(0, m.index + m[0].indexOf("{")).split(NEWLINE).length;
+      fouten.push(`${naam}:${regel}: var(--dac-surface) als achtergrond zonder rand -- in licht is dat wit op wit`);
+    }
+  }
+}
+
 if (fouten.length > 0) {
   console.error("FOUT in de CSS van de kaarten:");
   for (const f of fouten) console.error(`  - ${f}`);
@@ -408,6 +445,13 @@ if (fouten.length > 0) {
         "bewaker 5 in scripts/check-css.mjs en de tokens in src/theme.js.",
     );
   }
+  if (vlakZonderRand > 0) {
+    console.error(
+      "\nEen vlak in de kaartkleur zonder rand is in licht onzichtbaar. Zie bewaker 6\n" +
+        "in scripts/check-css.mjs: een hover is var(--dac-hover), een ander vlak\n" +
+        "var(--dac-surface-hi) of een rand erbij.",
+    );
+  }
   if (sjablonen > 0) {
     console.error(
       "\nEen backtick in een CSS-commentaar sluit het sjabloon af. Haal hem weg --\n" +
@@ -421,5 +465,6 @@ console.log(
   `OK: ${bewaakt} hover-regel(s) op kaarten achter @media (hover: hover), ` +
     "geen sjabloon dat midden in een CSS-commentaar ophoudt, " +
     "elke var(--dac-...) bestaat, er staan geen stuurtekens in de bron, " +
-    "en geen kaart draagt een kleur die alleen in donker klopt.",
+    "geen kaart draagt een kleur die alleen in donker klopt, " +
+    "en geen vlak in de kaartkleur staat zonder rand.",
 );
