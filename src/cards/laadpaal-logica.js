@@ -388,6 +388,68 @@ export function socTekst(stand) {
   return stand.socGeschat ? `± ${pct}` : pct;
 }
 
+/**
+ * Het veld "Hoe vol is de auto nu?", of null als het er niet hoort.
+ *
+ * De eigenaar op 14 oktober 2026, met de integratie van zijn auto even uit
+ * Home Assistant: de coach vroeg "Geef de accustand door op de laadpaalkaart",
+ * "maar ik kan nergens de accustand doorgeven." Daarna: "ja ook op de lovelace
+ * kaart wil ik die."
+ *
+ * Alles komt van de number `accustand` (coach 0.117.0). Of het veld er staat,
+ * beslist de coach (`vragen`): een kabel erin, een auto van het huis met zijn
+ * accu in het profiel, en geen accustand van de auto zelf. Zonder opgave is de
+ * toestand `unknown`; daarna de stand waar de coach mee rekent, die meeloopt
+ * met wat de paal erin laadt. De zinnen zijn die van de coachkaart (0.116.2).
+ *
+ * @param {object|null} st de state van de number `accustand`
+ * @returns {{waarde: string, opgegeven: boolean, uitleg: string}|null}
+ */
+export function accustandVeld(st) {
+  if (!st || st.state === "unavailable") return null;
+  const a = st.attributes ?? {};
+  if (a.vragen !== true) return null;
+  const n = LEEG.has(String(st.state ?? "")) ? null : getal(st.state);
+  if (n != null) {
+    return {
+      waarde: String(Math.round(n)),
+      opgegeven: true,
+      uitleg: "Dit loopt mee met wat de paal erin doet. Zegt de auto iets anders, vul dat in en druk op Doorgeven.",
+    };
+  }
+  // De eerste zin alleen bij een auto met een accusensor (`sensor`): die
+  // zwijgt nu. Een auto zonder sensor heeft nooit iets doorgegeven.
+  const stil = a.sensor === true ? "De auto geeft zijn accustand nu niet door. " : "";
+  const verder =
+    a.wacht === true
+      ? "Hier wacht de coach op. Zonder dit gaat hij uit van een lege accu."
+      : "Geef dit door, dan kan de coach het gunstigste moment kiezen.";
+  return { waarde: "", opgegeven: false, uitleg: stil + verder };
+}
+
+/**
+ * Wat er naar de coach gaat als de bewoner op Doorgeven drukt, of null.
+ *
+ * Afgerond op de stap van de entiteit en binnen min en max (0 tot 100): een
+ * `number.set_value` buiten het bereik weigert Home Assistant, en dan gebeurt
+ * er voor de bewoner niets. Een leeg veld geeft niets door; een opgave wissen
+ * kan hier niet, en hoeft ook niet, want de kabel eruit doet dat.
+ *
+ * @param {string} tekst wat er in het veld staat
+ * @param {object|null} st de state van de number `accustand`
+ */
+export function accustandInvoer(tekst, st) {
+  const ruw = String(tekst ?? "").trim().replace(",", ".");
+  if (ruw === "") return null;
+  const n = Number(ruw);
+  if (!Number.isFinite(n)) return null;
+  const a = st?.attributes ?? {};
+  const stap = getal(a.step) || 1;
+  const min = getal(a.min) ?? 0;
+  const max = getal(a.max) ?? 100;
+  return Math.min(max, Math.max(min, Math.round(n / stap) * stap));
+}
+
 /* --------------------------------------------------- vermogen en stapper */
 
 /**
