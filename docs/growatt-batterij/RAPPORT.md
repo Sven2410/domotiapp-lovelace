@@ -111,7 +111,8 @@ Tegen de code van `main` (`git archive main`, de test en de invoer erbij):
 De vijf die op de oude code slagen zijn allemaal als REGRESSIEWACHT gelabeld:
 daar kreeg een Growatt nooit een foto. Op deze tak: 1821 JS-tests groen. Ook
 groen: `verify`, `check:registratie`, `check:controls` en `check:css`.
-`VASTE_WEBP` in `tests/test_afbeeldingen.py` heeft de nieuwe foto.
+`VASTE_WEBP` in `tests/test_afbeeldingen.py` heeft de nieuwe foto. Python, in
+Docker: 815 passed.
 
 ### In een echte browser, tegen de nagebootste coach
 
