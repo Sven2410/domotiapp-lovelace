@@ -66,6 +66,10 @@ VASTE_WEBP = [
     # Sinds 0.63.1: de airco-kaart. Productfoto van Mitsubishi Electric, met
     # toestemming van de eigenaar als installateur (13 oktober 2026).
     "aircos/mitsubishi-premium-onyx-black.webp",
+    # Sinds 0.67.0: de robotstofzuigerkaart. Productfoto's van Dreame, met
+    # toestemming van de eigenaar als installateur (15 oktober 2026).
+    "robotstofzuigers/dreame-x50-ultra-complete.webp",
+    "robotstofzuigers/dreame-l40s-pro-ultra.webp",
 ]
 
 

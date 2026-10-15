@@ -588,6 +588,12 @@ export const icons = {
     <path d="M4.2 7.8h15.6M7.2 5.3h2.4"/>
     <path d="M9 11.4c1 1.4 1 2.8 0 4.2M12 11.4c1 1.4 1 2.8 0 4.2M15 11.4c1 1.4 1 2.8 0 4.2"/>`),
 
+  /* Een robotstofzuiger van bovenaf: de ronde behuizing, de lidar-koepel en
+     de bumper voorop. Voor de robotstofzuigerkaart (15 oktober 2026). */
+  stofzuiger: draw(`<circle cx="12" cy="12" r="8.6"/>
+    <circle cx="12" cy="8.6" r="2"/>
+    <path d="M6.4 14.4a6.2 6.2 0 0 0 11.2 0"/>`),
+
   printer: draw(`<path d="M7 9V4.6a.6.6 0 0 1 .6-.6h8.8a.6.6 0 0 1 .6.6V9"/>
     <rect x="3.6" y="9" width="16.8" height="7.2" rx="1.8"/>
     <path d="M7 15.4h10v4a.6.6 0 0 1-.6.6H7.6a.6.6 0 0 1-.6-.6z"/>`),

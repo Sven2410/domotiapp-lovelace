@@ -1,0 +1,2937 @@
+{
+ "_toelichting": "Tweede Dreame bij dezelfde klant, model dreame.vacuum.r9419h (marketingnaam nog onbekend), HACS dreame_vacuum (Tasshack), HA 2026.10.1, uitgelezen 15-10-2026 met alleen lezen. Geanonimiseerd zoals de X50-dump: MAC, serienummer, wifi, cloud-ids, tokens, persoonsnamen in kamers, tijdzone en ids. Voor de publieke repo ingekort tot wat een proef nodig heeft: zonder de instellingen per kamer (66 entiteiten), zonder de geometrie op de kaartcamera, zonder wifi, kaartdatums, schema en tijdstempels op de stofzuiger. In de vorm van hass: states, entities, devices, services.",
+ "states": {
+  "vacuum.dreame_boven": {
+   "entity_id": "vacuum.dreame_boven",
+   "state": "docked",
+   "attributes": {
+    "fan_speed_list": [
+     "silent",
+     "standard",
+     "strong",
+     "turbo"
+    ],
+    "fan_speed": "standard",
+    "timing_clean": 0,
+    "startup_method": "Through App",
+    "current_mop_type": 2,
+    "mop_pad": true,
+    "mop_pad_humidity": "Moist",
+    "mop_pad_humidity_list": [
+     "Slightly dry",
+     "Moist",
+     "Wet"
+    ],
+    "self_clean_area": 20,
+    "self_clean_area_min": 10,
+    "self_clean_area_max": 35,
+    "self_clean_area_default": 20,
+    "previous_self_clean_area": 20,
+    "self_clean_time_min": 10,
+    "self_clean_time_max": 50,
+    "self_clean_time_default": 25,
+    "previous_self_clean_time": 25,
+    "washing_mode": "Standard",
+    "washing_mode_list": [
+     "Light",
+     "Standard",
+     "Deep"
+    ],
+    "status": "sleeping",
+    "cleaning_mode_list": [
+     "Sweeping",
+     "Mopping",
+     "Sweeping and mopping",
+     "Mopping after sweeping"
+    ],
+    "cleaning_mode": "Sweeping and mopping",
+    "suction_level_list": [
+     "Quiet",
+     "Standard",
+     "Strong",
+     "Turbo"
+    ],
+    "suction_level": "Standard",
+    "tight_mopping": false,
+    "error": "No error",
+    "cleaning_paused": 0,
+    "relocation_status": "Located",
+    "low_water_warning": "No warning",
+    "cleaning_time": 52,
+    "cleaned_area": 51,
+    "main_brush_time_left": 290,
+    "main_brush_left": 96,
+    "side_brush_time_left": 190,
+    "side_brush_left": 95,
+    "filter_left": 93,
+    "filter_time_left": 140,
+    "total_cleaned_area": 558,
+    "total_cleaning_time": 573,
+    "cleaning_count": 8,
+    "customized_cleaning": false,
+    "nation_matched": "matched",
+    "total_runtime": 0,
+    "total_cruise_time": 0,
+    "multi_floor_map": false,
+    "scheduled_clean": false,
+    "voice_assistant": true,
+    "voice_assistant_language_list": [
+     "English",
+     "German",
+     "Russian",
+     "Italian",
+     "French",
+     "Korean",
+     "Chinese"
+    ],
+    "voice_assistant_language": "English",
+    "self_clean": true,
+    "obstacle_avoidance": true,
+    "volume": 90,
+    "child_lock": false,
+    "resume_cleaning": true,
+    "carpet_boost": true,
+    "map_recovery_status": "Idle",
+    "auto_water_refilling": false,
+    "battery_charge_level": 100,
+    "ring_light_always_on": false,
+    "auto_empty_mode": "High frequency",
+    "auto_empty_mode_list": [
+     "Off",
+     "Standard",
+     "High frequency",
+     "Low frequency"
+    ],
+    "auto_dust_collecting": true,
+    "auto_empty_status": "Idle",
+    "cleaning_progress": 0,
+    "task_type": 0,
+    "intelligent_recognition": true,
+    "wheel_dirty_left": 68,
+    "wheel_dirty_time_left": 20,
+    "scale_inhibitor_left": 89,
+    "scale_inhibitor_time_left": 982,
+    "map_backup_status": "Idle",
+    "sensor_dirty_left": 68,
+    "sensor_dirty_time_left": 20,
+    "carpet_recognition": 1,
+    "carpet_cleaning_list": [
+     "Avoidance",
+     "Adaptation",
+     "Remove mop",
+     "Ignore",
+     "Cross"
+    ],
+    "carpet_cleaning": "Adaptation",
+    "auto_mount_mop": true,
+    "auto_add_detergent": 1,
+    "clean_carpets_first": false,
+    "dust_bag_status": "Installed",
+    "drying_time_list": [
+     2,
+     3,
+     4
+    ],
+    "drying_time": 3,
+    "drying_progress": 0,
+    "detergent_status": "Installed",
+    "station_drainage_status": "Idle",
+    "hot_water_status": "Enabled",
+    "clean_water_tank_status": "Installed",
+    "dirty_water_tank_status": "Installed",
+    "smart_mop_washing": false,
+    "auto_drying": true,
+    "collision_avoidance": true,
+    "fill_light": true,
+    "ai_obstacle_detection": true,
+    "ai_pet_detection": false,
+    "ai_obstacle_picture": false,
+    "ai_obstacle_image_upload": false,
+    "pet_focused_detection": false,
+    "streaming_voice_prompt": true,
+    "large_particles_boost": false,
+    "pet_focused_cleaning": false,
+    "max_suction_power": false,
+    "cleaning_route_list": [
+     "Quick",
+     "Standard"
+    ],
+    "cleaning_route": "Standard",
+    "cleangenius_list": [
+     "Off",
+     "Routine cleaning",
+     "Deep cleaning"
+    ],
+    "cleangenius": "Routine cleaning",
+    "cleangenius_mode_list": [
+     "Vacuum and mop",
+     "Mop after vacuum"
+    ],
+    "cleangenius_mode": "Vacuum and mop",
+    "water_temperature_list": [
+     "Normal",
+     "Mild",
+     "Warm",
+     "Hot"
+    ],
+    "water_temperature": "Hot",
+    "silent_drying": false,
+    "hair_compression": true,
+    "side_brush_carpet_rotate": false,
+    "dnd_disable_resume_cleaning": true,
+    "dnd_disable_auto_empty": true,
+    "dnd_reduce_volume": false,
+    "self_clean_frequency_list": [],
+    "self_clean_frequency": "By area",
+    "floor_direction_cleaning": false,
+    "intensive_carpet_cleaning": false,
+    "mop_extend": true,
+    "mop_extend_frequency_list": [
+     "Standard",
+     "Intelligent",
+     "High"
+    ],
+    "mop_extend_frequency": "High",
+    "gap_cleaning_extension": false,
+    "mopping_under_furnitures": false,
+    "auto_recleaning_list": [
+     "Off",
+     "In deep mode",
+     "In all modes"
+    ],
+    "auto_recleaning": "Off",
+    "auto_rewashing_list": [
+     "Off",
+     "In deep mode",
+     "In all modes"
+    ],
+    "auto_rewashing": "Off",
+    "dynamic_obstacle_cleaning": false,
+    "off_peak_charging": false,
+    "battery": 100,
+    "cleaning_sequence": [
+     7,
+     6,
+     2,
+     1,
+     5,
+     4
+    ],
+    "charging": false,
+    "docked": true,
+    "located": true,
+    "started": false,
+    "paused": false,
+    "running": false,
+    "returning_paused": false,
+    "returning": false,
+    "segment_cleaning": false,
+    "zone_cleaning": false,
+    "spot_cleaning": false,
+    "cruising": false,
+    "vacuum_state": "charging_completed",
+    "has_saved_map": true,
+    "has_temporary_map": false,
+    "has_error": false,
+    "faults": {},
+    "mapping": false,
+    "mapping_available": false,
+    "dust_collection_available": true,
+    "washing": false,
+    "washing_paused": false,
+    "drying": false,
+    "low_water": false,
+    "washing_available": true,
+    "returning_to_wash": false,
+    "returning_to_wash_paused": false,
+    "drying_available": true,
+    "draining_available": true,
+    "drying_left": 0,
+    "cleangenius_cleaning": true,
+    "wetness_level": 16,
+    "map_count": 1,
+    "active_segments": null,
+    "skip_area_available": false,
+    "skipped_segments": null,
+    "completed_segments": null,
+    "current_segment": 5,
+    "selected_map": "Kaart 1",
+    "selected_map_id": 1,
+    "selected_map_index": 1,
+    "rooms": {
+     "Kaart 1": [
+      {
+       "id": 1,
+       "name": "Badkamer A",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 2,
+       "name": "Slaapkamer A",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 4,
+       "name": "Stairs",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 5,
+       "name": "Woonkamer",
+       "icon": "mdi:sofa-outline",
+       "type": 1,
+       "index": 0
+      },
+      {
+       "id": 6,
+       "name": "Badkamer B",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 7,
+       "name": "Slaapkamer B",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      }
+     ]
+    },
+    "carpet_avoidance": false,
+    "floor_direction_cleaning_available": true,
+    "shortcut_task": false,
+    "firmware_version": "3909",
+    "device_class": "dreame_vacuum",
+    "icon": "mdi:sleep",
+    "friendly_name": "dreame boven  dreame boven",
+    "supported_features": 31676
+   }
+  },
+  "sensor.dreame_boven_cleaning_time": {
+   "entity_id": "sensor.dreame_boven_cleaning_time",
+   "state": "52",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:timer-sand",
+    "friendly_name": "dreame boven Schoonmaaktijd"
+   }
+  },
+  "sensor.dreame_boven_mapping_time": {
+   "entity_id": "sensor.dreame_boven_mapping_time",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:map-clock",
+    "friendly_name": "dreame boven Kaarttijd"
+   }
+  },
+  "sensor.dreame_boven_cleaned_area": {
+   "entity_id": "sensor.dreame_boven_cleaned_area",
+   "state": "51",
+   "attributes": {
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:ruler-square",
+    "friendly_name": "dreame boven Schoongemaakt gebied"
+   }
+  },
+  "sensor.dreame_boven_state": {
+   "entity_id": "sensor.dreame_boven_state",
+   "state": "charging_completed",
+   "attributes": {
+    "value": 13,
+    "icon": "mdi:robot-vacuum",
+    "friendly_name": "dreame boven Status"
+   }
+  },
+  "sensor.dreame_boven_status": {
+   "entity_id": "sensor.dreame_boven_status",
+   "state": "sleeping",
+   "attributes": {
+    "value": 14,
+    "icon": "mdi:vacuum",
+    "friendly_name": "dreame boven Status"
+   }
+  },
+  "sensor.dreame_boven_relocation_status": {
+   "entity_id": "sensor.dreame_boven_relocation_status",
+   "state": "located",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:map-marker-radius",
+    "friendly_name": "dreame boven Verplaatsingsstatus"
+   }
+  },
+  "sensor.dreame_boven_task_status": {
+   "entity_id": "sensor.dreame_boven_task_status",
+   "state": "completed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:file-tree",
+    "friendly_name": "dreame boven Taakstatus"
+   }
+  },
+  "sensor.dreame_boven_mop_pad": {
+   "entity_id": "sensor.dreame_boven_mop_pad",
+   "state": "installed",
+   "attributes": {
+    "icon": "mdi:google-circles-communities",
+    "friendly_name": "dreame boven Dweilpad"
+   }
+  },
+  "sensor.dreame_boven_dust_collection": {
+   "entity_id": "sensor.dreame_boven_dust_collection",
+   "state": "available",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:delete-sweep",
+    "friendly_name": "dreame boven Stofverzameling"
+   }
+  },
+  "sensor.dreame_boven_auto_empty_status": {
+   "entity_id": "sensor.dreame_boven_auto_empty_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:delete",
+    "friendly_name": "dreame boven Status automatisch legen"
+   }
+  },
+  "sensor.dreame_boven_self_wash_base_status": {
+   "entity_id": "sensor.dreame_boven_self_wash_base_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:dishwasher",
+    "friendly_name": "dreame boven Status zelfwassing-basis"
+   }
+  },
+  "sensor.dreame_boven_low_water_warning": {
+   "entity_id": "sensor.dreame_boven_low_water_warning",
+   "state": "no_warning",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:water-check",
+    "friendly_name": "dreame boven Waarschuwing laag waterniveau"
+   }
+  },
+  "sensor.dreame_boven_drainage_status": {
+   "entity_id": "sensor.dreame_boven_drainage_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:pump-off",
+    "friendly_name": "dreame boven Status waterafvoer"
+   }
+  },
+  "sensor.dreame_boven_task_type": {
+   "entity_id": "sensor.dreame_boven_task_type",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:sitemap",
+    "friendly_name": "dreame boven Taaktype"
+   }
+  },
+  "sensor.dreame_boven_stream_status": {
+   "entity_id": "sensor.dreame_boven_stream_status",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:webcam-off",
+    "friendly_name": "dreame boven Stream-status"
+   }
+  },
+  "sensor.dreame_boven_error": {
+   "entity_id": "sensor.dreame_boven_error",
+   "state": "no_error",
+   "attributes": {
+    "value": 0,
+    "faults": [],
+    "description": "Geen fout",
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "dreame boven Fout"
+   }
+  },
+  "sensor.dreame_boven_charging_status": {
+   "entity_id": "sensor.dreame_boven_charging_status",
+   "state": "charging_completed",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:home-lightning-bolt",
+    "friendly_name": "dreame boven Oplaadstatus"
+   }
+  },
+  "sensor.dreame_boven_battery_level": {
+   "entity_id": "sensor.dreame_boven_battery_level",
+   "state": "100",
+   "attributes": {
+    "state_class": "measurement",
+    "value": 100,
+    "unit_of_measurement": "%",
+    "device_class": "battery",
+    "icon": "mdi:battery",
+    "friendly_name": "dreame boven Batterijniveau"
+   }
+  },
+  "sensor.dreame_boven_main_brush_left": {
+   "entity_id": "sensor.dreame_boven_main_brush_left",
+   "state": "96",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "dreame boven Hoofdborstel"
+   }
+  },
+  "sensor.dreame_boven_main_brush_time_left": {
+   "entity_id": "sensor.dreame_boven_main_brush_time_left",
+   "state": "290",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "dreame boven Resterende tijd hoofdborstel"
+   }
+  },
+  "sensor.dreame_boven_side_brush_left": {
+   "entity_id": "sensor.dreame_boven_side_brush_left",
+   "state": "95",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "dreame boven Zijborstel"
+   }
+  },
+  "sensor.dreame_boven_side_brush_time_left": {
+   "entity_id": "sensor.dreame_boven_side_brush_time_left",
+   "state": "190",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "dreame boven Resterende tijd zijborstel"
+   }
+  },
+  "sensor.dreame_boven_filter_left": {
+   "entity_id": "sensor.dreame_boven_filter_left",
+   "state": "93",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:air-filter",
+    "friendly_name": "dreame boven Filterelement"
+   }
+  },
+  "sensor.dreame_boven_filter_time_left": {
+   "entity_id": "sensor.dreame_boven_filter_time_left",
+   "state": "140",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:air-filter",
+    "friendly_name": "dreame boven Resterende filtertijd"
+   }
+  },
+  "sensor.dreame_boven_sensor_dirty_left": {
+   "entity_id": "sensor.dreame_boven_sensor_dirty_left",
+   "state": "68",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:radar",
+    "friendly_name": "dreame boven Sensoren reinigen"
+   }
+  },
+  "sensor.dreame_boven_sensor_dirty_time_left": {
+   "entity_id": "sensor.dreame_boven_sensor_dirty_time_left",
+   "state": "20",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:radar",
+    "friendly_name": "dreame boven Resterende sensortijd"
+   }
+  },
+  "sensor.dreame_boven_wheel_dirty_left": {
+   "entity_id": "sensor.dreame_boven_wheel_dirty_left",
+   "state": "68",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:tire",
+    "friendly_name": "dreame boven Wielen reinigen"
+   }
+  },
+  "sensor.dreame_boven_wheel_dirty_time_left": {
+   "entity_id": "sensor.dreame_boven_wheel_dirty_time_left",
+   "state": "20",
+   "attributes": {
+    "unit_of_measurement": "d",
+    "device_class": "duration",
+    "icon": "mdi:tire",
+    "friendly_name": "dreame boven Resterende wieltijd"
+   }
+  },
+  "sensor.dreame_boven_scale_inhibitor_left": {
+   "entity_id": "sensor.dreame_boven_scale_inhibitor_left",
+   "state": "89",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:pipe",
+    "friendly_name": "dreame boven Kalkremmer"
+   }
+  },
+  "sensor.dreame_boven_scale_inhibitor_time_left": {
+   "entity_id": "sensor.dreame_boven_scale_inhibitor_time_left",
+   "state": "982",
+   "attributes": {
+    "unit_of_measurement": "d",
+    "device_class": "duration",
+    "icon": "mdi:pipe",
+    "friendly_name": "dreame boven Resterende tijd antikalkmodule"
+   }
+  },
+  "sensor.dreame_boven_first_cleaning_date": {
+   "entity_id": "sensor.dreame_boven_first_cleaning_date",
+   "state": "2026-06-23T14:31:11+00:00",
+   "attributes": {
+    "value": 1782225071,
+    "device_class": "timestamp",
+    "icon": "mdi:calendar-start",
+    "friendly_name": "dreame boven Eerste schoonmaakdatum"
+   }
+  },
+  "sensor.dreame_boven_total_cleaning_time": {
+   "entity_id": "sensor.dreame_boven_total_cleaning_time",
+   "state": "573",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:timer-outline",
+    "friendly_name": "dreame boven Totale schoonmaaktijd"
+   }
+  },
+  "sensor.dreame_boven_cleaning_count": {
+   "entity_id": "sensor.dreame_boven_cleaning_count",
+   "state": "8",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "x",
+    "icon": "mdi:counter",
+    "friendly_name": "dreame boven Aantal schoonmaakbeurten"
+   }
+  },
+  "sensor.dreame_boven_total_cleaned_area": {
+   "entity_id": "sensor.dreame_boven_total_cleaned_area",
+   "state": "558",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:set-square",
+    "friendly_name": "dreame boven Totaal schoongemaakt gebied"
+   }
+  },
+  "sensor.dreame_boven_clean_water_tank_status": {
+   "entity_id": "sensor.dreame_boven_clean_water_tank_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:beer",
+    "friendly_name": "dreame boven Status schoonwatertank"
+   }
+  },
+  "sensor.dreame_boven_dirty_water_tank_status": {
+   "entity_id": "sensor.dreame_boven_dirty_water_tank_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:glass-mug",
+    "friendly_name": "dreame boven Status vuilwatertank"
+   }
+  },
+  "sensor.dreame_boven_dust_bag_status": {
+   "entity_id": "sensor.dreame_boven_dust_bag_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:delete-circle-outline",
+    "friendly_name": "dreame boven Status stofzak"
+   }
+  },
+  "sensor.dreame_boven_detergent_status": {
+   "entity_id": "sensor.dreame_boven_detergent_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:chart-bubble",
+    "friendly_name": "dreame boven Status reinigingsmiddel"
+   }
+  },
+  "sensor.dreame_boven_station_drainage_status": {
+   "entity_id": "sensor.dreame_boven_station_drainage_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:water-pump",
+    "friendly_name": "dreame boven Status station-waterafvoer"
+   }
+  },
+  "sensor.dreame_boven_hot_water_status": {
+   "entity_id": "sensor.dreame_boven_hot_water_status",
+   "state": "enabled",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:water-thermometer",
+    "friendly_name": "dreame boven Status warm water"
+   }
+  },
+  "sensor.dreame_boven_current_room": {
+   "entity_id": "sensor.dreame_boven_current_room",
+   "state": "Woonkamer",
+   "attributes": {
+    "room_id": 5,
+    "room_icon": "mdi:sofa-outline",
+    "room_name": "Living Room",
+    "icon": "mdi:home-map-marker",
+    "friendly_name": "dreame boven Huidige kamer"
+   }
+  },
+  "sensor.dreame_boven_cleaning_history": {
+   "entity_id": "sensor.dreame_boven_cleaning_history",
+   "state": "2026-10-14T16:22:53+00:00",
+   "attributes": {
+    "10-14 18:22": {
+     "timestamp": 1791994973,
+     "cleaning_time": "52 min",
+     "cleaned_area": "51 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1791999008,
+     "pet": false
+    },
+    "09-10 16:35": {
+     "timestamp": 1789050950,
+     "cleaning_time": "127 min",
+     "cleaned_area": "97 m²",
+     "status": "Cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1789060946,
+     "pet": false
+    },
+    "07-06 13:22": {
+     "timestamp": 1783336954,
+     "cleaning_time": "98 min",
+     "cleaned_area": "101 m²",
+     "status": "Cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1783344824,
+     "pet": false
+    },
+    "07-06 13:18": {
+     "timestamp": 1783336732,
+     "cleaning_time": "2 min",
+     "cleaned_area": "2 m²",
+     "status": "Spot cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1783336916,
+     "pet": false
+    },
+    "07-06 11:27": {
+     "timestamp": 1783330060,
+     "cleaning_time": "2 min",
+     "cleaned_area": "2 m²",
+     "status": "Spot cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1783330206,
+     "pet": false
+    },
+    "06-26 18:39": {
+     "timestamp": 1782491957,
+     "cleaning_time": "93 min",
+     "cleaned_area": "102 m²",
+     "status": "Cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1782499261,
+     "pet": false
+    },
+    "06-23 18:35": {
+     "timestamp": 1782232505,
+     "cleaning_time": "92 min",
+     "cleaned_area": "101 m²",
+     "status": "Cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1782232294,
+     "pet": false
+    },
+    "06-23 16:31": {
+     "timestamp": 1782225073,
+     "cleaning_time": "107 min",
+     "cleaned_area": "102 m²",
+     "status": "Cleaning",
+     "completed": true,
+     "mop_pad": "Not installed",
+     "cleanup_method": "Cleangenius",
+     "multiple_cleaning_time": 1782232294,
+     "pet": false
+    },
+    "device_class": "timestamp",
+    "icon": "mdi:clipboard-text-clock",
+    "friendly_name": "dreame boven Schoonmaakgeschiedenis"
+   }
+  },
+  "sensor.dreame_boven_cruising_history": {
+   "entity_id": "sensor.dreame_boven_cruising_history",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "timestamp",
+    "icon": "mdi:map-marker-path",
+    "friendly_name": "dreame boven Patrouillegeschiedenis"
+   }
+  },
+  "sensor.dreame_boven_cleaning_progress": {
+   "entity_id": "sensor.dreame_boven_cleaning_progress",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:home-percent",
+    "friendly_name": "dreame boven Schoonmaakvoortgang"
+   }
+  },
+  "sensor.dreame_boven_drying_progress": {
+   "entity_id": "sensor.dreame_boven_drying_progress",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:water-percent",
+    "friendly_name": "dreame boven Droogvoortgang"
+   }
+  },
+  "sensor.dreame_boven_drying_left": {
+   "entity_id": "sensor.dreame_boven_drying_left",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:water-percent",
+    "friendly_name": "dreame boven Resterende droogtijd"
+   }
+  },
+  "sensor.dreame_boven_firmware_version": {
+   "entity_id": "sensor.dreame_boven_firmware_version",
+   "state": "3909",
+   "attributes": {
+    "icon": "mdi:chip",
+    "friendly_name": "dreame boven Firmware-versie"
+   }
+  },
+  "binary_sensor.dreame_boven_charging_state": {
+   "entity_id": "binary_sensor.dreame_boven_charging_state",
+   "state": "off",
+   "attributes": {
+    "device_class": "battery_charging",
+    "icon": "mdi:power-plug",
+    "friendly_name": "dreame boven Oplaadstatus"
+   }
+  },
+  "binary_sensor.dreame_boven_problem": {
+   "entity_id": "binary_sensor.dreame_boven_problem",
+   "state": "off",
+   "attributes": {
+    "type": null,
+    "code": null,
+    "device_class": "problem",
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "dreame boven Probleem"
+   }
+  },
+  "binary_sensor.dreame_boven_maintenance": {
+   "entity_id": "binary_sensor.dreame_boven_maintenance",
+   "state": "off",
+   "attributes": {
+    "items": [],
+    "device_class": "problem",
+    "icon": "mdi:wrench-check",
+    "friendly_name": "dreame boven Onderhoud"
+   }
+  },
+  "switch.dreame_boven_resume_cleaning": {
+   "entity_id": "switch.dreame_boven_resume_cleaning",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:play-pause",
+    "friendly_name": "dreame boven Reiniging hervatten"
+   }
+  },
+  "switch.dreame_boven_carpet_boost": {
+   "entity_id": "switch.dreame_boven_carpet_boost",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:upload",
+    "friendly_name": "dreame boven Tapijt boost"
+   }
+  },
+  "switch.dreame_boven_obstacle_avoidance": {
+   "entity_id": "switch.dreame_boven_obstacle_avoidance",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:video-3d",
+    "friendly_name": "dreame boven Obstakelvermijding"
+   }
+  },
+  "switch.dreame_boven_customized_cleaning": {
+   "entity_id": "switch.dreame_boven_customized_cleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:home-search",
+    "friendly_name": "dreame boven Gepersonaliseerde reiniging"
+   }
+  },
+  "switch.dreame_boven_child_lock": {
+   "entity_id": "switch.dreame_boven_child_lock",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:lock-off",
+    "friendly_name": "dreame boven Kinderslot"
+   }
+  },
+  "switch.dreame_boven_dnd": {
+   "entity_id": "switch.dreame_boven_dnd",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:minus-circle-off-outline",
+    "friendly_name": "dreame boven DnD"
+   }
+  },
+  "switch.dreame_boven_dnd_disable_resume_cleaning": {
+   "entity_id": "switch.dreame_boven_dnd_disable_resume_cleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:pause-box",
+    "friendly_name": "dreame boven Hervatten reiniging uitschakelen"
+   }
+  },
+  "switch.dreame_boven_dnd_disable_auto_empty": {
+   "entity_id": "switch.dreame_boven_dnd_disable_auto_empty",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:delete-off",
+    "friendly_name": "dreame boven Automatisch legen uitschakelen"
+   }
+  },
+  "switch.dreame_boven_dnd_reduce_volume": {
+   "entity_id": "switch.dreame_boven_dnd_reduce_volume",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:volume-minus",
+    "friendly_name": "dreame boven Volume verlagen"
+   }
+  },
+  "switch.dreame_boven_multi_floor_map": {
+   "entity_id": "switch.dreame_boven_multi_floor_map",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:layers-off",
+    "friendly_name": "dreame boven Meerlaagse kaart"
+   }
+  },
+  "switch.dreame_boven_self_clean": {
+   "entity_id": "switch.dreame_boven_self_clean",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:water-sync",
+    "friendly_name": "dreame boven Zelfreiniging"
+   }
+  },
+  "switch.dreame_boven_auto_water_refilling": {
+   "entity_id": "switch.dreame_boven_auto_water_refilling",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:water-boiler-off",
+    "friendly_name": "dreame boven Automatisch water bijvullen"
+   }
+  },
+  "switch.dreame_boven_intelligent_recognition": {
+   "entity_id": "switch.dreame_boven_intelligent_recognition",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:wifi-marker",
+    "friendly_name": "dreame boven Intelligente herkenning"
+   }
+  },
+  "switch.dreame_boven_auto_drying": {
+   "entity_id": "switch.dreame_boven_auto_drying",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:weather-sunny",
+    "friendly_name": "dreame boven Automatisch drogen"
+   }
+  },
+  "switch.dreame_boven_auto_add_detergent": {
+   "entity_id": "switch.dreame_boven_auto_add_detergent",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:chart-bubble",
+    "friendly_name": "dreame boven Automatisch reinigingsmiddel toevoegen"
+   }
+  },
+  "switch.dreame_boven_auto_mount_mop": {
+   "entity_id": "switch.dreame_boven_auto_mount_mop",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:google-circles-group",
+    "friendly_name": "dreame boven Automatische dweilmontage"
+   }
+  },
+  "switch.dreame_boven_voice_assistant": {
+   "entity_id": "switch.dreame_boven_voice_assistant",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:microphone-message",
+    "friendly_name": "dreame boven Spraakassistent"
+   }
+  },
+  "switch.dreame_boven_ai_obstacle_detection": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_detection",
+   "state": "on",
+   "attributes": {
+    "value": true,
+    "icon": "mdi:robot",
+    "friendly_name": "dreame boven AI-obstakeldetectie"
+   }
+  },
+  "switch.dreame_boven_ai_obstacle_image_upload": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_image_upload",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:cloud-upload",
+    "friendly_name": "dreame boven AI obstakelfoto's uploaden"
+   }
+  },
+  "switch.dreame_boven_ai_obstacle_picture": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_picture",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:camera-off",
+    "friendly_name": "dreame boven Obstakelfoto's"
+   }
+  },
+  "switch.dreame_boven_ai_pet_detection": {
+   "entity_id": "switch.dreame_boven_ai_pet_detection",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:dog-side-off",
+    "friendly_name": "dreame boven Huisdierdetectie"
+   }
+  },
+  "switch.dreame_boven_ai_furniture_detection": {
+   "entity_id": "switch.dreame_boven_ai_furniture_detection",
+   "state": "on",
+   "attributes": {
+    "value": true,
+    "icon": "mdi:table-furniture",
+    "friendly_name": "dreame boven AI meubeldetectie"
+   }
+  },
+  "switch.dreame_boven_ai_fluid_detection": {
+   "entity_id": "switch.dreame_boven_ai_fluid_detection",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:water-off-outline",
+    "friendly_name": "dreame boven AI vloeistofdetectie"
+   }
+  },
+  "switch.dreame_boven_fuzzy_obstacle_detection": {
+   "entity_id": "switch.dreame_boven_fuzzy_obstacle_detection",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:blur-linear",
+    "friendly_name": "dreame boven Vage obstakeldetectie"
+   }
+  },
+  "switch.dreame_boven_pet_picture": {
+   "entity_id": "switch.dreame_boven_pet_picture",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:cat",
+    "friendly_name": "dreame boven Huisdierfoto"
+   }
+  },
+  "switch.dreame_boven_pet_focused_detection": {
+   "entity_id": "switch.dreame_boven_pet_focused_detection",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:dog",
+    "friendly_name": "dreame boven Huisdiergerichte detectie"
+   }
+  },
+  "switch.dreame_boven_large_particles_boost": {
+   "entity_id": "switch.dreame_boven_large_particles_boost",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:weather-dust",
+    "friendly_name": "dreame boven Grote deeltjes boost"
+   }
+  },
+  "switch.dreame_boven_fill_light": {
+   "entity_id": "switch.dreame_boven_fill_light",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:lightbulb-on",
+    "friendly_name": "dreame boven Cameralicht"
+   }
+  },
+  "switch.dreame_boven_collision_avoidance": {
+   "entity_id": "switch.dreame_boven_collision_avoidance",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:sign-direction",
+    "friendly_name": "dreame boven Botsvermijding"
+   }
+  },
+  "switch.dreame_boven_stain_avoidance": {
+   "entity_id": "switch.dreame_boven_stain_avoidance",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:liquid-spot",
+    "friendly_name": "dreame boven Vlekvermijding"
+   }
+  },
+  "switch.dreame_boven_floor_direction_cleaning": {
+   "entity_id": "switch.dreame_boven_floor_direction_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:arrow-decision-auto",
+    "friendly_name": "dreame boven Reinigen in vloerrichting"
+   }
+  },
+  "switch.dreame_boven_intensive_carpet_cleaning": {
+   "entity_id": "switch.dreame_boven_intensive_carpet_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:creation",
+    "friendly_name": "dreame boven Intensieve tapijtreiniging"
+   }
+  },
+  "switch.dreame_boven_side_reach": {
+   "entity_id": "switch.dreame_boven_side_reach",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:selection-ellipse-arrow-inside",
+    "friendly_name": "dreame boven Zijbereik"
+   }
+  },
+  "switch.dreame_boven_mop_extend": {
+   "entity_id": "switch.dreame_boven_mop_extend",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:waves-arrow-right",
+    "friendly_name": "dreame boven Dweil uitschuiven"
+   }
+  },
+  "switch.dreame_boven_gap_cleaning_extension": {
+   "entity_id": "switch.dreame_boven_gap_cleaning_extension",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:plus-circle-multiple",
+    "friendly_name": "dreame boven Spleetreiniging uitbreiding"
+   }
+  },
+  "switch.dreame_boven_mopping_under_furnitures": {
+   "entity_id": "switch.dreame_boven_mopping_under_furnitures",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:table-picnic",
+    "friendly_name": "dreame boven Dweilen onder meubels"
+   }
+  },
+  "switch.dreame_boven_off_peak_charging": {
+   "entity_id": "switch.dreame_boven_off_peak_charging",
+   "state": "off",
+   "attributes": {
+    "value": "{\"enable\":false,\"startTime\":\"22:00\",\"endTime\":\"08:00\"}",
+    "icon": "mdi:battery-clock",
+    "friendly_name": "dreame boven Opladen tijdens daluren"
+   }
+  },
+  "switch.dreame_boven_human_follow": {
+   "entity_id": "switch.dreame_boven_human_follow",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:account-off",
+    "friendly_name": "dreame boven Mens volgen"
+   }
+  },
+  "switch.dreame_boven_max_suction_power": {
+   "entity_id": "switch.dreame_boven_max_suction_power",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:weather-windy",
+    "friendly_name": "dreame boven Maximale zuigkracht"
+   }
+  },
+  "switch.dreame_boven_streaming_voice_prompt": {
+   "entity_id": "switch.dreame_boven_streaming_voice_prompt",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:account-tie-voice",
+    "friendly_name": "dreame boven Streaming spraakbericht"
+   }
+  },
+  "switch.dreame_boven_clean_carpets_first": {
+   "entity_id": "switch.dreame_boven_clean_carpets_first",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:order-bool-descending-variant",
+    "friendly_name": "dreame boven Tapijten eerst reinigen"
+   }
+  },
+  "switch.dreame_boven_smart_mop_washing": {
+   "entity_id": "switch.dreame_boven_smart_mop_washing",
+   "state": "off",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:hand-water",
+    "friendly_name": "dreame boven Slimme dweilwas"
+   }
+  },
+  "switch.dreame_boven_silent_drying": {
+   "entity_id": "switch.dreame_boven_silent_drying",
+   "state": "off",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:volume-mute",
+    "friendly_name": "dreame boven Stil drogen"
+   }
+  },
+  "switch.dreame_boven_hair_compression": {
+   "entity_id": "switch.dreame_boven_hair_compression",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:arrow-collapse-vertical",
+    "friendly_name": "dreame boven Haarcompressie"
+   }
+  },
+  "switch.dreame_boven_side_brush_carpet_rotate": {
+   "entity_id": "switch.dreame_boven_side_brush_carpet_rotate",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:format-rotate-90",
+    "friendly_name": "dreame boven Zijborstelrotatie op tapijt"
+   }
+  },
+  "switch.dreame_boven_ring_light_always_on": {
+   "entity_id": "switch.dreame_boven_ring_light_always_on",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:light-recessed",
+    "friendly_name": "dreame boven Ringlicht altijd aan"
+   }
+  },
+  "switch.dreame_boven_dynamic_obstacle_cleaning": {
+   "entity_id": "switch.dreame_boven_dynamic_obstacle_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:map-marker-circle",
+    "friendly_name": "dreame boven Dynamische obstakelreiniging"
+   }
+  },
+  "switch.dreame_boven_camera_light_brightness_auto": {
+   "entity_id": "switch.dreame_boven_camera_light_brightness_auto",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:brightness-auto",
+    "friendly_name": "dreame boven Automatische helderheid cameralamp"
+   }
+  },
+  "button.dreame_boven_reset_main_brush": {
+   "entity_id": "button.dreame_boven_reset_main_brush",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "dreame boven Hoofdborstel resetten"
+   }
+  },
+  "button.dreame_boven_reset_side_brush": {
+   "entity_id": "button.dreame_boven_reset_side_brush",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "dreame boven Zijborstel resetten"
+   }
+  },
+  "button.dreame_boven_reset_filter": {
+   "entity_id": "button.dreame_boven_reset_filter",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:air-filter",
+    "friendly_name": "dreame boven Filter resetten"
+   }
+  },
+  "button.dreame_boven_reset_sensor": {
+   "entity_id": "button.dreame_boven_reset_sensor",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:radar",
+    "friendly_name": "dreame boven Sensoren resetten"
+   }
+  },
+  "button.dreame_boven_reset_scale_inhibitor": {
+   "entity_id": "button.dreame_boven_reset_scale_inhibitor",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:pipe",
+    "friendly_name": "dreame boven Antikalkmodule resetten"
+   }
+  },
+  "button.dreame_boven_reset_wheel": {
+   "entity_id": "button.dreame_boven_reset_wheel",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:tire",
+    "friendly_name": "dreame boven Wielen resetten"
+   }
+  },
+  "button.dreame_boven_start_auto_empty": {
+   "entity_id": "button.dreame_boven_start_auto_empty",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:delete-empty",
+    "friendly_name": "dreame boven Automatisch legen starten"
+   }
+  },
+  "button.dreame_boven_clear_warning": {
+   "entity_id": "button.dreame_boven_clear_warning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clipboard-check-outline",
+    "friendly_name": "dreame boven Waarschuwing wissen"
+   }
+  },
+  "button.dreame_boven_start_fast_mapping": {
+   "entity_id": "button.dreame_boven_start_fast_mapping",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:map-plus",
+    "friendly_name": "dreame boven Snelle kartering starten"
+   }
+  },
+  "button.dreame_boven_self_clean": {
+   "entity_id": "button.dreame_boven_self_clean",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:dishwasher",
+    "friendly_name": "dreame boven Zelfreiniging"
+   }
+  },
+  "button.dreame_boven_manual_drying": {
+   "entity_id": "button.dreame_boven_manual_drying",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:weather-sunny",
+    "friendly_name": "dreame boven Handmatig drogen"
+   }
+  },
+  "button.dreame_boven_water_tank_draining": {
+   "entity_id": "button.dreame_boven_water_tank_draining",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:pump",
+    "friendly_name": "dreame boven Watertank aftappen"
+   }
+  },
+  "button.dreame_boven_empty_water_tank": {
+   "entity_id": "button.dreame_boven_empty_water_tank",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:waves-arrow-up",
+    "friendly_name": "dreame boven Watertank legen"
+   }
+  },
+  "button.dreame_boven_base_station_self_repair": {
+   "entity_id": "button.dreame_boven_base_station_self_repair",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:wrench-cog",
+    "friendly_name": "dreame boven Basisstation zelfreparatie"
+   }
+  },
+  "button.dreame_boven_base_station_cleaning": {
+   "entity_id": "button.dreame_boven_base_station_cleaning",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:car-wash",
+    "friendly_name": "dreame boven Basisstation reinigen"
+   }
+  },
+  "button.dreame_boven_start_recleaning": {
+   "entity_id": "button.dreame_boven_start_recleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:refresh-circle",
+    "friendly_name": "dreame boven Opnieuw schoonmaken starten"
+   }
+  },
+  "button.dreame_boven_reload_shortcuts": {
+   "entity_id": "button.dreame_boven_reload_shortcuts",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:motion-play-outline",
+    "friendly_name": "dreame boven Snelkoppelingen opnieuw laden"
+   }
+  },
+  "button.dreame_boven_backup_saved_map": {
+   "entity_id": "button.dreame_boven_backup_saved_map",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:cloud-upload",
+    "friendly_name": "dreame boven Back-up van opgeslagen kaart"
+   }
+  },
+  "number.dreame_boven_volume": {
+   "entity_id": "number.dreame_boven_volume",
+   "state": "90",
+   "attributes": {
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "mode": "slider",
+    "value": 90,
+    "unit_of_measurement": "%",
+    "icon": "mdi:volume-high",
+    "friendly_name": "dreame boven Volume"
+   }
+  },
+  "number.dreame_boven_self_clean_area": {
+   "entity_id": "number.dreame_boven_self_clean_area",
+   "state": "unavailable",
+   "attributes": {
+    "min": 10,
+    "max": 35,
+    "step": 1,
+    "mode": "slider",
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:texture-box",
+    "friendly_name": "dreame boven Zelfreinigingsgebied"
+   }
+  },
+  "number.dreame_boven_self_clean_time": {
+   "entity_id": "number.dreame_boven_self_clean_time",
+   "state": "unavailable",
+   "attributes": {
+    "min": 10,
+    "max": 50,
+    "step": 5,
+    "mode": "slider",
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:table-clock",
+    "friendly_name": "dreame boven Zelfreinigingstijd"
+   }
+  },
+  "number.dreame_boven_camera_light_brightness": {
+   "entity_id": "number.dreame_boven_camera_light_brightness",
+   "state": "unavailable",
+   "attributes": {
+    "min": 40,
+    "max": 100,
+    "step": 1,
+    "mode": "slider",
+    "unit_of_measurement": "%",
+    "icon": "mdi:brightness-percent",
+    "friendly_name": "dreame boven Helderheid cameralamp"
+   }
+  },
+  "number.dreame_boven_wetness_level": {
+   "entity_id": "number.dreame_boven_wetness_level",
+   "state": "unavailable",
+   "attributes": {
+    "min": 1,
+    "max": 32,
+    "step": 1,
+    "mode": "slider",
+    "icon": "mdi:water",
+    "friendly_name": "dreame boven Vochtigheid"
+   }
+  },
+  "select.dreame_boven_suction_level": {
+   "entity_id": "select.dreame_boven_suction_level",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:fan-speed-1",
+    "friendly_name": "dreame boven Zuigniveau"
+   }
+  },
+  "select.dreame_boven_cleaning_mode": {
+   "entity_id": "select.dreame_boven_cleaning_mode",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:hydro-power",
+    "friendly_name": "dreame boven Schoonmaakmodus"
+   }
+  },
+  "select.dreame_boven_carpet_cleaning": {
+   "entity_id": "select.dreame_boven_carpet_cleaning",
+   "state": "adaptation",
+   "attributes": {
+    "options": [
+     "avoidance",
+     "adaptation",
+     "remove_mop",
+     "ignore",
+     "cross"
+    ],
+    "value": 2,
+    "icon": "mdi:close-box-outline",
+    "friendly_name": "dreame boven Tapijtreiniging"
+   }
+  },
+  "select.dreame_boven_drying_time": {
+   "entity_id": "select.dreame_boven_drying_time",
+   "state": "3h",
+   "attributes": {
+    "options": [
+     "2h",
+     "3h",
+     "4h"
+    ],
+    "value": 3,
+    "icon": "mdi:sun-clock",
+    "friendly_name": "dreame boven Droogtijd"
+   }
+  },
+  "select.dreame_boven_voice_assistant_language": {
+   "entity_id": "select.dreame_boven_voice_assistant_language",
+   "state": "english",
+   "attributes": {
+    "options": [
+     "english",
+     "german",
+     "russian",
+     "italian",
+     "french",
+     "korean",
+     "chinese"
+    ],
+    "value": "EN",
+    "icon": "mdi:translate-variant",
+    "friendly_name": "dreame boven Taal stemassistent"
+   }
+  },
+  "select.dreame_boven_mop_pad_humidity": {
+   "entity_id": "select.dreame_boven_mop_pad_humidity",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:water",
+    "friendly_name": "dreame boven Vochtigheid dweilpad"
+   }
+  },
+  "select.dreame_boven_mop_extend_frequency": {
+   "entity_id": "select.dreame_boven_mop_extend_frequency",
+   "state": "high",
+   "attributes": {
+    "options": [
+     "standard",
+     "intelligent",
+     "high"
+    ],
+    "value": 2,
+    "icon": "mdi:waves-arrow-right",
+    "friendly_name": "dreame boven Frequentie dweiluitbreiding"
+   }
+  },
+  "select.dreame_boven_self_clean_frequency": {
+   "entity_id": "select.dreame_boven_self_clean_frequency",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:texture-box",
+    "friendly_name": "dreame boven Frequentie zelfreiniging"
+   }
+  },
+  "select.dreame_boven_auto_recleaning": {
+   "entity_id": "select.dreame_boven_auto_recleaning",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "off",
+     "in_deep_mode",
+     "in_all_modes"
+    ],
+    "value": -1,
+    "icon": "mdi:repeat-variant",
+    "friendly_name": "dreame boven Automatisch opnieuw reinigen"
+   }
+  },
+  "select.dreame_boven_auto_rewashing": {
+   "entity_id": "select.dreame_boven_auto_rewashing",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "off",
+     "in_deep_mode",
+     "in_all_modes"
+    ],
+    "value": 0,
+    "icon": "mdi:archive-refresh",
+    "friendly_name": "dreame boven Automatisch opnieuw wassen"
+   }
+  },
+  "select.dreame_boven_cleaning_route": {
+   "entity_id": "select.dreame_boven_cleaning_route",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:sine-wave",
+    "friendly_name": "dreame boven Route"
+   }
+  },
+  "select.dreame_boven_battery_charge_level": {
+   "entity_id": "select.dreame_boven_battery_charge_level",
+   "state": "100%",
+   "attributes": {
+    "options": [
+     "80%",
+     "90%",
+     "100%"
+    ],
+    "value": 100,
+    "icon": "mdi:battery-heart-variant",
+    "friendly_name": "dreame boven Batterijniveau"
+   }
+  },
+  "select.dreame_boven_cleangenius": {
+   "entity_id": "select.dreame_boven_cleangenius",
+   "state": "routine_cleaning",
+   "attributes": {
+    "options": [
+     "off",
+     "routine_cleaning",
+     "deep_cleaning"
+    ],
+    "value": 1,
+    "icon": "mdi:atom",
+    "friendly_name": "dreame boven CleanGenius"
+   }
+  },
+  "select.dreame_boven_cleangenius_mode": {
+   "entity_id": "select.dreame_boven_cleangenius_mode",
+   "state": "vacuum_and_mop",
+   "attributes": {
+    "options": [
+     "vacuum_and_mop",
+     "mop_after_vacuum"
+    ],
+    "value": 2,
+    "icon": "mdi:atom",
+    "friendly_name": "dreame boven CleanGenius-modus"
+   }
+  },
+  "select.dreame_boven_water_temperature": {
+   "entity_id": "select.dreame_boven_water_temperature",
+   "state": "hot",
+   "attributes": {
+    "options": [
+     "normal",
+     "mild",
+     "warm",
+     "hot"
+    ],
+    "value": 3,
+    "icon": "mdi:water-thermometer",
+    "friendly_name": "dreame boven Watertemperatuur"
+   }
+  },
+  "select.dreame_boven_auto_empty_mode": {
+   "entity_id": "select.dreame_boven_auto_empty_mode",
+   "state": "high_frequency",
+   "attributes": {
+    "options": [
+     "off",
+     "standard",
+     "high_frequency",
+     "low_frequency"
+    ],
+    "value": 2,
+    "icon": "mdi:auto-upload",
+    "friendly_name": "dreame boven Automatisch legen-modus"
+   }
+  },
+  "select.dreame_boven_washing_mode": {
+   "entity_id": "select.dreame_boven_washing_mode",
+   "state": "standard",
+   "attributes": {
+    "options": [
+     "light",
+     "standard",
+     "deep"
+    ],
+    "value": 1,
+    "icon": "mdi:water-opacity",
+    "friendly_name": "dreame boven Wasmodus"
+   }
+  },
+  "select.dreame_boven_map_rotation": {
+   "entity_id": "select.dreame_boven_map_rotation",
+   "state": "0",
+   "attributes": {
+    "options": [
+     "0",
+     "90",
+     "180",
+     "270"
+    ],
+    "unit_of_measurement": "°",
+    "icon": "mdi:crop-rotate",
+    "friendly_name": "dreame boven Kaartrotatie"
+   }
+  },
+  "select.dreame_boven_selected_map": {
+   "entity_id": "select.dreame_boven_selected_map",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:map-check",
+    "friendly_name": "dreame boven Geselecteerde kaart"
+   }
+  },
+  "camera.dreame_boven_map": {
+   "entity_id": "camera.dreame_boven_map",
+   "state": "2026-10-15 18:08:23",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.dreame_boven_map?token=REDACTED&v=1792080503",
+    "icon": "mdi:map",
+    "friendly_name": "dreame boven Huidige kaart",
+    "supported_features": 0
+   }
+  },
+  "time.dreame_boven_dnd_start": {
+   "entity_id": "time.dreame_boven_dnd_start",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clock-start",
+    "friendly_name": "dreame boven DnD starttijd"
+   }
+  },
+  "time.dreame_boven_dnd_end": {
+   "entity_id": "time.dreame_boven_dnd_end",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clock-end",
+    "friendly_name": "dreame boven DnD eindtijd"
+   }
+  },
+  "time.dreame_boven_off_peak_charging_start": {
+   "entity_id": "time.dreame_boven_off_peak_charging_start",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:battery-lock-open",
+    "friendly_name": "dreame boven Starttijd (daluren)"
+   }
+  },
+  "time.dreame_boven_off_peak_charging_end": {
+   "entity_id": "time.dreame_boven_off_peak_charging_end",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:battery-lock",
+    "friendly_name": "dreame boven Eindtijd (daluren)"
+   }
+  },
+  "camera.dreame_boven_map_1": {
+   "entity_id": "camera.dreame_boven_map_1",
+   "state": "2026-10-15 18:08:23",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.dreame_boven_map_1?token=REDACTED&v=1792080503",
+    "icon": "mdi:map-search",
+    "friendly_name": "dreame boven Opgeslagen kaart 1",
+    "supported_features": 0
+   }
+  }
+ },
+ "entities": {
+  "vacuum.dreame_boven": {
+   "entity_id": "vacuum.dreame_boven",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dreame_vacuum",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cleaning_time": {
+   "entity_id": "sensor.dreame_boven_cleaning_time",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_time",
+   "hidden": false
+  },
+  "sensor.dreame_boven_mapping_time": {
+   "entity_id": "sensor.dreame_boven_mapping_time",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mapping_time",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cleaned_area": {
+   "entity_id": "sensor.dreame_boven_cleaned_area",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaned_area",
+   "hidden": false
+  },
+  "sensor.dreame_boven_state": {
+   "entity_id": "sensor.dreame_boven_state",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "state",
+   "hidden": false
+  },
+  "sensor.dreame_boven_status": {
+   "entity_id": "sensor.dreame_boven_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_relocation_status": {
+   "entity_id": "sensor.dreame_boven_relocation_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "relocation_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_task_status": {
+   "entity_id": "sensor.dreame_boven_task_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "task_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_mop_pad": {
+   "entity_id": "sensor.dreame_boven_mop_pad",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_pad",
+   "hidden": false
+  },
+  "sensor.dreame_boven_dust_collection": {
+   "entity_id": "sensor.dreame_boven_dust_collection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dust_collection",
+   "hidden": false
+  },
+  "sensor.dreame_boven_auto_empty_status": {
+   "entity_id": "sensor.dreame_boven_auto_empty_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_empty_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_self_wash_base_status": {
+   "entity_id": "sensor.dreame_boven_self_wash_base_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_wash_base_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_low_water_warning": {
+   "entity_id": "sensor.dreame_boven_low_water_warning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "low_water_warning",
+   "hidden": false
+  },
+  "sensor.dreame_boven_drainage_status": {
+   "entity_id": "sensor.dreame_boven_drainage_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "drainage_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_task_type": {
+   "entity_id": "sensor.dreame_boven_task_type",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "task_type",
+   "hidden": false
+  },
+  "sensor.dreame_boven_stream_status": {
+   "entity_id": "sensor.dreame_boven_stream_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "stream_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_error": {
+   "entity_id": "sensor.dreame_boven_error",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "error",
+   "hidden": false
+  },
+  "sensor.dreame_boven_charging_status": {
+   "entity_id": "sensor.dreame_boven_charging_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "charging_status",
+   "hidden": false
+  },
+  "sensor.dreame_boven_battery_level": {
+   "entity_id": "sensor.dreame_boven_battery_level",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "battery_level",
+   "hidden": false
+  },
+  "sensor.dreame_boven_main_brush_left": {
+   "entity_id": "sensor.dreame_boven_main_brush_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "main_brush_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_main_brush_time_left": {
+   "entity_id": "sensor.dreame_boven_main_brush_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "main_brush_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_side_brush_left": {
+   "entity_id": "sensor.dreame_boven_side_brush_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_side_brush_time_left": {
+   "entity_id": "sensor.dreame_boven_side_brush_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_filter_left": {
+   "entity_id": "sensor.dreame_boven_filter_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "filter_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_filter_time_left": {
+   "entity_id": "sensor.dreame_boven_filter_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "filter_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_sensor_dirty_left": {
+   "entity_id": "sensor.dreame_boven_sensor_dirty_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "sensor_dirty_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_sensor_dirty_time_left": {
+   "entity_id": "sensor.dreame_boven_sensor_dirty_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "sensor_dirty_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_wheel_dirty_left": {
+   "entity_id": "sensor.dreame_boven_wheel_dirty_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "wheel_dirty_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_wheel_dirty_time_left": {
+   "entity_id": "sensor.dreame_boven_wheel_dirty_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "wheel_dirty_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_scale_inhibitor_left": {
+   "entity_id": "sensor.dreame_boven_scale_inhibitor_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "scale_inhibitor_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_scale_inhibitor_time_left": {
+   "entity_id": "sensor.dreame_boven_scale_inhibitor_time_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "scale_inhibitor_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_first_cleaning_date": {
+   "entity_id": "sensor.dreame_boven_first_cleaning_date",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "first_cleaning_date",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_total_cleaning_time": {
+   "entity_id": "sensor.dreame_boven_total_cleaning_time",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "total_cleaning_time",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cleaning_count": {
+   "entity_id": "sensor.dreame_boven_cleaning_count",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_count",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_total_cleaned_area": {
+   "entity_id": "sensor.dreame_boven_total_cleaned_area",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "total_cleaned_area",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_clean_water_tank_status": {
+   "entity_id": "sensor.dreame_boven_clean_water_tank_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "clean_water_tank_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_dirty_water_tank_status": {
+   "entity_id": "sensor.dreame_boven_dirty_water_tank_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dirty_water_tank_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_dust_bag_status": {
+   "entity_id": "sensor.dreame_boven_dust_bag_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dust_bag_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_detergent_status": {
+   "entity_id": "sensor.dreame_boven_detergent_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "detergent_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_station_drainage_status": {
+   "entity_id": "sensor.dreame_boven_station_drainage_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "station_drainage_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_hot_water_status": {
+   "entity_id": "sensor.dreame_boven_hot_water_status",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "hot_water_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_current_room": {
+   "entity_id": "sensor.dreame_boven_current_room",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "current_room",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cleaning_history": {
+   "entity_id": "sensor.dreame_boven_cleaning_history",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_history",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cruising_history": {
+   "entity_id": "sensor.dreame_boven_cruising_history",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cruising_history",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.dreame_boven_cleaning_progress": {
+   "entity_id": "sensor.dreame_boven_cleaning_progress",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_progress",
+   "hidden": false
+  },
+  "sensor.dreame_boven_drying_progress": {
+   "entity_id": "sensor.dreame_boven_drying_progress",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_progress",
+   "hidden": false
+  },
+  "sensor.dreame_boven_drying_left": {
+   "entity_id": "sensor.dreame_boven_drying_left",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_left",
+   "hidden": false
+  },
+  "sensor.dreame_boven_firmware_version": {
+   "entity_id": "sensor.dreame_boven_firmware_version",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "firmware_version",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.dreame_boven_charging_state": {
+   "entity_id": "binary_sensor.dreame_boven_charging_state",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "charging_state",
+   "hidden": false
+  },
+  "binary_sensor.dreame_boven_problem": {
+   "entity_id": "binary_sensor.dreame_boven_problem",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "problem",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.dreame_boven_maintenance": {
+   "entity_id": "binary_sensor.dreame_boven_maintenance",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "maintenance",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "switch.dreame_boven_resume_cleaning": {
+   "entity_id": "switch.dreame_boven_resume_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "resume_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_carpet_boost": {
+   "entity_id": "switch.dreame_boven_carpet_boost",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "carpet_boost",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_obstacle_avoidance": {
+   "entity_id": "switch.dreame_boven_obstacle_avoidance",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "obstacle_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_customized_cleaning": {
+   "entity_id": "switch.dreame_boven_customized_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "customized_cleaning",
+   "hidden": false
+  },
+  "switch.dreame_boven_child_lock": {
+   "entity_id": "switch.dreame_boven_child_lock",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "child_lock",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_dnd": {
+   "entity_id": "switch.dreame_boven_dnd",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_dnd_disable_resume_cleaning": {
+   "entity_id": "switch.dreame_boven_dnd_disable_resume_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_disable_resume_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_dnd_disable_auto_empty": {
+   "entity_id": "switch.dreame_boven_dnd_disable_auto_empty",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_disable_auto_empty",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_dnd_reduce_volume": {
+   "entity_id": "switch.dreame_boven_dnd_reduce_volume",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_reduce_volume",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_multi_floor_map": {
+   "entity_id": "switch.dreame_boven_multi_floor_map",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "multi_floor_map",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_self_clean": {
+   "entity_id": "switch.dreame_boven_self_clean",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean",
+   "hidden": false
+  },
+  "switch.dreame_boven_auto_water_refilling": {
+   "entity_id": "switch.dreame_boven_auto_water_refilling",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_water_refilling",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_intelligent_recognition": {
+   "entity_id": "switch.dreame_boven_intelligent_recognition",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "intelligent_recognition",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_auto_drying": {
+   "entity_id": "switch.dreame_boven_auto_drying",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_drying",
+   "hidden": false
+  },
+  "switch.dreame_boven_auto_add_detergent": {
+   "entity_id": "switch.dreame_boven_auto_add_detergent",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_add_detergent",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_auto_mount_mop": {
+   "entity_id": "switch.dreame_boven_auto_mount_mop",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_mount_mop",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_voice_assistant": {
+   "entity_id": "switch.dreame_boven_voice_assistant",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "voice_assistant",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_obstacle_detection": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_obstacle_image_upload": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_image_upload",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_image_upload",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_obstacle_picture": {
+   "entity_id": "switch.dreame_boven_ai_obstacle_picture",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_picture",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_pet_detection": {
+   "entity_id": "switch.dreame_boven_ai_pet_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_pet_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_furniture_detection": {
+   "entity_id": "switch.dreame_boven_ai_furniture_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_furniture_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ai_fluid_detection": {
+   "entity_id": "switch.dreame_boven_ai_fluid_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_fluid_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_fuzzy_obstacle_detection": {
+   "entity_id": "switch.dreame_boven_fuzzy_obstacle_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "fuzzy_obstacle_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_pet_picture": {
+   "entity_id": "switch.dreame_boven_pet_picture",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "pet_picture",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_pet_focused_detection": {
+   "entity_id": "switch.dreame_boven_pet_focused_detection",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "pet_focused_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_large_particles_boost": {
+   "entity_id": "switch.dreame_boven_large_particles_boost",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "large_particles_boost",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_fill_light": {
+   "entity_id": "switch.dreame_boven_fill_light",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "fill_light",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_collision_avoidance": {
+   "entity_id": "switch.dreame_boven_collision_avoidance",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "collision_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_stain_avoidance": {
+   "entity_id": "switch.dreame_boven_stain_avoidance",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "stain_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_floor_direction_cleaning": {
+   "entity_id": "switch.dreame_boven_floor_direction_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "floor_direction_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_intensive_carpet_cleaning": {
+   "entity_id": "switch.dreame_boven_intensive_carpet_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "intensive_carpet_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_side_reach": {
+   "entity_id": "switch.dreame_boven_side_reach",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_reach",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_mop_extend": {
+   "entity_id": "switch.dreame_boven_mop_extend",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_extend",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_gap_cleaning_extension": {
+   "entity_id": "switch.dreame_boven_gap_cleaning_extension",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "gap_cleaning_extension",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_mopping_under_furnitures": {
+   "entity_id": "switch.dreame_boven_mopping_under_furnitures",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mopping_under_furnitures",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_off_peak_charging": {
+   "entity_id": "switch.dreame_boven_off_peak_charging",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_human_follow": {
+   "entity_id": "switch.dreame_boven_human_follow",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "human_follow",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_max_suction_power": {
+   "entity_id": "switch.dreame_boven_max_suction_power",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "max_suction_power",
+   "hidden": false
+  },
+  "switch.dreame_boven_streaming_voice_prompt": {
+   "entity_id": "switch.dreame_boven_streaming_voice_prompt",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "streaming_voice_prompt",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_clean_carpets_first": {
+   "entity_id": "switch.dreame_boven_clean_carpets_first",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "clean_carpets_first",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_smart_mop_washing": {
+   "entity_id": "switch.dreame_boven_smart_mop_washing",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "smart_mop_washing",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_silent_drying": {
+   "entity_id": "switch.dreame_boven_silent_drying",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "silent_drying",
+   "hidden": false
+  },
+  "switch.dreame_boven_hair_compression": {
+   "entity_id": "switch.dreame_boven_hair_compression",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "hair_compression",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_side_brush_carpet_rotate": {
+   "entity_id": "switch.dreame_boven_side_brush_carpet_rotate",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_carpet_rotate",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_ring_light_always_on": {
+   "entity_id": "switch.dreame_boven_ring_light_always_on",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "ring_light_always_on",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_dynamic_obstacle_cleaning": {
+   "entity_id": "switch.dreame_boven_dynamic_obstacle_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dynamic_obstacle_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.dreame_boven_camera_light_brightness_auto": {
+   "entity_id": "switch.dreame_boven_camera_light_brightness_auto",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "camera_light_brightness_auto",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_main_brush": {
+   "entity_id": "button.dreame_boven_reset_main_brush",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_main_brush",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_side_brush": {
+   "entity_id": "button.dreame_boven_reset_side_brush",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_side_brush",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_filter": {
+   "entity_id": "button.dreame_boven_reset_filter",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_filter",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_sensor": {
+   "entity_id": "button.dreame_boven_reset_sensor",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_sensor",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_scale_inhibitor": {
+   "entity_id": "button.dreame_boven_reset_scale_inhibitor",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_scale_inhibitor",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_reset_wheel": {
+   "entity_id": "button.dreame_boven_reset_wheel",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_wheel",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_start_auto_empty": {
+   "entity_id": "button.dreame_boven_start_auto_empty",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_auto_empty",
+   "hidden": false
+  },
+  "button.dreame_boven_clear_warning": {
+   "entity_id": "button.dreame_boven_clear_warning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "clear_warning",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_start_fast_mapping": {
+   "entity_id": "button.dreame_boven_start_fast_mapping",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_fast_mapping",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "button.dreame_boven_self_clean": {
+   "entity_id": "button.dreame_boven_self_clean",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean",
+   "hidden": false
+  },
+  "button.dreame_boven_manual_drying": {
+   "entity_id": "button.dreame_boven_manual_drying",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "manual_drying",
+   "hidden": false
+  },
+  "button.dreame_boven_water_tank_draining": {
+   "entity_id": "button.dreame_boven_water_tank_draining",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "water_tank_draining",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_empty_water_tank": {
+   "entity_id": "button.dreame_boven_empty_water_tank",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "empty_water_tank",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_base_station_self_repair": {
+   "entity_id": "button.dreame_boven_base_station_self_repair",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "base_station_self_repair",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_base_station_cleaning": {
+   "entity_id": "button.dreame_boven_base_station_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "base_station_cleaning",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_start_recleaning": {
+   "entity_id": "button.dreame_boven_start_recleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_recleaning",
+   "hidden": false
+  },
+  "button.dreame_boven_reload_shortcuts": {
+   "entity_id": "button.dreame_boven_reload_shortcuts",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "reload_shortcuts",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.dreame_boven_backup_saved_map": {
+   "entity_id": "button.dreame_boven_backup_saved_map",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "backup_saved_map",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "number.dreame_boven_volume": {
+   "entity_id": "number.dreame_boven_volume",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "volume",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.dreame_boven_self_clean_area": {
+   "entity_id": "number.dreame_boven_self_clean_area",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_area",
+   "hidden": false
+  },
+  "number.dreame_boven_self_clean_time": {
+   "entity_id": "number.dreame_boven_self_clean_time",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_time",
+   "hidden": false
+  },
+  "number.dreame_boven_camera_light_brightness": {
+   "entity_id": "number.dreame_boven_camera_light_brightness",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "camera_light_brightness",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.dreame_boven_wetness_level": {
+   "entity_id": "number.dreame_boven_wetness_level",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "wetness_level",
+   "hidden": false
+  },
+  "select.dreame_boven_suction_level": {
+   "entity_id": "select.dreame_boven_suction_level",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "suction_level",
+   "hidden": false
+  },
+  "select.dreame_boven_cleaning_mode": {
+   "entity_id": "select.dreame_boven_cleaning_mode",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_mode",
+   "hidden": false
+  },
+  "select.dreame_boven_carpet_cleaning": {
+   "entity_id": "select.dreame_boven_carpet_cleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "carpet_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_drying_time": {
+   "entity_id": "select.dreame_boven_drying_time",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_time",
+   "hidden": false
+  },
+  "select.dreame_boven_voice_assistant_language": {
+   "entity_id": "select.dreame_boven_voice_assistant_language",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "voice_assistant_language",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_mop_pad_humidity": {
+   "entity_id": "select.dreame_boven_mop_pad_humidity",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_pad_humidity",
+   "hidden": false
+  },
+  "select.dreame_boven_mop_extend_frequency": {
+   "entity_id": "select.dreame_boven_mop_extend_frequency",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_extend_frequency",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_self_clean_frequency": {
+   "entity_id": "select.dreame_boven_self_clean_frequency",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_frequency",
+   "hidden": false
+  },
+  "select.dreame_boven_auto_recleaning": {
+   "entity_id": "select.dreame_boven_auto_recleaning",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_recleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_auto_rewashing": {
+   "entity_id": "select.dreame_boven_auto_rewashing",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_rewashing",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_cleaning_route": {
+   "entity_id": "select.dreame_boven_cleaning_route",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_route",
+   "hidden": false
+  },
+  "select.dreame_boven_battery_charge_level": {
+   "entity_id": "select.dreame_boven_battery_charge_level",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "battery_charge_level",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_cleangenius": {
+   "entity_id": "select.dreame_boven_cleangenius",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleangenius",
+   "hidden": false
+  },
+  "select.dreame_boven_cleangenius_mode": {
+   "entity_id": "select.dreame_boven_cleangenius_mode",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleangenius_mode",
+   "hidden": false
+  },
+  "select.dreame_boven_water_temperature": {
+   "entity_id": "select.dreame_boven_water_temperature",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "water_temperature",
+   "hidden": false
+  },
+  "select.dreame_boven_auto_empty_mode": {
+   "entity_id": "select.dreame_boven_auto_empty_mode",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_empty_mode",
+   "hidden": false
+  },
+  "select.dreame_boven_washing_mode": {
+   "entity_id": "select.dreame_boven_washing_mode",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "washing_mode",
+   "hidden": false
+  },
+  "select.dreame_boven_map_rotation": {
+   "entity_id": "select.dreame_boven_map_rotation",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "map_rotation",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.dreame_boven_selected_map": {
+   "entity_id": "select.dreame_boven_selected_map",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "selected_map",
+   "hidden": false
+  },
+  "camera.dreame_boven_map": {
+   "entity_id": "camera.dreame_boven_map",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "map",
+   "hidden": false
+  },
+  "time.dreame_boven_dnd_start": {
+   "entity_id": "time.dreame_boven_dnd_start",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_start",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.dreame_boven_dnd_end": {
+   "entity_id": "time.dreame_boven_dnd_end",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_end",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.dreame_boven_off_peak_charging_start": {
+   "entity_id": "time.dreame_boven_off_peak_charging_start",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging_start",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.dreame_boven_off_peak_charging_end": {
+   "entity_id": "time.dreame_boven_off_peak_charging_end",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging_end",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "camera.dreame_boven_map_1": {
+   "entity_id": "camera.dreame_boven_map_1",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "dreame_vacuum",
+   "translation_key": "saved_map",
+   "entity_category": "config",
+   "hidden": false
+  }
+ },
+ "devices": {
+  "d0000000000000000000000000000002": {
+   "id": "d0000000000000000000000000000002",
+   "manufacturer": "Dreametech™",
+   "model": "dreame.vacuum.r9419h",
+   "model_id": null,
+   "name": "dreame boven",
+   "name_by_user": null,
+   "sw_version": "4.3.9_3909"
+  }
+ }
+}
