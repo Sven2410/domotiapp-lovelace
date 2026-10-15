@@ -254,3 +254,77 @@ Vóór de commit:
 ```
 
 Na de commit: leeg.
+
+---
+
+# 0.68.1: de foto van de WH27S
+
+15 oktober 2026, later op de avond. De foto kwam na de uitgave van 0.68.0. De
+beheersessie zette hem in `C:\dev\_ref\warmtepompen\LG WH27S 270L.png`: een
+fabrieksfoto van LG, met toestemming van de eigenaar als installateur. De
+beheersessie bekeek hem en zei: de zilveren 270 liter met de zwarte strook en
+het display bovenaan.
+
+## Wat er veranderd is
+
+- `afbeeldingen/warmtepompboilers/lg-wh27s.webp`: bijgesneden op de alfa en
+  geschaald naar 396 hoog, net als de stofzuigers (161 × 396, 8.820 bytes). De
+  bron blijft in `_ref`.
+- `BOILERS.lg.modellen.wh27s` krijgt zijn `pad`, en die naam staat in
+  `VASTE_WEBP`.
+
+## Gemeten
+
+- **Verse code:** `?v=10aa5828a0b7`, gelijk aan de sha256 op schijf.
+- **De foto:** geladen in zijn natuurlijke maat van 161 × 396, en getekend op
+  zijn vlak van 58 × 72. Het standicoon staat in de statusregel.
+- **Schermafdrukken:** in donker en in licht bekeken; de zilveren boiler is in
+  allebei goed te zien.
+- **Op het raster:** de kaart met foto is 440 (7 rijen), want de foto is hoger
+  dan de chip. Die zonder foto is 376 (6 rijen).
+
+## Toetsen
+
+- `boiler-logica.test.mjs`:
+  - "de WH27S heeft zijn foto" (**NIEUW GEDRAG**). Tegen `main` (4f31ac2):
+    `actual: ''`, `expected: '/domotiapp_lovelace/afbeeldingen/warmtepompboilers/lg-wh27s.webp'`;
+  - de toets voor een type zonder pad blijft, met een eigen lijst.
+- `test_afbeeldingen.py`: de nieuwe naam. Tegen `main`:
+
+  ```
+  FAILED tests/test_afbeeldingen.py::test_de_laadpaalfoto_is_meegeleverd[warmtepompboilers/lg-wh27s.webp]
+  FAILED tests/test_afbeeldingen.py::test_de_laadpaalfoto_wordt_geserveerd[warmtepompboilers/lg-wh27s.webp]
+  2 failed, 35 passed
+  ```
+
+- Alles samen: 1802 JS-toetsen groen, `test_afbeeldingen.py` 37 groen. De
+  volledige Python-set draait in CI.
+
+## Samenvatting
+
+De WH27S toont nu zijn productfoto, automatisch herkend aan de modelcode.
+
+## Wat niet lukte
+
+Niets nieuws. Nog steeds niet gemeten tegen de echte boiler, en niet op een
+iPhone.
+
+## Aannames
+
+Geen aannames gedaan.
+
+## git status --porcelain
+
+Vóór de commit:
+
+```
+ M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
+ M custom_components/domotiapp_lovelace/manifest.json
+ M docs/warmtepompboiler/RAPPORT.md
+ M src/cards/boiler-logica.js
+ M tests/js/boiler-logica.test.mjs
+ M tests/test_afbeeldingen.py
+?? custom_components/domotiapp_lovelace/afbeeldingen/warmtepompboilers/
+```
+
+Na de commit: leeg.

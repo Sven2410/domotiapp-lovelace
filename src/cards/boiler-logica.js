@@ -340,10 +340,10 @@ export function uitersten(reeks) {
  * 15 oktober 2026, want de code WHT_056905 staat nergens online. Een
  * fabrieksfoto van LG mag, met zijn toestemming als installateur.
  *
- * De WH27S heeft nog GEEN `pad`: de foto was er bij de uitgave van 0.68.0 nog
- * niet. Zonder pad toont de kaart het icoon, zonder een adres dat 404 geeft.
- * Komt de foto, dan hier `pad: "warmtepompboilers/lg-wh27s.webp"` erbij, en
- * die naam in `VASTE_WEBP`.
+ * De foto kwam een uitgave later dan de kaart: 0.68.0 had nog geen `pad` en
+ * toonde het icoon, sinds 0.68.1 staat hij erin. Zo hoort een type zonder foto
+ * eruit te zien: zonder `pad` toont de kaart het icoon, en dan is er geen adres
+ * dat 404 geeft.
  */
 export const BOILERS = {
   lg: {
@@ -352,6 +352,7 @@ export const BOILERS = {
     modellen: {
       wh27s: {
         label: "WH27S (270 liter)",
+        pad: "warmtepompboilers/lg-wh27s.webp",
         codes: ["WHT_056905_WW"],
       },
     },

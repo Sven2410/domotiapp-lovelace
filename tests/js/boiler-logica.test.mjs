@@ -235,15 +235,16 @@ describe("merk, type en foto", () => {
     assert.deepEqual(typeBijApparaat(apparaat), { merk: "lg", model: "wh27s" });
   });
 
-  it("de WH27S heeft nog geen foto: dan het icoon, en geen adres dat 404 geeft", () => {
-    assert.equal(BOILERS.lg.modellen.wh27s.pad, undefined);
-    assert.equal(boilerAfbeelding({}, apparaat), "");
-    assert.equal(boilerAfbeelding({ merk: "lg", model: "wh27s" }, apparaat), "");
+  it("NIEUW GEDRAG (0.68.1): de WH27S heeft zijn foto, automatisch en gekozen", () => {
+    const pad = `${AFBEELDINGEN_BASIS}warmtepompboilers/lg-wh27s.webp`;
+    assert.equal(boilerAfbeelding({}, apparaat), pad);
+    assert.equal(boilerAfbeelding({ merk: "lg", model: "wh27s" }, apparaat), pad);
   });
 
-  it("een type MET een pad krijgt zijn foto (zo komt de WH27S straks)", () => {
-    const lijst = { lg: { ...BOILERS.lg, modellen: { wh27s: { ...BOILERS.lg.modellen.wh27s, pad: "warmtepompboilers/lg-wh27s.webp" } } } };
-    assert.equal(boilerAfbeelding({}, apparaat, lijst), `${AFBEELDINGEN_BASIS}warmtepompboilers/lg-wh27s.webp`);
+  it("een type ZONDER pad: het icoon, en geen adres dat 404 geeft (zo stond de WH27S in 0.68.0)", () => {
+    const lijst = { lg: { ...BOILERS.lg, modellen: { wh27s: { label: "WH27S", codes: ["WHT_056905_WW"] } } } };
+    assert.equal(boilerAfbeelding({}, apparaat, lijst), "");
+    assert.equal(boilerAfbeelding({ merk: "lg", model: "wh27s" }, apparaat, lijst), "");
   });
 
   it("een andere LG-code: geen foto, liever dan een verkeerde", () => {
