@@ -63,6 +63,10 @@ export const ROLLEN = {
  * de eerste op entity_id, zodat dezelfde invoer altijd dezelfde uitkomst geeft.
  * Een uitgeschakelde entiteit staat niet in `hass.entities`, en telt dus niet.
  *
+ * De deur heeft bij Miele GEEN `translation_key`: die vindt de kaart aan zijn
+ * `device_class` (`door`). Sinds 0.71.0, op verzoek van de eigenaar: *"ik wil
+ * ook de deurstatus op de wasmachine droger en de vriezer zien"*.
+ *
  * @param {object} hass
  * @param {string} statusId
  * @returns {Record<string, string>}
@@ -73,8 +77,14 @@ export function apparaatRollen(hass, statusId) {
   const uit = {};
   for (const id of Object.keys(hass.entities).sort()) {
     const e = hass.entities[id];
-    if (e?.device_id !== reg.device_id || e.platform !== reg.platform || !e.translation_key) continue;
-    const rol = ROLLEN[`${id.split(".")[0]}:${e.translation_key}`];
+    if (e?.device_id !== reg.device_id || e.platform !== reg.platform) continue;
+    const domein = id.split(".")[0];
+    if (domein === "binary_sensor" && hass.states?.[id]?.attributes?.device_class === "door") {
+      uit.deur ??= id;
+      continue;
+    }
+    if (!e.translation_key) continue;
+    const rol = ROLLEN[`${domein}:${e.translation_key}`];
     if (rol && !(rol in uit)) uit[rol] = id;
   }
   return uit;
@@ -161,74 +171,118 @@ export function startUitDuur(st, nu = new Date()) {
   return new Date(+nu + Math.round(minuten) * 60_000);
 }
 
-/** Waarden die zeggen dat er niets loopt: die horen niet op de kaart. */
+/*
+ * DE TEGELS (sinds 0.71.0)
+ *
+ * De eigenaar op 15 oktober 2026, met 0.70.0 bij de klant: *"ik wil ook de
+ * deurstatus op de wasmachine droger en de vriezer zien. Ook programma etc"*.
+ * Met de machine uit stond er alleen "Uit". Dus een rij tegels die er ALTIJD
+ * staat, met een streepje waar niets is, in de vorm van de tegels op de
+ * airco-kaart: de waarde groot, het label eronder, en een tik opent de sensor.
+ *
+ * Wasmachine: deur, programma, fase, klaar om, energie, water, TwinDos 1 en 2
+ * (twee rijen van vier). Droger: deur, programma, fase, klaar om, energie. De
+ * resterende tijd staat niet in een tegel: die staat al in de statusregel
+ * ("Draait · nog 1 u 30 min"), en met een tegel erbij werd de kaart een rij
+ * hoger.
+ */
+
+/** Waarden die zeggen dat er niets loopt. */
 const NIETS = new Set(["no_program", "not_running"]);
 
-/**
- * Het programma en de fase op een regel: "Katoen · Wassen", of "".
- *
- * De woorden komen van Home Assistant (`fmt`, `hass.formatEntityState`), want
- * de integratie heeft ze vertaald: 49 programma's en 23 fasen op de
- * wasmachine, en die lijst groeit met elke update. Een sleutel zonder
- * vertaling wordt leesbaar gemaakt in plaats van weggelaten.
- *
- * @param {object|null} programma de state van `program_id`
- * @param {object|null} fase de state van `program_phase`
- * @param {(st: object) => string} [fmt]
- */
-export function programmaRegel(programma, fase, fmt) {
-  const woord = (st) => {
-    const s = String(st?.state ?? "");
-    if (LEEG.has(s) || NIETS.has(s)) return "";
-    const vertaald = fmt?.(st);
-    if (vertaald && vertaald !== s) return vertaald;
-    return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
-  };
-  return [woord(programma), woord(fase)].filter(Boolean).join(" · ");
+/** Wat er in een tegel staat als er niets te melden is. */
+export const STREEP = "–";
+
+/** Een woord in de taal van Home Assistant, of een leesbaar gemaakte sleutel. */
+function woordVan(st, fmt) {
+  const s = String(st?.state ?? "");
+  const vertaald = fmt?.(st);
+  if (vertaald && vertaald !== s) return vertaald;
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
 }
 
-/** Een percentage als tekst, of "". */
-const pct = (st) => {
-  const n = getal(st);
-  return n == null ? "" : `${Math.round(n)}%`;
-};
+const KLOK = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
-/**
- * TwinDos: "TwinDos 95% · 100%", of "". Alleen de wasmachine heeft het.
- *
- * @param {object|null} een de state van `twin_dos_1_level`
- * @param {object|null} twee de state van `twin_dos_2_level`
- */
-export function twinDosTekst(een, twee) {
-  const delen = [pct(een), pct(twee)].filter(Boolean);
-  return delen.length ? `TwinDos ${delen.join(" · ")}` : "";
+/** "14:35", "morgen 00:13", of een streep. Op de kalender, niet in uren. */
+function klaarOmTekst(st, nu) {
+  const s = String(st?.state ?? "");
+  if (LEEG.has(s)) return STREEP;
+  const d = new Date(s);
+  if (Number.isNaN(+d)) return STREEP;
+  const dag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const dagen = Math.round((dag(d) - dag(nu)) / 86_400_000);
+  if (dagen === 0) return KLOK(d);
+  if (dagen === 1) return `morgen ${KLOK(d)}`;
+  return `${d.getDate()}-${d.getMonth() + 1} ${KLOK(d)}`;
 }
 
 /**
- * Het verbruik op een regel, alleen wat er een waarde heeft.
- *
- * "Energie 0,9 kWh (verwachting 60%) · Water 48 L (verwachting 70%)". De
- * verwachting is die van Miele zelf ("Energieverbruik voorspelling" in Home
- * Assistant), in procenten. Zonder verbruik maar met een verwachting:
- * "Energieverwachting 60%".
- *
- * @param {{energie?: object, energieVerwacht?: object, water?: object, waterVerwacht?: object}} st
+ * Energie of water: het verbruik zodra er iets verbruikt is, en daarvoor de
+ * verwachting van Miele ("Energieverbruik voorspelling" in Home Assistant).
+ * Vóór de start is de verwachting het nieuws, daarna het verbruik.
  */
-export function verbruikTekst({ energie, energieVerwacht, water, waterVerwacht } = {}) {
-  const deel = (naam, waarde, verwacht) => {
-    if (waarde && verwacht) return `${naam} ${waarde} (verwachting ${verwacht})`;
-    if (waarde) return `${naam} ${waarde}`;
-    if (verwacht) return `${naam}verwachting ${verwacht}`;
-    return "";
-  };
-  const kwh = getal(energie);
-  const liter = getal(water);
-  return [
-    deel("Energie", kwh == null ? "" : `${getalTekst(Math.round(kwh * 10) / 10)} kWh`, pct(energieVerwacht)),
-    deel("Water", liter == null ? "" : `${getalTekst(Math.round(liter))} L`, pct(waterVerwacht)),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+function verbruikTegel(sleutel, naam, verbruikSt, verwachtSt, maak) {
+  const n = getal(verbruikSt);
+  const p = getal(verwachtSt);
+  if (n != null && n > 0) return { sleutel, label: naam, waarde: maak(n), id: verbruikSt.entity_id };
+  if (p != null) return { sleutel, label: `${naam} verwacht`, waarde: `${Math.round(p)}%`, id: verwachtSt.entity_id };
+  if (n != null) return { sleutel, label: naam, waarde: maak(n), id: verbruikSt.entity_id };
+  return { sleutel, label: naam, waarde: STREEP, id: verbruikSt?.entity_id ?? verwachtSt?.entity_id ?? "" };
+}
+
+/**
+ * De tegels van een apparaat met een programma, in vaste volgorde. Een tegel
+ * staat er alleen als het apparaat die entiteit heeft; een waarde die er niet
+ * is wordt een streep, geen lege plek.
+ *
+ * @param {object} p
+ * @param {Record<string, string>} p.rollen uit `apparaatRollen()`
+ * @param {(id: string) => object|null} p.st de state bij een entity_id
+ * @param {(st: object) => string} [p.fmt] `hass.formatEntityState`
+ * @param {string} [p.deurWoord] "Deur" of "Klep"
+ * @param {Date} [p.nu]
+ * @returns {{sleutel: string, label: string, waarde: string, id: string}[]}
+ */
+export function programmaTegels({ rollen = {}, st, fmt, deurWoord = "Deur", nu = new Date() }) {
+  const uit = [];
+  const lees = (rol) => (rollen[rol] ? st(rollen[rol]) ?? null : null);
+  const leeg = (s) => !s || LEEG.has(String(s.state ?? ""));
+
+  if (rollen.deur) {
+    const s = lees("deur");
+    const waarde = leeg(s) ? STREEP : s.state === "on" ? "Open" : "Dicht";
+    uit.push({ sleutel: "deur", label: deurWoord, waarde, id: rollen.deur });
+  }
+  if (rollen.programma) {
+    const s = lees("programma");
+    const waarde = leeg(s) ? STREEP : s.state === "no_program" ? "Geen" : woordVan(s, fmt);
+    uit.push({ sleutel: "programma", label: "Programma", waarde, id: rollen.programma });
+  }
+  if (rollen.fase) {
+    const s = lees("fase");
+    const waarde = leeg(s) || NIETS.has(String(s.state)) ? STREEP : woordVan(s, fmt);
+    uit.push({ sleutel: "fase", label: "Fase", waarde, id: rollen.fase });
+  }
+  if (rollen.eind) {
+    uit.push({ sleutel: "klaar", label: "Klaar om", waarde: klaarOmTekst(lees("eind"), nu), id: rollen.eind });
+  }
+  if (rollen.energie || rollen.energieVerwacht) {
+    const kwh = (n) => `${getalTekst(Math.round(n * 10) / 10)} kWh`;
+    uit.push(verbruikTegel("energie", "Energie", lees("energie"), lees("energieVerwacht"), kwh));
+  }
+  if (rollen.water || rollen.waterVerwacht) {
+    const liter = (n) => `${getalTekst(Math.round(n))} L`;
+    uit.push(verbruikTegel("water", "Water", lees("water"), lees("waterVerwacht"), liter));
+  }
+  for (const [rol, label] of [
+    ["twinDos1", "TwinDos 1"],
+    ["twinDos2", "TwinDos 2"],
+  ]) {
+    if (!rollen[rol]) continue;
+    const n = getal(lees(rol));
+    uit.push({ sleutel: rol, label, waarde: n == null ? STREEP : `${Math.round(n)}%`, id: rollen[rol] });
+  }
+  return uit;
 }
 
 /**

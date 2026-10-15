@@ -80,11 +80,9 @@ import {
   apparaatSoort,
   knopKan,
   metApparaatVelden,
-  programmaRegel,
+  programmaTegels,
   startUitDuur,
-  twinDosTekst,
   veldenVanApparaat,
-  verbruikTekst,
   voortgangUitTijden,
 } from "./programma-logica.js";
 import { keuzeNaam } from "./programmanaam.js";
@@ -153,12 +151,6 @@ class DishwasherCard extends DacCard {
     .st .stip .icon { width: 13px; height: 13px; }
     .st .stip[hidden] { display: none; }
 
-    /* Het programma en de fase ("Katoen · Wassen"), alleen als er een loopt. */
-    .prog {
-      font-size: 11.5px; line-height: 1.25; color: var(--dac-ink-3);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .prog[hidden] { display: none; }
 
     /* De productfoto in de kop, op een eigen vlak in de tint van het thema:
        een witte machine verdwijnt anders op een lichte kaart. Staand, want een
@@ -172,12 +164,47 @@ class DishwasherCard extends DacCard {
     }
     .foto[hidden], .chip[hidden] { display: none; }
 
-    /* Verbruik en TwinDos: een kleine regel onder de balk, alleen met een
-       waarde. Mag doorlopen op een tweede regel: afkappen haalt juist de
-       getallen weg. */
-    .info { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; padding: 0 2px; }
-    .info[hidden], .info span[hidden] { display: none; }
-    .info span { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); font-variant-numeric: tabular-nums; }
+    /* De tegels (sinds 0.71.0): deur, programma, fase, klaar om, verbruik en
+       TwinDos, ALTIJD, met een streep waar niets is. In de vorm van de tegels
+       op de airco-kaart: de waarde groot, het label eronder, een tik opent de
+       sensor. Vier naast elkaar bij acht tegels (de wasmachine), drie bij vijf
+       (de droger). */
+    .tegels { --kol: 3; flex: 0 0 auto; display: grid; grid-template-columns: repeat(var(--kol), minmax(0, 1fr)); gap: 6px; }
+    .tegels[hidden] { display: none; }
+    .tegels[data-n="1"] { --kol: 1; }
+    .tegels[data-n="2"] { --kol: 2; }
+    .tegels[data-n="4"], .tegels[data-n="7"], .tegels[data-n="8"] { --kol: 4; }
+    .tegel {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 5px 4px; min-width: 0; cursor: pointer;
+      background: rgba(var(--dac-tint), .038); border: 1px solid var(--dac-border);
+      border-radius: var(--dac-radius-sm);
+      -webkit-tap-highlight-color: transparent;
+    }
+    @media (hover: hover) { .tegel:hover { border-color: var(--dac-border-hi); } }
+    .tegel .w {
+      font-size: 13px; font-weight: 500; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--dac-ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    /* Het label mag over twee regels: "Energie verwacht" paste op een
+       droger van 246 breed niet in de tegel. */
+    .tegel .l {
+      font-size: 10.5px; line-height: 1.2; color: var(--dac-ink-3); text-align: center; text-wrap: balance;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%;
+    }
+    /* Op een smalle kaart minder naast elkaar: vier op 300 maakt van "Katoen"
+       "Kat...". Drie tot 220; daaronder twee, want drie op 175 kapt "0,4 kWh"
+       af. Twee op 246 maakte de kaart zes rijen hoog (gemeten op
+       15 oktober 2026). */
+    @container (max-width: 340px) {
+      .tegels[data-n="4"], .tegels[data-n="7"], .tegels[data-n="8"] { --kol: 3; }
+    }
+    /* Met [data-n] en niet alleen .tegels: anders wint de regel voor acht
+       hierboven, die zwaarder weegt (gemeten: drie naast elkaar op 175). */
+    @container (max-width: 220px) {
+      .tegels[data-n] { --kol: 2; }
+      .tegels[data-n="1"] { --kol: 1; }
+    }
 
     /* Een halve kaart op een telefoon (rond 175): de statusregel mag dan
        doorlopen. Afgekapt stond er "Draait · nog 4...", en de resterende tijd
@@ -422,6 +449,8 @@ class DishwasherCard extends DacCard {
       c.pause,
       c.stop,
       // Wat de kaart van het apparaat zelf leest (Miele).
+      r.deur,
+      r.eind,
       r.verstreken,
       r.startIn,
       r.programma,
@@ -505,13 +534,12 @@ class DishwasherCard extends DacCard {
           <span class="txt">
             <span class="nm"></span>
             <span class="st"><span class="stip" hidden></span><span class="sw"></span></span>
-            <span class="prog" hidden></span>
           </span>
         </div>
 
         <div class="balk" hidden><span class="vul"></span></div>
 
-        <div class="info" hidden><span class="verbruik" hidden></span><span class="twindos" hidden></span></div>
+        <div class="tegels" hidden></div>
 
         <div class="rij coach" hidden>
           ${knop("vrijgave", "check", "Ingeruimd")}
@@ -544,6 +572,20 @@ class DishwasherCard extends DacCard {
       const v = this.velden_();
       const id = v.status || v.remaining || v.program || this.startSensor_();
       if (id) this.moreInfo_(id);
+    });
+
+    // Een tegel opent zijn sensor: daar staat de geschiedenis.
+    const tegels = this.$(".tegels");
+    const openTegel = (e) => {
+      const t = e.target?.closest?.(".tegel");
+      if (t?.dataset.id) this.moreInfo_(t.dataset.id);
+    };
+    this.on(tegels, "click", openTegel);
+    this.on(tegels, "keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openTegel(e);
+      }
     });
 
     this.on(this.$(".knop.start"), "click", () => this.druk_(this.velden_().start));
@@ -645,6 +687,25 @@ class DishwasherCard extends DacCard {
       },
       Math.max(1_000, Math.min(wacht, 3_600_000))
     );
+  }
+
+  /** De tegels, alleen opnieuw opgebouwd als er iets in verandert. */
+  paintTegels_(lijst) {
+    const vak = this.$(".tegels");
+    vak.hidden = lijst.length === 0;
+    vak.dataset.n = String(lijst.length);
+    const sig = JSON.stringify(lijst);
+    if (vak.dataset.sig === sig) return;
+    vak.dataset.sig = sig;
+    vak.innerHTML = lijst
+      .map(
+        (t) => `
+        <div class="tegel" role="button" tabindex="0" data-id="${escapeHtml(t.id)}" title="${escapeHtml(`${t.label}: ${t.waarde}`)}" aria-label="${escapeHtml(`${t.label}: ${t.waarde}`)}">
+          <span class="w">${escapeHtml(t.waarde)}</span>
+          <span class="l">${escapeHtml(t.label)}</span>
+        </div>`
+      )
+      .join("");
   }
 
   /**
@@ -756,25 +817,10 @@ class DishwasherCard extends DacCard {
     }
     top.setAttribute("aria-label", `${this.$(".nm").textContent}, ${nu.tekst}`);
 
-    // Programma en fase, in de woorden van Home Assistant.
+    // De tegels: deur, programma, fase, klaar om, verbruik en TwinDos, in de
+    // woorden van Home Assistant, altijd (programma-logica.js).
     const fmt = this.hass?.formatEntityState ? (s) => this.hass.formatEntityState(s) : null;
-    const prog = programmaRegel(st(r.programma), st(r.fase), fmt);
-    this.$(".prog").hidden = !prog;
-    this.text(".prog", prog);
-
-    // Verbruik en TwinDos, alleen wat een waarde heeft.
-    const verbruik = verbruikTekst({
-      energie: st(r.energie),
-      energieVerwacht: st(r.energieVerwacht),
-      water: st(r.water),
-      waterVerwacht: st(r.waterVerwacht),
-    });
-    const twin = twinDosTekst(st(r.twinDos1), st(r.twinDos2));
-    this.$(".info .verbruik").hidden = !verbruik;
-    this.text(".info .verbruik", verbruik);
-    this.$(".info .twindos").hidden = !twin;
-    this.text(".info .twindos", twin);
-    this.$(".info").hidden = !verbruik && !twin;
+    this.paintTegels_(programmaTegels({ rollen: r, st, fmt, deurWoord: soort.deur }));
 
     // De balk hoort bij een LOPEND programma en niet bij een sensor die zijn
     // laatste waarde vasthoudt: een balk op 38% naast het woord "Uit" leest als

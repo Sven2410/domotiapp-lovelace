@@ -118,9 +118,11 @@ describe("NIEUW GEDRAG: de status van Miele", () => {
 });
 
 describe("NIEUW GEDRAG: de rest van het apparaat bij de statussensor", () => {
-  it("vindt bij de wasmachine tijden, programma, fase, TwinDos en verbruik", () => {
+  it("vindt bij de wasmachine de deur, tijden, programma, fase, TwinDos en verbruik", () => {
     const r = P.apparaatRollen(hassUitDump(), "sensor.wasmachine");
     assert.deepEqual(r, {
+      // Sinds 0.71.0: de deur, die bij Miele geen translation_key heeft.
+      deur: "binary_sensor.wasmachine_deur",
       status: "sensor.wasmachine",
       rest: "sensor.wasmachine_resterende_tijd",
       verstreken: "sensor.wasmachine_verstreken_tijd",
@@ -186,48 +188,77 @@ describe("NIEUW GEDRAG: wat er op de kaart staat", () => {
     assert.equal(P.knopKan(null), false);
   });
 
-  it("zegt niets over programma en fase als de machine uit staat", () => {
-    const h = hassUitDump();
-    assert.equal(st(h, "sensor.wasmachine_programma").state, "no_program");
-    assert.equal(P.programmaRegel(st(h, "sensor.wasmachine_programma"), st(h, "sensor.wasmachine_programmafase")), "");
+  /** De tegels als `label: waarde`, zodat een toets leest als de kaart. */
+  const tegels = (h, statusId, extra = {}) =>
+    P.programmaTegels({ rollen: P.apparaatRollen(h, statusId), st: (id) => st(h, id), ...extra }).map((t) => `${t.label}: ${t.waarde}`);
+
+  it("toont de wasmachine van de dump, uit, met acht tegels en strepen", () => {
+    assert.deepEqual(tegels(hassUitDump(), "sensor.wasmachine"), [
+      "Deur: Open",
+      "Programma: Geen",
+      "Fase: –",
+      "Klaar om: –",
+      "Energie: –",
+      "Water: –",
+      "TwinDos 1: 95%",
+      "TwinDos 2: 100%",
+    ]);
   });
 
-  it("toont programma en fase in de woorden van Home Assistant", () => {
-    const h = hassUitDump({ over: { "sensor.wasmachine_programma": "cottons", "sensor.wasmachine_programmafase": "main_wash" } });
-    const nl = { cottons: "Katoen", main_wash: "Wassen" };
-    const fmt = (s) => nl[s.state] ?? s.state;
-    assert.equal(P.programmaRegel(st(h, "sensor.wasmachine_programma"), st(h, "sensor.wasmachine_programmafase"), fmt), "Katoen · Wassen");
-    // Zonder vertaling leesbaar, en niet weggelaten.
-    assert.equal(P.programmaRegel(st(h, "sensor.wasmachine_programma"), st(h, "sensor.wasmachine_programmafase")), "Cottons · Main wash");
+  it("toont de droger van de dump met vijf: geen water en geen TwinDos", () => {
+    assert.deepEqual(tegels(hassUitDump(), "sensor.wasdroger"), [
+      "Deur: Dicht",
+      "Programma: Geen",
+      "Fase: –",
+      "Klaar om: –",
+      "Energie: –",
+    ]);
   });
 
-  it("toont TwinDos zoals in de dump", () => {
-    const h = hassUitDump();
-    assert.equal(P.twinDosTekst(st(h, "sensor.wasmachine_twindos_1_niveau"), st(h, "sensor.wasmachine_twindos_2_niveau")), "TwinDos 95% · 100%");
-    assert.equal(P.twinDosTekst(null, null), "");
-  });
-
-  it("toont het verbruik alleen met een waarde: uit staat er niets", () => {
-    const h = hassUitDump();
-    const v = (h2) =>
-      P.verbruikTekst({
-        energie: st(h2, "sensor.wasmachine_energieverbruik"),
-        energieVerwacht: st(h2, "sensor.wasmachine_energieverbruik_voorspelling"),
-        water: st(h2, "sensor.wasmachine_waterverbruik"),
-        waterVerwacht: st(h2, "sensor.wasmachine_waterverbruik_voorspelling"),
-      });
-    assert.equal(v(h), "");
-    const loopt = hassUitDump({
+  it("toont vóór de start de verwachting, en daarna het verbruik", () => {
+    const voor = hassUitDump({
+      over: {
+        "sensor.wasmachine_energieverbruik": "0",
+        "sensor.wasmachine_energieverbruik_voorspelling": "60",
+        "sensor.wasmachine_waterverbruik_voorspelling": "70",
+      },
+    });
+    const t = tegels(voor, "sensor.wasmachine");
+    assert.ok(t.includes("Energie verwacht: 60%"));
+    assert.ok(t.includes("Water verwacht: 70%"));
+    const na = hassUitDump({
       over: {
         "sensor.wasmachine_energieverbruik": "0.94",
         "sensor.wasmachine_energieverbruik_voorspelling": "60",
         "sensor.wasmachine_waterverbruik": "48.2",
-        "sensor.wasmachine_waterverbruik_voorspelling": "70",
       },
     });
-    assert.equal(v(loopt), "Energie 0,9 kWh (verwachting 60%) · Water 48 L (verwachting 70%)");
-    const alleenVerwacht = hassUitDump({ over: { "sensor.wasmachine_energieverbruik_voorspelling": "60" } });
-    assert.equal(v(alleenVerwacht), "Energieverwachting 60%");
+    assert.ok(tegels(na, "sensor.wasmachine").includes("Energie: 0,9 kWh"));
+    assert.ok(tegels(na, "sensor.wasmachine").includes("Water: 48 L"));
+  });
+
+  it("toont programma en fase in de woorden van Home Assistant, en de eindtijd als klok", () => {
+    const nu = new Date(2026, 9, 15, 13, 5);
+    const eind = new Date(2026, 9, 15, 14, 35).toISOString();
+    const h = hassUitDump({
+      over: { "sensor.wasmachine_programma": "cottons", "sensor.wasmachine_programmafase": "main_wash", "sensor.wasmachine_eindtijd": eind },
+    });
+    const nl = { cottons: "Katoen", main_wash: "Wassen" };
+    const t = tegels(h, "sensor.wasmachine", { fmt: (s) => nl[s.state] ?? s.state, nu });
+    assert.deepEqual(t.slice(1, 4), ["Programma: Katoen", "Fase: Wassen", "Klaar om: 14:35"]);
+    // Zonder vertaling leesbaar, en niet weggelaten.
+    assert.equal(tegels(h, "sensor.wasmachine", { nu })[1], "Programma: Cottons");
+    const morgen = hassUitDump({ over: { "sensor.wasmachine_eindtijd": new Date(2026, 9, 16, 0, 13).toISOString() } });
+    assert.equal(tegels(morgen, "sensor.wasmachine", { nu })[3], "Klaar om: morgen 00:13");
+  });
+
+  it("noemt de deur van een vaatwasser een klep, en opent bij een tik de sensor zelf", () => {
+    const t = P.programmaTegels({ rollen: P.apparaatRollen(hassUitDump(), "sensor.wasmachine"), st: (id) => st(hassUitDump(), id), deurWoord: "Klep" });
+    assert.deepEqual(t[0], { sleutel: "deur", label: "Klep", waarde: "Open", id: "binary_sensor.wasmachine_deur" });
+  });
+
+  it("REGRESSIEWACHT: een vaatwasser zonder apparaat heeft geen tegels", () => {
+    assert.deepEqual(P.programmaTegels({ rollen: {}, st: () => null }), []);
   });
 
   it("rekent de voortgang uit verstreken en resterende tijd", () => {
