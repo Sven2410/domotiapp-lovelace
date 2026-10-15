@@ -1,0 +1,201 @@
+{
+ "_toelichting": "Coach v0.123.0 bij een klant, thuisbatterij merk growatt (alleen uitlezen), 15-10-2026 na het omzetten. Geanonimiseerd: serienummer omvormer (serienr), ids.",
+ "coach_entiteiten": [
+  {
+   "registry": {
+    "entity_id": "sensor.thuisbatterij_coach",
+    "unique_id": "dev-growattaccu_coach",
+    "translation_key": "coach",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "sensor.thuisbatterij_coach",
+    "state": "",
+    "attributes": {
+     "contract": 1,
+     "type": "thuisbatterij",
+     "stand": "stil",
+     "accu_fabrikant": "Growatt",
+     "accu_model": "",
+     "brand": "growatt",
+     "alleen_lezen": true,
+     "capaciteit": 15.3,
+     "zelf": false,
+     "soc": null,
+     "reason": "",
+     "temperatuur": null,
+     "plan": [],
+     "opgeleverd_vandaag": null,
+     "opgeleverd_maand": null,
+     "opgeleverd_totaal": null,
+     "opgeleverd_sinds": null,
+     "override": null,
+     "leeg_tot": null,
+     "vakantie": false,
+     "vakantie_max": 50,
+     "reserve": null,
+     "ondergrens": null,
+     "entiteiten": {
+      "soc": "sensor.serienr_state_of_charge",
+      "charge_power": "sensor.serienr_accu_wordt_geladen",
+      "discharge_power": "sensor.serienr_accu_ontladen_kw",
+      "accu_in": "sensor.serienr_accu_geladen_levenslang",
+      "accu_out": "sensor.serienr_accu_ontladen_levenslang"
+     },
+     "icon": "mdi:home-battery",
+     "friendly_name": "Thuisbatterij Coach"
+    },
+    "last_changed": "2026-10-15T19:31:50.099422+00:00",
+    "last_reported": "2026-10-15T19:33:43.291341+00:00",
+    "last_updated": "2026-10-15T19:33:43.291341+00:00"
+   }
+  },
+  {
+   "registry": {
+    "entity_id": "button.thuisbatterij_nu_vol_laden",
+    "unique_id": "dev-growattaccu_vol_laden",
+    "translation_key": "vol_laden",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "button.thuisbatterij_nu_vol_laden",
+    "state": "unknown",
+    "attributes": {
+     "icon": "mdi:battery-arrow-up",
+     "friendly_name": "Thuisbatterij Nu vol laden"
+    },
+    "last_changed": "2026-10-15T19:31:50.100151+00:00",
+    "last_reported": "2026-10-15T19:31:50.100151+00:00",
+    "last_updated": "2026-10-15T19:31:50.100151+00:00"
+   }
+  },
+  {
+   "registry": {
+    "entity_id": "button.thuisbatterij_nu_leegladen",
+    "unique_id": "dev-growattaccu_leegladen",
+    "translation_key": "leegladen",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "button.thuisbatterij_nu_leegladen",
+    "state": "unknown",
+    "attributes": {
+     "icon": "mdi:battery-arrow-down",
+     "friendly_name": "Thuisbatterij Nu leegladen"
+    },
+    "last_changed": "2026-10-15T19:31:50.100287+00:00",
+    "last_reported": "2026-10-15T19:31:50.100287+00:00",
+    "last_updated": "2026-10-15T19:31:50.100287+00:00"
+   }
+  },
+  {
+   "registry": {
+    "entity_id": "button.thuisbatterij_terug_naar_het_plan",
+    "unique_id": "dev-growattaccu_terug_naar_plan",
+    "translation_key": "terug_naar_plan",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "button.thuisbatterij_terug_naar_het_plan",
+    "state": "unknown",
+    "attributes": {
+     "icon": "mdi:calendar-sync",
+     "friendly_name": "Thuisbatterij Terug naar het plan"
+    },
+    "last_changed": "2026-10-15T19:31:50.100408+00:00",
+    "last_reported": "2026-10-15T19:31:50.100408+00:00",
+    "last_updated": "2026-10-15T19:31:50.100408+00:00"
+   }
+  },
+  {
+   "registry": {
+    "entity_id": "switch.thuisbatterij_vakantiestand",
+    "unique_id": "dev-growattaccu_vakantiestand",
+    "translation_key": "vakantiestand",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "switch.thuisbatterij_vakantiestand",
+    "state": "off",
+    "attributes": {
+     "icon": "mdi:palm-tree",
+     "friendly_name": "Thuisbatterij Vakantiestand"
+    },
+    "last_changed": "2026-10-15T19:31:50.100989+00:00",
+    "last_reported": "2026-10-15T19:31:50.100989+00:00",
+    "last_updated": "2026-10-15T19:31:50.100989+00:00"
+   }
+  },
+  {
+   "registry": {
+    "entity_id": "number.thuisbatterij_leegladen_tot",
+    "unique_id": "dev-growattaccu_leeg_tot",
+    "translation_key": "leeg_tot",
+    "platform": "domotiapp_coach",
+    "entity_category": null
+   },
+   "state": {
+    "entity_id": "number.thuisbatterij_leegladen_tot",
+    "state": "0.0",
+    "attributes": {
+     "min": 0,
+     "max": 100,
+     "step": 5,
+     "mode": "auto",
+     "unit_of_measurement": "%",
+     "icon": "mdi:battery-low",
+     "friendly_name": "Thuisbatterij Leegladen tot"
+    },
+    "last_changed": "2026-10-15T19:31:50.101600+00:00",
+    "last_reported": "2026-10-15T19:31:50.101600+00:00",
+    "last_updated": "2026-10-15T19:31:50.101600+00:00"
+   }
+  }
+ ],
+ "growatt_sensoren": [
+  {
+   "entity_id": "sensor.serienr_state_of_charge",
+   "translation_key": "mix_statement_of_charge",
+   "state": "15",
+   "unit": "%",
+   "device_class": "battery"
+  },
+  {
+   "entity_id": "sensor.serienr_accu_wordt_geladen",
+   "translation_key": "mix_battery_charge",
+   "state": "0",
+   "unit": "kW",
+   "device_class": "power",
+   "state_class": "measurement"
+  },
+  {
+   "entity_id": "sensor.serienr_accu_ontladen_kw",
+   "translation_key": "mix_battery_discharge_kw",
+   "state": "0",
+   "unit": "kW",
+   "device_class": "power",
+   "state_class": "measurement"
+  },
+  {
+   "entity_id": "sensor.serienr_accu_geladen_levenslang",
+   "translation_key": "mix_battery_charge_lifetime",
+   "state": "1778.4",
+   "unit": "kWh",
+   "device_class": "energy",
+   "state_class": "total"
+  },
+  {
+   "entity_id": "sensor.serienr_accu_ontladen_levenslang",
+   "translation_key": "mix_battery_discharge_lifetime",
+   "state": "1603.3",
+   "unit": "kWh",
+   "device_class": "energy",
+   "state_class": "total"
+  }
+ ]
+}
