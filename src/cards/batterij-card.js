@@ -49,6 +49,7 @@ import {
   standVorm,
   temperatuurTekst,
   uitgelezenStand,
+  vermogenTekst,
 } from "./batterij-logica.js";
 import { COACH_FABRIKANT, coachMelding, coachRollen, contractVan, kiesApparaat, klantEntiteiten } from "./coach-logica.js";
 import { drukOproep } from "./vaatwasser-logica.js";
@@ -70,8 +71,11 @@ class BatterijCard extends DacCard {
     :host([bare]) .card { background: none; box-shadow: none; }
 
     .kop { display: flex; align-items: center; gap: 14px; cursor: pointer; min-width: 0; }
-    /* Liggend: een Solarbank is breder dan hoog, met uitbreiding bijna vierkant. */
-    .foto { flex: 0 0 auto; width: 84px; height: 64px; object-fit: contain; object-position: center; }
+    /* Liggend: een Solarbank is breder dan hoog, met uitbreiding bijna vierkant.
+       De breedte volgt de foto, tot 84: een Growatt ARK staat rechtop (een
+       half zo breed als hoog), en in een vak van 84 stond hij dan met een gat
+       van 26 aan elke kant (gemeten op 15 oktober 2026). */
+    .foto { flex: 0 0 auto; width: auto; max-width: 84px; height: 64px; object-fit: contain; object-position: center; }
     .geenfoto {
       flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center;
       border-radius: var(--dac-radius-sm); background: var(--dac-surface-hi); color: var(--dac-ink-2);
@@ -195,7 +199,7 @@ class BatterijCard extends DacCard {
 
     /* Smal: een kleinere foto en lading. */
     @container (max-width: 360px) {
-      .foto { width: 64px; height: 50px; }
+      .foto { max-width: 64px; height: 50px; }
       .soc { font-size: 24px; }
     }
 
@@ -408,7 +412,9 @@ class BatterijCard extends DacCard {
 
     this.$(".lading").hidden = s?.soc == null;
     this.text(".soc", s?.soc != null ? `${Math.round(s.soc)}%` : "");
-    this.text(".temp", temperatuurTekst(s));
+    // Onder de lading: het vermogen van een batterij die de coach alleen
+    // uitleest, en de temperatuur.
+    this.text(".temp", [vermogenTekst(s), temperatuurTekst(s)].filter(Boolean).join(" · "));
 
     const meld = this.$(".melding");
     meld.hidden = !melding;

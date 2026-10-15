@@ -105,25 +105,36 @@ describe("NIEUW GEDRAG: de accustand en het vermogen uit de sensoren van de batt
     assert.equal(s.stand, "stil");
     assert.equal(s.tekst, "Stil");
     assert.equal(s.vermogen, 0);
+    // Stil heeft geen vermogen om te noemen.
+    assert.equal(B.vermogenTekst(s), "");
   });
 
   it("toont het ontladen met het vermogen, zoals om 19:00 bij de klant (6,1 kW)", () => {
     const [, kw] = GROWATT.geschiedenis.accu_ontladen_kw.find(([, v]) => v === "6.1");
     const s = B.uitgelezenStand(B.batterijStand(coachSensor()), toestanden({ [ONTLADEN.entity_id]: kw, [SOC.entity_id]: "20" }));
     assert.equal(s.stand, "ontladen");
-    assert.equal(s.tekst, "Ontladen · 6,1 kW");
+    assert.equal(s.tekst, "Ontladen");
+    assert.equal(B.vermogenTekst(s), "6,1 kW");
     assert.equal(s.soc, 20);
     assert.equal(B.standVorm(s.stand).icoon, "arrowDown");
   });
 
   it("toont het laden, en rekent watt om naar kW", () => {
     const st = toestanden({ [LADEN.entity_id]: "2.34" });
-    assert.equal(B.uitgelezenStand(B.batterijStand(coachSensor()), st).tekst, "Laden · 2,3 kW");
+    const laden = B.uitgelezenStand(B.batterijStand(coachSensor()), st);
+    assert.equal(laden.tekst, "Laden");
+    assert.equal(B.vermogenTekst(laden), "2,3 kW");
 
     const w = sensor("mix_battery_discharge_w");
     const sph = coachSensor({ entiteiten: { soc: SOC.entity_id, discharge_power: w.entity_id } });
     const s = B.uitgelezenStand(B.batterijStand(sph), toestanden({ [w.entity_id]: "4734" }));
-    assert.equal(s.tekst, "Ontladen · 4,7 kW");
+    assert.equal(s.tekst, "Ontladen");
+    assert.equal(B.vermogenTekst(s), "4,7 kW");
+  });
+
+  it("zet bij een batterij die de coach stuurt geen vermogen onder de lading", () => {
+    assert.equal(B.vermogenTekst(B.batterijStand(coachSensor({ alleen_lezen: false, soc: 64 }))), "");
+    assert.equal(B.vermogenTekst(null), "");
   });
 
   it("noemt minder dan 50 W stil", () => {

@@ -152,9 +152,9 @@ const STIL_KW = 0.05;
  *
  * - de accustand uit de entiteit `soc`;
  * - de stand uit laden min ontladen (`charge_power`, `discharge_power`): laden,
- *   ontladen of stil, met het vermogen in de tekst ("Ontladen · 4,7 kW").
- *   Zijn ze er allebei niet, dan "Vermogen onbekend", en geen stand die doet
- *   alsof hij het weet;
+ *   ontladen of stil, en het vermogen in `vermogen` (kW, laden positief; zie
+ *   `vermogenTekst`). Zijn ze er allebei niet, dan "Vermogen onbekend", en
+ *   geen stand die doet alsof hij het weet;
  * - geen plan, opdracht, leegbeurt, vakantiestand of grenzen: dat zijn dingen
  *   van een coach die stuurt. De vakantiestand kan nog aan staan van vroeger,
  *   en de grens zou dan op de balk komen zonder dat hij iets doet.
@@ -175,14 +175,10 @@ export function uitgelezenStand(stand, toestand) {
   const ontladen = kilowatt(lees("discharge_power"));
   const netto = laden == null && ontladen == null ? null : (laden ?? 0) - (ontladen ?? 0);
   const sleutel = netto == null ? "" : netto >= STIL_KW ? "laden" : netto <= -STIL_KW ? "ontladen" : "stil";
-  const kw = netto == null ? null : Math.round(Math.abs(netto) * 10) / 10;
-  let tekst = "Vermogen onbekend";
-  if (sleutel === "stil") tekst = STANDEN.stil.label;
-  else if (sleutel) tekst = `${STANDEN[sleutel].label} · ${getalTekst(kw)} kW`;
   return {
     ...stand,
     stand: sleutel,
-    tekst,
+    tekst: sleutel ? STANDEN[sleutel].label : "Vermogen onbekend",
     reden: "",
     zelf: false,
     soc,
@@ -307,6 +303,19 @@ export function grenzenTekst(stand) {
   if (stand.reserve != null) delen.push(`reserve ${Math.round(stand.reserve)}%`);
   if (stand.vakantie && stand.vakantieMax != null) delen.push(`vakantie tot ${Math.round(stand.vakantieMax)}%`);
   return delen.join(" · ");
+}
+
+/**
+ * Het vermogen van een batterij die de coach alleen uitleest: "4,7 kW", of "".
+ *
+ * Rechts onder de lading, op de plek van de temperatuur, en niet in de regel
+ * met de stand: daar werd "Ontladen · 4,7 kW" op een halve kaart afgekapt tot
+ * "Ontladen · 4,7 …", en het getal is wat je wilt zien (gemeten op
+ * 15 oktober 2026). Stil heeft geen vermogen om te noemen.
+ */
+export function vermogenTekst(stand) {
+  if (stand?.vermogen == null || stand.stand === "stil") return "";
+  return `${getalTekst(Math.round(Math.abs(stand.vermogen) * 10) / 10)} kW`;
 }
 
 /** De temperatuur als tekst: "21 °C", of "". */
