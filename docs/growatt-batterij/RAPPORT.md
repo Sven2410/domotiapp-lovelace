@@ -1,7 +1,7 @@
 # 0.69.0: Growatt op de thuisbatterijkaart
 
-**Status: gebouwd en gemeten, nog NIET uitgebracht.** Het wacht op de echte dump
-van coach 0.123.0 (zie *Wat er nog moet*).
+**Uitgebracht na de echte dump van coach 0.123.0** (15 oktober 2026, 21:33),
+zie *Tegen de echte coach 0.123.0* onderaan de bewijzen.
 
 De vraag, via de beheersessie op 15 oktober 2026: *"naast Anker moet ook Growatt
 erop, met type en productfoto."* Het gaat om een Growatt ARK 15.3H bij een
@@ -168,18 +168,39 @@ kop < card`. Er ging een more-info open voor
 **Licht thema**: de witte kast blijft op de witte kaart zichtbaar door de grijze
 randen van de modules. Het thema staat daarna weer op standaard.
 
-## Wat er nog moet
+### Tegen de echte coach 0.123.0
 
-1. **Coach 0.123.0 komt uit.** De eigenaar installeert hem, en de beheersessie
-   zet de accu bij de klant op merk Growatt.
-2. **De beheersessie stuurt de echte dump**: de sensor van de thuisbatterij met
-   alle attributen, en de toestanden en eenheden van soc, charge_power en
-   discharge_power.
-3. **Die dump wordt vaste invoer**, `coach-0.123.0-batterij-growatt.json`, met
-   een test erop, zoals bij 0.112.1. Wijkt hij af van de beschrijving, dan gaat
-   de kaart eerst mee. Pas daarna PR, merge en uitgave 0.69.0. Dat is de
-   afspraak in de kop van `coach-logica.js`: er gaat niets uit dat een attribuut
-   leest dat nog niet in een echte dump stond.
+De eigenaar installeerde coach 0.123.0 bij de klant, en de beheersessie zette
+de accu daar op merk Growatt. Om 21:33 maakte beheer de dump; die staat nu in
+`vaste-invoer/coach-0.123.0-batterij-growatt.json` (serienummer vervangen).
+Daar staat precies wat afgesproken was:
+- **Sensor van de coach:** de toestand is leeg, `stand` "stil", `soc` null.
+  Ook `alleen_lezen: true`, `capaciteit: 15.3`, `accu_fabrikant` "Growatt"
+  en `accu_model` "".
+- **Knoppen:** Vol laden, Leegladen, Terug naar het plan, Leegladen tot en de
+  vakantiestand bestaan wel bij deze accu.
+- **De Growatt zelf:** 15%, met 0 kW laden en 0 kW ontladen ('s nachts, op
+  zijn ondergrens), in % en kW.
+
+`tests/js/batterij-dump-0123.test.mjs`, 7 tests. Tegen `main`:
+
+```
+✔ REGRESSIEWACHT: de dump van coach 0.123.0 met een Growatt   (2 van 2)
+✖ NIEUW GEDRAG: de kaart bij deze Growatt                     (5 van 5 om)
+ℹ pass 2   fail 5
+```
+
+Met deze dump laat de kaart het volgende zien:
+- 15% en "Stil", zonder vermogen;
+- geen knoppen, ook al bestaan ze;
+- geen plan en geen grenzen;
+- de foto van de ARK 15.3H, gekozen aan de capaciteit.
+
+Met de laadsensor op 2,3 kW (het enige dat de proef zelf zet) staat er
+"Laden" en "2,3 kW".
+
+Een dump terwijl hij laadt of ontlaadt komt er nog als de zon schijnt. De
+eenheden staan al in deze dump (kW), en daar rekent de kaart mee.
 
 ## Samenvatting
 
@@ -193,12 +214,14 @@ randen van de modules. Het thema staat daarna weer op standaard.
   kiezen.
 - **Staande foto's.** Het fotovak volgt nu de foto, en daardoor staat ook de
   Solarbank met uitbreiding 8 px dichter bij zijn naam.
-- **Nog niet uitgebracht.** Het wacht op de echte dump van coach 0.123.0.
+- **Getoetst en uitgebracht.** Uitgebracht als 0.69.0, na een test op de echte
+  dump van coach 0.123.0 bij de klant.
 
 ## Wat niet lukte
 
-- **Niet tegen de echte coach 0.123.0 gemeten.** Die is er nog niet; alles is
-  gemeten tegen de beschrijving van de coach-sessie. Daarom wacht de uitgave.
+- **De browsermeting liep tegen de nagebootste coach**, niet tegen de echte.
+  De echte dump is daarna als test toegevoegd. Hij wijkt niet af van de nep:
+  de toestand is leeg, de attributen en de eenheden zijn dezelfde.
 - **Op 170 px breed** worden naam en stand afgekapt. Dat geldt voor elke
   batterijkaart op een halve breedte op een telefoon, ook voor "Nul op de meter"
   bij een Anker. Niet opgelost in deze ronde.
@@ -219,13 +242,4 @@ randen van de modules. Het thema staat daarna weer op standaard.
 
 ## git status --porcelain
 
-```
- M CLAUDE.md
- M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
- M src/cards/batterij-card.js
- M src/cards/batterij-logica.js
- M tests/js/batterij-growatt.test.mjs
-?? docs/growatt-batterij/
-```
-
-(Na het vastleggen leeg; de eerste commit van deze tak stond al op GitHub.)
+Na het vastleggen leeg (`git status --porcelain` geeft niets).
