@@ -131,7 +131,8 @@ met de sleutels uit de opties van de dump.
 Op deze tak:
 - 1862 JS-tests groen;
 - `verify`, `check:registratie`, `check:controls` en `check:css` groen;
-- Python in Docker: zie onderaan.
+- de Python-tests groen in de CI van PR #117. Ze dekken `VASTE_WEBP`, met de
+  drie nieuwe foto's.
 
 ### In een echte browser, tegen een nagebootste Miele
 
