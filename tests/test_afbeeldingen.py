@@ -76,6 +76,12 @@ VASTE_WEBP = [
     # Sinds 0.69.0: Growatt op de thuisbatterijkaart. Productfoto van Growatt,
     # met toestemming van de eigenaar als installateur (15 oktober 2026).
     "thuisbatterijen/growatt-ark-15-3h.webp",
+    # Sinds 0.70.0: Miele op de kaart voor vaatwasser, wasmachine en droger, en
+    # de vriezerkaart. Productfoto's van Miele, met toestemming van de eigenaar
+    # als installateur (15 oktober 2026).
+    "wasmachines/miele-wwi880.webp",
+    "wasdrogers/miele-twh780wp.webp",
+    "vriezers/miele-fns-7710-e.webp",
 ]
 
 

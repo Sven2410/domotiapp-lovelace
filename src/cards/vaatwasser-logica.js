@@ -78,8 +78,63 @@ export function soortVan(state) {
   return SOORT.ONBEKEND;
 }
 
+/*
+ * MIELE (15 oktober 2026)
+ *
+ * De statussensor van Miele is een enum met vaste sleutels (`StateStatus` in de
+ * integratie), en die passen niet in de woordenlijst hierboven: `on` is bij
+ * Miele "Aan" (het display staat aan, er draait niets), en `in_use` en
+ * `program_ended` staan er niet in. Een Miele-sensor herken je aan zijn opties:
+ * daar staan `in_use` en `program_ended` tussen. Dan geldt deze tabel, en de
+ * woordenlijst niet.
+ *
+ * `woord` is een eigen tekst waar die meer zegt dan die van de soort.
+ */
+const MIELE_STATUS = {
+  off: { soort: SOORT.UIT },
+  on: { soort: SOORT.KLAAR, woord: "Aan" },
+  idle: { soort: SOORT.KLAAR, woord: "Aan" },
+  programmed: { soort: SOORT.KLAAR },
+  reserved: { soort: SOORT.KLAAR, woord: "Aan" },
+  service: { soort: SOORT.KLAAR, woord: "Instellingen" },
+  waiting_to_start: { soort: SOORT.UITGESTELD },
+  in_use: { soort: SOORT.DRAAIT },
+  autocleaning: { soort: SOORT.DRAAIT },
+  pause: { soort: SOORT.PAUZE },
+  rinse_hold: { soort: SOORT.PAUZE, woord: "Spoelstop" },
+  program_ended: { soort: SOORT.AF },
+  failure: { soort: SOORT.FOUT },
+  program_interrupted: { soort: SOORT.FOUT, woord: "Programma onderbroken" },
+  not_connected: { soort: SOORT.ONBEKEND },
+};
+
+/** Is dit de statussensor van Miele? Aan zijn opties, niet aan zijn naam. */
+export const isMieleStatus = (st) => {
+  const opties = st?.attributes?.options;
+  return Array.isArray(opties) && opties.includes("in_use") && opties.includes("program_ended");
+};
+
+/**
+ * De soort van een statussensor, en een eigen woord als dat er is.
+ *
+ * Een Miele-sensor gaat door `MIELE_STATUS`; een sleutel die daar niet staat
+ * (een koelkaststand op een wasmachine) is rust. De rest gaat door `soortVan`.
+ *
+ * @param {object|null} st
+ * @returns {{soort: string, woord: string}}
+ */
+export function statusDuiding(st) {
+  if (isMieleStatus(st)) {
+    const s = String(st.state ?? "");
+    if (!s || s === "unknown" || s === "unavailable") return { soort: SOORT.ONBEKEND, woord: "" };
+    const m = MIELE_STATUS[s] ?? { soort: SOORT.KLAAR, woord: "Aan" };
+    return { soort: m.soort, woord: m.woord ?? "" };
+  }
+  return { soort: soortVan(st?.state), woord: "" };
+}
+
 /** Draait hij? Eén plek, zodat de animatie en de tekst het niet oneens kunnen zijn. */
-export const draait = (statusSt) => DRAAIT_SOORTEN.has(soortVan(statusSt?.state));
+export const draait = (statusSt) => DRAAIT_SOORTEN.has(statusDuiding(statusSt).soort);
 
 /**
  * Hoeveel minuten er nog te gaan zijn, of null.
@@ -389,13 +444,23 @@ export function metCoachVelden(config, entiteiten) {
  * sturing staat er met de coach nergens: Ingeruimd is de slimme sturing, en de
  * knop Slim staat dan niet op de kaart.
  *
+ * Sinds 0.70.0 is er een veld Pauze (Miele heeft een aparte pauzeknop), en
+ * staat een veld dat het APPARAAT zelf levert er ook niet: bij Miele vindt de
+ * kaart resterende tijd, voortgang, start, pauze en stop bij de statussensor
+ * (`apparaat`, zie programma-logica.js). Wat er dan nog staat is wat je zelf
+ * kiest.
+ *
  * @param {object} p
  * @param {boolean} p.coach het vinkje
  * @param {Record<string, string>} p.entiteiten wat de coach levert (leeg als er geen coach gevonden is)
+ * @param {string[]} [p.apparaat] de velden die het apparaat zelf levert
  * @returns {{zichtbaar: string[], afwijken: string[]}}
  */
-export function editorVelden({ coach, entiteiten }) {
-  const alle = ["status", "remaining", "progress", "program", "start", "stop", "door", "smart"];
+export function editorVelden({ coach, entiteiten, apparaat = [] }) {
+  const vanApparaat = new Set(apparaat);
+  const alle = ["status", "remaining", "progress", "program", "start", "pause", "stop", "door", "smart"].filter(
+    (v) => !vanApparaat.has(v)
+  );
   if (!coach) return { zichtbaar: alle, afwijken: [] };
   const vanCoach = new Set(VELDEN_UIT_COACH.map(([v]) => v).filter((v) => uitCoach(v, entiteiten)));
   return {
@@ -540,13 +605,19 @@ export const bezig = (soort) =>
  *      "Programma klaar" en "Niet bereikbaar" winnen van het plan -- de vaat
  *      is schoon, of de machine is weg, en dat is het nieuws.
  *
+ * Een wasmachine en een droger hebben een deur en geen klep (`deurWoord`), en
+ * Miele heeft voor een paar standen een eigen woord ("Aan", "Spoelstop"; zie
+ * `statusDuiding`).
+ *
  * @param {Date|null} [start] het geplande startmoment uit `startMoment`
  * @param {Date} [nu]
+ * @param {string} [deurWoord] "Klep" of "Deur"
  * @returns {{soort: string, tekst: string, tone: string, waarschuwing: string}}
  */
-export function toestand({ status, deur, rest, pct, start = null, nu = new Date() } = {}) {
-  const soort = soortVan(status?.state);
+export function toestand({ status, deur, rest, pct, start = null, nu = new Date(), deurWoord = "Klep" } = {}) {
+  const { soort, woord } = statusDuiding(status);
   const open = klepOpen(deur);
+  const klep = `${deurWoord} open`;
 
   if (soort === SOORT.DRAAIT) {
     const stukjes = [];
@@ -563,11 +634,11 @@ export function toestand({ status, deur, rest, pct, start = null, nu = new Date(
   }
 
   if (soort === SOORT.PAUZE) {
-    return { soort, tekst: "Gepauzeerd", tone: "warn", waarschuwing: open ? "Klep open" : "" };
+    return { soort, tekst: woord || "Gepauzeerd", tone: "warn", waarschuwing: open ? klep : "" };
   }
 
   if (soort === SOORT.FOUT) {
-    return { soort, tekst: "Storing", tone: "bad", waarschuwing: open ? "Klep open" : "" };
+    return { soort, tekst: woord || "Storing", tone: "bad", waarschuwing: open ? klep : "" };
   }
 
   if (soort === SOORT.AF) {
@@ -581,20 +652,20 @@ export function toestand({ status, deur, rest, pct, start = null, nu = new Date(
     let tekst = "Uitgestelde start";
     if (start) tekst = startTekst(start, nu);
     else if (rest != null) tekst = `Start over ${restTekst(rest).replace(/^nog /, "")}`;
-    return { soort, tekst, tone: "accent", waarschuwing: open ? "Klep open" : "" };
+    return { soort, tekst, tone: "accent", waarschuwing: open ? klep : "" };
   }
 
   if (start && (soort === SOORT.KLAAR || soort === SOORT.UIT)) {
-    return { soort, tekst: startTekst(start, nu), tone: "accent", waarschuwing: open ? "Klep open" : "" };
+    return { soort, tekst: startTekst(start, nu), tone: "accent", waarschuwing: open ? klep : "" };
   }
 
   if (open) {
-    return { soort, tekst: "Klep open", tone: "warn", waarschuwing: "" };
+    return { soort, tekst: klep, tone: "warn", waarschuwing: "" };
   }
 
   if (soort === SOORT.UIT) return { soort, tekst: "Uit", tone: "neutral", waarschuwing: "" };
   if (soort === SOORT.KLAAR)
-    return { soort, tekst: "Klaar om te starten", tone: "neutral", waarschuwing: "" };
+    return { soort, tekst: woord || "Klaar om te starten", tone: "neutral", waarschuwing: "" };
 
   return { soort: SOORT.ONBEKEND, tekst: "Niet bereikbaar", tone: "neutral", waarschuwing: "" };
 }
