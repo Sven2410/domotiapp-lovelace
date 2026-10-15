@@ -723,14 +723,18 @@ export function energieSamenvatting(reeks) {
  * Een SVG-pad voor de lijn en een voor het vlak eronder, in een vak van
  * `w` bij `h`. Nul staat onderaan (of het minimum, als er negatieve
  * waarden zijn -- teruglevering), de piek op 5% van de bovenrand.
+ *
+ * Met `min` en `max` ligt het bereik vast: de warmtepompboiler tekent 35 tot
+ * 60 graden, en vanaf nul zou die lijn tegen de bovenrand kruipen. Het vlak
+ * loopt dan tot `min`.
  */
-export function lijnPad(reeks, { w = 1000, h = 400 } = {}) {
+export function lijnPad(reeks, { w = 1000, h = 400, min: vastMin, max: vastMax } = {}) {
   const p = reeks?.punten ?? [];
   if (p.length < 2 || !(reeks.tot > reeks.van)) return { lijn: "", vlak: "", min: 0, max: 0 };
   const waarden = p.map((x) => x.v);
-  const min = Math.min(0, ...waarden);
+  const min = Number.isFinite(vastMin) ? vastMin : Math.min(0, ...waarden);
   const top = Math.max(...waarden);
-  const max = top > min ? min + (top - min) / 0.95 : min + 1;
+  const max = Number.isFinite(vastMax) && vastMax > min ? vastMax : top > min ? min + (top - min) / 0.95 : min + 1;
   const x = (t) => (((t - reeks.van) / (reeks.tot - reeks.van)) * w).toFixed(1);
   const y = (v) => (h - ((v - min) / (max - min)) * h).toFixed(1);
   const lijn = p.map((q, i) => `${i ? "L" : "M"}${x(q.t)},${y(q.v)}`).join(" ");
@@ -798,8 +802,8 @@ export function verdunReeks(reeks, n = 48) {
  * naar cubische Béziers). De hoekpunten blijven op hun plek; alleen het
  * stuk ertussen buigt.
  */
-export function vloeiendPad(reeks, { w = 1000, h = 400, spanning = 0.5 } = {}) {
-  const recht = lijnPad(reeks, { w, h });
+export function vloeiendPad(reeks, { w = 1000, h = 400, spanning = 0.5, min: vastMin, max: vastMax } = {}) {
+  const recht = lijnPad(reeks, { w, h, min: vastMin, max: vastMax });
   const p = reeks?.punten ?? [];
   if (p.length < 3 || !recht.lijn) return recht;
   const { min, max } = recht;

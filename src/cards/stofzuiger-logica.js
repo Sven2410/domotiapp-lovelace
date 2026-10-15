@@ -54,6 +54,13 @@
  * `(st, waarde) => hass.formatEntityState(st, waarde)`.
  */
 
+import {
+  AFBEELDINGEN_BASIS,
+  merkKeuzes as merken,
+  productAfbeelding,
+  typeBijApparaat as typeBij,
+  typeKeuzes as types,
+} from "./productfoto.js";
 import { isVertaald, keuzeNaam } from "./programmanaam.js";
 
 const domeinVan = (id) => String(id ?? "").split(".")[0];
@@ -728,22 +735,17 @@ export function kaartBeeld(hass, kaartId) {
 
 /* --------------------------------------------------------------- foto's */
 
-/** Waar de integratie haar afbeeldingen serveert. */
-export const AFBEELDINGEN_BASIS = "/domotiapp_lovelace/afbeeldingen/";
+export { AFBEELDINGEN_BASIS };
 
 /**
- * De merken en hun types, elk met een productfoto.
+ * De merken en hun types, elk met een productfoto. De regels (wat
+ * Automatisch kiest, wat een eigen afbeelding doet) staan in productfoto.js;
+ * de warmtepompboiler deelt ze.
  *
  * Een type erbij is één regel hier plus een WebP onder
  * `afbeeldingen/robotstofzuigers/` (en die naam in `VASTE_WEBP` van
- * `tests/test_afbeeldingen.py`). De paden komen in dashboards zodra iemand er
- * een kiest: alleen aanvullen, nooit hernoemen.
- *
- * `fabrikant` wordt als STUK gezocht in de fabrikant van het apparaat (bij
- * Dreame is dat "Dreametech™"). `codes` zijn de modelcodes zoals de integratie
- * ze in het apparaat zet; alleen op een code kiest Automatisch een foto. Een
- * verkeerde foto is erger dan geen, en een tweede Dreame met een onbekende
- * code krijgt dus het icoon tot hij hier staat.
+ * `tests/test_afbeeldingen.py`). Een tweede Dreame met een onbekende code krijgt
+ * het icoon tot hij hier staat.
  */
 export const STOFZUIGERS = {
   dreame: {
@@ -766,70 +768,17 @@ export const STOFZUIGERS = {
   },
 };
 
-/**
- * Merk en type bij een apparaat uit `hass.devices`, of null.
- *
- * @returns {{merk: string, model: string}|null}
- */
-export function typeBijApparaat(apparaat, lijst = STOFZUIGERS) {
-  const fabrikant = String(apparaat?.manufacturer ?? "").toLowerCase();
-  const model = String(apparaat?.model ?? "").toLowerCase().trim();
-  if (!fabrikant || !model) return null;
-  for (const [merk, m] of Object.entries(lijst ?? {})) {
-    if (!m?.fabrikant || !fabrikant.includes(String(m.fabrikant).toLowerCase())) continue;
-    for (const [sleutel, t] of Object.entries(m.modellen ?? {})) {
-      if ((t.codes ?? []).some((c) => String(c).toLowerCase() === model)) return { merk, model: sleutel };
-    }
-  }
-  return null;
-}
+/** Merk en type bij een apparaat uit `hass.devices`, of null. */
+export const typeBijApparaat = (apparaat, lijst = STOFZUIGERS) => typeBij(apparaat, lijst);
 
-/**
- * Het adres van de afbeelding op de kaart, of "" (dan staat er een chip).
- *
- * - `merk: geen`: geen afbeelding;
- * - `merk: eigen`: de eigen afbeelding (`image`), leeg als er geen is;
- * - een merk uit `STOFZUIGERS`: de foto van het gekozen type, en anders het
- *   type dat bij het apparaat hoort, en anders het eerste type van dat merk;
- * - `auto` (of niets): een eigen afbeelding als die er is, anders de foto bij
- *   de modelcode van het apparaat, anders niets.
- *
- * @param {{merk?: string, model?: string, image?: string}} config
- * @param {object|null} apparaat uit `hass.devices`
- */
-export function stofzuigerAfbeelding(config, apparaat, lijst = STOFZUIGERS) {
-  const merk = config?.merk || "auto";
-  if (merk === "geen") return "";
-  if (merk === "eigen") return config?.image || "";
-  if (merk === "auto") {
-    if (config?.image) return config.image;
-    const t = typeBijApparaat(apparaat, lijst);
-    const pad = t ? lijst[t.merk]?.modellen?.[t.model]?.pad : "";
-    return pad ? AFBEELDINGEN_BASIS + pad : "";
-  }
-  const modellen = lijst?.[merk]?.modellen ?? {};
-  const herkend = typeBijApparaat(apparaat, lijst);
-  const gekozen =
-    modellen[config?.model] ??
-    (herkend?.merk === merk ? modellen[herkend.model] : null) ??
-    Object.values(modellen)[0];
-  return gekozen?.pad ? AFBEELDINGEN_BASIS + gekozen.pad : "";
-}
+/** Het adres van de afbeelding op de kaart, of "". Zie `productAfbeelding`. */
+export const stofzuigerAfbeelding = (config, apparaat, lijst = STOFZUIGERS) => productAfbeelding(config, apparaat, lijst);
 
-/** De keuzes voor Merk in de editor. Valkuil 55: geen enkele met de waarde "". */
-export function merkKeuzes(lijst = STOFZUIGERS) {
-  return [
-    { value: "auto", label: "Automatisch" },
-    ...Object.entries(lijst).map(([value, m]) => ({ value, label: m.label })),
-    { value: "eigen", label: "Ander merk (eigen afbeelding)" },
-    { value: "geen", label: "Geen afbeelding (icoon)" },
-  ];
-}
+/** De keuzes voor Merk in de editor. */
+export const merkKeuzes = (lijst = STOFZUIGERS) => merken(lijst);
 
-/** De keuzes voor Type bij een merk, of [] als het geen merk uit de lijst is. */
-export function typeKeuzes(merk, lijst = STOFZUIGERS) {
-  return Object.entries(lijst?.[merk]?.modellen ?? {}).map(([value, t]) => ({ value, label: t.label }));
-}
+/** De keuzes voor Type bij een merk. */
+export const typeKeuzes = (merk, lijst = STOFZUIGERS) => types(merk, lijst);
 
 /* ---------------------------------------------------------- de blokken */
 

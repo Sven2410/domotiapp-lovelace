@@ -51,6 +51,7 @@ import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   BLOKKEN,
   SOORT_TOON,
+  STOFZUIGERS,
   actieveKamers,
   bedieningKnoppen,
   blokAan,
@@ -65,9 +66,9 @@ import {
   stofzuigerAfbeelding,
   stofzuigerDelen,
   stofzuigerStand,
-  typeBijApparaat,
   typeKeuzes,
 } from "./stofzuiger-logica.js";
+import { metType } from "./productfoto.js";
 
 const domeinVan = (id) => String(id ?? "").split(".")[0];
 
@@ -839,16 +840,8 @@ class StofzuigerEditor extends DacEditor {
    * dat merk is, en anders het eerste. Een ander merk heeft geen type.
    */
   serialize(config) {
-    const types = typeKeuzes(config.merk);
-    if (!types.length) {
-      if (!("model" in config)) return config;
-      const { model: _weg, ...rest } = config;
-      return rest;
-    }
-    if (types.some((t) => t.value === config.model)) return config;
     const reg = this.hass_?.entities?.[config.entity];
-    const herkend = typeBijApparaat(reg?.device_id ? this.hass_?.devices?.[reg.device_id] : null);
-    return { ...config, model: herkend?.merk === config.merk ? herkend.model : types[0].value };
+    return metType(config, reg?.device_id ? this.hass_?.devices?.[reg.device_id] : null, STOFZUIGERS);
   }
 
   label(s) {

@@ -520,6 +520,17 @@ getekende nep, niet de geometrie uit de dump. `kaart-test` heeft een view
 `stofzuiger` met beide robots en een demo-stofzuiger (een ander merk). Zie
 valkuil 72 voor het versienummer in zijn manifest.
 
+En een **nagebootste LG-boiler** in `.ha-dev-config/custom_components/nep_lg/`
+(ook niet in git), voor de warmtepompboilerkaart. Hij heeft de vijf entiteiten
+uit `tests/js/vaste-invoer/lg-wh27s.json`, met dezelfde entity_id's,
+`translation_key`'s, fabrikant (LGE) en modelcode. Het domein is eigen, niet
+`lg_thinq`, want dat is een integratie van Home Assistant zelf. De
+watertemperatuur loopt naar het doel (in Turbo sneller) en koelt een graad per
+minuut af als het doel lager staat. Aanroepen komen als `nep_lg` op de bus.
+De GESCHIEDENIS van `sensor.water_heater_current_temperature` (een dag met een
+douche om 7 uur) is met de hand in `home-assistant_v2.db` gezet, net als bij de
+bewegingsmelders. Op `kaart-test` staat een view `boiler`.
+
 De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
 gaat met `dev/inlog_als.py`, elk op een eigen origin
 (`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
@@ -1805,7 +1816,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **achtentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **negenentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -1814,7 +1825,7 @@ met **achtentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
-| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`) |
+| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`). Merk, type en foto delen ze in `productfoto.js` |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 
