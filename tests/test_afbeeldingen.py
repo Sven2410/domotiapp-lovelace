@@ -70,6 +70,9 @@ VASTE_WEBP = [
     # toestemming van de eigenaar als installateur (15 oktober 2026).
     "robotstofzuigers/dreame-x50-ultra-complete.webp",
     "robotstofzuigers/dreame-l40s-pro-ultra.webp",
+    # Sinds 0.68.1: de warmtepompboilerkaart. Productfoto van LG, met
+    # toestemming van de eigenaar als installateur (15 oktober 2026).
+    "warmtepompboilers/lg-wh27s.webp",
 ]
 
 
