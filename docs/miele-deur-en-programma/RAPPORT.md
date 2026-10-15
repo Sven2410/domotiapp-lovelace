@@ -13,6 +13,7 @@ Beheer las het zo:
 
 Beheer bood aan een voorstel met schermafdruk aan de eigenaar voor te leggen.
 Dat is gedaan, met twee afdrukken uit de testinstance (zie *Het voorstel*).
+Zijn antwoord: *"Ja, uitbrengen"*.
 
 ## Wat er gebouwd is
 
@@ -153,8 +154,8 @@ Op geen enkele breedte wordt een waarde of label afgekapt (gemeten met
   niets is: deur, programma, fase, klaar om, energie, water en TwinDos. Vóór
   de start staat er de verwachting, daarna het verbruik.
 - **Vriezer:** de statusregel noemt altijd de deur.
-- **Voorgelegd:** het voorstel ligt met twee schermafdrukken bij de eigenaar.
-  0.71.0 staat klaar in PR #118.
+- **Goedgekeurd en uitgebracht:** de eigenaar zag het voorstel met twee
+  schermafdrukken en zei *"Ja, uitbrengen"*. Uitgebracht als 0.71.0 (PR #118).
 
 ## Wat niet lukte
 
