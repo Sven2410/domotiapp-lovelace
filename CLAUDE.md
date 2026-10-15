@@ -544,6 +544,28 @@ Een ontlaadbeurt zet je met `POST /api/states/sensor.growatt_omvormer_accu_ontla
 ook een halve breedte. Kies op een batterijkaart altijd `coach_device`: met twee
 batterijen zegt een kaart zonder keuze "Kies in de editor".
 
+Sinds 15 oktober 2026 staat er ook een **nagebootste Miele** in
+`.ha-dev-config/custom_components/nep_miele/` (niet in git), voor de
+programmakaart en de vriezerkaart. Hij speelt de dump uit
+`tests/js/vaste-invoer/miele-was-droog-vries.json` na:
+- **Apparaten:** een wasmachine (WWI880), een droger (TWH780WP) en een
+  vriezer (FNS 7710 E).
+- **Zelfde vorm als de dump:** dezelfde entity_id's, `translation_key`'s en
+  opties, en `model` en `model_id` zoals Miele ze zet. De spookzones van de
+  vriezer zitten er ook in.
+- **Vertalingen:** de map `translations/` is gekopieerd uit de echte
+  integratie in de container. Daardoor zegt Home Assistant "Katoen" en
+  "Wassen".
+- **Knoppen:** start, pauze en stop zijn alleen beschikbaar als het kan, zoals
+  bij Miele. Starten kan alleen met "start op afstand" aan.
+- **Een lopend programma** telt versneld af: een minuut per 10 seconden.
+- **Toestanden zetten:** met de dienst `nep_miele.zet`, met `apparaat` erbij,
+  bijvoorbeeld `{apparaat: "wasmachine", status: "programmed", programma:
+  "cottons", rest: 90, op_afstand: true}`. Elke aanroep komt als `nep_miele` op
+  de bus.
+
+Op `kaart-test` staat een view `miele`.
+
 De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
 gaat met `dev/inlog_als.py`, elk op een eigen origin
 (`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
@@ -1829,16 +1851,16 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **negenentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **dertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
 | Kop en indeling | header, separator, **navbalk**, **tabbladen**, **terug** (een chip die naar een vast pad gaat of een stap terug; ook in een pop-up, waar een badge niet kan staan) |
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
-| Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
+| Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
-| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`). Merk, type en foto delen ze in `productfoto.js` |
+| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; zie `vriezer-logica.js`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 

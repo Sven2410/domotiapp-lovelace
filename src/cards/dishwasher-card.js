@@ -179,6 +179,14 @@ class DishwasherCard extends DacCard {
     .info[hidden], .info span[hidden] { display: none; }
     .info span { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); font-variant-numeric: tabular-nums; }
 
+    /* Een halve kaart op een telefoon (rond 175): de statusregel mag dan
+       doorlopen. Afgekapt stond er "Draait · nog 4...", en de resterende tijd
+       is juist wat je wilt zien (gemeten op 15 oktober 2026). */
+    @container (max-width: 240px) {
+      .st { align-items: flex-start; }
+      .st .sw { white-space: normal; }
+    }
+
     /* --------------------------------------------------------- de balk */
 
     .balk {

@@ -94,6 +94,23 @@ class VriezerCard extends DacCard {
     .set .waarde { flex: 1 1 auto; text-align: center; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--dac-ink); white-space: nowrap; }
     .set .waarde.pending { color: var(--dac-accent-hi); }
 
+    /* Smal, een halve kaart op een telefoon (rond 175). Gemeten op
+       15 oktober 2026: op 170 paste "Instellen op" met de stepper niet (198
+       nodig, 146 over) en werd "Deur open" afgekapt tot "Deur op...". Dus een
+       kleinere foto en temperatuur, een melding die mag doorlopen, en alleen
+       de stepper: die zegt zelf wat hij doet. */
+    @container (max-width: 230px) {
+      .kop { gap: 8px; }
+      .foto { width: 28px; height: 40px; padding: 2px; }
+      .chip { width: 32px; height: 32px; }
+      .nm { font-size: 13px; }
+      .temp { font-size: 19px; }
+      .st { align-items: flex-start; }
+      .st .sw { white-space: normal; }
+      .instellen .kopje { display: none; }
+      .set { flex: 1 1 auto; min-width: 0; }
+    }
+
     :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
   `;
 
