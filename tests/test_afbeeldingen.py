@@ -73,6 +73,12 @@ VASTE_WEBP = [
     # Sinds 0.68.1: de warmtepompboilerkaart. Productfoto van LG, met
     # toestemming van de eigenaar als installateur (15 oktober 2026).
     "warmtepompboilers/lg-wh27s.webp",
+    # Sinds 0.70.0: Miele op de kaart voor vaatwasser, wasmachine en droger, en
+    # de vriezerkaart. Productfoto's van Miele, met toestemming van de eigenaar
+    # als installateur (15 oktober 2026).
+    "wasmachines/miele-wwi880.webp",
+    "wasdrogers/miele-twh780wp.webp",
+    "vriezers/miele-fns-7710-e.webp",
 ]
 
 

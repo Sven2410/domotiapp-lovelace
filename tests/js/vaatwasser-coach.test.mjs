@@ -275,21 +275,22 @@ describe("NIEUW GEDRAG: welke velden de editor toont", () => {
 
   it("laat zonder coach alles staan, behalve Geplande start", () => {
     const v = V.editorVelden({ coach: false, entiteiten: ALLES });
-    assert.deepEqual(v.zichtbaar, ["status", "remaining", "progress", "program", "start", "stop", "door", "smart"]);
+    // Sinds 0.70.0 met Pauze erbij: Miele heeft een aparte pauzeknop.
+    assert.deepEqual(v.zichtbaar, ["status", "remaining", "progress", "program", "start", "pause", "stop", "door", "smart"]);
     assert.ok(!v.zichtbaar.includes("planned_start"));
     assert.deepEqual(v.afwijken, []);
   });
 
   it("laat met de coach alleen zien wat de coach niet levert: bij hem de voortgang", () => {
     const v = V.editorVelden({ coach: true, entiteiten: ALLES });
-    assert.deepEqual(v.zichtbaar, ["progress"]);
+    assert.deepEqual(v.zichtbaar, ["progress", "pause"]);
     assert.deepEqual(v.afwijken, ["status", "remaining", "program", "start", "stop", "door"]);
   });
 
   it("laat een veld staan dat de coach niet heeft", () => {
     const { door, ...zonderDeur } = ALLES;
     const v = V.editorVelden({ coach: true, entiteiten: zonderDeur });
-    assert.deepEqual(v.zichtbaar, ["progress", "door"]);
+    assert.deepEqual(v.zichtbaar, ["progress", "pause", "door"]);
     assert.ok(!v.afwijken.includes("door"));
   });
 

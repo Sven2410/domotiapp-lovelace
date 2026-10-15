@@ -1,0 +1,1319 @@
+{
+ "_toelichting": "Drie Miele-apparaten via de core-integratie miele (cloud), HA 2026.10.1, 15-10-2026, alleen gelezen. Wasmachine en droger stonden UIT. Serienummers, registry-ids en ULIDs waren al vervangen. In de vorm van de frontend: devices, entities (register) en states.",
+ "devices": {
+  "d0000000000000000000000000000001": {
+   "manufacturer": "Miele",
+   "model": "Washing machine",
+   "model_id": "WWI880",
+   "name": "Wasmachine",
+   "name_by_user": null
+  },
+  "d0000000000000000000000000000002": {
+   "manufacturer": "Miele",
+   "model": "Tumble dryer",
+   "model_id": "TWH780WP",
+   "name": "Wasdroger",
+   "name_by_user": null
+  },
+  "d0000000000000000000000000000003": {
+   "manufacturer": "Miele",
+   "model": "Freezer",
+   "model_id": "FNS 7710 E",
+   "name": "Vriezer",
+   "name_by_user": null
+  }
+ },
+ "entities": {
+  "binary_sensor.wasmachine_deur": {
+   "entity_id": "binary_sensor.wasmachine_deur",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasmachine_notificatie_actief": {
+   "entity_id": "binary_sensor.wasmachine_notificatie_actief",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "notification_active",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasmachine_probleem": {
+   "entity_id": "binary_sensor.wasmachine_probleem",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasmachine_bediening_op_afstand": {
+   "entity_id": "binary_sensor.wasmachine_bediening_op_afstand",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "remote_control",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasmachine_smart_grid": {
+   "entity_id": "binary_sensor.wasmachine_smart_grid",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "smart_grid",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasmachine_start_op_afstand": {
+   "entity_id": "binary_sensor.wasmachine_start_op_afstand",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "mobile_start",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "button.wasmachine_starten": {
+   "entity_id": "button.wasmachine_starten",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "start",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "button.wasmachine_stoppen": {
+   "entity_id": "button.wasmachine_stoppen",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "stop",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "button.wasmachine_pauzeren": {
+   "entity_id": "button.wasmachine_pauzeren",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "pause",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "sensor.wasmachine": {
+   "entity_id": "sensor.wasmachine",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "status",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_programma": {
+   "entity_id": "sensor.wasmachine_programma",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "program_id",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_programmafase": {
+   "entity_id": "sensor.wasmachine_programmafase",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "program_phase",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_programmatype": {
+   "entity_id": "sensor.wasmachine_programmatype",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "program_type",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_energieverbruik": {
+   "entity_id": "sensor.wasmachine_energieverbruik",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "energy_consumption",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_energieverbruik_voorspelling": {
+   "entity_id": "sensor.wasmachine_energieverbruik_voorspelling",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "energy_forecast",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_waterverbruik": {
+   "entity_id": "sensor.wasmachine_waterverbruik",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "water_consumption",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_waterverbruik_voorspelling": {
+   "entity_id": "sensor.wasmachine_waterverbruik_voorspelling",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "water_forecast",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_centrifugetoerental": {
+   "entity_id": "sensor.wasmachine_centrifugetoerental",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "spin_speed",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_resterende_tijd": {
+   "entity_id": "sensor.wasmachine_resterende_tijd",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "remaining_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_verstreken_tijd": {
+   "entity_id": "sensor.wasmachine_verstreken_tijd",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "elapsed_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_start_in": {
+   "entity_id": "sensor.wasmachine_start_in",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "start_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_eindtijd": {
+   "entity_id": "sensor.wasmachine_eindtijd",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "finish",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_starttijd": {
+   "entity_id": "sensor.wasmachine_starttijd",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "start",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_temperatuur": {
+   "entity_id": "sensor.wasmachine_temperatuur",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "target_temperature",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_twindos_1_niveau": {
+   "entity_id": "sensor.wasmachine_twindos_1_niveau",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "twin_dos_1_level",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasmachine_twindos_2_niveau": {
+   "entity_id": "sensor.wasmachine_twindos_2_niveau",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "twin_dos_2_level",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "switch.wasmachine_aan_uit": {
+   "entity_id": "switch.wasmachine_aan_uit",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "miele",
+   "translation_key": "power",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_deur": {
+   "entity_id": "binary_sensor.wasdroger_deur",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_notificatie_actief": {
+   "entity_id": "binary_sensor.wasdroger_notificatie_actief",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "notification_active",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_probleem": {
+   "entity_id": "binary_sensor.wasdroger_probleem",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_bediening_op_afstand": {
+   "entity_id": "binary_sensor.wasdroger_bediening_op_afstand",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "remote_control",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_smart_grid": {
+   "entity_id": "binary_sensor.wasdroger_smart_grid",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "smart_grid",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.wasdroger_start_op_afstand": {
+   "entity_id": "binary_sensor.wasdroger_start_op_afstand",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "mobile_start",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "button.wasdroger_starten": {
+   "entity_id": "button.wasdroger_starten",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "start",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "button.wasdroger_stoppen": {
+   "entity_id": "button.wasdroger_stoppen",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "stop",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "button.wasdroger_pauzeren": {
+   "entity_id": "button.wasdroger_pauzeren",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "pause",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": "integration"
+  },
+  "sensor.wasdroger": {
+   "entity_id": "sensor.wasdroger",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "status",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_programma": {
+   "entity_id": "sensor.wasdroger_programma",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "program_id",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_programmafase": {
+   "entity_id": "sensor.wasdroger_programmafase",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "program_phase",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_programmatype": {
+   "entity_id": "sensor.wasdroger_programmatype",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "program_type",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_energieverbruik": {
+   "entity_id": "sensor.wasdroger_energieverbruik",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "energy_consumption",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_energieverbruik_voorspelling": {
+   "entity_id": "sensor.wasdroger_energieverbruik_voorspelling",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "energy_forecast",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_resterende_tijd": {
+   "entity_id": "sensor.wasdroger_resterende_tijd",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "remaining_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_verstreken_tijd": {
+   "entity_id": "sensor.wasdroger_verstreken_tijd",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "elapsed_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_start_in": {
+   "entity_id": "sensor.wasdroger_start_in",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "start_time",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_eindtijd": {
+   "entity_id": "sensor.wasdroger_eindtijd",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "finish",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_starttijd": {
+   "entity_id": "sensor.wasdroger_starttijd",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "start",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.wasdroger_droogtegraad": {
+   "entity_id": "sensor.wasdroger_droogtegraad",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "drying_step",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "switch.wasdroger_aan_uit": {
+   "entity_id": "switch.wasdroger_aan_uit",
+   "device_id": "d0000000000000000000000000000002",
+   "platform": "miele",
+   "translation_key": "power",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_deur": {
+   "entity_id": "binary_sensor.vriezer_deur",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_notificatie_actief": {
+   "entity_id": "binary_sensor.vriezer_notificatie_actief",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "notification_active",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_probleem": {
+   "entity_id": "binary_sensor.vriezer_probleem",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_bediening_op_afstand": {
+   "entity_id": "binary_sensor.vriezer_bediening_op_afstand",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "remote_control",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_smart_grid": {
+   "entity_id": "binary_sensor.vriezer_smart_grid",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "smart_grid",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "binary_sensor.vriezer_start_op_afstand": {
+   "entity_id": "binary_sensor.vriezer_start_op_afstand",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "mobile_start",
+   "entity_category": "diagnostic",
+   "hidden": false,
+   "disabled_by": null
+  },
+  "climate.vriezer": {
+   "entity_id": "climate.vriezer",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "freezer",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "climate.vriezer_zone_2": {
+   "entity_id": "climate.vriezer_zone_2",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "zone_2",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "climate.vriezer_zone_3": {
+   "entity_id": "climate.vriezer_zone_3",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "zone_3",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "select.vriezer_modus": {
+   "entity_id": "select.vriezer_modus",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "fridge_freezer_mode",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.vriezer": {
+   "entity_id": "sensor.vriezer",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "status",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "sensor.vriezer_temperatuur": {
+   "entity_id": "sensor.vriezer_temperatuur",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": null,
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  },
+  "switch.vriezer_supervriezen": {
+   "entity_id": "switch.vriezer_supervriezen",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "miele",
+   "translation_key": "superfreezing",
+   "entity_category": null,
+   "hidden": false,
+   "disabled_by": null
+  }
+ },
+ "states": {
+  "binary_sensor.wasmachine_deur": {
+   "entity_id": "binary_sensor.wasmachine_deur",
+   "state": "on",
+   "attributes": {
+    "device_class": "door",
+    "friendly_name": "Wasmachine Deur"
+   }
+  },
+  "binary_sensor.wasmachine_notificatie_actief": {
+   "entity_id": "binary_sensor.wasmachine_notificatie_actief",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Wasmachine Notificatie actief"
+   }
+  },
+  "binary_sensor.wasmachine_probleem": {
+   "entity_id": "binary_sensor.wasmachine_probleem",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Wasmachine Probleem"
+   }
+  },
+  "binary_sensor.wasmachine_bediening_op_afstand": {
+   "entity_id": "binary_sensor.wasmachine_bediening_op_afstand",
+   "state": "on",
+   "attributes": {
+    "friendly_name": "Wasmachine Bediening op afstand"
+   }
+  },
+  "binary_sensor.wasmachine_smart_grid": {
+   "entity_id": "binary_sensor.wasmachine_smart_grid",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasmachine Smart grid"
+   }
+  },
+  "binary_sensor.wasmachine_start_op_afstand": {
+   "entity_id": "binary_sensor.wasmachine_start_op_afstand",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasmachine Start op afstand"
+   }
+  },
+  "sensor.wasmachine": {
+   "entity_id": "sensor.wasmachine",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "autocleaning",
+     "failure",
+     "idle",
+     "in_use",
+     "not_connected",
+     "off",
+     "on",
+     "pause",
+     "program_ended",
+     "program_interrupted",
+     "programmed",
+     "reserved",
+     "rinse_hold",
+     "service",
+     "supercooling",
+     "supercooling_superfreezing",
+     "superfreezing",
+     "superheating",
+     "waiting_to_start"
+    ],
+    "device_class": "enum",
+    "icon": "mdi:washing-machine",
+    "friendly_name": "Wasmachine"
+   }
+  },
+  "sensor.wasmachine_programma": {
+   "entity_id": "sensor.wasmachine_programma",
+   "state": "no_program",
+   "attributes": {
+    "options": [
+     "automatic_plus",
+     "bed_linen",
+     "clean_machine",
+     "cool_air",
+     "cottonrepair",
+     "cottons",
+     "cottons_eco",
+     "cottons_hygiene",
+     "curtains",
+     "dark_garments",
+     "dark_jeans",
+     "delicates",
+     "denim",
+     "down_duvets",
+     "down_filled_items",
+     "drain_spin",
+     "easy_care",
+     "eco_40_60",
+     "express_20",
+     "first_wash",
+     "freshen_up",
+     "game_pieces",
+     "minimum_iron",
+     "no_program",
+     "normal",
+     "outdoor_garments",
+     "outerwear",
+     "pillows",
+     "powerfresh",
+     "pre_ironing",
+     "proofing",
+     "quick_intense",
+     "quick_power_wash",
+     "rinse",
+     "rinse_out_lint",
+     "separate_rinse_starch",
+     "shirts",
+     "silks",
+     "smartmatic",
+     "sportswear",
+     "starch",
+     "steam_care",
+     "stuffed_toys",
+     "table_linen",
+     "towels",
+     "trainers",
+     "trainers_refresh",
+     "warm_air",
+     "woollens"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasmachine Programma"
+   }
+  },
+  "sensor.wasmachine_programmafase": {
+   "entity_id": "sensor.wasmachine_programmafase",
+   "state": "not_running",
+   "attributes": {
+    "options": [
+     "anti_crease",
+     "automatic_start",
+     "cancelled",
+     "cleaning",
+     "cooling_down",
+     "disinfecting",
+     "drain",
+     "drying",
+     "finished",
+     "flex_load_active",
+     "freshen_up_and_moisten",
+     "hygiene",
+     "main_wash",
+     "not_running",
+     "paused",
+     "pre_wash",
+     "rinse",
+     "rinse_hold",
+     "soak",
+     "spin",
+     "starch_stop",
+     "steam_smoothing",
+     "venting"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasmachine Programmafase"
+   }
+  },
+  "sensor.wasmachine_programmatype": {
+   "entity_id": "sensor.wasmachine_programmatype",
+   "state": "normal_operation_mode",
+   "attributes": {
+    "options": [
+     "automatic_program",
+     "maintenance_program",
+     "normal_operation_mode",
+     "own_program"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasmachine Programmatype"
+   }
+  },
+  "sensor.wasmachine_energieverbruik": {
+   "entity_id": "sensor.wasmachine_energieverbruik",
+   "state": "unknown",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "friendly_name": "Wasmachine Energieverbruik"
+   }
+  },
+  "sensor.wasmachine_energieverbruik_voorspelling": {
+   "entity_id": "sensor.wasmachine_energieverbruik_voorspelling",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "friendly_name": "Wasmachine Energieverbruik voorspelling"
+   }
+  },
+  "sensor.wasmachine_waterverbruik": {
+   "entity_id": "sensor.wasmachine_waterverbruik",
+   "state": "unknown",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "L",
+    "device_class": "water",
+    "friendly_name": "Wasmachine Waterverbruik"
+   }
+  },
+  "sensor.wasmachine_waterverbruik_voorspelling": {
+   "entity_id": "sensor.wasmachine_waterverbruik_voorspelling",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "friendly_name": "Wasmachine Waterverbruik voorspelling"
+   }
+  },
+  "sensor.wasmachine_centrifugetoerental": {
+   "entity_id": "sensor.wasmachine_centrifugetoerental",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "rpm",
+    "friendly_name": "Wasmachine Centrifugetoerental"
+   }
+  },
+  "sensor.wasmachine_resterende_tijd": {
+   "entity_id": "sensor.wasmachine_resterende_tijd",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "friendly_name": "Wasmachine Resterende tijd"
+   }
+  },
+  "sensor.wasmachine_verstreken_tijd": {
+   "entity_id": "sensor.wasmachine_verstreken_tijd",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "friendly_name": "Wasmachine Verstreken tijd"
+   }
+  },
+  "sensor.wasmachine_start_in": {
+   "entity_id": "sensor.wasmachine_start_in",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "friendly_name": "Wasmachine Start in"
+   }
+  },
+  "sensor.wasmachine_eindtijd": {
+   "entity_id": "sensor.wasmachine_eindtijd",
+   "state": "unknown",
+   "attributes": {
+    "device_class": "timestamp",
+    "friendly_name": "Wasmachine Eindtijd"
+   }
+  },
+  "sensor.wasmachine_starttijd": {
+   "entity_id": "sensor.wasmachine_starttijd",
+   "state": "unknown",
+   "attributes": {
+    "device_class": "timestamp",
+    "friendly_name": "Wasmachine Starttijd"
+   }
+  },
+  "sensor.wasmachine_temperatuur": {
+   "entity_id": "sensor.wasmachine_temperatuur",
+   "state": "unknown",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Wasmachine Temperatuur"
+   }
+  },
+  "sensor.wasmachine_twindos_1_niveau": {
+   "entity_id": "sensor.wasmachine_twindos_1_niveau",
+   "state": "95",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "%",
+    "friendly_name": "Wasmachine TwinDos 1 niveau"
+   }
+  },
+  "sensor.wasmachine_twindos_2_niveau": {
+   "entity_id": "sensor.wasmachine_twindos_2_niveau",
+   "state": "100",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "%",
+    "friendly_name": "Wasmachine TwinDos 2 niveau"
+   }
+  },
+  "switch.wasmachine_aan_uit": {
+   "entity_id": "switch.wasmachine_aan_uit",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasmachine Aan/uit"
+   }
+  },
+  "binary_sensor.wasdroger_deur": {
+   "entity_id": "binary_sensor.wasdroger_deur",
+   "state": "off",
+   "attributes": {
+    "device_class": "door",
+    "friendly_name": "Wasdroger Deur"
+   }
+  },
+  "binary_sensor.wasdroger_notificatie_actief": {
+   "entity_id": "binary_sensor.wasdroger_notificatie_actief",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Wasdroger Notificatie actief"
+   }
+  },
+  "binary_sensor.wasdroger_probleem": {
+   "entity_id": "binary_sensor.wasdroger_probleem",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Wasdroger Probleem"
+   }
+  },
+  "binary_sensor.wasdroger_bediening_op_afstand": {
+   "entity_id": "binary_sensor.wasdroger_bediening_op_afstand",
+   "state": "on",
+   "attributes": {
+    "friendly_name": "Wasdroger Bediening op afstand"
+   }
+  },
+  "binary_sensor.wasdroger_smart_grid": {
+   "entity_id": "binary_sensor.wasdroger_smart_grid",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasdroger Smart grid"
+   }
+  },
+  "binary_sensor.wasdroger_start_op_afstand": {
+   "entity_id": "binary_sensor.wasdroger_start_op_afstand",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasdroger Start op afstand"
+   }
+  },
+  "sensor.wasdroger": {
+   "entity_id": "sensor.wasdroger",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "autocleaning",
+     "failure",
+     "idle",
+     "in_use",
+     "not_connected",
+     "off",
+     "on",
+     "pause",
+     "program_ended",
+     "program_interrupted",
+     "programmed",
+     "reserved",
+     "rinse_hold",
+     "service",
+     "supercooling",
+     "supercooling_superfreezing",
+     "superfreezing",
+     "superheating",
+     "waiting_to_start"
+    ],
+    "device_class": "enum",
+    "icon": "mdi:tumble-dryer",
+    "friendly_name": "Wasdroger"
+   }
+  },
+  "sensor.wasdroger_programma": {
+   "entity_id": "sensor.wasdroger_programma",
+   "state": "no_program",
+   "attributes": {
+    "options": [
+     "automatic",
+     "automatic_plus",
+     "basket_program",
+     "bed_linen",
+     "cool_air",
+     "cottons",
+     "cottons_eco",
+     "cottons_hygiene",
+     "curtains",
+     "custom_program_1",
+     "custom_program_10",
+     "custom_program_11",
+     "custom_program_12",
+     "custom_program_13",
+     "custom_program_14",
+     "custom_program_15",
+     "custom_program_16",
+     "custom_program_17",
+     "custom_program_18",
+     "custom_program_19",
+     "custom_program_2",
+     "custom_program_20",
+     "custom_program_3",
+     "custom_program_4",
+     "custom_program_5",
+     "custom_program_6",
+     "custom_program_7",
+     "custom_program_8",
+     "custom_program_9",
+     "delicates",
+     "denim",
+     "downs_duvets",
+     "eco",
+     "express",
+     "gentle_denim",
+     "gentle_smoothing",
+     "hygiene",
+     "large_pillows",
+     "minimum_iron",
+     "no_program",
+     "outerwear",
+     "pillows_sanitize",
+     "proofing",
+     "quick_hygiene",
+     "quick_power_dry",
+     "shirts",
+     "silks_handcare",
+     "smoothing",
+     "sportswear",
+     "standard_pillows",
+     "steam_smoothing",
+     "warm_air",
+     "woollens",
+     "woollens_handcare"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasdroger Programma"
+   }
+  },
+  "sensor.wasdroger_programmafase": {
+   "entity_id": "sensor.wasdroger_programmafase",
+   "state": "not_running",
+   "attributes": {
+    "options": [
+     "anti_crease",
+     "automatic_start",
+     "comfort_cooling",
+     "cooling_down",
+     "drying",
+     "extra_dry",
+     "finished",
+     "hand_iron",
+     "hand_iron_1",
+     "hand_iron_2",
+     "hygiene_drying",
+     "machine_iron",
+     "moisten",
+     "normal",
+     "normal_plus",
+     "not_running",
+     "perfect_dry_active",
+     "program_running",
+     "rinse_out_lint",
+     "rinses",
+     "safety_cooling",
+     "slightly_dry",
+     "smoothing",
+     "steam_smoothing",
+     "thermo_spin",
+     "timed_drying",
+     "warm_air"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasdroger Programmafase"
+   }
+  },
+  "sensor.wasdroger_programmatype": {
+   "entity_id": "sensor.wasdroger_programmatype",
+   "state": "normal_operation_mode",
+   "attributes": {
+    "options": [
+     "automatic_program",
+     "maintenance_program",
+     "normal_operation_mode",
+     "own_program"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasdroger Programmatype"
+   }
+  },
+  "sensor.wasdroger_energieverbruik": {
+   "entity_id": "sensor.wasdroger_energieverbruik",
+   "state": "unknown",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "friendly_name": "Wasdroger Energieverbruik"
+   }
+  },
+  "sensor.wasdroger_energieverbruik_voorspelling": {
+   "entity_id": "sensor.wasdroger_energieverbruik_voorspelling",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "friendly_name": "Wasdroger Energieverbruik voorspelling"
+   }
+  },
+  "sensor.wasdroger_resterende_tijd": {
+   "entity_id": "sensor.wasdroger_resterende_tijd",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "friendly_name": "Wasdroger Resterende tijd"
+   }
+  },
+  "sensor.wasdroger_verstreken_tijd": {
+   "entity_id": "sensor.wasdroger_verstreken_tijd",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "friendly_name": "Wasdroger Verstreken tijd"
+   }
+  },
+  "sensor.wasdroger_start_in": {
+   "entity_id": "sensor.wasdroger_start_in",
+   "state": "unknown",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "friendly_name": "Wasdroger Start in"
+   }
+  },
+  "sensor.wasdroger_eindtijd": {
+   "entity_id": "sensor.wasdroger_eindtijd",
+   "state": "unknown",
+   "attributes": {
+    "device_class": "timestamp",
+    "friendly_name": "Wasdroger Eindtijd"
+   }
+  },
+  "sensor.wasdroger_starttijd": {
+   "entity_id": "sensor.wasdroger_starttijd",
+   "state": "unknown",
+   "attributes": {
+    "device_class": "timestamp",
+    "friendly_name": "Wasdroger Starttijd"
+   }
+  },
+  "sensor.wasdroger_droogtegraad": {
+   "entity_id": "sensor.wasdroger_droogtegraad",
+   "state": "unknown",
+   "attributes": {
+    "options": [
+     "extra_dry",
+     "hand_iron_1",
+     "hand_iron_2",
+     "machine_iron",
+     "normal",
+     "normal_plus",
+     "slightly_dry",
+     "smoothing"
+    ],
+    "device_class": "enum",
+    "friendly_name": "Wasdroger Droogtegraad"
+   }
+  },
+  "switch.wasdroger_aan_uit": {
+   "entity_id": "switch.wasdroger_aan_uit",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Wasdroger Aan/uit"
+   }
+  },
+  "binary_sensor.vriezer_deur": {
+   "entity_id": "binary_sensor.vriezer_deur",
+   "state": "off",
+   "attributes": {
+    "device_class": "door",
+    "friendly_name": "Vriezer Deur"
+   }
+  },
+  "binary_sensor.vriezer_notificatie_actief": {
+   "entity_id": "binary_sensor.vriezer_notificatie_actief",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Vriezer Notificatie actief"
+   }
+  },
+  "binary_sensor.vriezer_probleem": {
+   "entity_id": "binary_sensor.vriezer_probleem",
+   "state": "off",
+   "attributes": {
+    "device_class": "problem",
+    "friendly_name": "Vriezer Probleem"
+   }
+  },
+  "binary_sensor.vriezer_bediening_op_afstand": {
+   "entity_id": "binary_sensor.vriezer_bediening_op_afstand",
+   "state": "on",
+   "attributes": {
+    "friendly_name": "Vriezer Bediening op afstand"
+   }
+  },
+  "binary_sensor.vriezer_smart_grid": {
+   "entity_id": "binary_sensor.vriezer_smart_grid",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vriezer Smart grid"
+   }
+  },
+  "binary_sensor.vriezer_start_op_afstand": {
+   "entity_id": "binary_sensor.vriezer_start_op_afstand",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vriezer Start op afstand"
+   }
+  },
+  "climate.vriezer": {
+   "entity_id": "climate.vriezer",
+   "state": "cool",
+   "attributes": {
+    "hvac_modes": [
+     "cool"
+    ],
+    "min_temp": -28,
+    "max_temp": -15,
+    "target_temp_step": 1,
+    "current_temperature": -18,
+    "temperature": -18,
+    "friendly_name": "Vriezer",
+    "supported_features": 1
+   }
+  },
+  "climate.vriezer_zone_2": {
+   "entity_id": "climate.vriezer_zone_2",
+   "state": "cool",
+   "attributes": {
+    "hvac_modes": [
+     "cool"
+    ],
+    "min_temp": 7,
+    "max_temp": 35,
+    "target_temp_step": 1,
+    "current_temperature": null,
+    "temperature": null,
+    "friendly_name": "Vriezer Zone 2",
+    "supported_features": 1
+   }
+  },
+  "climate.vriezer_zone_3": {
+   "entity_id": "climate.vriezer_zone_3",
+   "state": "cool",
+   "attributes": {
+    "hvac_modes": [
+     "cool"
+    ],
+    "min_temp": 7,
+    "max_temp": 35,
+    "target_temp_step": 1,
+    "current_temperature": null,
+    "temperature": null,
+    "friendly_name": "Vriezer Zone 3",
+    "supported_features": 1
+   }
+  },
+  "select.vriezer_modus": {
+   "entity_id": "select.vriezer_modus",
+   "state": "normal",
+   "attributes": {
+    "options": [
+     "normal",
+     "party",
+     "sabbath"
+    ],
+    "friendly_name": "Vriezer Modus"
+   }
+  },
+  "sensor.vriezer": {
+   "entity_id": "sensor.vriezer",
+   "state": "in_use",
+   "attributes": {
+    "options": [
+     "autocleaning",
+     "failure",
+     "idle",
+     "in_use",
+     "not_connected",
+     "off",
+     "on",
+     "pause",
+     "program_ended",
+     "program_interrupted",
+     "programmed",
+     "reserved",
+     "rinse_hold",
+     "service",
+     "supercooling",
+     "supercooling_superfreezing",
+     "superfreezing",
+     "superheating",
+     "waiting_to_start"
+    ],
+    "device_class": "enum",
+    "icon": "mdi:fridge-industrial-outline",
+    "friendly_name": "Vriezer"
+   }
+  },
+  "sensor.vriezer_temperatuur": {
+   "entity_id": "sensor.vriezer_temperatuur",
+   "state": "-18.0",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "°C",
+    "device_class": "temperature",
+    "friendly_name": "Vriezer Temperatuur"
+   }
+  },
+  "switch.vriezer_supervriezen": {
+   "entity_id": "switch.vriezer_supervriezen",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Vriezer Supervriezen"
+   }
+  }
+ }
+}

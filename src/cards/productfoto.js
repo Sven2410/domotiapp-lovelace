@@ -16,7 +16,9 @@
  * - `codes` zijn de modelcodes zoals de integratie ze in het apparaat zet. Op
  *   een code kiest Automatisch een foto, en alleen daarop: een verkeerde foto is
  *   erger dan geen. Een toevoeging tussen haakjes telt niet mee: LG meldt
- *   "WHT_056905_WW (DEVICE_WATER_HEATER)".
+ *   "WHT_056905_WW (DEVICE_WATER_HEATER)". De code staat in `model` OF in
+ *   `model_id`: Miele zet in `model` de soort ("Washing machine") en in
+ *   `model_id` het type ("WWI880").
  * - `pad` is relatief aan `AFBEELDINGEN_BASIS`. Die adressen komen in
  *   dashboards zodra iemand er een kiest: alleen aanvullen, nooit hernoemen. Elk
  *   pad staat ook in `VASTE_WEBP` van `tests/test_afbeeldingen.py`.
@@ -41,12 +43,12 @@ const kaleCode = (tekst) =>
  */
 export function typeBijApparaat(apparaat, lijst) {
   const fabrikant = String(apparaat?.manufacturer ?? "").toLowerCase();
-  const model = kaleCode(apparaat?.model);
-  if (!fabrikant || !model) return null;
+  const modellen = [kaleCode(apparaat?.model), kaleCode(apparaat?.model_id)].filter(Boolean);
+  if (!fabrikant || !modellen.length) return null;
   for (const [merk, m] of Object.entries(lijst ?? {})) {
     if (!m?.fabrikant || !fabrikant.includes(String(m.fabrikant).toLowerCase())) continue;
     for (const [sleutel, t] of Object.entries(m.modellen ?? {})) {
-      if ((t.codes ?? []).some((c) => kaleCode(c) === model)) return { merk, model: sleutel };
+      if ((t.codes ?? []).some((c) => modellen.includes(kaleCode(c)))) return { merk, model: sleutel };
     }
   }
   return null;
