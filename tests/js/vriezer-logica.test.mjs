@@ -57,13 +57,14 @@ describe("NIEUW GEDRAG: de vriezerkaart", () => {
     assert.ok(!Object.values(d).some((id) => /supervriezen|modus/.test(id)));
   });
 
-  it("toont de stand van de dump: -18 °C, ingesteld op -18, niets te melden", () => {
+  it("toont de stand van de dump: -18 °C, ingesteld op -18, en de deur dicht", () => {
     const s = standVan(hassUitDump());
     assert.equal(s.temperatuur, -18);
     assert.equal(s.doel, -18);
     assert.deepEqual([s.min, s.max, s.stap], [-28, -15, 1]);
     assert.equal(Z.gradenTekst(s.temperatuur), "-18 °C");
-    assert.deepEqual(Z.vriezerMelding(s), { tekst: "", tone: "neutral" });
+    // Sinds 0.71.0 staat de deur er altijd, ook dicht (de wens van de eigenaar).
+    assert.deepEqual(Z.vriezerMelding(s), { tekst: "Deur dicht", regels: ["Deur dicht"], tone: "neutral" });
   });
 
   it("leest de temperatuur van de sensor, met een tiende erbij", () => {
@@ -72,11 +73,14 @@ describe("NIEUW GEDRAG: de vriezerkaart", () => {
     assert.equal(Z.gradenTekst(s.temperatuur), "-17,6 °C");
   });
 
-  it("meldt een open deur eerst, dan een storing, dan een melding", () => {
+  it("meldt een open deur eerst, dan een storing, dan een melding, en de dichte deur achteraan", () => {
     const melding = (over) => Z.vriezerMelding(standVan(hassUitDump(over)));
-    assert.deepEqual(melding({ "binary_sensor.vriezer_deur": "on", "binary_sensor.vriezer_probleem": "on" }), { tekst: "Deur open", tone: "warn" });
-    assert.deepEqual(melding({ "binary_sensor.vriezer_probleem": "on" }), { tekst: "Storing", tone: "bad" });
-    assert.deepEqual(melding({ "binary_sensor.vriezer_notificatie_actief": "on" }), { tekst: "Melding op de vriezer", tone: "warn" });
+    assert.deepEqual(melding({ "binary_sensor.vriezer_deur": "on", "binary_sensor.vriezer_probleem": "on" }), { tekst: "Deur open · Storing", regels: ["Deur open", "Storing"], tone: "bad" });
+    assert.deepEqual(melding({ "binary_sensor.vriezer_deur": "on" }), { tekst: "Deur open", regels: ["Deur open"], tone: "warn" });
+    assert.deepEqual(melding({ "binary_sensor.vriezer_probleem": "on" }), { tekst: "Storing · Deur dicht", regels: ["Storing", "Deur dicht"], tone: "bad" });
+    assert.deepEqual(melding({ "binary_sensor.vriezer_notificatie_actief": "on" }), { tekst: "Melding op de vriezer · Deur dicht", regels: ["Melding op de vriezer", "Deur dicht"], tone: "warn" });
+    // Zonder deursensor geen woord over de deur.
+    assert.deepEqual(melding({ "binary_sensor.vriezer_deur": "unavailable" }), { tekst: "", regels: [], tone: "neutral" });
   });
 
   it("zegt niet bereikbaar als de climate weg is", () => {

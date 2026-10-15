@@ -79,6 +79,7 @@ export function vriezerStand(st, delen = {}) {
     stap: getal(a.target_temp_step) ?? 1,
     eenheid: String(delen.temperatuur?.attributes?.unit_of_measurement ?? "°C"),
     deurOpen: delen.deur?.state === "on",
+    deurBekend: delen.deur?.state === "on" || delen.deur?.state === "off",
     storing: delen.storing?.state === "on",
     melding: delen.melding?.state === "on",
   };
@@ -88,20 +89,30 @@ export function vriezerStand(st, delen = {}) {
 export const gradenTekst = (n, eenheid = "°C") => (n == null ? "" : `${getalTekst(Math.round(n * 10) / 10)} ${eenheid}`);
 
 /**
- * De regel onder de naam, of "" als er niets te melden is (Vormregels:
- * statusregels weglaten als er niets te melden is).
+ * De regel onder de naam.
+ *
+ * De deur staat er ALTIJD, ook dicht. De eigenaar op 15 oktober 2026: *"ik wil
+ * ook de deurstatus op de wasmachine droger en de vriezer zien"*. Tot 0.71.0
+ * stond hier alleen iets als er iets mis was (Vormregels: een statusregel
+ * weglaten als er niets te melden is); zijn wens gaat voor.
  *
  * Een open deur eerst: daar kun je nu iets aan doen. Dan een storing, dan een
- * melding van het apparaat zelf.
+ * melding van het apparaat zelf, en een dichte deur achteraan. De kleur is die
+ * van het ergste. Op de kaart staat elk deel op een eigen regel (`regels`):
+ * achter elkaar ("Storing · deur dicht") liep het op een halve kaart over
+ * drie regels.
  *
- * @returns {{tekst: string, tone: string}}
+ * @returns {{tekst: string, regels: string[], tone: string}}
  */
 export function vriezerMelding(s) {
-  if (!s) return { tekst: "Niet bereikbaar", tone: "neutral" };
-  if (s.deurOpen) return { tekst: "Deur open", tone: "warn" };
-  if (s.storing) return { tekst: "Storing", tone: "bad" };
-  if (s.melding) return { tekst: "Melding op de vriezer", tone: "warn" };
-  return { tekst: "", tone: "neutral" };
+  if (!s) return { tekst: "Niet bereikbaar", regels: ["Niet bereikbaar"], tone: "neutral" };
+  const regels = [];
+  if (s.deurOpen) regels.push("Deur open");
+  if (s.storing) regels.push("Storing");
+  if (s.melding) regels.push("Melding op de vriezer");
+  if (s.deurBekend && !s.deurOpen) regels.push("Deur dicht");
+  const tone = s.storing ? "bad" : s.deurOpen || s.melding ? "warn" : "neutral";
+  return { tekst: regels.join(" · "), regels, tone };
 }
 
 /**

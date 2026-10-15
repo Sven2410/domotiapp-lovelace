@@ -6,15 +6,16 @@
  * niet op staan.
  *
  *   [foto/chip] Vriezer                     -18 °C
- *               Deur open (alleen als er iets is)
+ *               Deur dicht (altijd, sinds 0.71.0)
  *   Instellen op                        [ −  -18 °C  + ]
  *
  * Een tik op de kop opent de vriezer in Home Assistant. − en + lopen voor op de
  * vriezer zelf: pas als je stopt met tikken gaat de nieuwe waarde eruit.
  *
  * KLEUR: alleen de chip draagt de toestand (een open deur let op, een storing
- * rood). Met een foto doet een icoontje in de statusregel dat, en die regel staat
- * er alleen als er iets te melden is. Het getal is neutrale inkt.
+ * rood). Met een foto doet een icoontje in de statusregel dat, alleen als er
+ * iets mis is. Die regel noemt sinds 0.71.0 altijd de deur, ook als hij dicht
+ * is (de wens van de eigenaar). Het getal is neutrale inkt.
  */
 
 import { DacCard, INCOMPLETE, TONES, registerCard, registerEditor } from "../base.js";
@@ -69,7 +70,10 @@ class VriezerCard extends DacCard {
     .st { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.3; color: var(--dac-ink-2); }
     .st .stip { flex: 0 0 auto; width: 13px; height: 13px; color: var(--tone); display: grid; }
     .st .stip .icon { width: 13px; height: 13px; }
-    .st .sw { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Mag doorlopen, ook breed: met de deur erbij is het "Storing · deur
+       dicht", en afgekapt viel juist de deur weg (gemeten op 15 oktober 2026). */
+    .st { align-items: flex-start; }
+    .st .sw { min-width: 0; white-space: pre-line; }
 
     /* De temperatuur: groot, zoals de lading op de batterijkaart. */
     .temp {
@@ -249,7 +253,8 @@ class VriezerCard extends DacCard {
       stip.innerHTML = resolve(icoon, "koelkast");
     }
     this.$(".st").hidden = !melding.tekst;
-    this.text(".st .sw", melding.tekst);
+    // Elk deel op een eigen regel (white-space: pre-line).
+    this.text(".st .sw", melding.regels.join("\n"));
 
     this.text(".temp", gradenTekst(s?.temperatuur, s?.eenheid));
     this.$(".kop").setAttribute("aria-label", [naam, gradenTekst(s?.temperatuur, s?.eenheid), melding.tekst].filter(Boolean).join(", "));

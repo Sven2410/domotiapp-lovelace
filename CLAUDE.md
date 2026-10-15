@@ -192,6 +192,12 @@ geldt: **een STORING blijft altijd staan.** "Niet bereikbaar" is geen status
 maar een defect, en dat verbergen geeft een kaart die net doet alsof alles in
 orde is.
 
+**Behalve waar hij er zelf om vraagt.** Op 15 oktober 2026, met de Miele-kaarten
+bij een klant: *"ik wil ook de deurstatus op de wasmachine droger en de vriezer
+zien. Ook programma etc"*. Daarom staat sinds 0.71.0 op die kaarten de deur er
+ALTIJD, ook dicht, en hebben wasmachine en droger tegels met een streep waar
+niets is. Haal dat niet weg met een beroep op de regel hierboven.
+
 ### De vormtaal komt van DomotiApp Coach
 
 De tokens staan in
