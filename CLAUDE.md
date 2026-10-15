@@ -531,6 +531,19 @@ De GESCHIEDENIS van `sensor.water_heater_current_temperature` (een dag met een
 douche om 7 uur) is met de hand in `home-assistant_v2.db` gezet, net als bij de
 bewegingsmelders. Op `kaart-test` staat een view `boiler`.
 
+De **nagebootste coach** (`.ha-dev-config/custom_components/domotiapp_coach/`,
+niet in git) heeft sinds 15 oktober 2026 twee thuisbatterijen:
+- "Thuisbatterij": een die de coach stuurt;
+- "Accu schuur": een die hij ALLEEN UITLEEST, zoals een Growatt bij coach
+  0.123.0. Die heeft `alleen_lezen: true` en `capaciteit: 15.3`, en zijn
+  `entiteiten` wijzen naar het apparaat "Growatt omvormer". Dat apparaat heeft
+  de sensoren uit de echte dump, met dezelfde eenheden (% en kW).
+
+Een ontlaadbeurt zet je met `POST /api/states/sensor.growatt_omvormer_accu_ontladen_kw`
+(met de attributen erbij). Op `kaart-test` staat een view `batterij` met allebei,
+ook een halve breedte. Kies op een batterijkaart altijd `coach_device`: met twee
+batterijen zegt een kaart zonder keuze "Kies in de editor".
+
 De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
 gaat met `dev/inlog_als.py`, elk op een eigen origin
 (`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
@@ -1825,7 +1838,7 @@ met **negenentwintig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
-| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`). Merk, type en foto delen ze in `productfoto.js` |
+| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`). Merk, type en foto delen ze in `productfoto.js` |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 
