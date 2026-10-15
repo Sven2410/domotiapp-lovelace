@@ -12,9 +12,18 @@
  * De toestand van de sensor is de naam van de stand, tekst voor mensen. Die
  * wordt getoond, maar wat de kaart DOET komt uit `stand` (valkuil 67).
  *
+ * ALLEEN UITLEZEN (coach 0.123.0, 15 oktober 2026)
+ *
+ * Een batterij die de coach niet stuurt, zoals een Growatt (altijd, de keuze
+ * van de eigenaar), heeft `alleen_lezen: true`. De coach draait dan geen stand:
+ * `stand` is "stil", `plan` leeg, `soc` null. De kaart leest de accustand en
+ * het vermogen dan zelf uit de entiteiten van de klant (`entiteiten`), en de
+ * knoppen gaan weg: die bestaan wel, maar doen niets. Zie `uitgelezenStand`.
+ *
  * Geen DOM en geen `hass`: dit hoort in een gewone Node-test.
  */
 
+import { klantEntiteiten } from "./coach-logica.js";
 import { getalTekst, tikken } from "./laadpaal-logica.js";
 
 /** Het model van een thuisbatterij bij de coach. */
@@ -71,6 +80,12 @@ export function batterijStand(st) {
     // draagt het merk zelf ook. Een lege tekst is "niet bekend".
     fabrikant: String(a.accu_fabrikant ?? ""),
     model: String(a.accu_model ?? ""),
+    // De capaciteit in kWh (coach 0.123.0): eerst een sensor, anders wat de
+    // installateur intypte, anders null. Ook voor de foto: een Growatt meldt
+    // geen model, en een ARK is aan zijn aantal modules te herkennen.
+    capaciteit: getal(a.capaciteit),
+    alleenLezen: a.alleen_lezen === true,
+    entiteiten: klantEntiteiten(st),
     tekst: LEEG.has(ruw) ? STANDEN[stand]?.label ?? "" : ruw.charAt(0).toUpperCase() + ruw.slice(1),
     reden: String(a.reason ?? ""),
     zelf: a.zelf === true,
@@ -111,6 +126,78 @@ export function leegTotMetGrens(st, stand) {
 }
 
 /**
+ * Een vermogen in kW uit een sensor, op zijn eenheid, of null.
+ *
+ * Growatt meldt laden en ontladen bij een MIX in kW en bij een SPH in W (de
+ * coach-sessie, 15 oktober 2026). Een andere eenheid, of geen, is niet te
+ * lezen: raden zou een factor duizend kunnen schelen.
+ */
+export function kilowatt(st) {
+  if (!st || LEEG.has(String(st.state ?? ""))) return null;
+  const n = getal(st.state);
+  if (n == null) return null;
+  const eenheid = String(st.attributes?.unit_of_measurement ?? "");
+  if (eenheid === "kW") return n;
+  if (eenheid === "W") return n / 1000;
+  return null;
+}
+
+/** Onder dit vermogen in kW staat hij stil. Growatt meldt in tienden van een kW. */
+const STIL_KW = 0.05;
+
+/**
+ * Wat een batterij die de coach alleen uitleest NU doet, uit zijn eigen sensoren.
+ *
+ * Voor een batterij die de coach stuurt verandert er niets. Bij `alleenLezen`:
+ *
+ * - de accustand uit de entiteit `soc`;
+ * - de stand uit laden min ontladen (`charge_power`, `discharge_power`): laden,
+ *   ontladen of stil, met het vermogen in de tekst ("Ontladen · 4,7 kW").
+ *   Zijn ze er allebei niet, dan "Vermogen onbekend", en geen stand die doet
+ *   alsof hij het weet;
+ * - geen plan, opdracht, leegbeurt, vakantiestand of grenzen: dat zijn dingen
+ *   van een coach die stuurt. De vakantiestand kan nog aan staan van vroeger,
+ *   en de grens zou dan op de balk komen zonder dat hij iets doet.
+ *
+ * Growatt zelf haalt alles eens per vijf minuten uit de cloud; de kaart toont
+ * wat Home Assistant nu heeft.
+ *
+ * @param {ReturnType<typeof batterijStand>} stand
+ * @param {(entityId: string) => object|null|undefined} toestand bijvoorbeeld `(id) => hass.states[id]`
+ */
+export function uitgelezenStand(stand, toestand) {
+  if (!stand?.alleenLezen) return stand;
+  const e = stand.entiteiten ?? {};
+  const lees = (rol) => (e[rol] ? toestand(e[rol]) ?? null : null);
+  const socSt = lees("soc");
+  const soc = socSt && !LEEG.has(String(socSt.state ?? "")) ? getal(socSt.state) : null;
+  const laden = kilowatt(lees("charge_power"));
+  const ontladen = kilowatt(lees("discharge_power"));
+  const netto = laden == null && ontladen == null ? null : (laden ?? 0) - (ontladen ?? 0);
+  const sleutel = netto == null ? "" : netto >= STIL_KW ? "laden" : netto <= -STIL_KW ? "ontladen" : "stil";
+  const kw = netto == null ? null : Math.round(Math.abs(netto) * 10) / 10;
+  let tekst = "Vermogen onbekend";
+  if (sleutel === "stil") tekst = STANDEN.stil.label;
+  else if (sleutel) tekst = `${STANDEN[sleutel].label} · ${getalTekst(kw)} kW`;
+  return {
+    ...stand,
+    stand: sleutel,
+    tekst,
+    reden: "",
+    zelf: false,
+    soc,
+    vermogen: netto,
+    plan: [],
+    override: null,
+    leegTot: null,
+    vakantie: false,
+    vakantieMax: null,
+    reserve: null,
+    ondergrens: null,
+  };
+}
+
+/**
  * De knoppen voor een handmatige opdracht, in volgorde.
  *
  * Vol laden en Leegladen staan aan als die opdracht loopt (`override`).
@@ -122,7 +209,9 @@ export function leegTotMetGrens(st, stand) {
  * @param {Record<string, string>} rollen uit `coachRollen()`
  */
 export function opdrachtKnoppen(stand, rollen) {
-  if (!stand) return [];
+  // Een batterij die de coach alleen uitleest heeft de knoppen wel, maar ze
+  // doen niets (coach 0.123.0). Verbergen is het eerlijkst.
+  if (!stand || stand.alleenLezen) return [];
   const uit = [
     { rol: "vol", entity: rollen.vol_laden, label: "Vol laden", kort: "Vol laden", icoon: "arrowUp", aan: stand.override === "vol" },
     { rol: "leeg", entity: rollen.leegladen, label: "Leegladen", kort: "Leegladen", icoon: "arrowDown", aan: stand.override === "leeg" },
@@ -243,7 +332,36 @@ export const BATTERIJ_FOTOS = {
     label: "Anker SOLIX Solarbank Max AC met uitbreiding",
     pad: "thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp",
   },
+  // Sinds 0.69.0, met toestemming van de eigenaar als installateur
+  // (15 oktober 2026: "ja growatt mag in de publieke repo"). Zes modules op
+  // een BMS; een ARK met een ander aantal modules is hoger of lager.
+  growatt_ark_15_3h: {
+    label: "Growatt ARK 15.3H",
+    pad: "thuisbatterijen/growatt-ark-15-3h.webp",
+  },
 };
+
+/** Eén module van een Growatt ARK (ARK 2.5H-A1): 51,2 V maal 50 Ah, 2,56 kWh. */
+const ARK_MODULE_KWH = 2.56;
+
+/** De foto per aantal modules. De reeks loopt van 3 (7.6H) tot 10 (25.6H). */
+const ARK_FOTOS = { 6: "growatt_ark_15_3h" };
+
+/**
+ * Welke ARK het is, aan zijn capaciteit, of null.
+ *
+ * Een ARK heet naar zijn capaciteit, naar beneden afgekapt: zes modules is
+ * 15,36 kWh en heet 15.3H. Dat getal typt de installateur bij de coach. Het
+ * moet dicht bij een heel aantal modules liggen, anders is het iets anders:
+ * bij de klant kwam er ongeveer 12 kWh uit per 100%, en wie dat intypt is er
+ * twee modules naast. Bij twijfel geen foto (de coach-sessie, 15 oktober 2026).
+ */
+function arkBijCapaciteit(kwh) {
+  if (!Number.isFinite(kwh) || kwh <= 0) return null;
+  const modules = Math.round(kwh / ARK_MODULE_KWH);
+  if (Math.abs(kwh - modules * ARK_MODULE_KWH) > 0.15) return null;
+  return ARK_FOTOS[modules] ?? null;
+}
 
 /**
  * Welke foto er bij een batterij hoort, of null.
@@ -254,12 +372,22 @@ export const BATTERIJ_FOTOS = {
  * erger dan geen. De uitbreiding is aan het model niet te zien: die kies je in
  * de editor.
  *
- * @param {{fabrikant?: string, model?: string}|null} accu uit `batterijStand()`
+ * Een Growatt meldt bij een MIX geen model (`growatt_server` zet het op null),
+ * en het model dat er wel staat is dat van de omvormer: de accustand hangt aan
+ * de omvormer. Een ARK herkent Automatisch daarom aan het getal in een model
+ * als "ARK 15.3H", en anders aan de capaciteit uit de coach.
+ *
+ * @param {{fabrikant?: string, model?: string, capaciteit?: number|null}|null} accu uit `batterijStand()`
  * @returns {string|null} een sleutel uit `BATTERIJ_FOTOS`
  */
 export function fotoBijAccu(accu) {
   const model = `${accu?.model ?? ""}`.toLowerCase();
   if (/\bsolarbank\s+max\s+ac\b/.test(model)) return "anker_solarbank_max_ac";
+  const fabrikant = `${accu?.fabrikant ?? ""}`.toLowerCase();
+  if (/\bgrowatt\b/.test(fabrikant) || /\bgrowatt\b/.test(model)) {
+    const ark = model.match(/\bark[\s-]*(\d+(?:[.,]\d+)?)\s*h\b/);
+    return arkBijCapaciteit(ark ? Number(ark[1].replace(",", ".")) : accu?.capaciteit ?? NaN);
+  }
   return null;
 }
 

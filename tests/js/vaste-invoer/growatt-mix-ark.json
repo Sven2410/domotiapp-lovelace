@@ -1,0 +1,213 @@
+{
+ "_toelichting": "Ingekort uit een dump van een Growatt MIX met ARK-accu via de core-integratie growatt_server (HA 2026.10.1, 15-10-2026, alleen gelezen). Alleen de omvormer en de accusensoren. Serienummer en namen waren al vervangen.",
+ "apparaat": {
+  "manufacturer": "Growatt",
+  "model": null,
+  "model_id": null
+ },
+ "entiteiten": [
+  {
+   "entity_id": "sensor.serienr_state_of_charge",
+   "platform": "growatt_server",
+   "translation_key": "mix_statement_of_charge",
+   "state": "15",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "device_class": "battery"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accu_geladen_levenslang",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_charge_lifetime",
+   "state": "1778.4",
+   "attributes": {
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "state_class": "total"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accu_ontladen_levenslang",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_discharge_lifetime",
+   "state": "1603.3",
+   "attributes": {
+    "unit_of_measurement": "kWh",
+    "device_class": "energy",
+    "state_class": "total"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accu_ontlaadt_w",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_discharge_w",
+   "state": "0",
+   "attributes": {
+    "unit_of_measurement": "W",
+    "device_class": "power",
+    "state_class": "measurement"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accuspanning",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_voltage",
+   "state": "308.9",
+   "attributes": {
+    "unit_of_measurement": "V",
+    "device_class": "voltage"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accu_wordt_geladen",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_charge",
+   "state": "0",
+   "attributes": {
+    "unit_of_measurement": "kW",
+    "device_class": "power",
+    "state_class": "measurement"
+   }
+  },
+  {
+   "entity_id": "sensor.serienr_accu_ontladen_kw",
+   "platform": "growatt_server",
+   "translation_key": "mix_battery_discharge_kw",
+   "state": "0",
+   "attributes": {
+    "unit_of_measurement": "kW",
+    "device_class": "power",
+    "state_class": "measurement"
+   }
+  }
+ ],
+ "geschiedenis": {
+  "state_of_charge": [
+   [
+    "2026-10-15T15:46:34.615812+00:00",
+    "68"
+   ],
+   [
+    "2026-10-15T15:51:35.825737+00:00",
+    "66"
+   ],
+   [
+    "2026-10-15T15:54:56.802618+00:00",
+    "65"
+   ],
+   [
+    "2026-10-15T16:04:59.440436+00:00",
+    "62"
+   ],
+   [
+    "2026-10-15T16:10:01.213846+00:00",
+    "59"
+   ],
+   [
+    "2026-10-15T16:15:04.057596+00:00",
+    "56"
+   ],
+   [
+    "2026-10-15T16:20:04.860510+00:00",
+    "52"
+   ],
+   [
+    "2026-10-15T16:25:42.884598+00:00",
+    "48"
+   ],
+   [
+    "2026-10-15T16:30:44.144288+00:00",
+    "45"
+   ],
+   [
+    "2026-10-15T16:35:44.706427+00:00",
+    "41"
+   ],
+   [
+    "2026-10-15T16:40:45.413401+00:00",
+    "37"
+   ],
+   [
+    "2026-10-15T16:45:46.488057+00:00",
+    "33"
+   ],
+   [
+    "2026-10-15T16:50:47.579288+00:00",
+    "29"
+   ],
+   [
+    "2026-10-15T16:55:48.412794+00:00",
+    "25"
+   ],
+   [
+    "2026-10-15T17:00:49.628831+00:00",
+    "20"
+   ],
+   [
+    "2026-10-15T17:05:54.293213+00:00",
+    "15"
+   ]
+  ],
+  "accu_ontladen_kw": [
+   [
+    "2026-10-15T15:46:34.628814+00:00",
+    "1.9"
+   ],
+   [
+    "2026-10-15T15:51:35.826488+00:00",
+    "2.3"
+   ],
+   [
+    "2026-10-15T15:54:56.806207+00:00",
+    "0.7"
+   ],
+   [
+    "2026-10-15T15:59:58.364490+00:00",
+    "0.8"
+   ],
+   [
+    "2026-10-15T16:04:59.441266+00:00",
+    "4.7"
+   ],
+   [
+    "2026-10-15T16:10:01.214536+00:00",
+    "4.9"
+   ],
+   [
+    "2026-10-15T16:15:04.058344+00:00",
+    "5.4"
+   ],
+   [
+    "2026-10-15T16:30:44.145850+00:00",
+    "5.3"
+   ],
+   [
+    "2026-10-15T16:35:44.708020+00:00",
+    "5.7"
+   ],
+   [
+    "2026-10-15T16:45:46.489518+00:00",
+    "5.8"
+   ],
+   [
+    "2026-10-15T16:50:47.580126+00:00",
+    "6"
+   ],
+   [
+    "2026-10-15T17:00:49.629494+00:00",
+    "6.1"
+   ],
+   [
+    "2026-10-15T17:05:54.294029+00:00",
+    "0"
+   ]
+  ],
+  "accu_wordt_geladen": [
+   [
+    "2026-10-15T15:46:34.622027+00:00",
+    "0"
+   ]
+  ]
+ }
+}

@@ -23,6 +23,12 @@
  * Alles van de coach, via het apparaat dat in de editor gekozen is (of het
  * enige). De toestand van de coach-sensor wordt getoond maar nergens gelezen om
  * iets te beslissen (valkuil 67).
+ *
+ * Een batterij die de coach ALLEEN UITLEEST (sinds coach 0.123.0; een Growatt
+ * altijd) houdt alleen 1, 2 en 7: de accustand en het vermogen komen dan uit
+ * zijn eigen sensoren, en de knoppen, de vakantiestand en het plan zijn er
+ * niet. Gevraagd op 15 oktober 2026, voor een Growatt ARK bij een klant. Zie
+ * `uitgelezenStand` in batterij-logica.js.
  */
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -42,8 +48,9 @@ import {
   planStaven,
   standVorm,
   temperatuurTekst,
+  uitgelezenStand,
 } from "./batterij-logica.js";
-import { COACH_FABRIKANT, coachMelding, coachRollen, contractVan, kiesApparaat } from "./coach-logica.js";
+import { COACH_FABRIKANT, coachMelding, coachRollen, contractVan, kiesApparaat, klantEntiteiten } from "./coach-logica.js";
 import { drukOproep } from "./vaatwasser-logica.js";
 import { getalTekst, stapWaarde } from "./laadpaal-logica.js";
 
@@ -214,7 +221,25 @@ class BatterijCard extends DacCard {
 
   watched() {
     const r = this.coach_()?.rollen ?? {};
-    return [r.coach, r.vol_laden, r.leegladen, r.terug_naar_plan, r.leeg_tot, r.vakantiestand].filter(Boolean);
+    // De sensoren van de batterij zelf: bij een batterij die de coach alleen
+    // uitleest komen de accustand en het vermogen daarvandaan.
+    const eigen = r.coach ? klantEntiteiten(stateOf(this.hass, r.coach)) : {};
+    return [
+      r.coach,
+      r.vol_laden,
+      r.leegladen,
+      r.terug_naar_plan,
+      r.leeg_tot,
+      r.vakantiestand,
+      eigen.soc,
+      eigen.charge_power,
+      eigen.discharge_power,
+    ].filter(Boolean);
+  }
+
+  /** Wat de batterij doet: van de coach, of uit zijn eigen sensoren als de coach hem alleen uitleest. */
+  stand_(coachSt) {
+    return uitgelezenStand(batterijStand(coachSt), (id) => stateOf(this.hass, id));
   }
 
   coach_() {
@@ -279,7 +304,11 @@ class BatterijCard extends DacCard {
 
   wire() {
     this.on(this.$(".kop"), "click", () => {
-      const id = this.coach_()?.rollen.coach;
+      // Een batterij die de coach alleen uitleest: de accustand, want de
+      // sensor van de coach heeft dan niets te zeggen.
+      const coach = this.coach_()?.rollen.coach;
+      const s = coach ? this.stand_(stateOf(this.hass, coach)) : null;
+      const id = (s?.alleenLezen && s.entiteiten.soc) || coach;
       if (id) this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: id }, bubbles: true, composed: true }));
     });
     // De opdrachtknoppen worden in `paint()` gebouwd; het gedrag hangt aan de rij.
@@ -358,7 +387,7 @@ class BatterijCard extends DacCard {
     const info = this.coach_();
     const r = info?.rollen ?? {};
     const coachSt = stateOf(this.hass, r.coach);
-    const s = batterijStand(coachSt);
+    const s = this.stand_(coachSt);
     const melding = info ? coachMelding(info.keuze, contractVan(coachSt), "0.112.1") : "";
 
     const apparaat = this.hass?.devices?.[info?.keuze.id ?? ""];
@@ -463,8 +492,10 @@ class BatterijCard extends DacCard {
     rij.hidden = !knoppen.length;
 
     // Leegladen tot [− getal +], de instelling bij de knop Leegladen.
+    // Bij een batterij die de coach alleen uitleest bestaan leeg_tot en de
+    // vakantiestand wel, maar ze doen niets.
     const totSt = leegTotMetGrens(stateOf(this.hass, r.leeg_tot), s);
-    const metLeeg = Boolean(r.leegladen) && Boolean(totSt) && totSt.state !== "unavailable";
+    const metLeeg = !s?.alleenLezen && Boolean(r.leegladen) && Boolean(totSt) && totSt.state !== "unavailable";
     this.$(".leeg").hidden = !metLeeg;
     if (metLeeg) {
       const v = this.pending_ ?? Number(totSt.state);
@@ -479,7 +510,7 @@ class BatterijCard extends DacCard {
 
     // De vakantiestand: aan of uit, met de grens van de installateur erbij.
     const vakSt = stateOf(this.hass, r.vakantiestand);
-    const metVak = Boolean(vakSt) && vakSt.state !== "unavailable";
+    const metVak = !s?.alleenLezen && Boolean(vakSt) && vakSt.state !== "unavailable";
     this.$(".vakantierij").hidden = !metVak;
     if (metVak) {
       const aan = vakSt.state === "on";
@@ -569,7 +600,8 @@ class BatterijEditor extends DacEditor {
       name: "Leeg laten: de naam die de batterij bij de coach heeft.",
       coach_device:
         "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.",
-      afbeelding: "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC).",
+      afbeelding:
+        "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC). Een Growatt ARK herkent hij aan de capaciteit bij de coach; staat daar iets anders, kies het type dan hier.",
     }[s.name];
   }
 }
@@ -577,7 +609,8 @@ class BatterijEditor extends DacEditor {
 registerEditor("domotiapp-batterij-card-editor", BatterijEditor);
 registerCard("domotiapp-batterij-card", BatterijCard, {
   name: "DomotiApp Thuisbatterij",
-  description: "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan.",
+  description:
+    "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen.",
 });
 
 export { BatterijCard };
