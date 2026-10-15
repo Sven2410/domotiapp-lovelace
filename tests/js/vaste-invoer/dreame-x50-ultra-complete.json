@@ -1,0 +1,3515 @@
+{
+ "_toelichting": "Dreame X50 Ultra Complete via HACS-integratie dreame_vacuum (Tasshack), HA 2026.10.1, uitgelezen 15-10-2026 met alleen lezen. Geanonimiseerd in de beheersessie: MAC, serienummer, wifi (ssid/bssid/ip), cloud-ids, tokens, kaartnaam, persoonsnamen in kamers, tijdzone en registry-ids vervangen. Kamergeometrie, meubels en obstakels staan er nog in (geen namen of locatie). Voor de publieke repo ingekort tot wat een proef nodig heeft: zonder de instellingen per kamer (143 entiteiten), zonder de geometrie op de kaartcamera, zonder wifi, kaartdatums, schema en tijdstempels op de stofzuiger. In de vorm van hass: states, entities, devices, services.",
+ "states": {
+  "vacuum.x50_ultra_complete": {
+   "entity_id": "vacuum.x50_ultra_complete",
+   "state": "docked",
+   "attributes": {
+    "fan_speed_list": [
+     "silent",
+     "standard",
+     "strong",
+     "turbo"
+    ],
+    "fan_speed": "standard",
+    "timing_clean": 0,
+    "startup_method": "Through App",
+    "current_mop_type": 2,
+    "mop_pad": true,
+    "mop_pad_humidity": "Moist",
+    "mop_pad_humidity_list": [
+     "Slightly dry",
+     "Moist",
+     "Wet"
+    ],
+    "self_clean_area": 15,
+    "self_clean_area_min": 8,
+    "self_clean_area_max": 25,
+    "self_clean_area_default": 15,
+    "previous_self_clean_area": 15,
+    "self_clean_time_min": 10,
+    "self_clean_time_max": 40,
+    "self_clean_time_default": 20,
+    "previous_self_clean_time": 25,
+    "washing_mode": "Standard",
+    "washing_mode_list": [
+     "Light",
+     "Standard",
+     "Deep"
+    ],
+    "status": "sleeping",
+    "cleaning_mode_list": [
+     "Sweeping",
+     "Mopping",
+     "Sweeping and mopping",
+     "Mopping after sweeping"
+    ],
+    "cleaning_mode": "Sweeping and mopping",
+    "suction_level_list": [
+     "Quiet",
+     "Standard",
+     "Strong",
+     "Turbo"
+    ],
+    "suction_level": "Standard",
+    "tight_mopping": false,
+    "error": "No error",
+    "cleaning_paused": 0,
+    "relocation_status": "Located",
+    "low_water_warning": "No warning",
+    "cleaning_time": 27,
+    "cleaned_area": 22,
+    "main_brush_time_left": 202,
+    "main_brush_left": 67,
+    "side_brush_time_left": 102,
+    "side_brush_left": 51,
+    "filter_left": 35,
+    "filter_time_left": 52,
+    "total_cleaned_area": 4959,
+    "total_cleaning_time": 5835,
+    "cleaning_count": 72,
+    "customized_cleaning": false,
+    "nation_matched": "matched",
+    "total_runtime": 0,
+    "total_cruise_time": 0,
+    "multi_floor_map": true,
+    "scheduled_clean": false,
+    "voice_assistant": true,
+    "voice_assistant_language_list": [
+     "English",
+     "German",
+     "Russian",
+     "Italian",
+     "French",
+     "Korean",
+     "Chinese"
+    ],
+    "voice_assistant_language": "English",
+    "self_clean": true,
+    "obstacle_avoidance": true,
+    "volume": 90,
+    "child_lock": false,
+    "resume_cleaning": true,
+    "carpet_boost": true,
+    "map_recovery_status": "Idle",
+    "auto_water_refilling": false,
+    "battery_charge_level": 100,
+    "ring_light_always_on": false,
+    "auto_empty_mode": "High frequency",
+    "auto_empty_mode_list": [
+     "Off",
+     "Standard",
+     "High frequency",
+     "Low frequency"
+    ],
+    "auto_dust_collecting": true,
+    "auto_empty_status": "Idle",
+    "cleaning_progress": 0,
+    "task_type": 0,
+    "wheel_dirty_left": 83,
+    "wheel_dirty_time_left": 25,
+    "scale_inhibitor_left": 83,
+    "scale_inhibitor_time_left": 918,
+    "map_backup_status": "Idle",
+    "sensor_dirty_left": 78,
+    "sensor_dirty_time_left": 23,
+    "carpet_recognition": 1,
+    "carpet_cleaning_list": [
+     "Avoidance",
+     "Adaptation",
+     "Remove mop",
+     "Ignore",
+     "Cross"
+    ],
+    "carpet_cleaning": "Adaptation",
+    "auto_mount_mop": true,
+    "auto_add_detergent": 1,
+    "clean_carpets_first": false,
+    "dust_bag_status": "Installed",
+    "drying_time_list": [
+     2,
+     3,
+     4
+    ],
+    "drying_time": 3,
+    "drying_progress": 33,
+    "detergent_status": "Installed",
+    "station_drainage_status": "Idle",
+    "hot_water_status": "Enabled",
+    "clean_water_tank_status": "Installed",
+    "dirty_water_tank_status": "Installed",
+    "smart_mop_washing": false,
+    "mopping_with_detergent": true,
+    "auto_drying": true,
+    "collision_avoidance": true,
+    "fill_light": true,
+    "ai_obstacle_detection": true,
+    "ai_pet_detection": false,
+    "ai_obstacle_picture": true,
+    "ai_obstacle_image_upload": false,
+    "pet_focused_detection": false,
+    "streaming_voice_prompt": true,
+    "large_particles_boost": false,
+    "pet_focused_cleaning": false,
+    "max_suction_power": false,
+    "uv_sterilization": false,
+    "cleaning_route_list": [
+     "Quick",
+     "Standard"
+    ],
+    "cleaning_route": "Standard",
+    "cleangenius_list": [
+     "Off",
+     "Routine cleaning",
+     "Deep cleaning"
+    ],
+    "cleangenius": "Off",
+    "cleangenius_mode_list": [],
+    "cleangenius_mode": "Vacuum and mop",
+    "water_temperature_list": [
+     "Normal",
+     "Mild",
+     "Warm",
+     "Hot"
+    ],
+    "water_temperature": "Hot",
+    "silent_drying": false,
+    "hair_compression": true,
+    "side_brush_carpet_rotate": false,
+    "lds_state": false,
+    "auto_lds_coverage_list": [
+     "Off",
+     "Security",
+     "Extreme"
+    ],
+    "auto_lds_coverage": "Security",
+    "obstacle_crossing": 0,
+    "dnd_disable_resume_cleaning": true,
+    "dnd_disable_auto_empty": true,
+    "dnd_reduce_volume": false,
+    "self_clean_frequency_list": [
+     "By area",
+     "By time",
+     "By room"
+    ],
+    "self_clean_frequency": "By area",
+    "floor_direction_cleaning": false,
+    "intensive_carpet_cleaning": false,
+    "mop_extend": true,
+    "mop_extend_frequency_list": [
+     "Standard",
+     "Intelligent",
+     "High"
+    ],
+    "mop_extend_frequency": "High",
+    "gap_cleaning_extension": false,
+    "mopping_under_furnitures": false,
+    "auto_recleaning_list": [
+     "Off",
+     "In deep mode",
+     "In all modes"
+    ],
+    "auto_recleaning": "Off",
+    "auto_rewashing_list": [
+     "Off",
+     "In deep mode",
+     "In all modes"
+    ],
+    "auto_rewashing": "Off",
+    "dynamic_obstacle_cleaning": false,
+    "off_peak_charging": true,
+    "battery": 55,
+    "cleaning_sequence": [
+     2,
+     11,
+     7,
+     12,
+     13,
+     15,
+     14,
+     16,
+     1
+    ],
+    "charging": true,
+    "docked": true,
+    "located": true,
+    "started": false,
+    "paused": false,
+    "running": false,
+    "returning_paused": false,
+    "returning": false,
+    "segment_cleaning": false,
+    "zone_cleaning": false,
+    "spot_cleaning": false,
+    "cruising": false,
+    "vacuum_state": "drying",
+    "has_saved_map": true,
+    "has_temporary_map": false,
+    "has_error": false,
+    "faults": {},
+    "mapping": false,
+    "mapping_available": true,
+    "dust_collection_available": true,
+    "washing": false,
+    "washing_paused": false,
+    "drying": true,
+    "low_water": false,
+    "washing_available": true,
+    "returning_to_wash": false,
+    "returning_to_wash_paused": false,
+    "drying_available": true,
+    "draining_available": true,
+    "drying_left": 120,
+    "cleangenius_cleaning": false,
+    "wetness_level": 16,
+    "map_count": 3,
+    "active_segments": null,
+    "skip_area_available": false,
+    "skipped_segments": null,
+    "completed_segments": null,
+    "current_segment": 15,
+    "selected_map": "Kaart 1",
+    "selected_map_id": 28,
+    "selected_map_index": 1,
+    "rooms": {
+     "Kaart 1": [
+      {
+       "id": 1,
+       "name": "Kamer 1",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 2,
+       "name": "Kantoor",
+       "icon": "mdi:monitor-shimmer",
+       "type": 12,
+       "index": 0
+      },
+      {
+       "id": 7,
+       "name": "Gang",
+       "icon": "mdi:foot-print",
+       "type": 8,
+       "index": 0
+      },
+      {
+       "id": 11,
+       "name": "Eerste Slaapkamer",
+       "icon": "mdi:bed-king-outline",
+       "type": 2,
+       "index": 0
+      },
+      {
+       "id": 12,
+       "name": "Badkamer 2",
+       "icon": "mdi:toilet",
+       "type": 6,
+       "index": 1
+      },
+      {
+       "id": 13,
+       "name": "Keuken",
+       "icon": "mdi:chef-hat",
+       "type": 4,
+       "index": 0
+      },
+      {
+       "id": 14,
+       "name": "Woonkamer",
+       "icon": "mdi:sofa-outline",
+       "type": 1,
+       "index": 0
+      },
+      {
+       "id": 15,
+       "name": "Eetkamer",
+       "icon": "mdi:room-service-outline",
+       "type": 5,
+       "index": 0
+      },
+      {
+       "id": 16,
+       "name": "Outdoor",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 1
+      }
+     ],
+     "Kaart 2": [
+      {
+       "id": 1,
+       "name": "Badkamer",
+       "icon": "mdi:toilet",
+       "type": 6,
+       "index": 0
+      },
+      {
+       "id": 2,
+       "name": "Kamer 2",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 3,
+       "name": "Kamer 3",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 4,
+       "name": "Eerste Slaapkamer",
+       "icon": "mdi:bed-king-outline",
+       "type": 2,
+       "index": 0
+      },
+      {
+       "id": 5,
+       "name": "Kamer 5",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 6,
+       "name": "Badkamer 2",
+       "icon": "mdi:toilet",
+       "type": 6,
+       "index": 1
+      },
+      {
+       "id": 7,
+       "name": "Eerste Slaapkamer 2",
+       "icon": "mdi:bed-king-outline",
+       "type": 2,
+       "index": 1
+      }
+     ],
+     "Kaart 3": [
+      {
+       "id": 1,
+       "name": "Slaapkamer A",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      },
+      {
+       "id": 3,
+       "name": "Gang",
+       "icon": "mdi:foot-print",
+       "type": 8,
+       "index": 0
+      },
+      {
+       "id": 6,
+       "name": "Slaapkamer B",
+       "icon": "mdi:home-outline",
+       "type": 0,
+       "index": 0
+      }
+     ]
+    },
+    "carpet_avoidance": false,
+    "floor_direction_cleaning_available": true,
+    "shortcut_task": false,
+    "firmware_version": "3128",
+    "device_class": "dreame_vacuum",
+    "icon": "mdi:hair-dryer",
+    "friendly_name": "X50 Ultra Complete  X50 Ultra Complete",
+    "supported_features": 31676
+   }
+  },
+  "sensor.x50_ultra_complete_cleaning_time": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_time",
+   "state": "27",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:timer-sand",
+    "friendly_name": "X50 Ultra Complete Schoonmaaktijd"
+   }
+  },
+  "sensor.x50_ultra_complete_mapping_time": {
+   "entity_id": "sensor.x50_ultra_complete_mapping_time",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:map-clock",
+    "friendly_name": "X50 Ultra Complete Kaarttijd"
+   }
+  },
+  "sensor.x50_ultra_complete_cleaned_area": {
+   "entity_id": "sensor.x50_ultra_complete_cleaned_area",
+   "state": "22",
+   "attributes": {
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:ruler-square",
+    "friendly_name": "X50 Ultra Complete Schoongemaakt gebied"
+   }
+  },
+  "sensor.x50_ultra_complete_state": {
+   "entity_id": "sensor.x50_ultra_complete_state",
+   "state": "drying",
+   "attributes": {
+    "value": 8,
+    "icon": "mdi:robot-vacuum",
+    "friendly_name": "X50 Ultra Complete Status"
+   }
+  },
+  "sensor.x50_ultra_complete_status": {
+   "entity_id": "sensor.x50_ultra_complete_status",
+   "state": "sleeping",
+   "attributes": {
+    "value": 14,
+    "icon": "mdi:vacuum",
+    "friendly_name": "X50 Ultra Complete Status"
+   }
+  },
+  "sensor.x50_ultra_complete_relocation_status": {
+   "entity_id": "sensor.x50_ultra_complete_relocation_status",
+   "state": "located",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:map-marker-radius",
+    "friendly_name": "X50 Ultra Complete Verplaatsingsstatus"
+   }
+  },
+  "sensor.x50_ultra_complete_task_status": {
+   "entity_id": "sensor.x50_ultra_complete_task_status",
+   "state": "completed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:file-tree",
+    "friendly_name": "X50 Ultra Complete Taakstatus"
+   }
+  },
+  "sensor.x50_ultra_complete_mop_pad": {
+   "entity_id": "sensor.x50_ultra_complete_mop_pad",
+   "state": "installed",
+   "attributes": {
+    "icon": "mdi:google-circles-communities",
+    "friendly_name": "X50 Ultra Complete Dweilpad"
+   }
+  },
+  "sensor.x50_ultra_complete_dust_collection": {
+   "entity_id": "sensor.x50_ultra_complete_dust_collection",
+   "state": "available",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:delete-sweep",
+    "friendly_name": "X50 Ultra Complete Stofverzameling"
+   }
+  },
+  "sensor.x50_ultra_complete_auto_empty_status": {
+   "entity_id": "sensor.x50_ultra_complete_auto_empty_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:delete",
+    "friendly_name": "X50 Ultra Complete Status automatisch legen"
+   }
+  },
+  "sensor.x50_ultra_complete_self_wash_base_status": {
+   "entity_id": "sensor.x50_ultra_complete_self_wash_base_status",
+   "state": "drying",
+   "attributes": {
+    "value": 2,
+    "icon": "mdi:dishwasher",
+    "friendly_name": "X50 Ultra Complete Status zelfwassing-basis"
+   }
+  },
+  "sensor.x50_ultra_complete_low_water_warning": {
+   "entity_id": "sensor.x50_ultra_complete_low_water_warning",
+   "state": "no_warning",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:water-check",
+    "friendly_name": "X50 Ultra Complete Waarschuwing laag waterniveau"
+   }
+  },
+  "sensor.x50_ultra_complete_drainage_status": {
+   "entity_id": "sensor.x50_ultra_complete_drainage_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:pump-off",
+    "friendly_name": "X50 Ultra Complete Status waterafvoer"
+   }
+  },
+  "sensor.x50_ultra_complete_task_type": {
+   "entity_id": "sensor.x50_ultra_complete_task_type",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:sitemap",
+    "friendly_name": "X50 Ultra Complete Taaktype"
+   }
+  },
+  "sensor.x50_ultra_complete_stream_status": {
+   "entity_id": "sensor.x50_ultra_complete_stream_status",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:webcam-off",
+    "friendly_name": "X50 Ultra Complete Stream-status"
+   }
+  },
+  "sensor.x50_ultra_complete_error": {
+   "entity_id": "sensor.x50_ultra_complete_error",
+   "state": "no_error",
+   "attributes": {
+    "value": 0,
+    "faults": [],
+    "description": "Geen fout",
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "X50 Ultra Complete Fout"
+   }
+  },
+  "sensor.x50_ultra_complete_charging_status": {
+   "entity_id": "sensor.x50_ultra_complete_charging_status",
+   "state": "charging",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:home-lightning-bolt",
+    "friendly_name": "X50 Ultra Complete Oplaadstatus"
+   }
+  },
+  "sensor.x50_ultra_complete_battery_level": {
+   "entity_id": "sensor.x50_ultra_complete_battery_level",
+   "state": "55",
+   "attributes": {
+    "state_class": "measurement",
+    "value": 55,
+    "unit_of_measurement": "%",
+    "device_class": "battery",
+    "icon": "mdi:battery-charging-60",
+    "friendly_name": "X50 Ultra Complete Batterijniveau"
+   }
+  },
+  "sensor.x50_ultra_complete_main_brush_left": {
+   "entity_id": "sensor.x50_ultra_complete_main_brush_left",
+   "state": "67",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "X50 Ultra Complete Hoofdborstel"
+   }
+  },
+  "sensor.x50_ultra_complete_main_brush_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_main_brush_time_left",
+   "state": "202",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "X50 Ultra Complete Resterende tijd hoofdborstel"
+   }
+  },
+  "sensor.x50_ultra_complete_side_brush_left": {
+   "entity_id": "sensor.x50_ultra_complete_side_brush_left",
+   "state": "51",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "X50 Ultra Complete Zijborstel"
+   }
+  },
+  "sensor.x50_ultra_complete_side_brush_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_side_brush_time_left",
+   "state": "102",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "X50 Ultra Complete Resterende tijd zijborstel"
+   }
+  },
+  "sensor.x50_ultra_complete_filter_left": {
+   "entity_id": "sensor.x50_ultra_complete_filter_left",
+   "state": "35",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:air-filter",
+    "friendly_name": "X50 Ultra Complete Filterelement"
+   }
+  },
+  "sensor.x50_ultra_complete_filter_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_filter_time_left",
+   "state": "52",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:air-filter",
+    "friendly_name": "X50 Ultra Complete Resterende filtertijd"
+   }
+  },
+  "sensor.x50_ultra_complete_sensor_dirty_left": {
+   "entity_id": "sensor.x50_ultra_complete_sensor_dirty_left",
+   "state": "78",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:radar",
+    "friendly_name": "X50 Ultra Complete Sensoren reinigen"
+   }
+  },
+  "sensor.x50_ultra_complete_sensor_dirty_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_sensor_dirty_time_left",
+   "state": "23",
+   "attributes": {
+    "unit_of_measurement": "h",
+    "device_class": "duration",
+    "icon": "mdi:radar",
+    "friendly_name": "X50 Ultra Complete Resterende sensortijd"
+   }
+  },
+  "sensor.x50_ultra_complete_wheel_dirty_left": {
+   "entity_id": "sensor.x50_ultra_complete_wheel_dirty_left",
+   "state": "83",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:tire",
+    "friendly_name": "X50 Ultra Complete Wielen reinigen"
+   }
+  },
+  "sensor.x50_ultra_complete_wheel_dirty_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_wheel_dirty_time_left",
+   "state": "25",
+   "attributes": {
+    "unit_of_measurement": "d",
+    "device_class": "duration",
+    "icon": "mdi:tire",
+    "friendly_name": "X50 Ultra Complete Resterende wieltijd"
+   }
+  },
+  "sensor.x50_ultra_complete_scale_inhibitor_left": {
+   "entity_id": "sensor.x50_ultra_complete_scale_inhibitor_left",
+   "state": "83",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:pipe",
+    "friendly_name": "X50 Ultra Complete Kalkremmer"
+   }
+  },
+  "sensor.x50_ultra_complete_scale_inhibitor_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_scale_inhibitor_time_left",
+   "state": "918",
+   "attributes": {
+    "unit_of_measurement": "d",
+    "device_class": "duration",
+    "icon": "mdi:pipe",
+    "friendly_name": "X50 Ultra Complete Resterende tijd antikalkmodule"
+   }
+  },
+  "sensor.x50_ultra_complete_first_cleaning_date": {
+   "entity_id": "sensor.x50_ultra_complete_first_cleaning_date",
+   "state": "2026-04-22T06:08:00+00:00",
+   "attributes": {
+    "value": 1776838080,
+    "device_class": "timestamp",
+    "icon": "mdi:calendar-start",
+    "friendly_name": "X50 Ultra Complete Eerste schoonmaakdatum"
+   }
+  },
+  "sensor.x50_ultra_complete_total_cleaning_time": {
+   "entity_id": "sensor.x50_ultra_complete_total_cleaning_time",
+   "state": "5835",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:timer-outline",
+    "friendly_name": "X50 Ultra Complete Totale schoonmaaktijd"
+   }
+  },
+  "sensor.x50_ultra_complete_cleaning_count": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_count",
+   "state": "72",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "x",
+    "icon": "mdi:counter",
+    "friendly_name": "X50 Ultra Complete Aantal schoonmaakbeurten"
+   }
+  },
+  "sensor.x50_ultra_complete_total_cleaned_area": {
+   "entity_id": "sensor.x50_ultra_complete_total_cleaned_area",
+   "state": "4959",
+   "attributes": {
+    "state_class": "total_increasing",
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:set-square",
+    "friendly_name": "X50 Ultra Complete Totaal schoongemaakt gebied"
+   }
+  },
+  "sensor.x50_ultra_complete_clean_water_tank_status": {
+   "entity_id": "sensor.x50_ultra_complete_clean_water_tank_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:beer",
+    "friendly_name": "X50 Ultra Complete Status schoonwatertank"
+   }
+  },
+  "sensor.x50_ultra_complete_dirty_water_tank_status": {
+   "entity_id": "sensor.x50_ultra_complete_dirty_water_tank_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:glass-mug",
+    "friendly_name": "X50 Ultra Complete Status vuilwatertank"
+   }
+  },
+  "sensor.x50_ultra_complete_dust_bag_status": {
+   "entity_id": "sensor.x50_ultra_complete_dust_bag_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:delete-circle-outline",
+    "friendly_name": "X50 Ultra Complete Status stofzak"
+   }
+  },
+  "sensor.x50_ultra_complete_detergent_status": {
+   "entity_id": "sensor.x50_ultra_complete_detergent_status",
+   "state": "installed",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:chart-bubble",
+    "friendly_name": "X50 Ultra Complete Status reinigingsmiddel"
+   }
+  },
+  "sensor.x50_ultra_complete_station_drainage_status": {
+   "entity_id": "sensor.x50_ultra_complete_station_drainage_status",
+   "state": "idle",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:water-pump",
+    "friendly_name": "X50 Ultra Complete Status station-waterafvoer"
+   }
+  },
+  "sensor.x50_ultra_complete_hot_water_status": {
+   "entity_id": "sensor.x50_ultra_complete_hot_water_status",
+   "state": "enabled",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:water-thermometer",
+    "friendly_name": "X50 Ultra Complete Status warm water"
+   }
+  },
+  "sensor.x50_ultra_complete_current_room": {
+   "entity_id": "sensor.x50_ultra_complete_current_room",
+   "state": "Eetkamer",
+   "attributes": {
+    "room_id": 15,
+    "room_icon": "mdi:room-service-outline",
+    "room_name": "Dining Hall",
+    "icon": "mdi:home-map-marker",
+    "friendly_name": "X50 Ultra Complete Huidige kamer"
+   }
+  },
+  "sensor.x50_ultra_complete_cleaning_history": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_history",
+   "state": "2026-10-15T14:28:14+00:00",
+   "attributes": {
+    "10-15 16:28": {
+     "timestamp": 1792074494,
+     "cleaning_time": "27 min",
+     "cleaned_area": "22 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1792076659,
+     "pet": false
+    },
+    "10-15 10:56": {
+     "timestamp": 1792054568,
+     "cleaning_time": "27 min",
+     "cleaned_area": "26 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1792056801,
+     "pet": false
+    },
+    "10-14 14:53": {
+     "timestamp": 1791982386,
+     "cleaning_time": "98 min",
+     "cleaned_area": "65 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1791999203,
+     "pet": false
+    },
+    "10-13 21:06": {
+     "timestamp": 1791918408,
+     "cleaning_time": "106 min",
+     "cleaned_area": "89 m²",
+     "status": "Room cleaning",
+     "completed": false,
+     "mop_pad": "Not installed",
+     "cleanup_method": "Default mode",
+     "interrupt_reason": "Mop pad fallen off crossing obstacle",
+     "multiple_cleaning_time": 1791936049,
+     "pet": false
+    },
+    "10-12 19:53": {
+     "timestamp": 1791827598,
+     "cleaning_time": "32 min",
+     "cleaned_area": "22 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1791830383,
+     "pet": false
+    },
+    "10-11 19:22": {
+     "timestamp": 1791739329,
+     "cleaning_time": "93 min",
+     "cleaned_area": "74 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1791746854,
+     "pet": false
+    },
+    "09-30 21:04": {
+     "timestamp": 1790795072,
+     "cleaning_time": "28 min",
+     "cleaned_area": "27 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1790797295,
+     "pet": false
+    },
+    "09-29 19:10": {
+     "timestamp": 1790701809,
+     "cleaning_time": "30 min",
+     "cleaned_area": "27 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1790704229,
+     "pet": false
+    },
+    "09-23 08:37": {
+     "timestamp": 1790145466,
+     "cleaning_time": "232 min",
+     "cleaned_area": "174 m²",
+     "status": "Cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "blocked_rooms": {},
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1790196590,
+     "pet": false
+    },
+    "09-22 19:40": {
+     "timestamp": 1790098814,
+     "cleaning_time": "39 min",
+     "cleaned_area": "23 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1790101885,
+     "pet": false
+    },
+    "09-20 19:52": {
+     "timestamp": 1789926760,
+     "cleaning_time": "108 min",
+     "cleaned_area": "92 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789935772,
+     "pet": false
+    },
+    "09-17 10:33": {
+     "timestamp": 1789634012,
+     "cleaning_time": "122 min",
+     "cleaned_area": "88 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789644142,
+     "pet": false
+    },
+    "09-16 12:13": {
+     "timestamp": 1789553586,
+     "cleaning_time": "32 min",
+     "cleaned_area": "23 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789555949,
+     "pet": false
+    },
+    "09-15 22:03": {
+     "timestamp": 1789502639,
+     "cleaning_time": "121 min",
+     "cleaned_area": "92 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789511761,
+     "pet": false
+    },
+    "09-13 21:12": {
+     "timestamp": 1789326744,
+     "cleaning_time": "78 min",
+     "cleaned_area": "72 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789332922,
+     "pet": false
+    },
+    "09-12 18:55": {
+     "timestamp": 1789232123,
+     "cleaning_time": "79 min",
+     "cleaned_area": "72 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789238474,
+     "pet": false
+    },
+    "09-11 10:38": {
+     "timestamp": 1789115907,
+     "cleaning_time": "58 min",
+     "cleaned_area": "53 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1789120728,
+     "pet": false
+    },
+    "09-09 14:32": {
+     "timestamp": 1788957159,
+     "cleaning_time": "111 min",
+     "cleaned_area": "93 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1788966086,
+     "pet": false
+    },
+    "09-08 13:13": {
+     "timestamp": 1788866034,
+     "cleaning_time": "120 min",
+     "cleaned_area": "106 m²",
+     "status": "Room cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1788885277,
+     "pet": false
+    },
+    "09-08 12:09": {
+     "timestamp": 1788862193,
+     "cleaning_time": "20 min",
+     "cleaned_area": "15 m²",
+     "status": "Room cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "blocked_rooms": {
+      "7": "Blocked by door",
+      "11": "Blocked by dynamic obstacle",
+      "13": "Blocked by door",
+      "14": "Blocked by dynamic obstacle",
+      "15": "Blocked by dynamic obstacle"
+     },
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1788865636,
+     "pet": false
+    },
+    "09-08 11:42": {
+     "timestamp": 1788860559,
+     "cleaning_time": "20 min",
+     "cleaned_area": "16 m²",
+     "status": "Cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1788862114,
+     "pet": false
+    },
+    "08-30 19:40": {
+     "timestamp": 1788111601,
+     "cleaning_time": "80 min",
+     "cleaned_area": "64 m²",
+     "status": "Room cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1788122989,
+     "pet": false
+    },
+    "08-28 10:53": {
+     "timestamp": 1787907194,
+     "cleaning_time": "20 min",
+     "cleaned_area": "23 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787908755,
+     "pet": false
+    },
+    "08-25 23:17": {
+     "timestamp": 1787692656,
+     "cleaning_time": "39 min",
+     "cleaned_area": "26 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787696518,
+     "pet": false
+    },
+    "08-24 20:03": {
+     "timestamp": 1787594592,
+     "cleaning_time": "222 min",
+     "cleaned_area": "152 m²",
+     "status": "Cleaning",
+     "completed": false,
+     "mop_pad": "Installed",
+     "blocked_rooms": {},
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787671917,
+     "pet": false
+    },
+    "08-24 13:39": {
+     "timestamp": 1787571597,
+     "cleaning_time": "28 min",
+     "cleaned_area": "27 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787574656,
+     "pet": false
+    },
+    "08-23 10:10": {
+     "timestamp": 1787472652,
+     "cleaning_time": "130 min",
+     "cleaned_area": "95 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787482197,
+     "pet": false
+    },
+    "08-19 13:12": {
+     "timestamp": 1787137964,
+     "cleaning_time": "92 min",
+     "cleaned_area": "71 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787145140,
+     "pet": false
+    },
+    "08-19 09:50": {
+     "timestamp": 1787125827,
+     "cleaning_time": "48 min",
+     "cleaned_area": "38 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787125615,
+     "pet": false
+    },
+    "08-19 09:41": {
+     "timestamp": 1787125299,
+     "cleaning_time": "1 min",
+     "cleaned_area": "0 m²",
+     "status": "Room cleaning",
+     "completed": true,
+     "mop_pad": "Installed",
+     "blocked_rooms": {
+      "11": "Blocked by obstacle"
+     },
+     "cleanup_method": "Default mode",
+     "multiple_cleaning_time": 1787125615,
+     "pet": false
+    },
+    "device_class": "timestamp",
+    "icon": "mdi:clipboard-text-clock",
+    "friendly_name": "X50 Ultra Complete Schoonmaakgeschiedenis"
+   }
+  },
+  "sensor.x50_ultra_complete_cruising_history": {
+   "entity_id": "sensor.x50_ultra_complete_cruising_history",
+   "state": "unavailable",
+   "attributes": {
+    "device_class": "timestamp",
+    "icon": "mdi:map-marker-path",
+    "friendly_name": "X50 Ultra Complete Patrouillegeschiedenis"
+   }
+  },
+  "sensor.x50_ultra_complete_cleaning_progress": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_progress",
+   "state": "unavailable",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:home-percent",
+    "friendly_name": "X50 Ultra Complete Schoonmaakvoortgang"
+   }
+  },
+  "sensor.x50_ultra_complete_drying_progress": {
+   "entity_id": "sensor.x50_ultra_complete_drying_progress",
+   "state": "33",
+   "attributes": {
+    "unit_of_measurement": "%",
+    "icon": "mdi:water-percent",
+    "friendly_name": "X50 Ultra Complete Droogvoortgang"
+   }
+  },
+  "sensor.x50_ultra_complete_drying_left": {
+   "entity_id": "sensor.x50_ultra_complete_drying_left",
+   "state": "120",
+   "attributes": {
+    "value": 33,
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:water-percent",
+    "friendly_name": "X50 Ultra Complete Resterende droogtijd"
+   }
+  },
+  "sensor.x50_ultra_complete_firmware_version": {
+   "entity_id": "sensor.x50_ultra_complete_firmware_version",
+   "state": "3128",
+   "attributes": {
+    "icon": "mdi:chip",
+    "friendly_name": "X50 Ultra Complete Firmware-versie"
+   }
+  },
+  "binary_sensor.x50_ultra_complete_charging_state": {
+   "entity_id": "binary_sensor.x50_ultra_complete_charging_state",
+   "state": "on",
+   "attributes": {
+    "device_class": "battery_charging",
+    "icon": "mdi:power-plug-battery",
+    "friendly_name": "X50 Ultra Complete Oplaadstatus"
+   }
+  },
+  "binary_sensor.x50_ultra_complete_lds_status": {
+   "entity_id": "binary_sensor.x50_ultra_complete_lds_status",
+   "state": "off",
+   "attributes": {
+    "value": 0,
+    "device_class": "opening",
+    "icon": "mdi:download-circle",
+    "friendly_name": "X50 Ultra Complete LDS-status"
+   }
+  },
+  "binary_sensor.x50_ultra_complete_problem": {
+   "entity_id": "binary_sensor.x50_ultra_complete_problem",
+   "state": "off",
+   "attributes": {
+    "type": null,
+    "code": null,
+    "device_class": "problem",
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "X50 Ultra Complete Probleem"
+   }
+  },
+  "binary_sensor.x50_ultra_complete_maintenance": {
+   "entity_id": "binary_sensor.x50_ultra_complete_maintenance",
+   "state": "off",
+   "attributes": {
+    "items": [],
+    "device_class": "problem",
+    "icon": "mdi:wrench-check",
+    "friendly_name": "X50 Ultra Complete Onderhoud"
+   }
+  },
+  "switch.x50_ultra_complete_resume_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_resume_cleaning",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:play-pause",
+    "friendly_name": "X50 Ultra Complete Reiniging hervatten"
+   }
+  },
+  "switch.x50_ultra_complete_carpet_boost": {
+   "entity_id": "switch.x50_ultra_complete_carpet_boost",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:upload",
+    "friendly_name": "X50 Ultra Complete Tapijt boost"
+   }
+  },
+  "switch.x50_ultra_complete_obstacle_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_obstacle_avoidance",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:video-3d",
+    "friendly_name": "X50 Ultra Complete Obstakelvermijding"
+   }
+  },
+  "switch.x50_ultra_complete_customized_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_customized_cleaning",
+   "state": "off",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:home-search",
+    "friendly_name": "X50 Ultra Complete Gepersonaliseerde reiniging"
+   }
+  },
+  "switch.x50_ultra_complete_child_lock": {
+   "entity_id": "switch.x50_ultra_complete_child_lock",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:lock-off",
+    "friendly_name": "X50 Ultra Complete Kinderslot"
+   }
+  },
+  "switch.x50_ultra_complete_dnd": {
+   "entity_id": "switch.x50_ultra_complete_dnd",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:minus-circle-off-outline",
+    "friendly_name": "X50 Ultra Complete DnD"
+   }
+  },
+  "switch.x50_ultra_complete_dnd_disable_resume_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_dnd_disable_resume_cleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:pause-box",
+    "friendly_name": "X50 Ultra Complete Hervatten reiniging uitschakelen"
+   }
+  },
+  "switch.x50_ultra_complete_dnd_disable_auto_empty": {
+   "entity_id": "switch.x50_ultra_complete_dnd_disable_auto_empty",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:delete-off",
+    "friendly_name": "X50 Ultra Complete Automatisch legen uitschakelen"
+   }
+  },
+  "switch.x50_ultra_complete_dnd_reduce_volume": {
+   "entity_id": "switch.x50_ultra_complete_dnd_reduce_volume",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:volume-minus",
+    "friendly_name": "X50 Ultra Complete Volume verlagen"
+   }
+  },
+  "switch.x50_ultra_complete_multi_floor_map": {
+   "entity_id": "switch.x50_ultra_complete_multi_floor_map",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:layers",
+    "friendly_name": "X50 Ultra Complete Meerlaagse kaart"
+   }
+  },
+  "switch.x50_ultra_complete_self_clean": {
+   "entity_id": "switch.x50_ultra_complete_self_clean",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:water-sync",
+    "friendly_name": "X50 Ultra Complete Zelfreiniging"
+   }
+  },
+  "switch.x50_ultra_complete_auto_water_refilling": {
+   "entity_id": "switch.x50_ultra_complete_auto_water_refilling",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:water-boiler-off",
+    "friendly_name": "X50 Ultra Complete Automatisch water bijvullen"
+   }
+  },
+  "switch.x50_ultra_complete_auto_drying": {
+   "entity_id": "switch.x50_ultra_complete_auto_drying",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:weather-sunny",
+    "friendly_name": "X50 Ultra Complete Automatisch drogen"
+   }
+  },
+  "switch.x50_ultra_complete_mop_washing_with_detergent": {
+   "entity_id": "switch.x50_ultra_complete_mop_washing_with_detergent",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:hand-wash",
+    "friendly_name": "X50 Ultra Complete Dweil wassen mit reinigingsmiddel"
+   }
+  },
+  "switch.x50_ultra_complete_mopping_with_detergent": {
+   "entity_id": "switch.x50_ultra_complete_mopping_with_detergent",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:hand-wash",
+    "friendly_name": "X50 Ultra Complete Dweilen met reinigingsmiddel"
+   }
+  },
+  "switch.x50_ultra_complete_auto_mount_mop": {
+   "entity_id": "switch.x50_ultra_complete_auto_mount_mop",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:google-circles-group",
+    "friendly_name": "X50 Ultra Complete Automatische dweilmontage"
+   }
+  },
+  "switch.x50_ultra_complete_voice_assistant": {
+   "entity_id": "switch.x50_ultra_complete_voice_assistant",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:microphone-message",
+    "friendly_name": "X50 Ultra Complete Spraakassistent"
+   }
+  },
+  "switch.x50_ultra_complete_ai_obstacle_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_detection",
+   "state": "on",
+   "attributes": {
+    "value": true,
+    "icon": "mdi:robot",
+    "friendly_name": "X50 Ultra Complete AI-obstakeldetectie"
+   }
+  },
+  "switch.x50_ultra_complete_ai_obstacle_image_upload": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_image_upload",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:cloud-upload",
+    "friendly_name": "X50 Ultra Complete AI obstakelfoto's uploaden"
+   }
+  },
+  "switch.x50_ultra_complete_ai_obstacle_picture": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_picture",
+   "state": "on",
+   "attributes": {
+    "value": true,
+    "icon": "mdi:camera",
+    "friendly_name": "X50 Ultra Complete Obstakelfoto's"
+   }
+  },
+  "switch.x50_ultra_complete_ai_pet_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_pet_detection",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:dog-side-off",
+    "friendly_name": "X50 Ultra Complete Huisdierdetectie"
+   }
+  },
+  "switch.x50_ultra_complete_ai_furniture_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_furniture_detection",
+   "state": "on",
+   "attributes": {
+    "value": true,
+    "icon": "mdi:table-furniture",
+    "friendly_name": "X50 Ultra Complete AI meubeldetectie"
+   }
+  },
+  "switch.x50_ultra_complete_ai_fluid_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_fluid_detection",
+   "state": "off",
+   "attributes": {
+    "value": false,
+    "icon": "mdi:water-off-outline",
+    "friendly_name": "X50 Ultra Complete AI vloeistofdetectie"
+   }
+  },
+  "switch.x50_ultra_complete_fuzzy_obstacle_detection": {
+   "entity_id": "switch.x50_ultra_complete_fuzzy_obstacle_detection",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:blur-linear",
+    "friendly_name": "X50 Ultra Complete Vage obstakeldetectie"
+   }
+  },
+  "switch.x50_ultra_complete_pet_picture": {
+   "entity_id": "switch.x50_ultra_complete_pet_picture",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:cat",
+    "friendly_name": "X50 Ultra Complete Huisdierfoto"
+   }
+  },
+  "switch.x50_ultra_complete_pet_focused_detection": {
+   "entity_id": "switch.x50_ultra_complete_pet_focused_detection",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:dog",
+    "friendly_name": "X50 Ultra Complete Huisdiergerichte detectie"
+   }
+  },
+  "switch.x50_ultra_complete_large_particles_boost": {
+   "entity_id": "switch.x50_ultra_complete_large_particles_boost",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:weather-dust",
+    "friendly_name": "X50 Ultra Complete Grote deeltjes boost"
+   }
+  },
+  "switch.x50_ultra_complete_fill_light": {
+   "entity_id": "switch.x50_ultra_complete_fill_light",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:lightbulb-on",
+    "friendly_name": "X50 Ultra Complete Cameralicht"
+   }
+  },
+  "switch.x50_ultra_complete_collision_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_collision_avoidance",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:sign-direction",
+    "friendly_name": "X50 Ultra Complete Botsvermijding"
+   }
+  },
+  "switch.x50_ultra_complete_stain_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_stain_avoidance",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:liquid-spot",
+    "friendly_name": "X50 Ultra Complete Vlekvermijding"
+   }
+  },
+  "switch.x50_ultra_complete_floor_direction_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_floor_direction_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:arrow-decision-auto",
+    "friendly_name": "X50 Ultra Complete Reinigen in vloerrichting"
+   }
+  },
+  "switch.x50_ultra_complete_intensive_carpet_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_intensive_carpet_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:creation",
+    "friendly_name": "X50 Ultra Complete Intensieve tapijtreiniging"
+   }
+  },
+  "switch.x50_ultra_complete_side_reach": {
+   "entity_id": "switch.x50_ultra_complete_side_reach",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:selection-ellipse-arrow-inside",
+    "friendly_name": "X50 Ultra Complete Zijbereik"
+   }
+  },
+  "switch.x50_ultra_complete_mop_extend": {
+   "entity_id": "switch.x50_ultra_complete_mop_extend",
+   "state": "on",
+   "attributes": {
+    "value": 1,
+    "icon": "mdi:waves-arrow-right",
+    "friendly_name": "X50 Ultra Complete Dweil uitschuiven"
+   }
+  },
+  "switch.x50_ultra_complete_gap_cleaning_extension": {
+   "entity_id": "switch.x50_ultra_complete_gap_cleaning_extension",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:plus-circle-multiple",
+    "friendly_name": "X50 Ultra Complete Spleetreiniging uitbreiding"
+   }
+  },
+  "switch.x50_ultra_complete_mopping_under_furnitures": {
+   "entity_id": "switch.x50_ultra_complete_mopping_under_furnitures",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:table-picnic",
+    "friendly_name": "X50 Ultra Complete Dweilen onder meubels"
+   }
+  },
+  "switch.x50_ultra_complete_off_peak_charging": {
+   "entity_id": "switch.x50_ultra_complete_off_peak_charging",
+   "state": "on",
+   "attributes": {
+    "value": "{\"enable\":true,\"startTime\":\"00:00\",\"endTime\":\"06:00\"}",
+    "icon": "mdi:battery-clock",
+    "friendly_name": "X50 Ultra Complete Opladen tijdens daluren"
+   }
+  },
+  "switch.x50_ultra_complete_human_follow": {
+   "entity_id": "switch.x50_ultra_complete_human_follow",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:account-off",
+    "friendly_name": "X50 Ultra Complete Mens volgen"
+   }
+  },
+  "switch.x50_ultra_complete_max_suction_power": {
+   "entity_id": "switch.x50_ultra_complete_max_suction_power",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:weather-windy",
+    "friendly_name": "X50 Ultra Complete Maximale zuigkracht"
+   }
+  },
+  "switch.x50_ultra_complete_uv_sterilization": {
+   "entity_id": "switch.x50_ultra_complete_uv_sterilization",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:sun-wireless",
+    "friendly_name": "X50 Ultra Complete UV-sterilisatie"
+   }
+  },
+  "switch.x50_ultra_complete_streaming_voice_prompt": {
+   "entity_id": "switch.x50_ultra_complete_streaming_voice_prompt",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:account-tie-voice",
+    "friendly_name": "X50 Ultra Complete Streaming spraakbericht"
+   }
+  },
+  "switch.x50_ultra_complete_clean_carpets_first": {
+   "entity_id": "switch.x50_ultra_complete_clean_carpets_first",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:order-bool-descending-variant",
+    "friendly_name": "X50 Ultra Complete Tapijten eerst reinigen"
+   }
+  },
+  "switch.x50_ultra_complete_smart_mop_washing": {
+   "entity_id": "switch.x50_ultra_complete_smart_mop_washing",
+   "state": "off",
+   "attributes": {
+    "value": 0,
+    "icon": "mdi:hand-water",
+    "friendly_name": "X50 Ultra Complete Slimme dweilwas"
+   }
+  },
+  "switch.x50_ultra_complete_silent_drying": {
+   "entity_id": "switch.x50_ultra_complete_silent_drying",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:volume-mute",
+    "friendly_name": "X50 Ultra Complete Stil drogen"
+   }
+  },
+  "switch.x50_ultra_complete_hair_compression": {
+   "entity_id": "switch.x50_ultra_complete_hair_compression",
+   "state": "on",
+   "attributes": {
+    "icon": "mdi:arrow-collapse-vertical",
+    "friendly_name": "X50 Ultra Complete Haarcompressie"
+   }
+  },
+  "switch.x50_ultra_complete_side_brush_carpet_rotate": {
+   "entity_id": "switch.x50_ultra_complete_side_brush_carpet_rotate",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:format-rotate-90",
+    "friendly_name": "X50 Ultra Complete Zijborstelrotatie op tapijt"
+   }
+  },
+  "switch.x50_ultra_complete_ring_light_always_on": {
+   "entity_id": "switch.x50_ultra_complete_ring_light_always_on",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:light-recessed",
+    "friendly_name": "X50 Ultra Complete Ringlicht altijd aan"
+   }
+  },
+  "switch.x50_ultra_complete_obstacle_crossing": {
+   "entity_id": "switch.x50_ultra_complete_obstacle_crossing",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:boom-gate-arrow-up",
+    "friendly_name": "X50 Ultra Complete Gesynchroniseerde obstakeloversteek"
+   }
+  },
+  "switch.x50_ultra_complete_dynamic_obstacle_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_dynamic_obstacle_cleaning",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:map-marker-circle",
+    "friendly_name": "X50 Ultra Complete Dynamische obstakelreiniging"
+   }
+  },
+  "switch.x50_ultra_complete_lds_state": {
+   "entity_id": "switch.x50_ultra_complete_lds_state",
+   "state": "off",
+   "attributes": {
+    "icon": "mdi:chevron-up-circle",
+    "friendly_name": "X50 Ultra Complete LDS-status"
+   }
+  },
+  "switch.x50_ultra_complete_camera_light_brightness_auto": {
+   "entity_id": "switch.x50_ultra_complete_camera_light_brightness_auto",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:brightness-auto",
+    "friendly_name": "X50 Ultra Complete Automatische helderheid cameralamp"
+   }
+  },
+  "button.x50_ultra_complete_reset_main_brush": {
+   "entity_id": "button.x50_ultra_complete_reset_main_brush",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:car-turbocharger",
+    "friendly_name": "X50 Ultra Complete Hoofdborstel resetten"
+   }
+  },
+  "button.x50_ultra_complete_reset_side_brush": {
+   "entity_id": "button.x50_ultra_complete_reset_side_brush",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:pinwheel-outline",
+    "friendly_name": "X50 Ultra Complete Zijborstel resetten"
+   }
+  },
+  "button.x50_ultra_complete_reset_filter": {
+   "entity_id": "button.x50_ultra_complete_reset_filter",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:air-filter",
+    "friendly_name": "X50 Ultra Complete Filter resetten"
+   }
+  },
+  "button.x50_ultra_complete_reset_sensor": {
+   "entity_id": "button.x50_ultra_complete_reset_sensor",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:radar",
+    "friendly_name": "X50 Ultra Complete Sensoren resetten"
+   }
+  },
+  "button.x50_ultra_complete_reset_scale_inhibitor": {
+   "entity_id": "button.x50_ultra_complete_reset_scale_inhibitor",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:pipe",
+    "friendly_name": "X50 Ultra Complete Antikalkmodule resetten"
+   }
+  },
+  "button.x50_ultra_complete_reset_wheel": {
+   "entity_id": "button.x50_ultra_complete_reset_wheel",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:tire",
+    "friendly_name": "X50 Ultra Complete Wielen resetten"
+   }
+  },
+  "button.x50_ultra_complete_start_auto_empty": {
+   "entity_id": "button.x50_ultra_complete_start_auto_empty",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:delete-empty",
+    "friendly_name": "X50 Ultra Complete Automatisch legen starten"
+   }
+  },
+  "button.x50_ultra_complete_clear_warning": {
+   "entity_id": "button.x50_ultra_complete_clear_warning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clipboard-check-outline",
+    "friendly_name": "X50 Ultra Complete Waarschuwing wissen"
+   }
+  },
+  "button.x50_ultra_complete_start_fast_mapping": {
+   "entity_id": "button.x50_ultra_complete_start_fast_mapping",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:map-plus",
+    "friendly_name": "X50 Ultra Complete Snelle kartering starten"
+   }
+  },
+  "button.x50_ultra_complete_self_clean": {
+   "entity_id": "button.x50_ultra_complete_self_clean",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:dishwasher",
+    "friendly_name": "X50 Ultra Complete Zelfreiniging"
+   }
+  },
+  "button.x50_ultra_complete_manual_drying": {
+   "entity_id": "button.x50_ultra_complete_manual_drying",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:weather-sunny-off",
+    "friendly_name": "X50 Ultra Complete Handmatig drogen"
+   }
+  },
+  "button.x50_ultra_complete_water_tank_draining": {
+   "entity_id": "button.x50_ultra_complete_water_tank_draining",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:pump",
+    "friendly_name": "X50 Ultra Complete Watertank aftappen"
+   }
+  },
+  "button.x50_ultra_complete_empty_water_tank": {
+   "entity_id": "button.x50_ultra_complete_empty_water_tank",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:waves-arrow-up",
+    "friendly_name": "X50 Ultra Complete Watertank legen"
+   }
+  },
+  "button.x50_ultra_complete_base_station_self_repair": {
+   "entity_id": "button.x50_ultra_complete_base_station_self_repair",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:wrench-cog",
+    "friendly_name": "X50 Ultra Complete Basisstation zelfreparatie"
+   }
+  },
+  "button.x50_ultra_complete_base_station_cleaning": {
+   "entity_id": "button.x50_ultra_complete_base_station_cleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:car-wash",
+    "friendly_name": "X50 Ultra Complete Basisstation reinigen"
+   }
+  },
+  "button.x50_ultra_complete_start_recleaning": {
+   "entity_id": "button.x50_ultra_complete_start_recleaning",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:refresh-circle",
+    "friendly_name": "X50 Ultra Complete Opnieuw schoonmaken starten"
+   }
+  },
+  "button.x50_ultra_complete_reload_shortcuts": {
+   "entity_id": "button.x50_ultra_complete_reload_shortcuts",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:motion-play-outline",
+    "friendly_name": "X50 Ultra Complete Snelkoppelingen opnieuw laden"
+   }
+  },
+  "button.x50_ultra_complete_backup_saved_map": {
+   "entity_id": "button.x50_ultra_complete_backup_saved_map",
+   "state": "unknown",
+   "attributes": {
+    "icon": "mdi:cloud-upload",
+    "friendly_name": "X50 Ultra Complete Back-up van opgeslagen kaart"
+   }
+  },
+  "number.x50_ultra_complete_volume": {
+   "entity_id": "number.x50_ultra_complete_volume",
+   "state": "90",
+   "attributes": {
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "mode": "slider",
+    "value": 90,
+    "unit_of_measurement": "%",
+    "icon": "mdi:volume-high",
+    "friendly_name": "X50 Ultra Complete Volume"
+   }
+  },
+  "number.x50_ultra_complete_self_clean_area": {
+   "entity_id": "number.x50_ultra_complete_self_clean_area",
+   "state": "15",
+   "attributes": {
+    "min": 8,
+    "max": 25,
+    "step": 1,
+    "mode": "slider",
+    "unit_of_measurement": "m²",
+    "device_class": "area",
+    "icon": "mdi:texture-box",
+    "friendly_name": "X50 Ultra Complete Zelfreinigingsgebied"
+   }
+  },
+  "number.x50_ultra_complete_self_clean_time": {
+   "entity_id": "number.x50_ultra_complete_self_clean_time",
+   "state": "unavailable",
+   "attributes": {
+    "min": 10,
+    "max": 40,
+    "step": 5,
+    "mode": "slider",
+    "unit_of_measurement": "min",
+    "device_class": "duration",
+    "icon": "mdi:table-clock",
+    "friendly_name": "X50 Ultra Complete Zelfreinigingstijd"
+   }
+  },
+  "number.x50_ultra_complete_camera_light_brightness": {
+   "entity_id": "number.x50_ultra_complete_camera_light_brightness",
+   "state": "unavailable",
+   "attributes": {
+    "min": 40,
+    "max": 100,
+    "step": 1,
+    "mode": "slider",
+    "unit_of_measurement": "%",
+    "icon": "mdi:brightness-percent",
+    "friendly_name": "X50 Ultra Complete Helderheid cameralamp"
+   }
+  },
+  "number.x50_ultra_complete_wetness_level": {
+   "entity_id": "number.x50_ultra_complete_wetness_level",
+   "state": "16",
+   "attributes": {
+    "min": 1,
+    "max": 32,
+    "step": 1,
+    "mode": "slider",
+    "icon": "mdi:water",
+    "friendly_name": "X50 Ultra Complete Vochtigheid"
+   }
+  },
+  "select.x50_ultra_complete_suction_level": {
+   "entity_id": "select.x50_ultra_complete_suction_level",
+   "state": "standard",
+   "attributes": {
+    "options": [
+     "quiet",
+     "standard",
+     "strong",
+     "turbo"
+    ],
+    "value": 1,
+    "icon": "mdi:fan-speed-1",
+    "friendly_name": "X50 Ultra Complete Zuigniveau"
+   }
+  },
+  "select.x50_ultra_complete_cleaning_mode": {
+   "entity_id": "select.x50_ultra_complete_cleaning_mode",
+   "state": "sweeping_and_mopping",
+   "attributes": {
+    "options": [
+     "sweeping",
+     "mopping",
+     "sweeping_and_mopping",
+     "mopping_after_sweeping"
+    ],
+    "value": 3840,
+    "icon": "mdi:hydro-power",
+    "friendly_name": "X50 Ultra Complete Schoonmaakmodus"
+   }
+  },
+  "select.x50_ultra_complete_carpet_cleaning": {
+   "entity_id": "select.x50_ultra_complete_carpet_cleaning",
+   "state": "adaptation",
+   "attributes": {
+    "options": [
+     "avoidance",
+     "adaptation",
+     "remove_mop",
+     "ignore",
+     "cross"
+    ],
+    "value": 2,
+    "icon": "mdi:close-box-outline",
+    "friendly_name": "X50 Ultra Complete Tapijtreiniging"
+   }
+  },
+  "select.x50_ultra_complete_drying_time": {
+   "entity_id": "select.x50_ultra_complete_drying_time",
+   "state": "3h",
+   "attributes": {
+    "options": [
+     "2h",
+     "3h",
+     "4h"
+    ],
+    "value": 3,
+    "icon": "mdi:sun-clock",
+    "friendly_name": "X50 Ultra Complete Droogtijd"
+   }
+  },
+  "select.x50_ultra_complete_voice_assistant_language": {
+   "entity_id": "select.x50_ultra_complete_voice_assistant_language",
+   "state": "english",
+   "attributes": {
+    "options": [
+     "english",
+     "german",
+     "russian",
+     "italian",
+     "french",
+     "korean",
+     "chinese"
+    ],
+    "value": "EN",
+    "icon": "mdi:translate-variant",
+    "friendly_name": "X50 Ultra Complete Taal stemassistent"
+   }
+  },
+  "select.x50_ultra_complete_mop_pad_humidity": {
+   "entity_id": "select.x50_ultra_complete_mop_pad_humidity",
+   "state": "moist",
+   "attributes": {
+    "options": [
+     "slightly_dry",
+     "moist",
+     "wet"
+    ],
+    "value": 2,
+    "icon": "mdi:water",
+    "friendly_name": "X50 Ultra Complete Vochtigheid dweilpad"
+   }
+  },
+  "select.x50_ultra_complete_mop_extend_frequency": {
+   "entity_id": "select.x50_ultra_complete_mop_extend_frequency",
+   "state": "high",
+   "attributes": {
+    "options": [
+     "standard",
+     "intelligent",
+     "high"
+    ],
+    "value": 2,
+    "icon": "mdi:waves-arrow-right",
+    "friendly_name": "X50 Ultra Complete Frequentie dweiluitbreiding"
+   }
+  },
+  "select.x50_ultra_complete_self_clean_frequency": {
+   "entity_id": "select.x50_ultra_complete_self_clean_frequency",
+   "state": "by_area",
+   "attributes": {
+    "options": [
+     "by_area",
+     "by_time",
+     "by_room"
+    ],
+    "value": 1,
+    "icon": "mdi:texture-box",
+    "friendly_name": "X50 Ultra Complete Frequentie zelfreiniging"
+   }
+  },
+  "select.x50_ultra_complete_auto_recleaning": {
+   "entity_id": "select.x50_ultra_complete_auto_recleaning",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "off",
+     "in_deep_mode",
+     "in_all_modes"
+    ],
+    "value": -1,
+    "icon": "mdi:repeat-variant",
+    "friendly_name": "X50 Ultra Complete Automatisch opnieuw reinigen"
+   }
+  },
+  "select.x50_ultra_complete_auto_rewashing": {
+   "entity_id": "select.x50_ultra_complete_auto_rewashing",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "off",
+     "in_deep_mode",
+     "in_all_modes"
+    ],
+    "value": 0,
+    "icon": "mdi:archive-refresh",
+    "friendly_name": "X50 Ultra Complete Automatisch opnieuw wassen"
+   }
+  },
+  "select.x50_ultra_complete_cleaning_route": {
+   "entity_id": "select.x50_ultra_complete_cleaning_route",
+   "state": "standard",
+   "attributes": {
+    "options": [
+     "quick",
+     "standard"
+    ],
+    "value": 1,
+    "icon": "mdi:sine-wave",
+    "friendly_name": "X50 Ultra Complete Route"
+   }
+  },
+  "select.x50_ultra_complete_battery_charge_level": {
+   "entity_id": "select.x50_ultra_complete_battery_charge_level",
+   "state": "100%",
+   "attributes": {
+    "options": [
+     "80%",
+     "90%",
+     "100%"
+    ],
+    "value": 100,
+    "icon": "mdi:battery-heart-variant",
+    "friendly_name": "X50 Ultra Complete Batterijniveau"
+   }
+  },
+  "select.x50_ultra_complete_cleangenius": {
+   "entity_id": "select.x50_ultra_complete_cleangenius",
+   "state": "off",
+   "attributes": {
+    "options": [
+     "off",
+     "routine_cleaning",
+     "deep_cleaning"
+    ],
+    "value": 0,
+    "icon": "mdi:atom",
+    "friendly_name": "X50 Ultra Complete CleanGenius"
+   }
+  },
+  "select.x50_ultra_complete_cleangenius_mode": {
+   "entity_id": "select.x50_ultra_complete_cleangenius_mode",
+   "state": "unavailable",
+   "attributes": {
+    "options": [
+     "unavailable"
+    ],
+    "icon": "mdi:atom",
+    "friendly_name": "X50 Ultra Complete CleanGenius-modus"
+   }
+  },
+  "select.x50_ultra_complete_water_temperature": {
+   "entity_id": "select.x50_ultra_complete_water_temperature",
+   "state": "hot",
+   "attributes": {
+    "options": [
+     "normal",
+     "mild",
+     "warm",
+     "hot"
+    ],
+    "value": 3,
+    "icon": "mdi:water-thermometer",
+    "friendly_name": "X50 Ultra Complete Watertemperatuur"
+   }
+  },
+  "select.x50_ultra_complete_auto_lds_coverage": {
+   "entity_id": "select.x50_ultra_complete_auto_lds_coverage",
+   "state": "security",
+   "attributes": {
+    "options": [
+     "off",
+     "security",
+     "extreme"
+    ],
+    "value": 1,
+    "icon": "mdi:elevator",
+    "friendly_name": "X50 Ultra Complete Automatische LDS-dekking"
+   }
+  },
+  "select.x50_ultra_complete_auto_empty_mode": {
+   "entity_id": "select.x50_ultra_complete_auto_empty_mode",
+   "state": "high_frequency",
+   "attributes": {
+    "options": [
+     "off",
+     "standard",
+     "high_frequency",
+     "low_frequency"
+    ],
+    "value": 2,
+    "icon": "mdi:auto-upload",
+    "friendly_name": "X50 Ultra Complete Automatisch legen-modus"
+   }
+  },
+  "select.x50_ultra_complete_washing_mode": {
+   "entity_id": "select.x50_ultra_complete_washing_mode",
+   "state": "standard",
+   "attributes": {
+    "options": [
+     "light",
+     "standard",
+     "deep"
+    ],
+    "value": 1,
+    "icon": "mdi:water-opacity",
+    "friendly_name": "X50 Ultra Complete Wasmodus"
+   }
+  },
+  "select.x50_ultra_complete_map_rotation": {
+   "entity_id": "select.x50_ultra_complete_map_rotation",
+   "state": "0",
+   "attributes": {
+    "options": [
+     "0",
+     "90",
+     "180",
+     "270"
+    ],
+    "unit_of_measurement": "°",
+    "icon": "mdi:crop-rotate",
+    "friendly_name": "X50 Ultra Complete Kaartrotatie"
+   }
+  },
+  "select.x50_ultra_complete_selected_map": {
+   "entity_id": "select.x50_ultra_complete_selected_map",
+   "state": "Kaart 1",
+   "attributes": {
+    "options": [
+     "Kaart 1",
+     "Kaart 2",
+     "Kaart 3"
+    ],
+    "map_id": 28,
+    "map_index": 1,
+    "icon": "mdi:map-check",
+    "friendly_name": "X50 Ultra Complete Geselecteerde kaart"
+   }
+  },
+  "camera.x50_ultra_complete_map": {
+   "entity_id": "camera.x50_ultra_complete_map",
+   "state": "2026-10-15 18:00:43",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.x50_ultra_complete_map?token=REDACTED&v=1792080043",
+    "icon": "mdi:map",
+    "friendly_name": "X50 Ultra Complete Huidige kaart",
+    "supported_features": 0
+   }
+  },
+  "camera.x50_ultra_complete_map_1": {
+   "entity_id": "camera.x50_ultra_complete_map_1",
+   "state": "2026-10-15 18:00:43",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.x50_ultra_complete_map_1?token=REDACTED&v=1792080043",
+    "icon": "mdi:map-search",
+    "friendly_name": "X50 Ultra Complete Opgeslagen kaart Kaart 1",
+    "supported_features": 0
+   }
+  },
+  "camera.x50_ultra_complete_map_2": {
+   "entity_id": "camera.x50_ultra_complete_map_2",
+   "state": "2026-10-15 18:00:42",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.x50_ultra_complete_map_2?token=REDACTED&v=1792080042",
+    "icon": "mdi:map-search",
+    "friendly_name": "X50 Ultra Complete Opgeslagen kaart 2",
+    "supported_features": 0
+   }
+  },
+  "camera.x50_ultra_complete_map_3": {
+   "entity_id": "camera.x50_ultra_complete_map_3",
+   "state": "2026-10-15 18:00:42",
+   "attributes": {
+    "entity_picture": "/api/camera_proxy/camera.x50_ultra_complete_map_3?token=REDACTED&v=1792080042",
+    "icon": "mdi:map-search",
+    "friendly_name": "X50 Ultra Complete Opgeslagen kaart 3",
+    "supported_features": 0
+   }
+  },
+  "time.x50_ultra_complete_dnd_start": {
+   "entity_id": "time.x50_ultra_complete_dnd_start",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clock-start",
+    "friendly_name": "X50 Ultra Complete DnD starttijd"
+   }
+  },
+  "time.x50_ultra_complete_dnd_end": {
+   "entity_id": "time.x50_ultra_complete_dnd_end",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:clock-end",
+    "friendly_name": "X50 Ultra Complete DnD eindtijd"
+   }
+  },
+  "time.x50_ultra_complete_off_peak_charging_start": {
+   "entity_id": "time.x50_ultra_complete_off_peak_charging_start",
+   "state": "00:00:00",
+   "attributes": {
+    "icon": "mdi:battery-lock-open",
+    "friendly_name": "X50 Ultra Complete Starttijd (daluren)"
+   }
+  },
+  "time.x50_ultra_complete_off_peak_charging_end": {
+   "entity_id": "time.x50_ultra_complete_off_peak_charging_end",
+   "state": "06:00:00",
+   "attributes": {
+    "icon": "mdi:battery-lock",
+    "friendly_name": "X50 Ultra Complete Eindtijd (daluren)"
+   }
+  }
+ },
+ "entities": {
+  "vacuum.x50_ultra_complete": {
+   "entity_id": "vacuum.x50_ultra_complete",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dreame_vacuum",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cleaning_time": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_time",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_time",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_mapping_time": {
+   "entity_id": "sensor.x50_ultra_complete_mapping_time",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mapping_time",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cleaned_area": {
+   "entity_id": "sensor.x50_ultra_complete_cleaned_area",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaned_area",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_state": {
+   "entity_id": "sensor.x50_ultra_complete_state",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "state",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_status": {
+   "entity_id": "sensor.x50_ultra_complete_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_relocation_status": {
+   "entity_id": "sensor.x50_ultra_complete_relocation_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "relocation_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_task_status": {
+   "entity_id": "sensor.x50_ultra_complete_task_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "task_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_mop_pad": {
+   "entity_id": "sensor.x50_ultra_complete_mop_pad",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_pad",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_dust_collection": {
+   "entity_id": "sensor.x50_ultra_complete_dust_collection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dust_collection",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_auto_empty_status": {
+   "entity_id": "sensor.x50_ultra_complete_auto_empty_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_empty_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_self_wash_base_status": {
+   "entity_id": "sensor.x50_ultra_complete_self_wash_base_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_wash_base_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_low_water_warning": {
+   "entity_id": "sensor.x50_ultra_complete_low_water_warning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "low_water_warning",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_drainage_status": {
+   "entity_id": "sensor.x50_ultra_complete_drainage_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "drainage_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_task_type": {
+   "entity_id": "sensor.x50_ultra_complete_task_type",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "task_type",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_stream_status": {
+   "entity_id": "sensor.x50_ultra_complete_stream_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "stream_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_error": {
+   "entity_id": "sensor.x50_ultra_complete_error",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "error",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_charging_status": {
+   "entity_id": "sensor.x50_ultra_complete_charging_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "charging_status",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_battery_level": {
+   "entity_id": "sensor.x50_ultra_complete_battery_level",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "battery_level",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_main_brush_left": {
+   "entity_id": "sensor.x50_ultra_complete_main_brush_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "main_brush_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_main_brush_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_main_brush_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "main_brush_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_side_brush_left": {
+   "entity_id": "sensor.x50_ultra_complete_side_brush_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_side_brush_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_side_brush_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_filter_left": {
+   "entity_id": "sensor.x50_ultra_complete_filter_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "filter_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_filter_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_filter_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "filter_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_sensor_dirty_left": {
+   "entity_id": "sensor.x50_ultra_complete_sensor_dirty_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "sensor_dirty_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_sensor_dirty_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_sensor_dirty_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "sensor_dirty_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_wheel_dirty_left": {
+   "entity_id": "sensor.x50_ultra_complete_wheel_dirty_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "wheel_dirty_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_wheel_dirty_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_wheel_dirty_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "wheel_dirty_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_scale_inhibitor_left": {
+   "entity_id": "sensor.x50_ultra_complete_scale_inhibitor_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "scale_inhibitor_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_scale_inhibitor_time_left": {
+   "entity_id": "sensor.x50_ultra_complete_scale_inhibitor_time_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "scale_inhibitor_time_left",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_first_cleaning_date": {
+   "entity_id": "sensor.x50_ultra_complete_first_cleaning_date",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "first_cleaning_date",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_total_cleaning_time": {
+   "entity_id": "sensor.x50_ultra_complete_total_cleaning_time",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "total_cleaning_time",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cleaning_count": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_count",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_count",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_total_cleaned_area": {
+   "entity_id": "sensor.x50_ultra_complete_total_cleaned_area",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "total_cleaned_area",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_clean_water_tank_status": {
+   "entity_id": "sensor.x50_ultra_complete_clean_water_tank_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "clean_water_tank_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_dirty_water_tank_status": {
+   "entity_id": "sensor.x50_ultra_complete_dirty_water_tank_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dirty_water_tank_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_dust_bag_status": {
+   "entity_id": "sensor.x50_ultra_complete_dust_bag_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dust_bag_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_detergent_status": {
+   "entity_id": "sensor.x50_ultra_complete_detergent_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "detergent_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_station_drainage_status": {
+   "entity_id": "sensor.x50_ultra_complete_station_drainage_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "station_drainage_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_hot_water_status": {
+   "entity_id": "sensor.x50_ultra_complete_hot_water_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "hot_water_status",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_current_room": {
+   "entity_id": "sensor.x50_ultra_complete_current_room",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "current_room",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cleaning_history": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_history",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_history",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cruising_history": {
+   "entity_id": "sensor.x50_ultra_complete_cruising_history",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cruising_history",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_cleaning_progress": {
+   "entity_id": "sensor.x50_ultra_complete_cleaning_progress",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_progress",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_drying_progress": {
+   "entity_id": "sensor.x50_ultra_complete_drying_progress",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_progress",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_drying_left": {
+   "entity_id": "sensor.x50_ultra_complete_drying_left",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_left",
+   "hidden": false
+  },
+  "sensor.x50_ultra_complete_firmware_version": {
+   "entity_id": "sensor.x50_ultra_complete_firmware_version",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "firmware_version",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.x50_ultra_complete_charging_state": {
+   "entity_id": "binary_sensor.x50_ultra_complete_charging_state",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "charging_state",
+   "hidden": false
+  },
+  "binary_sensor.x50_ultra_complete_lds_status": {
+   "entity_id": "binary_sensor.x50_ultra_complete_lds_status",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "lds_status",
+   "hidden": false
+  },
+  "binary_sensor.x50_ultra_complete_problem": {
+   "entity_id": "binary_sensor.x50_ultra_complete_problem",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "problem",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "binary_sensor.x50_ultra_complete_maintenance": {
+   "entity_id": "binary_sensor.x50_ultra_complete_maintenance",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "maintenance",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_resume_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_resume_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "resume_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_carpet_boost": {
+   "entity_id": "switch.x50_ultra_complete_carpet_boost",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "carpet_boost",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_obstacle_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_obstacle_avoidance",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "obstacle_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_customized_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_customized_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "customized_cleaning",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_child_lock": {
+   "entity_id": "switch.x50_ultra_complete_child_lock",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "child_lock",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_dnd": {
+   "entity_id": "switch.x50_ultra_complete_dnd",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_dnd_disable_resume_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_dnd_disable_resume_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_disable_resume_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_dnd_disable_auto_empty": {
+   "entity_id": "switch.x50_ultra_complete_dnd_disable_auto_empty",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_disable_auto_empty",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_dnd_reduce_volume": {
+   "entity_id": "switch.x50_ultra_complete_dnd_reduce_volume",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_reduce_volume",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_multi_floor_map": {
+   "entity_id": "switch.x50_ultra_complete_multi_floor_map",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "multi_floor_map",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_self_clean": {
+   "entity_id": "switch.x50_ultra_complete_self_clean",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_auto_water_refilling": {
+   "entity_id": "switch.x50_ultra_complete_auto_water_refilling",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_water_refilling",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_auto_drying": {
+   "entity_id": "switch.x50_ultra_complete_auto_drying",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_drying",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_mop_washing_with_detergent": {
+   "entity_id": "switch.x50_ultra_complete_mop_washing_with_detergent",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_washing_with_detergent",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_mopping_with_detergent": {
+   "entity_id": "switch.x50_ultra_complete_mopping_with_detergent",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mopping_with_detergent",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_auto_mount_mop": {
+   "entity_id": "switch.x50_ultra_complete_auto_mount_mop",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_mount_mop",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_voice_assistant": {
+   "entity_id": "switch.x50_ultra_complete_voice_assistant",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "voice_assistant",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_obstacle_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_obstacle_image_upload": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_image_upload",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_image_upload",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_obstacle_picture": {
+   "entity_id": "switch.x50_ultra_complete_ai_obstacle_picture",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_obstacle_picture",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_pet_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_pet_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_pet_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_furniture_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_furniture_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_furniture_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ai_fluid_detection": {
+   "entity_id": "switch.x50_ultra_complete_ai_fluid_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ai_fluid_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_fuzzy_obstacle_detection": {
+   "entity_id": "switch.x50_ultra_complete_fuzzy_obstacle_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "fuzzy_obstacle_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_pet_picture": {
+   "entity_id": "switch.x50_ultra_complete_pet_picture",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "pet_picture",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_pet_focused_detection": {
+   "entity_id": "switch.x50_ultra_complete_pet_focused_detection",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "pet_focused_detection",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_large_particles_boost": {
+   "entity_id": "switch.x50_ultra_complete_large_particles_boost",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "large_particles_boost",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_fill_light": {
+   "entity_id": "switch.x50_ultra_complete_fill_light",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "fill_light",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_collision_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_collision_avoidance",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "collision_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_stain_avoidance": {
+   "entity_id": "switch.x50_ultra_complete_stain_avoidance",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "stain_avoidance",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_floor_direction_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_floor_direction_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "floor_direction_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_intensive_carpet_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_intensive_carpet_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "intensive_carpet_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_side_reach": {
+   "entity_id": "switch.x50_ultra_complete_side_reach",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_reach",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_mop_extend": {
+   "entity_id": "switch.x50_ultra_complete_mop_extend",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_extend",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_gap_cleaning_extension": {
+   "entity_id": "switch.x50_ultra_complete_gap_cleaning_extension",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "gap_cleaning_extension",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_mopping_under_furnitures": {
+   "entity_id": "switch.x50_ultra_complete_mopping_under_furnitures",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mopping_under_furnitures",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_off_peak_charging": {
+   "entity_id": "switch.x50_ultra_complete_off_peak_charging",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_human_follow": {
+   "entity_id": "switch.x50_ultra_complete_human_follow",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "human_follow",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_max_suction_power": {
+   "entity_id": "switch.x50_ultra_complete_max_suction_power",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "max_suction_power",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_uv_sterilization": {
+   "entity_id": "switch.x50_ultra_complete_uv_sterilization",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "uv_sterilization",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_streaming_voice_prompt": {
+   "entity_id": "switch.x50_ultra_complete_streaming_voice_prompt",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "streaming_voice_prompt",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_clean_carpets_first": {
+   "entity_id": "switch.x50_ultra_complete_clean_carpets_first",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "clean_carpets_first",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_smart_mop_washing": {
+   "entity_id": "switch.x50_ultra_complete_smart_mop_washing",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "smart_mop_washing",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_silent_drying": {
+   "entity_id": "switch.x50_ultra_complete_silent_drying",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "silent_drying",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_hair_compression": {
+   "entity_id": "switch.x50_ultra_complete_hair_compression",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "hair_compression",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_side_brush_carpet_rotate": {
+   "entity_id": "switch.x50_ultra_complete_side_brush_carpet_rotate",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "side_brush_carpet_rotate",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_ring_light_always_on": {
+   "entity_id": "switch.x50_ultra_complete_ring_light_always_on",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "ring_light_always_on",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_obstacle_crossing": {
+   "entity_id": "switch.x50_ultra_complete_obstacle_crossing",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "obstacle_crossing",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_dynamic_obstacle_cleaning": {
+   "entity_id": "switch.x50_ultra_complete_dynamic_obstacle_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dynamic_obstacle_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_lds_state": {
+   "entity_id": "switch.x50_ultra_complete_lds_state",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "lds_state",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "switch.x50_ultra_complete_camera_light_brightness_auto": {
+   "entity_id": "switch.x50_ultra_complete_camera_light_brightness_auto",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "camera_light_brightness_auto",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_main_brush": {
+   "entity_id": "button.x50_ultra_complete_reset_main_brush",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_main_brush",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_side_brush": {
+   "entity_id": "button.x50_ultra_complete_reset_side_brush",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_side_brush",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_filter": {
+   "entity_id": "button.x50_ultra_complete_reset_filter",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_filter",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_sensor": {
+   "entity_id": "button.x50_ultra_complete_reset_sensor",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_sensor",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_scale_inhibitor": {
+   "entity_id": "button.x50_ultra_complete_reset_scale_inhibitor",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_scale_inhibitor",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reset_wheel": {
+   "entity_id": "button.x50_ultra_complete_reset_wheel",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reset_wheel",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_start_auto_empty": {
+   "entity_id": "button.x50_ultra_complete_start_auto_empty",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_auto_empty",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_clear_warning": {
+   "entity_id": "button.x50_ultra_complete_clear_warning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "clear_warning",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_start_fast_mapping": {
+   "entity_id": "button.x50_ultra_complete_start_fast_mapping",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_fast_mapping",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_self_clean": {
+   "entity_id": "button.x50_ultra_complete_self_clean",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_manual_drying": {
+   "entity_id": "button.x50_ultra_complete_manual_drying",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "manual_drying",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_water_tank_draining": {
+   "entity_id": "button.x50_ultra_complete_water_tank_draining",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "water_tank_draining",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_empty_water_tank": {
+   "entity_id": "button.x50_ultra_complete_empty_water_tank",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "empty_water_tank",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_base_station_self_repair": {
+   "entity_id": "button.x50_ultra_complete_base_station_self_repair",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "base_station_self_repair",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_base_station_cleaning": {
+   "entity_id": "button.x50_ultra_complete_base_station_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "base_station_cleaning",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_start_recleaning": {
+   "entity_id": "button.x50_ultra_complete_start_recleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "start_recleaning",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_reload_shortcuts": {
+   "entity_id": "button.x50_ultra_complete_reload_shortcuts",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "reload_shortcuts",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "button.x50_ultra_complete_backup_saved_map": {
+   "entity_id": "button.x50_ultra_complete_backup_saved_map",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "backup_saved_map",
+   "entity_category": "diagnostic",
+   "hidden": false
+  },
+  "number.x50_ultra_complete_volume": {
+   "entity_id": "number.x50_ultra_complete_volume",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "volume",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.x50_ultra_complete_self_clean_area": {
+   "entity_id": "number.x50_ultra_complete_self_clean_area",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_area",
+   "hidden": false
+  },
+  "number.x50_ultra_complete_self_clean_time": {
+   "entity_id": "number.x50_ultra_complete_self_clean_time",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_time",
+   "hidden": false
+  },
+  "number.x50_ultra_complete_camera_light_brightness": {
+   "entity_id": "number.x50_ultra_complete_camera_light_brightness",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "camera_light_brightness",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "number.x50_ultra_complete_wetness_level": {
+   "entity_id": "number.x50_ultra_complete_wetness_level",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "wetness_level",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_suction_level": {
+   "entity_id": "select.x50_ultra_complete_suction_level",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "suction_level",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_cleaning_mode": {
+   "entity_id": "select.x50_ultra_complete_cleaning_mode",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_mode",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_carpet_cleaning": {
+   "entity_id": "select.x50_ultra_complete_carpet_cleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "carpet_cleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_drying_time": {
+   "entity_id": "select.x50_ultra_complete_drying_time",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "drying_time",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_voice_assistant_language": {
+   "entity_id": "select.x50_ultra_complete_voice_assistant_language",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "voice_assistant_language",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_mop_pad_humidity": {
+   "entity_id": "select.x50_ultra_complete_mop_pad_humidity",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_pad_humidity",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_mop_extend_frequency": {
+   "entity_id": "select.x50_ultra_complete_mop_extend_frequency",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "mop_extend_frequency",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_self_clean_frequency": {
+   "entity_id": "select.x50_ultra_complete_self_clean_frequency",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "self_clean_frequency",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_auto_recleaning": {
+   "entity_id": "select.x50_ultra_complete_auto_recleaning",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_recleaning",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_auto_rewashing": {
+   "entity_id": "select.x50_ultra_complete_auto_rewashing",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_rewashing",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_cleaning_route": {
+   "entity_id": "select.x50_ultra_complete_cleaning_route",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleaning_route",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_battery_charge_level": {
+   "entity_id": "select.x50_ultra_complete_battery_charge_level",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "battery_charge_level",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_cleangenius": {
+   "entity_id": "select.x50_ultra_complete_cleangenius",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleangenius",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_cleangenius_mode": {
+   "entity_id": "select.x50_ultra_complete_cleangenius_mode",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "cleangenius_mode",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_water_temperature": {
+   "entity_id": "select.x50_ultra_complete_water_temperature",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "water_temperature",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_auto_lds_coverage": {
+   "entity_id": "select.x50_ultra_complete_auto_lds_coverage",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_lds_coverage",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_auto_empty_mode": {
+   "entity_id": "select.x50_ultra_complete_auto_empty_mode",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "auto_empty_mode",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_washing_mode": {
+   "entity_id": "select.x50_ultra_complete_washing_mode",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "washing_mode",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_map_rotation": {
+   "entity_id": "select.x50_ultra_complete_map_rotation",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "map_rotation",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "select.x50_ultra_complete_selected_map": {
+   "entity_id": "select.x50_ultra_complete_selected_map",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "selected_map",
+   "hidden": false
+  },
+  "camera.x50_ultra_complete_map": {
+   "entity_id": "camera.x50_ultra_complete_map",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "map",
+   "hidden": false
+  },
+  "camera.x50_ultra_complete_map_1": {
+   "entity_id": "camera.x50_ultra_complete_map_1",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "saved_map",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "camera.x50_ultra_complete_map_2": {
+   "entity_id": "camera.x50_ultra_complete_map_2",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "saved_map",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "camera.x50_ultra_complete_map_3": {
+   "entity_id": "camera.x50_ultra_complete_map_3",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "saved_map",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.x50_ultra_complete_dnd_start": {
+   "entity_id": "time.x50_ultra_complete_dnd_start",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_start",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.x50_ultra_complete_dnd_end": {
+   "entity_id": "time.x50_ultra_complete_dnd_end",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "dnd_end",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.x50_ultra_complete_off_peak_charging_start": {
+   "entity_id": "time.x50_ultra_complete_off_peak_charging_start",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging_start",
+   "entity_category": "config",
+   "hidden": false
+  },
+  "time.x50_ultra_complete_off_peak_charging_end": {
+   "entity_id": "time.x50_ultra_complete_off_peak_charging_end",
+   "device_id": "d0000000000000000000000000000001",
+   "platform": "dreame_vacuum",
+   "translation_key": "off_peak_charging_end",
+   "entity_category": "config",
+   "hidden": false
+  }
+ },
+ "devices": {
+  "d0000000000000000000000000000001": {
+   "id": "d0000000000000000000000000000001",
+   "manufacturer": "Dreametech™",
+   "model": "dreame.vacuum.r5048h",
+   "model_id": null,
+   "name": "X50 Ultra Complete",
+   "name_by_user": null,
+   "sw_version": "4.3.9_3128"
+  }
+ },
+ "services": {
+  "vacuum": {
+   "start": {},
+   "pause": {},
+   "return_to_base": {},
+   "clean_spot": {},
+   "clean_area": {},
+   "locate": {},
+   "stop": {},
+   "set_fan_speed": {},
+   "send_command": {}
+  },
+  "dreame_vacuum": {
+   "vacuum_clean_segment": {
+    "fields": {
+     "segments": {
+      "example": "[3,2] or 3",
+      "required": true,
+      "selector": {
+       "object": {
+        "multiple": false
+       }
+      }
+     },
+     "repeats": {
+      "example": "[1,2] or 1",
+      "required": false,
+      "selector": {
+       "number": {
+        "min": 1,
+        "max": 3,
+        "step": 1,
+        "mode": "slider"
+       }
+      }
+     },
+     "suction_level": {
+      "example": "[0,3] or 0",
+      "required": false,
+      "selector": {
+       "number": {
+        "min": 0,
+        "max": 3,
+        "step": 1,
+        "mode": "slider"
+       }
+      }
+     },
+     "water_volume": {
+      "example": "[1,3] or 1",
+      "required": false,
+      "selector": {
+       "number": {
+        "min": 1,
+        "max": 3,
+        "step": 1,
+        "mode": "slider"
+       }
+      }
+     }
+    },
+    "target": {
+     "entity": [
+      {
+       "integration": "dreame_vacuum",
+       "domain": [
+        "vacuum"
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+}
