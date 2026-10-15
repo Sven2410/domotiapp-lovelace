@@ -1,0 +1,125 @@
+{
+ "_toelichting": "LG warmtepompboiler via de core-integratie lg_thinq (ThinQ Connect, cloud), HA 2026.10.1, uitgelezen 15-10-2026 met alleen lezen. Geanonimiseerd: het ThinQ-apparaat-id (zit ook in elke unique_id), registry-ids en ULIDs. In de vorm van hass: states, entities, devices.",
+ "states": {
+  "binary_sensor.water_heater_vermogen": {
+   "entity_id": "binary_sensor.water_heater_vermogen",
+   "state": "on",
+   "attributes": {
+    "device_class": "power",
+    "friendly_name": "Water Heater Vermogen"
+   },
+   "last_changed": "2026-10-15T16:20:41.830527+00:00",
+   "last_updated": "2026-10-15T16:20:41.830527+00:00"
+  },
+  "number.water_heater_temperatuur": {
+   "entity_id": "number.water_heater_temperatuur",
+   "state": "58",
+   "attributes": {
+    "min": 35,
+    "max": 60,
+    "step": 1,
+    "mode": "box",
+    "unit_of_measurement": "°C",
+    "friendly_name": "Water Heater Temperatuur"
+   },
+   "last_changed": "2026-10-15T16:20:41.831333+00:00",
+   "last_updated": "2026-10-15T16:20:41.831333+00:00"
+  },
+  "select.water_heater_bedrijfsmodus": {
+   "entity_id": "select.water_heater_bedrijfsmodus",
+   "state": "turbo",
+   "attributes": {
+    "options": [
+     "heat_pump",
+     "vacation",
+     "turbo",
+     "auto"
+    ],
+    "friendly_name": "Water Heater Bedrijfsmodus"
+   },
+   "last_changed": "2026-10-15T16:20:41.831639+00:00",
+   "last_updated": "2026-10-15T16:20:41.831639+00:00"
+  },
+  "sensor.water_heater_current_temperature": {
+   "entity_id": "sensor.water_heater_current_temperature",
+   "state": "58",
+   "attributes": {
+    "state_class": "measurement",
+    "unit_of_measurement": "°C",
+    "friendly_name": "Water Heater Current temperature"
+   },
+   "last_changed": "2026-10-15T16:20:41.831953+00:00",
+   "last_updated": "2026-10-15T16:20:41.831953+00:00"
+  },
+  "water_heater.water_heater": {
+   "entity_id": "water_heater.water_heater",
+   "state": "performance",
+   "attributes": {
+    "min_temp": 35,
+    "max_temp": 60,
+    "target_temp_step": 1,
+    "operation_list": [
+     "heat_pump",
+     "vacation",
+     "performance",
+     "eco"
+    ],
+    "current_temperature": 58,
+    "temperature": 58,
+    "target_temp_high": null,
+    "target_temp_low": null,
+    "operation_mode": "performance",
+    "friendly_name": "Water Heater",
+    "supported_features": 3
+   },
+   "last_changed": "2026-10-15T16:20:41.832567+00:00",
+   "last_updated": "2026-10-15T16:20:41.832567+00:00"
+  }
+ },
+ "entities": {
+  "binary_sensor.water_heater_vermogen": {
+   "entity_id": "binary_sensor.water_heater_vermogen",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "lg_thinq",
+   "translation_key": "water_heater_operation_mode",
+   "hidden": false
+  },
+  "number.water_heater_temperatuur": {
+   "entity_id": "number.water_heater_temperatuur",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "lg_thinq",
+   "translation_key": "target_temperature",
+   "hidden": false
+  },
+  "select.water_heater_bedrijfsmodus": {
+   "entity_id": "select.water_heater_bedrijfsmodus",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "lg_thinq",
+   "translation_key": "current_job_mode",
+   "hidden": false
+  },
+  "sensor.water_heater_current_temperature": {
+   "entity_id": "sensor.water_heater_current_temperature",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "lg_thinq",
+   "translation_key": "current_temperature",
+   "hidden": false
+  },
+  "water_heater.water_heater": {
+   "entity_id": "water_heater.water_heater",
+   "device_id": "d0000000000000000000000000000003",
+   "platform": "lg_thinq",
+   "hidden": false
+  }
+ },
+ "devices": {
+  "d0000000000000000000000000000003": {
+   "id": "d0000000000000000000000000000003",
+   "manufacturer": "LGE",
+   "model": "WHT_056905_WW (DEVICE_WATER_HEATER)",
+   "model_id": null,
+   "name": "Water Heater",
+   "name_by_user": null
+  }
+ }
+}
