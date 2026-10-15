@@ -257,7 +257,7 @@ describe("NIEUW GEDRAG: wat er op de kaart staat", () => {
     assert.deepEqual(t[0], { sleutel: "deur", label: "Klep", waarde: "Open", id: "binary_sensor.wasmachine_deur" });
   });
 
-  it("REGRESSIEWACHT: een vaatwasser zonder apparaat heeft geen tegels", () => {
+  it("geeft een vaatwasser zonder apparaat geen tegels", () => {
     assert.deepEqual(P.programmaTegels({ rollen: {}, st: () => null }), []);
   });
 
