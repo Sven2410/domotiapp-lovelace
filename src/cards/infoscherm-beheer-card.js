@@ -256,6 +256,7 @@ const css = /* css */ `
   .voet { display: flex; justify-content: flex-start; align-items: center; gap: 10px; flex-wrap: wrap; }
   .melding { font-size: 12px; color: var(--dac-ink-3); }
   .melding.fout { color: var(--dac-bad); }
+  .melding.goed { color: var(--dac-good); }
 
   /* lijsten */
   .lijst { display: flex; flex-direction: column; gap: 8px; }
@@ -794,7 +795,9 @@ export class InfoschermBeheerCard extends DacCard {
   htmlVoet_(blok) {
     const info = this.blokInfo_(blok);
     const fout = info.secties.map((s) => this.fouten_[s]).find(Boolean);
-    const m = this.meldingen_[blok];
+    // De melding van een boeking staat bij de knop Boeken (htmlRuimtes_):
+    // onderaan het blok, onder de lijst van ruimtes, zag je hem niet.
+    const m = blok === "ruimtes" ? null : this.meldingen_[blok];
     if (!fout && !m) return "";
     return `<div class="voet"><span class="melding ${fout || m?.fout ? "fout" : ""}">${at(fout ? `Niet opgeslagen: ${fout}` : m?.tekst)}</span></div>`;
   }
@@ -1074,7 +1077,9 @@ export class InfoschermBeheerCard extends DacCard {
         ${this.veld_("Tot", "tot", f.tot ?? "", { type: "time", s: "boeken" })}
       </div>
       ${this.veld_("Omschrijving (niet op het scherm)", "omschrijving", f.omschrijving ?? "", { s: "boeken", extra: 'placeholder="Bijvoorbeeld: teamoverleg"' })}
-      <div class="voet"><button class="knop" type="button" data-actie="r_boek">${resolve("plus")}<span>Boeken</span></button></div>
+      <div class="voet"><button class="knop" type="button" data-actie="r_boek">${resolve("plus")}<span>Boeken</span></button>${
+        this.meldingen_.ruimtes ? `<span class="melding ${this.meldingen_.ruimtes.fout ? "fout" : "goed"}" role="status">${at(this.meldingen_.ruimtes.tekst)}</span>` : ""
+      }</div>
       <div class="sub">Geboekt, de komende twee weken</div>
       <div class="lijst">${lijst}</div>
       <div class="sub">Boeken op het scherm</div>

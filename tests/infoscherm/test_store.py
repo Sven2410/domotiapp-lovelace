@@ -402,6 +402,8 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         # 13 oktober 2026: de airco's. Net als het afval een lege lijst als de
         # kaart ze niet meestuurt.
         "klimaat": [],
+        # 16 oktober 2026: de ruimtes, om dezelfde reden.
+        "ruimtes": [],
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
     # Dezelfde config nog eens: niets gewijzigd.

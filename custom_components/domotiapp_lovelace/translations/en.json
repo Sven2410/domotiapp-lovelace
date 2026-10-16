@@ -80,7 +80,7 @@
     },
     "competities_bezet": {
       "title": "Competition sensors not created",
-      "description": "DomotiApp Lovelace creates the sensors for the sports pop-up itself, logo included. These names are already used by another entity: {entiteiten}\n\nThey have therefore not been created. A second sensor next to it would get _2 appended to its name, and nothing on the dashboard would change.\n\nUsually it is an old template helper (Settings > Devices & services > Helpers). Remove it and restart Home Assistant: DomotiApp Lovelace then creates the sensor under exactly this name, and this notice disappears. The logo in customize.yaml is no longer needed after that."
+      "description": "DomotiApp Lovelace creates the sensors for the sports pop-up itself, logo included. These names are already used by another entity: {entiteiten}\n\nThey have therefore not been created. A second sensor next to it would get _2 appended to its name, and nothing on the dashboard would change.\n\nUsually it is an old template helper (Settings > Devices & services > Helpers). Remove it and reload DomotiApp Lovelace (Settings > Devices & services > DomotiApp Lovelace > the three dots > Reload), or restart Home Assistant: DomotiApp Lovelace then creates the sensor under exactly this name, and this notice disappears. The logo in customize.yaml is no longer needed after that."
     }
   }
 }

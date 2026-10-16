@@ -2553,7 +2553,7 @@ de beheerkaart wél een kleine kopregel.
 
 De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
 staat sinds ronde 4 in de kaartconfig van de BEHEERKAART (`weather`,
-`energy`, `lights`, `climates`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
+`energy`, `lights`, `climates`, `rooms`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
 de opslag gestuurd zodra een beheerder hem met die config ziet
 (`infoscherm/installatie/sync`, alleen admin, alleen bij verschil, en alleen
 als de config die velden heeft; een beheerkaart zonder laat de opslag met
@@ -2567,9 +2567,12 @@ mededeling, en wat er in het welkomblok staat: tekst en logo verbergen;
 `welkom_onder` wordt sinds 0.62.1 niet meer gebruikt),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
 receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender, en sinds
-13 oktober 2026 `klimaat`, de airco's, elk met een naam van de receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
+13 oktober 2026 `klimaat`, de airco's, en sinds 16 oktober 2026 `ruimtes`, de
+agenda's van de ruimtes, allebei elk met een naam van de receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
-(verlichting tonen, klimaat tonen, klimaat bedienen, feeds, kioskaccounts) en de lijst van bestanden. Een
+(verlichting tonen, klimaat tonen, klimaat bedienen, feeds, kioskaccounts), de lijst van bestanden,
+en BUITEN de stand de code om op het scherm een ruimte te boeken (`ruimte_code`;
+de stand zegt alleen `boeken_op_scherm`, want hij gaat ook naar de iPad). Een
 opslag van vóór ronde 3 wordt bij het laden eenmalig bijgewerkt: berichten van
 het pand worden mededelingen, de eerste welkomsttekst wordt de tekst van het
 welkomblok. Rechten:
@@ -2577,8 +2580,10 @@ welkomblok. Rechten:
 | handeling | wie |
 |---|---|
 | lezen, abonneren, aanwezigheid omzetten, lampen schakelen, airco's bedienen | iedere ingelogde gebruiker |
+| een ruimte boeken (`infoscherm/ruimtes/boek`) | iedere ingelogde gebruiker; een kioskaccount alleen met de code, en wat het scherm stuurt (altijd met een code) wordt altijd nagekeken |
+| een boeking vrijgeven, de code instellen (`ruimtes/vrijgeven`, `ruimtes/code`) | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
 | personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN en de VOLGORDE van de lampen en de airco's wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| de entiteiten (weer, energie, agenda's, lampen, airco's) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
+| de entiteiten (weer, energie, agenda's, lampen, airco's, ruimtes) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
 Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
 typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
@@ -2614,7 +2619,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
   met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
-  nieuws, verlichting, agenda, verjaardagen, afval, klimaat) op de plek en maat uit
+  nieuws, verlichting, agenda, verjaardagen, afval, klimaat, ruimtes) op de plek en maat uit
   `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
   Een blok met een pagina erachter heeft een kop die een knop is ("Alles
   bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
@@ -2623,7 +2628,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   maat van plek als het ene op het andere wordt losgelaten.
 - **Alles in een blok schaalt met de maat van het blok** (ronde 4): een blok
   van 2×2 is de maat 1, groter wordt groter en kleiner kleiner. Een blok met
-  een lijst (aanwezig, nieuws, verlichting, agenda, verjaardagen, klimaat) schaalt
+  een lijst (aanwezig, nieuws, verlichting, agenda, verjaardagen, klimaat, ruimtes) schaalt
   alleen met zijn breedte en toont in de hoogte MEER: de rijen die passen
   zijn even hoog en vullen het blok; blijft er bijna een rij over, dan gaat
   alles een tikje kleiner zodat die rij erbij past. Wat er niet in past
@@ -2712,6 +2717,34 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   mag bedienen; zonder bediening is de pagina alleen om te kijken. Het blok
   staat niet in de standaardindeling (die is vol) en komt erbij via Indeling,
   Blok toevoegen.
+- **Het blok Ruimtes** (16 oktober 2026, op verzoek van de eigenaar: *"kunnen
+  we iets maken voor een planning van ruimtes. (...) een spreekruimte kleine
+  vergader ruimte etc etc?"*). Per ruimte een AGENDA in Home Assistant (bij
+  voorkeur een Lokale agenda), gekozen door de installateur in de kaarteditor
+  van het beheer (`rooms`, ten hoogste twintig); de receptie geeft ze een naam
+  en een volgorde. De boekingen staan in die agenda's en nergens anders.
+  - Op het scherm alleen **vrij of bezet, en tot wanneer** ("Bezet tot 15:00",
+    "Vrij tot 14:30", "Vrij"), nooit de titel of de omschrijving van een
+    boeking: er kijken bezoekers mee. Aansluitende boekingen tellen samen.
+    Alleen het icoon draagt de toestand, in de statuskleuren.
+  - De pagina Ruimtes toont per ruimte de dag als tijdlijn (de openingstijden
+    van vandaag, anders 8 tot 18 uur, ruimer als er eerder of later geboekt
+    is; voor alle ruimtes hetzelfde venster), een lijn voor nu, en de tijden
+    van vandaag als regel eronder.
+  - Is er in het beheer een code ingesteld (vier tot acht cijfers), dan staat
+    bij elke ruimte een knop **Boeken**: begintijd (nu, of per kwartier),
+    duur (30 min, 1 uur, 1,5 uur, 2 uur; niet over een andere boeking of
+    middernacht heen) en de code op een eigen cijferblok. De server kijkt de
+    code na (na vijf verkeerde vijf minuten niet) en weigert een boeking die
+    overlapt, ook als twee mensen tegelijk boeken.
+  - In het beheer: boeken met datum, begin, eind en een omschrijving (die
+    alleen in de agenda komt), de boekingen van de komende twee weken met
+    Vrijgeven, en de code. Vrijgeven kan alleen in het beheer.
+  - Scherm en beheer lezen de agenda's live met `calendar/event/subscribe` van
+    Home Assistant; een boeking uit de agenda van Home Assistant zelf staat er
+    dus ook meteen.
+  - Het blok staat niet in de standaardindeling en komt erbij via Indeling,
+    Blok toevoegen.
 
 ### 20.8 Foutgedrag
 
@@ -2724,4 +2757,8 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   is wordt getoond, de rest gelogd en overgeslagen (als in SPEC 18.2).
 - Een feed die faalt laat de andere met rust; de fout staat bij de bron in het
   beheer.
+- Een agenda van een ruimte die (nog) niet bestaat, bijvoorbeeld vlak na een
+  herstart, wordt later opnieuw gevraagd. Kan een agenda niet gelezen worden,
+  dan blijft staan wat er stond. Een agenda die geen boekingen aanneemt geeft
+  bij boeken een uitleg ("Kies een Lokale agenda").
 

@@ -80,7 +80,7 @@
     },
     "competities_bezet": {
       "title": "Competitiesensoren niet aangemaakt",
-      "description": "DomotiApp Lovelace maakt de sensoren voor de sportpop-up zelf, met het logo erbij. Deze namen zijn al in gebruik door een andere entiteit: {entiteiten}\n\nDaarom zijn ze niet aangemaakt. Ernaast zou een tweede sensor met _2 achter de naam komen, en dan verandert er op het dashboard niets.\n\nMeestal is het een sjabloonhelper van vroeger (Instellingen > Apparaten en diensten > Helpers). Haal die weg en herstart Home Assistant: dan maakt DomotiApp Lovelace de sensor onder precies deze naam, en verdwijnt deze melding. Het logo in customize.yaml is daarna ook niet meer nodig."
+      "description": "DomotiApp Lovelace maakt de sensoren voor de sportpop-up zelf, met het logo erbij. Deze namen zijn al in gebruik door een andere entiteit: {entiteiten}\n\nDaarom zijn ze niet aangemaakt. Ernaast zou een tweede sensor met _2 achter de naam komen, en dan verandert er op het dashboard niets.\n\nMeestal is het een sjabloonhelper van vroeger (Instellingen > Apparaten en diensten > Helpers). Haal die weg en laad DomotiApp Lovelace opnieuw (Instellingen > Apparaten en diensten > DomotiApp Lovelace > de drie puntjes > Opnieuw laden), of herstart Home Assistant: dan maakt DomotiApp Lovelace de sensor onder precies deze naam, en verdwijnt deze melding. Het logo in customize.yaml is daarna ook niet meer nodig."
     }
   }
 }

@@ -104,8 +104,9 @@ async def async_setup_entry(
     if bezet:
         _LOGGER.warning(
             "Niet aangemaakt, want de naam is al in gebruik: %s. Meestal is dat een "
-            "sjabloonhelper van vroeger. Haal die weg en herstart Home Assistant, dan "
-            "maakt DomotiApp Lovelace de sensor zelf, met het logo erbij.",
+            "sjabloonhelper van vroeger. Haal die weg en laad DomotiApp Lovelace opnieuw "
+            "(of herstart Home Assistant), dan maakt DomotiApp Lovelace de sensor zelf, "
+            "met het logo erbij.",
             ", ".join(bezet),
         )
         ir.async_create_issue(

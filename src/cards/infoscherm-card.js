@@ -930,17 +930,17 @@ const css = /* css */ `
     background: rgba(var(--dac-tint), 0.05); border: 1px solid var(--dac-border);
   }
   .r-balk {
-    position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;
-    background: color-mix(in srgb, var(--tone) 22%, transparent); border-left: 2px solid var(--tone); box-sizing: border-box;
-    font-size: calc(13px * var(--s)); font-weight: 600; color: var(--dac-ink); white-space: nowrap;
+    position: absolute; top: 0; bottom: 0; box-sizing: border-box;
+    background: color-mix(in srgb, var(--tone) 22%, transparent); border-left: 2px solid var(--tone);
   }
-  .r-balk span { padding: 0 calc(6px * var(--s)); overflow: hidden; text-overflow: ellipsis; }
   .r-balk.voorbij { opacity: 0.4; }
   .r-nu { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--dac-ink); }
   .r-uren { position: relative; height: calc(16px * var(--s)); }
   .r-uren span { position: absolute; transform: translateX(-50%); font-size: calc(12px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
   .r-uren span:first-child { transform: none; }
   .r-uren span:last-child { transform: translateX(-100%); }
+  .r-tijden { display: flex; flex-wrap: wrap; gap: calc(4px * var(--s)) calc(18px * var(--s)); margin-top: calc(4px * var(--s)); font-size: calc(15px * var(--s)); font-variant-numeric: tabular-nums; color: var(--dac-ink-2); }
+  .r-tijden .voorbij { color: var(--dac-ink-3); }
 
   /* ------------------------------------------------------------ lagen */
   .laag { position: absolute; inset: 0; display: none; background: var(--dac-bg); color: var(--dac-ink); }
@@ -3050,12 +3050,21 @@ export class InfoschermCard extends DacCard {
     const { naam, toestand, tekst } = this.ruimteNu_(r, nu);
     const afspraken = this.ruimteAfspraken_.get(r.entity) ?? [];
     const nuPos = nuPositie(nu, nu, venster);
+    // Geen tekst IN de balk: een uur op een dag van zeventien is 75 pixels, en
+    // dan stond er "14:00 – 15:..." met de nu-lijn er dwars doorheen (gemeten
+    // op 16 oktober 2026). De tijden staan als regel onder de lijn.
     const balken = ruimteBalken(afspraken, nu, venster)
       .map(
         (b) =>
-          `<div class="r-balk${b.afspraak.eind <= nu ? " voorbij" : ""}" style="left:${b.links.toFixed(2)}%;width:${b.breedte.toFixed(2)}%"><span>${escapeHtml(b.tekst)}</span></div>`
+          `<div class="r-balk${b.afspraak.eind <= nu ? " voorbij" : ""}" style="left:${b.links.toFixed(2)}%;width:${b.breedte.toFixed(2)}%" title="${escapeHtml(b.tekst)}"></div>`
       )
       .join("");
+    const vandaag = afspraken.filter((a) => a.eind > dagBegin(nu) && a.start < plusDagen(dagBegin(nu), 1));
+    const tijden = vandaag.length
+      ? vandaag
+          .map((a) => `<span class="${a.eind <= nu ? "voorbij" : ""}">${escapeHtml(a.heleDag ? "de hele dag" : `${klok(a.start)} – ${klok(a.eind)}`)}</span>`)
+          .join("")
+      : `<span class="voorbij">Vandaag nog niets geboekt.</span>`;
     const uren = uurStrepen(venster)
       .map((u) => `<span style="left:${u.links.toFixed(2)}%">${u.uur}</span>`)
       .join("");
@@ -3072,6 +3081,7 @@ export class InfoschermCard extends DacCard {
       <div class="r-lijn">
         <div class="r-baan">${balken}${nuPos == null ? "" : `<div class="r-nu" style="left:${nuPos.toFixed(2)}%"></div>`}</div>
         <div class="r-uren">${uren}</div>
+        <div class="r-tijden">${tijden}</div>
       </div>
     </div>`;
   }
@@ -3127,9 +3137,12 @@ export class InfoschermCard extends DacCard {
       // Past de gekozen duur daar niet meer, dan de langste die wel past.
       const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
       const duren = duurKeuzes(afspraken, keuzes[j].tijd);
+      // Een uur of korter, net als bij het openen (eersteKeuze); anders
+      // sprong hij na een stap terug en een stap vooruit van 1 naar 2 uur.
       if (!duren.find((d) => d.minuten === b.minuten)?.kan) {
         const passend = duren.filter((d) => d.kan);
-        b.minuten = passend.length ? passend[passend.length - 1].minuten : null;
+        const kort = passend.filter((d) => d.minuten <= 60);
+        b.minuten = (kort.length ? kort[kort.length - 1] : passend[0])?.minuten ?? null;
       }
     } else if (actie === "duur") {
       b.minuten = Number(knop.dataset.min);
