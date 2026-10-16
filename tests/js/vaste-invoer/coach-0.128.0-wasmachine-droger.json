@@ -1,0 +1,165 @@
+{
+ "_toelichting": "Coach v0.128.0 bij een klant (16-10-2026, 23:04), Miele wasmachine en droger zonder het vinkje 'mag sturen': de startsensors en de vier bedieningsentiteiten van de coach per apparaat. De eigen start- en stopknoppen van Miele die in entiteiten staan, zijn bij die klant in het register uitgeschakeld en staan dus niet in hass.states. Geen persoonsgegevens; de unique_ids zijn de apparaat-id's uit de coach.",
+ "entiteiten": [
+  {
+   "entity_id": "sensor.wasmachine_start",
+   "translation_key": "start",
+   "unique_id": "dev-mielewasmachine_start_om",
+   "state": "unknown",
+   "attributes": {
+    "start": null,
+    "reason": "Alleen uitlezen: de coach start hem niet.",
+    "plan": "",
+    "rule": "read-only",
+    "released": false,
+    "running": false,
+    "release_switch": null,
+    "contract": 1,
+    "type": "wasmachine",
+    "stand": "niet_vrijgegeven",
+    "vrijgegeven": false,
+    "nu": false,
+    "klaar_om": null,
+    "later": null,
+    "entiteiten": {
+     "status": "sensor.wasmachine",
+     "program": "sensor.wasmachine_programma",
+     "remaining": "sensor.wasmachine_resterende_tijd",
+     "remote_start": "binary_sensor.wasmachine_start_op_afstand",
+     "door": "binary_sensor.wasmachine_deur",
+     "start": "button.wasmachine_starten",
+     "stop": "button.wasmachine_stoppen",
+     "energy": "sensor.wasmachine_energieverbruik"
+    },
+    "alleen_lezen": true,
+    "icon": "mdi:clock-start",
+    "friendly_name": "Wasmachine Start"
+   },
+   "last_changed": "2026-10-16T23:04:46.280864+02:00"
+  },
+  {
+   "entity_id": "sensor.droger_start",
+   "translation_key": "start",
+   "unique_id": "dev-mieledroger_start_om",
+   "state": "unknown",
+   "attributes": {
+    "start": null,
+    "reason": "Alleen uitlezen: de coach start hem niet.",
+    "plan": "",
+    "rule": "read-only",
+    "released": false,
+    "running": false,
+    "release_switch": null,
+    "contract": 1,
+    "type": "droger",
+    "stand": "niet_vrijgegeven",
+    "vrijgegeven": false,
+    "nu": false,
+    "klaar_om": null,
+    "later": null,
+    "entiteiten": {
+     "status": "sensor.wasdroger",
+     "program": "sensor.wasdroger_programma",
+     "remaining": "sensor.wasdroger_resterende_tijd",
+     "remote_start": "binary_sensor.wasdroger_start_op_afstand",
+     "door": "binary_sensor.wasdroger_deur",
+     "start": "button.wasdroger_starten",
+     "stop": "button.wasdroger_stoppen",
+     "energy": "sensor.wasdroger_energieverbruik"
+    },
+    "alleen_lezen": true,
+    "icon": "mdi:clock-start",
+    "friendly_name": "Droger Start"
+   },
+   "last_changed": "2026-10-16T23:04:46.281018+02:00"
+  },
+  {
+   "entity_id": "binary_sensor.wasmachine_vrijgegeven",
+   "translation_key": "vrijgegeven",
+   "unique_id": "dev-mielewasmachine_vrijgegeven",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "Wasmachine Vrijgegeven"
+   },
+   "last_changed": "2026-10-16T23:04:46.282029+02:00"
+  },
+  {
+   "entity_id": "binary_sensor.droger_vrijgegeven",
+   "translation_key": "vrijgegeven",
+   "unique_id": "dev-mieledroger_vrijgegeven",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:check-circle-outline",
+    "friendly_name": "Droger Vrijgegeven"
+   },
+   "last_changed": "2026-10-16T23:04:46.282143+02:00"
+  },
+  {
+   "entity_id": "button.wasmachine_ingeruimd_goedkoopste_moment",
+   "translation_key": "ingeruimd_morgen",
+   "unique_id": "dev-mielewasmachine_ingeruimd_morgen",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:calendar-clock",
+    "friendly_name": "Wasmachine Ingeruimd, goedkoopste moment"
+   },
+   "last_changed": "2026-10-16T23:04:46.282802+02:00"
+  },
+  {
+   "entity_id": "button.wasmachine_ingeruimd_nu_starten",
+   "translation_key": "ingeruimd_nu",
+   "unique_id": "dev-mielewasmachine_ingeruimd_nu",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:play-circle-outline",
+    "friendly_name": "Wasmachine Ingeruimd, nu starten"
+   },
+   "last_changed": "2026-10-16T23:04:46.282908+02:00"
+  },
+  {
+   "entity_id": "button.wasmachine_vrijgave_intrekken",
+   "translation_key": "vrijgave_intrekken",
+   "unique_id": "dev-mielewasmachine_vrijgave_intrekken",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:close-circle-outline",
+    "friendly_name": "Wasmachine Vrijgave intrekken"
+   },
+   "last_changed": "2026-10-16T23:04:46.283003+02:00"
+  },
+  {
+   "entity_id": "button.droger_ingeruimd_goedkoopste_moment",
+   "translation_key": "ingeruimd_morgen",
+   "unique_id": "dev-mieledroger_ingeruimd_morgen",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:calendar-clock",
+    "friendly_name": "Droger Ingeruimd, goedkoopste moment"
+   },
+   "last_changed": "2026-10-16T23:04:46.283097+02:00"
+  },
+  {
+   "entity_id": "button.droger_ingeruimd_nu_starten",
+   "translation_key": "ingeruimd_nu",
+   "unique_id": "dev-mieledroger_ingeruimd_nu",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:play-circle-outline",
+    "friendly_name": "Droger Ingeruimd, nu starten"
+   },
+   "last_changed": "2026-10-16T23:04:46.28319+02:00"
+  },
+  {
+   "entity_id": "button.droger_vrijgave_intrekken",
+   "translation_key": "vrijgave_intrekken",
+   "unique_id": "dev-mieledroger_vrijgave_intrekken",
+   "state": "unavailable",
+   "attributes": {
+    "icon": "mdi:close-circle-outline",
+    "friendly_name": "Droger Vrijgave intrekken"
+   },
+   "last_changed": "2026-10-16T23:04:46.283277+02:00"
+  }
+ ]
+}

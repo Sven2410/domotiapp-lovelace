@@ -347,6 +347,12 @@ export const PROGRAMMA_APPARATEN = {
  * Dus bij een wasmachine en een droger: geen knoppen, ook niet die van de
  * coach. De vaatwasser noemde hij niet; die houdt ze.
  *
+ * Sinds 0.79.0 komen de knoppen van de COACH terug als de coach hem mag
+ * sturen. De eigenaar later die dag, via de coach-sessie: *"wasmachines van
+ * bosch bijvoorbeeld en drogers kunnen wel gestuurd worden dus in de toekomst
+ * ja wel sturen."* Zie `welkeKnoppen`. De eigen knoppen van de machine blijven
+ * weg: de coach drukt zelf op Starten.
+ *
  * En staat hij UIT, dan de laatste beurt. Miele zet bij "uit" bijna alles op
  * `unknown`: programma, verbruik, temperatuur, de tijden. Wat er liep moet dus
  * uit de recorder komen. Zodra hij aangaat (ook alleen klaargezet) weer de
@@ -366,8 +372,42 @@ export const PROGRAMMA_APPARATEN = {
  *   wordt, en zijn op dat moment allemaal tegelijk `unknown`.
  */
 
-/** De soorten apparaten zonder knoppen op de kaart. */
+/** De soorten apparaten zonder eigen knoppen op de kaart. */
 export const ALLEEN_LEZEN = new Set(["wasmachine", "droger"]);
+
+/**
+ * Mag de coach dit apparaat sturen? Alleen als de startsensor dat zelf zegt.
+ *
+ * `alleen_lezen` staat er sinds coach v0.127.0 altijd, als true of false. Het
+ * is `not controllable`, het vinkje "mag sturen" bij de coach, en uit
+ * hetzelfde vinkje volgt of zijn knoppen beschikbaar zijn (`ProgrammaBediening`
+ * in `entiteit.py` van de coach, gelezen op 16 oktober 2026 bij v0.128.0).
+ * Gezien in een echte dump: `true`, bij een klant
+ * (`vaste-invoer/coach-0.128.0-wasmachine-droger.json`).
+ *
+ * Een oudere coach heeft het attribuut niet, en dan NIET. Bij de klant van
+ * 0.78.0 waren de knoppen met zo'n coach beschikbaar terwijl starten op
+ * afstand niet kon.
+ */
+export const coachStuurt = (startSt) => startSt?.attributes?.alleen_lezen === false;
+
+/**
+ * Welke knoppen er op de kaart mogen: de eigen knoppen van de machine
+ * (programmakeuze, start, pauze, stop, slim en Handmatig) en die van de coach.
+ *
+ * Een vaatwasser heeft ze allebei, zoals altijd. Een wasmachine of droger
+ * heeft geen eigen knoppen, en die van de coach alleen als de coach hem mag
+ * sturen. Of een knop er dan ook echt staat, hangt nog af van of hij
+ * beschikbaar is (zie `coachKnoppen` en `knopKan`).
+ *
+ * @param {string} soortNaam uit `apparaatSoort`
+ * @param {object|null} startSt de startsensor van de coach
+ * @returns {{eigen: boolean, coach: boolean}}
+ */
+export function welkeKnoppen(soortNaam, startSt) {
+  if (!ALLEEN_LEZEN.has(soortNaam)) return { eigen: true, coach: true };
+  return { eigen: false, coach: coachStuurt(startSt) };
+}
 
 /** Hoe ver de kaart terugkijkt: de recorder bewaart standaard tien dagen. */
 export const BEURT_DAGEN = 10;
