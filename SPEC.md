@@ -2585,6 +2585,7 @@ welkomblok. Rechten:
 | lezen, abonneren, aanwezigheid omzetten, lampen schakelen, airco's bedienen | iedere ingelogde gebruiker |
 | een ruimte boeken (`infoscherm/ruimtes/boek`) | iedere ingelogde gebruiker; een kioskaccount alleen met de code, en wat het scherm stuurt (altijd met een code) wordt altijd nagekeken |
 | een boeking vrijgeven, de code instellen (`ruimtes/vrijgeven`, `ruimtes/code`) | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
+| een ruimte maken (`ruimtes/nieuw`, maakt een Lokale agenda) en een ZELF GEMAAKTE ruimte weghalen, met zijn agenda (`ruimtes/weg`) | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen, ook zonder adminrecht |
 | personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN en de VOLGORDE van de lampen en de airco's wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
 | de entiteiten (weer, energie, agenda's, lampen, airco's, ruimtes, wifi) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
@@ -2727,9 +2728,16 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 - **Het blok Ruimtes** (16 oktober 2026, op verzoek van de eigenaar: *"kunnen
   we iets maken voor een planning van ruimtes. (...) een spreekruimte kleine
   vergader ruimte etc etc?"*). Per ruimte een AGENDA in Home Assistant (bij
-  voorkeur een Lokale agenda), gekozen door de installateur in de kaarteditor
-  van het beheer (`rooms`, ten hoogste twintig); de receptie geeft ze een naam
-  en een volgorde. De boekingen staan in die agenda's en nergens anders.
+  voorkeur een Lokale agenda). De receptie MAAKT een ruimte in het beheer
+  (sinds 0.76.0, *"De receptioniste moet dat zelf kunnen maken."*): de server
+  maakt er een Lokale agenda bij, en bij weghalen gaat die agenda met alle
+  boekingen mee, na een bevestiging. Bestaat er al een Lokale agenda met die
+  naam, dan wordt die gekoppeld en niet weggehaald. De installateur kan in de
+  kaarteditor van het beheer daarnaast een bestaande agenda kiezen (`rooms`,
+  bijvoorbeeld een van Outlook); die haalt het beheer niet weg, en de
+  kaartconfig laat een gemaakte ruimte staan. Ten hoogste twintig. De receptie
+  geeft ze een naam en een volgorde. De boekingen staan in die agenda's en
+  nergens anders.
   - Op het scherm alleen **vrij of bezet, en tot wanneer** ("Bezet tot 15:00",
     "Vrij tot 14:30", "Vrij"), nooit de titel of de omschrijving van een
     boeking: er kijken bezoekers mee. Aansluitende boekingen tellen samen.

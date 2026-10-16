@@ -62,6 +62,11 @@
  * stand: die gaat ook naar de iPad. Het formulier voor een nieuwe boeking
  * wordt NIET opgeslagen (`data-s="boeken"`); pas de knop Boeken stuurt het.
  *
+ * Sinds 0.76.0 maakt het beheer ook zelf een ruimte (veld Nieuwe ruimte): *"De
+ * receptioniste moet dat zelf kunnen maken."* De server maakt dan een Lokale
+ * agenda (zie de kop van ruimtes.py). Zo'n ruimte (`gemaakt`) kan hier ook weer
+ * weg; een ruimte die de installateur in de kaartconfig koos niet.
+ *
  * ALLES BEGINT DICHT
  *
  * Tot 0.72.0 stond er een instelling "Staat open bij het laden", met
@@ -87,7 +92,9 @@ import {
   geefRuimteVrij,
   haalGebruikers,
   haalStand,
+  nieuweRuimte,
   nogNietGereed,
+  ruimteWeg,
   syncInstallatie,
   upload,
   vergeetBestand,
@@ -277,6 +284,9 @@ const css = /* css */ `
   .item.lamp .ent, .item.airco .ent, .item.ruimte .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .item.lamp .ent b, .item.airco .ent b, .item.ruimte .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item.lamp .ent span, .item.airco .ent span, .item.ruimte .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.ruimte { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .item.ruimte .van { font-size: 11px; color: var(--dac-ink-3); }
+  .rij.toevoegen { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .item.boeking { grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1.4fr) auto; padding: 6px 8px 6px 12px; font-size: 13px; }
   .r-tijd { font-variant-numeric: tabular-nums; font-weight: 600; }
   .r-ruimte { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -407,6 +417,8 @@ export class InfoschermBeheerCard extends DacCard {
     this.ruimteAfspraken_ = new Map();
     this.ruimteDag_ = "";
     this.boekForm_ = {};
+    this.nieuweRuimte_ = "";
+    this.ruimteMelding_ = null;
     this.logoAnalyses_ = new Map();
     this.herkansing_ = new Herkansing(() => this.haal_());
     this.verbinding_ = new Verbindingswacht();
@@ -483,7 +495,9 @@ export class InfoschermBeheerCard extends DacCard {
       afval: i.afval ?? [],
       verlichting: (i.verlichting ?? []).map((l) => l.entity).sort(),
       klimaat: (i.klimaat ?? []).map((a) => a.entity).sort(),
-      ruimtes: (i.ruimtes ?? []).map((r) => r.entity).sort(),
+      // Een ruimte die het beheer maakte staat niet in de kaartconfig, en hoort
+      // dus niet als verschil te tellen.
+      ruimtes: (i.ruimtes ?? []).filter((r) => !r.gemaakt).map((r) => r.entity).sort(),
       wifi: i.wifi ?? null,
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
@@ -551,6 +565,13 @@ export class InfoschermBeheerCard extends DacCard {
     this.on(card, "change", (e) => this.invoer_(e));
     this.on(card, "pointerdown", (e) => this.sleepStart_(e));
     this.on(card, "focusout", (e) => this.focusWeg_(e));
+    // Enter in het veld Nieuwe ruimte is hetzelfde als Toevoegen.
+    this.on(card, "keydown", (e) => {
+      if (e.key === "Enter" && e.target?.dataset?.veld === "r_nieuw_naam") {
+        e.preventDefault();
+        this.maakRuimte_();
+      }
+    });
     this.on(this.$(".file"), "change", (e) => this.bestandGekozen_(e));
 
     // `open_` begint op null en verandert alleen door een klik (zie de kop).
@@ -1039,28 +1060,34 @@ export class InfoschermBeheerCard extends DacCard {
     const rijen = ruimtes
       .map((r, i) => {
         const a = this.hass?.states?.[r.entity]?.attributes ?? {};
+        const weg = r.gemaakt
+          ? `<button class="knop ico gevaar" type="button" data-actie="r_weg" data-ruimte="${at(r.entity)}" title="Ruimte weghalen">${resolve("minus")}</button>`
+          : `<span class="van" title="Deze agenda koos de installateur in de kaartinstellingen; daar gaat hij ook weer weg.">installateur</span>`;
         return `<div class="item ruimte" data-i="${i}" data-lijst="ruimtes">
           <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
           <div class="ent"><b>${at(a.friendly_name ?? r.entity)}</b><span>${at(r.entity)}</span></div>
           ${this.veld_("Naam op het scherm", "r_naam", r.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+          <div class="knoppen">${weg}</div>
         </div>`;
       })
       .join("");
+    const m = this.ruimteMelding_;
     const namenEnVolgorde = `
       <div class="sub">Ruimtes</div>
-      <div class="hulp">De namen zoals ze op het scherm staan (leeg = de naam uit Home Assistant); slepen aan de greep bepaalt de volgorde. Welke ruimtes er zijn kiest de installateur in de kaartinstellingen van DEZE kaart: per ruimte een agenda in Home Assistant, het liefst een Lokale agenda.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen ruimtes gekozen.</div>`}</div>`;
-    // Nog geen ruimtes: zeggen hoe, stap voor stap. Gemeld op 16 oktober 2026:
-    // de keuzelijst in de kaarteditor zei "Geen items beschikbaar", want er
-    // was nog geen enkele agenda, en dan staat ook Agenda niet in de zijbalk.
+      <div class="hulp">Elke ruimte heeft een eigen agenda in Home Assistant; daar staan de boekingen in. De namen hieronder zijn die op het scherm (leeg = de naam van de agenda), en slepen aan de greep bepaalt de volgorde. Weghalen haalt ook de agenda weg, met alle boekingen erin.</div>
+      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen ruimtes.</div>`}</div>
+      <div class="rij toevoegen">
+        ${this.veld_("Nieuwe ruimte", "r_nieuw_naam", this.nieuweRuimte_ ?? "", { s: "ruimte_nieuw", extra: 'placeholder="Bijvoorbeeld: Spreekruimte" autocomplete="off"' })}
+        <button class="knop" type="button" data-actie="r_nieuw">${resolve("plus")}<span>Toevoegen</span></button>
+      </div>
+      ${m ? `<div class="voet"><span class="melding ${m.fout ? "fout" : "goed"}" role="status">${at(m.tekst)}</span></div>` : ""}`;
+    // Nog geen ruimtes: eerst er een maken. Tot 0.76.0 kon dat alleen een
+    // beheerder, met een Lokale agenda en de kaartinstellingen; gemeld op
+    // 16 oktober 2026: "De receptioniste moet dat zelf kunnen maken."
     if (!ruimtes.length) {
       return `
-        <div class="hulp">Een ruimte is een agenda in Home Assistant. Zo zet je ze erop (als beheerder):</div>
-        <ol class="hulp stappen">
-          <li>Instellingen, Apparaten en diensten, Integratie toevoegen, <b>Lokale agenda</b>. Geef hem de naam van de ruimte, bijvoorbeeld Spreekruimte. Herhaal dat per ruimte. Daarna staat Agenda ook in de zijbalk.</li>
-          <li>Open de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart) en kies de agenda's bij <b>Ruimtes om te boeken</b>.</li>
-          <li>Hier verschijnen dan de ruimtes, en kun je een code instellen om op de iPad te boeken. Op het scherm komt het blok met Indeling, Blok toevoegen, Ruimtes.</li>
-        </ol>`;
+        <div class="hulp">Voeg hieronder een ruimte toe, bijvoorbeeld de spreekruimte of de kleine vergaderruimte. Daarna kun je hier boeken, en een code instellen om op de iPad te boeken. Op het scherm komt het blok met Indeling, Blok toevoegen, Ruimtes.</div>
+        ${namenEnVolgorde}`;
     }
 
     const f = this.boekForm_;
@@ -1269,6 +1296,10 @@ export class InfoschermBeheerCard extends DacCard {
     // Boeken stuurt het, en dan naar de agenda en niet naar de opslag.
     if (el.dataset.s === "boeken") {
       this.boekForm_[veld] = el.value;
+      return undefined;
+    }
+    if (el.dataset.s === "ruimte_nieuw") {
+      this.nieuweRuimte_ = el.value;
       return undefined;
     }
     const info = this.blokInfo_(blok);
@@ -1574,6 +1605,8 @@ export class InfoschermBeheerCard extends DacCard {
       return this.invoer_({ target: groep, type: "change" });
     }
     if (actie === "r_boek") return this.boekRuimte_();
+    if (actie === "r_nieuw") return this.maakRuimte_();
+    if (actie === "r_weg") return this.haalRuimteWeg_(knop);
     if (actie === "r_vrij") return this.geefVrij_(knop);
     const i = Number(knop.dataset.i);
     const info = this.blokInfo_(blok);
@@ -1716,6 +1749,49 @@ export class InfoschermBeheerCard extends DacCard {
     const naam = r?.naam || this.hass?.states?.[f.ruimte]?.attributes?.friendly_name || f.ruimte;
     this.boekForm_ = { ruimte: f.ruimte, datum: f.datum };
     return meld(`${naam} is geboekt, ${f.van} tot ${f.tot}.`);
+  }
+
+  /** Een ruimte maken: de server maakt er een Lokale agenda bij. */
+  async maakRuimte_() {
+    const naam = (this.nieuweRuimte_ ?? "").trim();
+    const meld = (tekst, fout = false) => {
+      this.ruimteMelding_ = { tekst, fout };
+      this.teken_("ruimtes", true);
+    };
+    if (!naam) return meld("Geef de ruimte een naam.", true);
+    if (this.ruimteBezig_) return undefined;
+    this.ruimteBezig_ = true;
+    meld(`${naam} wordt aangemaakt…`);
+    try {
+      const r = await nieuweRuimte(this.hass, naam);
+      this.nieuweRuimte_ = "";
+      meld(r.gemaakt ? `${naam} staat erbij, met een eigen agenda.` : `Er was al een agenda ${naam}; die staat er nu bij.`);
+    } catch (fout) {
+      meld(fout?.message ?? "Dat lukte niet.", true);
+    } finally {
+      this.ruimteBezig_ = false;
+    }
+    return undefined;
+  }
+
+  /** Een ruimte die het beheer maakte weghalen, met zijn agenda. */
+  async haalRuimteWeg_(knop) {
+    const entity = knop.dataset.ruimte;
+    const r = (this.werk_.installatie?.ruimtes ?? []).find((x) => x.entity === entity);
+    const naam = r?.naam || this.hass?.states?.[entity]?.attributes?.friendly_name || entity;
+    const ja = await vraagBevestiging({
+      title: `${naam} weghalen?`,
+      text: "De ruimte verdwijnt van het scherm, en zijn agenda verdwijnt uit Home Assistant, met alle boekingen erin.",
+      confirmText: "Weghalen",
+    });
+    if (!ja) return;
+    try {
+      await ruimteWeg(this.hass, entity);
+      this.ruimteMelding_ = { tekst: `${naam} is weggehaald.`, fout: false };
+    } catch (fout) {
+      this.ruimteMelding_ = { tekst: fout?.message ?? "Weghalen lukte niet.", fout: true };
+    }
+    this.teken_("ruimtes", true);
   }
 
   async geefVrij_(knop) {
@@ -1879,7 +1955,7 @@ const HELPERS = {
   climates:
     "Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in.",
   rooms:
-    "Per ruimte (spreekruimte, vergaderruimte) een agenda in Home Assistant: maak er een aan met Instellingen, Apparaten en diensten, Integratie toevoegen, Lokale agenda, en noem hem naar de ruimte. De boekingen staan in die agenda; op het scherm staat alleen vrij of bezet.",
+    "Meestal hoeft hier niets: de receptie maakt de ruimtes zelf in het beheer (blok Ruimtes, Nieuwe ruimte), en dat maakt er een Lokale agenda bij. Kies hier alleen een agenda die er al is, bijvoorbeeld een van Outlook of Google die boekingen aanneemt. Op het scherm staat alleen vrij of bezet.",
   wifi:
     "Bij UniFi Network de entiteit QR-code van het GASTnetwerk. Die staat standaard uit (en is er alleen met een beheerdersaccount in UniFi): zet hem aan bij de entiteiten van het netwerk. Kies niet het gewone netwerk: wie de code scant, heeft het wachtwoord.",
   kiosk_users:

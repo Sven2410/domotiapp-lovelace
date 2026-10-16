@@ -99,6 +99,16 @@ export const boekRuimte = (hass, { ruimte, start, eind, omschrijving, code }) =>
 export const geefRuimteVrij = (hass, { ruimte, uid, recurrence_id }) =>
   roep(hass, "ruimtes/vrijgeven", { ruimte, uid, ...(recurrence_id ? { recurrence_id } : {}) });
 
+/**
+ * Een ruimte maken (sinds 0.76.0): de server maakt een Lokale agenda met deze
+ * naam, ook voor een receptie zonder adminrecht. Bestaat er al een, dan wordt
+ * die gekoppeld (`gemaakt: false`).
+ */
+export const nieuweRuimte = (hass, naam) => roep(hass, "ruimtes/nieuw", { naam });
+
+/** Een ruimte die het beheer maakte weghalen, met zijn agenda en alle boekingen. */
+export const ruimteWeg = (hass, ruimte) => roep(hass, "ruimtes/weg", { ruimte });
+
 /** De code om op het scherm te boeken; leeg zet het uit. Alleen het beheer. */
 export const zetRuimteCode = (hass, code) => roep(hass, "ruimtes/code", { code });
 
