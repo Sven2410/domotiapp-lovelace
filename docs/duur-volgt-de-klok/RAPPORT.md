@@ -86,7 +86,8 @@ bediening niets veranderd, dus er is geen klikproef gedaan.
 - `npm run build` (met `check:css`), `verify`, `check:registratie`,
   `check:controls`: groen.
 - `npm test`: 1969 tests, alle groen.
-- Python: zie de PR. Aan de serverkant is niets veranderd.
+- Python: 874 tests, alle groen (lokaal in Docker). Aan de serverkant is
+  niets veranderd.
 
 ## Samenvatting
 
