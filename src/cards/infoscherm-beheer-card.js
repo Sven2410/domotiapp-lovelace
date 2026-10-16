@@ -52,6 +52,15 @@
  * opgeslagen wordt nooit door de server overschreven. Alleen de aanwezigheid
  * wordt tussendoor bijgewerkt, in het schakelaartje zelf, want die komt van
  * de iPad en die wil je zien.
+ *
+ * ALLES BEGINT DICHT
+ *
+ * Tot 0.72.0 stond er een instelling "Staat open bij het laden", met
+ * Medewerkers als standaard. De eigenaar op 16 oktober 2026: *"Elke keer als
+ * ik beheer open van het infoscherm staat medewerkers opengeklapt alles moet
+ * gewoon dichtgeklapt blijven tot ik zelf iets open klap."* De instelling is
+ * weg; een `open:` die nog in een config staat doet niets meer. Wat er open
+ * is bepaalt alleen een klik, en dat blijft open zolang de kaart er staat.
  */
 
 import { DacCard, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -141,7 +150,6 @@ const STANDAARD = {
   show_verlichting: true,
   show_klimaat: true,
   show_instellingen: true,
-  open: "personen",
 };
 
 const css = /* css */ `
@@ -497,12 +505,7 @@ export class InfoschermBeheerCard extends DacCard {
     this.on(card, "focusout", (e) => this.focusWeg_(e));
     this.on(this.$(".file"), "change", (e) => this.bestandGekozen_(e));
 
-    // Welk blok er openstaat komt uit de config, maar een klik wint zolang
-    // de config niet verandert. "geen" (Alles dicht) is ook een keuze.
-    if (this.openConfig_ !== this.config.open) {
-      this.openConfig_ = this.config.open;
-      this.open_ = this.config.open && this.config.open !== "geen" ? this.config.open : null;
-    }
+    // `open_` begint op null en verandert alleen door een klik (zie de kop).
     this.teardown_.push(() => this.abo_.stop());
     this.haal_();
     this.abo_.start(this.hass);
@@ -1594,7 +1597,6 @@ const LABELS = {
   show_verlichting: "Blok Verlichting",
   show_klimaat: "Blok Klimaat",
   show_instellingen: "Blok Instellingen en logo",
-  open: "Staat open bij het laden",
 };
 
 const HELPERS = {
@@ -1694,17 +1696,6 @@ export class InfoschermBeheerEditor extends DacEditor {
     return [
       ...installatie,
       { name: "title", selector: sel.text() },
-      {
-        // "geen" en niet "": een lege waarde wordt uit de config gehaald
-        // (DacEditor.patch_) en dan stond er meteen weer het eerste blok.
-        // Gemeld op 10 september 2026: "de keuze Alles dicht kan ik niet
-        // selecteren."
-        name: "open",
-        selector: sel.select([
-          ...BLOKKEN.map((b) => ({ value: b.key, label: b.titel })),
-          { value: "geen", label: "Alles dicht" },
-        ]),
-      },
       ...BLOKKEN.map((b) => ({ name: `show_${b.key}`, selector: sel.bool() })),
     ];
   }
