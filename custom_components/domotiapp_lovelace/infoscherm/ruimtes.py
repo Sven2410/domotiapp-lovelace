@@ -33,6 +33,21 @@ iPad gebruikt geen kioskaccount is (bij een klant zonder kioskaccount is het
 gewoon een gebruiker). Een kioskaccount MOET een code geven; een ander account
 dat er een meestuurt, krijgt hem ook nagekeken. Vrijgeven kan alleen in het
 beheer.
+
+## Een ruimte maken in het beheer (sinds 0.76.0)
+
+*"De receptioniste moet dat zelf kunnen maken."* (16 oktober 2026, via een
+beheersessie bij een klant). Een Lokale agenda toevoegen is een config flow, en
+dat mag in Home Assistant alleen een beheerder. Dit doet het namens wie het
+infoscherm mag beheren, en ALLEEN voor een Lokale agenda met een naam:
+
+- `async_nieuw` maakt de agenda (`local_calendar`, stap user) en zet hem als
+  ruimte op het scherm, met `gemaakt: true`. Bestaat er al een Lokale agenda met
+  die naam, dan wordt DIE gekoppeld, zonder `gemaakt`: wat iemand anders maakte,
+  haalt het beheer niet weg;
+- `async_weg` haalt een ruimte met `gemaakt` weer weg, en verwijdert dan ook de
+  agenda, met alle boekingen erin. Een ruimte die de installateur in de
+  kaartconfig koos, laat het staan.
 """
 
 from __future__ import annotations
@@ -46,9 +61,12 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components.calendar.const import DATA_COMPONENT, CalendarEntityFeature
+from homeassistant.config_entries import SOURCE_USER, ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import dt as dt_util
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     CODE_POGINGEN,
@@ -61,6 +79,11 @@ from .const import (
 from .store import InfoFout, InfoStore, _tekst
 
 _LOGGER = logging.getLogger(__name__)
+
+# De Lokale agenda van Home Assistant, en de velden van zijn config flow.
+LOKAAL = "local_calendar"
+LOKAAL_NAAM = "calendar_name"
+LOKAAL_SLEUTEL = "storage_key"
 
 # Wat er in de agenda als titel komt als er niets ingevuld is. Op het scherm
 # staat het nooit.
@@ -190,15 +213,86 @@ class Ruimtes:
                     summary=titel_uit,
                     description=omschrijving[:MAX_MIDDEL],
                 )
-            except (HomeAssistantError, vol.Invalid, ValueError) as fout:
+            except (HomeAssistantError, vol.Invalid, ValueError, OSError) as fout:
+                # OSError: de Lokale agenda schrijft een .ics-bestand weg, en een
+                # schijf die vol of alleen-lezen is gaf anders "Unknown error".
                 raise RuimteFout("failed", f"Boeken lukte niet: {fout}") from None
         _LOGGER.info("Infoscherm: %s geboekt van %s tot %s (%s)", ruimte, begin, einde, waar)
         return {"ruimte": ruimte, "start": begin.isoformat(), "eind": einde.isoformat()}
+
+    def _lokale_agenda(self, sleutel: str) -> ConfigEntry | None:
+        """De Lokale agenda met deze naam (zijn `storage_key`), als die er is."""
+        for entry in self._hass.config_entries.async_entries(LOKAAL):
+            if entry.data.get(LOKAAL_SLEUTEL) == sleutel:
+                return entry
+        return None
+
+    async def _agenda_van(self, entry: ConfigEntry) -> str | None:
+        """De calendar-entiteit van een config entry. Een nieuwe agenda wordt
+        opgezet terwijl de flow afrondt; geef hem een paar tellen."""
+        register = er.async_get(self._hass)
+        for _ in range(50):
+            for ent in er.async_entries_for_config_entry(register, entry.entry_id):
+                if ent.domain == "calendar" and self._hass.states.get(ent.entity_id) is not None:
+                    return ent.entity_id
+            await asyncio.sleep(0.1)
+        return None
+
+    async def async_nieuw(self, naam: Any) -> dict[str, Any]:
+        """Een ruimte maken: een Lokale agenda met deze naam, als ruimte op het scherm."""
+        try:
+            tekst = _tekst(naam, "naam", MAX_KORT, verplicht=True)
+        except InfoFout as fout:
+            raise RuimteFout("invalid_format", "Geef de ruimte een naam.") from fout
+        # `slugify` van Home Assistant maakt van "!!!" geen lege tekst maar
+        # "unknown"; dus zelf kijken of er iets in staat.
+        if not any(teken.isalnum() for teken in tekst):
+            raise RuimteFout("invalid_format", "Een naam met letters of cijfers, graag.")
+        sleutel = slugify(tekst)
+        async with self._slot:
+            entry = self._lokale_agenda(sleutel)
+            gemaakt = entry is None
+            if gemaakt:
+                flow = await self._hass.config_entries.flow.async_init(LOKAAL, context={"source": SOURCE_USER})
+                uit = await self._hass.config_entries.flow.async_configure(
+                    flow["flow_id"], {LOKAAL_NAAM: tekst, "import": "create_empty"}
+                )
+                if uit.get("type") != FlowResultType.CREATE_ENTRY:
+                    raise RuimteFout("failed", f"De agenda kon niet gemaakt worden ({uit.get('reason') or uit.get('type')}).")
+                entry = uit["result"]
+            entity_id = await self._agenda_van(entry)
+            if entity_id is None:
+                raise RuimteFout("failed", "De agenda is er, maar Home Assistant heeft hem nog niet klaar. Probeer het zo opnieuw.")
+            try:
+                item = await self._store.async_voeg_ruimte_toe(entity_id, gemaakt=gemaakt)
+            except InfoFout as fout:
+                raise RuimteFout("invalid_format", str(fout)) from None
+        _LOGGER.info("Infoscherm: ruimte %s %s (%s)", tekst, "gemaakt" if gemaakt else "gekoppeld", entity_id)
+        return {"ruimte": item, "gemaakt": gemaakt}
+
+    async def async_weg(self, ruimte: str) -> dict[str, Any]:
+        """Een ruimte die het beheer maakte weer weghalen, met zijn agenda."""
+        item = self._store.ruimte(ruimte)
+        if item is None:
+            raise RuimteFout("not_found", "Deze ruimte staat niet (meer) op het infoscherm")
+        if not item.get("gemaakt"):
+            raise RuimteFout(
+                "niet_van_beheer",
+                "Deze ruimte heeft de installateur gekozen; die haalt hem weg in de kaartinstellingen van het beheer.",
+            )
+        ent = er.async_get(self._hass).async_get(ruimte)
+        entry = self._hass.config_entries.async_get_entry(ent.config_entry_id) if ent and ent.config_entry_id else None
+        async with self._slot:
+            await self._store.async_haal_ruimte_weg(ruimte)
+            if entry is not None and entry.domain == LOKAAL:
+                await self._hass.config_entries.async_remove(entry.entry_id)
+        _LOGGER.info("Infoscherm: ruimte %s weggehaald, met zijn agenda", ruimte)
+        return {"ruimte": ruimte, "agenda_weg": entry is not None and entry.domain == LOKAAL}
 
     async def async_vrijgeven(self, *, ruimte: str, uid: str, recurrence_id: str | None) -> None:
         """Eén boeking weg. Bij een herhalende alleen deze keer."""
         agenda = self._agenda(ruimte, CalendarEntityFeature.DELETE_EVENT, "verwijderen")
         try:
             await agenda.async_delete_event(uid, recurrence_id=recurrence_id or None)
-        except (HomeAssistantError, ValueError) as fout:
+        except (HomeAssistantError, ValueError, OSError) as fout:
             raise RuimteFout("failed", f"Vrijgeven lukte niet: {fout}") from None

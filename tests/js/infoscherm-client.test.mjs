@@ -21,7 +21,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
-import { Abonnement, AgendaAbonnement, RUST_NA_FOUT, bestandUrl, boekRuimte, haal, upload } from "../../src/infoscherm-client.js";
+import { Abonnement, AgendaAbonnement, RUST_NA_FOUT, bestandUrl, boekRuimte, haal, nieuweRuimte, ruimteWeg, upload } from "../../src/infoscherm-client.js";
 
 const echteFetch = globalThis.fetch;
 afterEach(() => {
@@ -270,5 +270,18 @@ describe("boekRuimte", () => {
     assert.ok(!("omschrijving" in verstuurd[0]));
     assert.ok(!("code" in verstuurd[1]));
     assert.equal(verstuurd[1].omschrijving, "Overleg");
+  });
+});
+
+describe("een ruimte maken en weghalen (NIEUW GEDRAG, 0.76.0)", () => {
+  it("stuurt de naam, en bij weghalen de agenda van de ruimte", async () => {
+    const verstuurd = [];
+    const hass = { connection: { sendMessagePromise: async (b) => (verstuurd.push(b), {}) } };
+    await nieuweRuimte(hass, "Grote vergaderzaal");
+    await ruimteWeg(hass, "calendar.grote_vergaderzaal");
+    assert.deepEqual(verstuurd, [
+      { type: "domotiapp_lovelace/infoscherm/ruimtes/nieuw", naam: "Grote vergaderzaal" },
+      { type: "domotiapp_lovelace/infoscherm/ruimtes/weg", ruimte: "calendar.grote_vergaderzaal" },
+    ]);
   });
 });

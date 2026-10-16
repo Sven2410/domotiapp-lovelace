@@ -49,6 +49,11 @@ vergaderruimte). Net als de lampen en de airco's: de installateur kiest de
 entiteiten, de receptie de namen en de volgorde. De boekingen zelf staan NIET
 hier maar in die agenda's; zie `ruimtes.py`.
 
+Sinds 0.76.0 kan het beheer ook zelf een ruimte maken (`ruimtes.py`). Zo'n
+ruimte heeft `gemaakt: true`: het beheer mag hem weer weghalen, en de
+kaartconfig van de installateur laat hem staan (`async_zet_installatie_van_kaart`).
+Gevraagd op 16 oktober 2026: *"De receptioniste moet dat zelf kunnen maken."*
+
 De code waarmee je op het scherm boekt staat hier wel, maar BUITEN de stand
 (`ruimte_code`): de stand gaat naar elk scherm, ook naar de iPad, en daar
 hoort de code niet te staan. Wat het scherm ervan weet is alleen of er een
@@ -554,6 +559,8 @@ def valideer_ruimte(rauw: Any) -> dict[str, Any]:
     return {
         "entity": _entiteit(rauw.get("entity"), "ruimtes.entity", ("calendar",)),
         "naam": _tekst(rauw.get("naam"), "ruimtes.naam", MAX_KORT),
+        # Gemaakt in het beheer (sinds 0.76.0), en dus daar ook weg te halen.
+        "gemaakt": bool(rauw.get("gemaakt", False)),
     }
 
 
@@ -572,8 +579,10 @@ def _namen_en_volgorde(oud: list[dict[str, Any]], gestuurd: list[dict[str, Any]]
     """Wat een receptie-account mag: de entiteiten blijven die van `oud`, met
     de namen en de volgorde uit `gestuurd`."""
     namen = {l["entity"]: l["naam"] for l in gestuurd}
+    # De rest van een item (bij een ruimte `gemaakt`) blijft zoals het was: een
+    # receptie-account mag de naam en de volgorde wijzigen, niet meer.
     return [
-        {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
+        {**l, "naam": namen.get(l["entity"], l["naam"])}
         for l in _in_volgorde_van(oud, gestuurd)
     ]
 
@@ -581,9 +590,15 @@ def _namen_en_volgorde(oud: list[dict[str, Any]], gestuurd: list[dict[str, Any]]
 def _houd_namen(nieuw: list[dict[str, Any]], oud: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Wat de kaartconfig mag: de entiteiten uit `nieuw`, met de namen en de
     volgorde die de receptie al had. Een nieuwe gaat achteraan."""
-    namen = {l["entity"]: l["naam"] for l in oud}
+    eerder = {l["entity"]: l for l in oud}
+    # Wat er naast de naam bij een item stond (bij een ruimte `gemaakt`) blijft
+    # van het item dat er al was.
     return [
-        {"entity": l["entity"], "naam": namen.get(l["entity"], l["naam"])}
+        {
+            **l,
+            **{k: v for k, v in eerder.get(l["entity"], {}).items() if k not in ("entity", "naam")},
+            "naam": eerder[l["entity"]]["naam"] if l["entity"] in eerder else l["naam"],
+        }
         for l in _in_volgorde_van(nieuw, oud)
     ]
 
@@ -1009,6 +1024,14 @@ class InfoStore:
         nieuw["verlichting"] = _houd_namen(nieuw["verlichting"], self._installatie["verlichting"])
         nieuw["klimaat"] = _houd_namen(nieuw["klimaat"], self._installatie.get("klimaat", []))
         nieuw["ruimtes"] = _houd_namen(nieuw["ruimtes"], self._installatie.get("ruimtes", []))
+        # Een ruimte die het beheer maakte staat niet in de kaartconfig, en
+        # blijft (achteraan als hij nieuw is voor de kaart, anders op zijn plek).
+        in_kaart = {r["entity"] for r in nieuw["ruimtes"]}
+        nieuw["ruimtes"] = _in_volgorde_van(
+            nieuw["ruimtes"]
+            + [r for r in self._installatie.get("ruimtes", []) if r.get("gemaakt") and r["entity"] not in in_kaart],
+            self._installatie.get("ruimtes", []),
+        )
         kiosk = valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers"))
         gewijzigd = nieuw != self._installatie or kiosk != self._instellingen["kiosk_gebruikers"]
         if gewijzigd:
@@ -1029,6 +1052,31 @@ class InfoStore:
         self._instellingen = nieuw
         await self._async_save()
         return dict(self._instellingen)
+
+    async def async_voeg_ruimte_toe(self, entity_id: str, *, gemaakt: bool) -> dict[str, Any]:
+        """Een agenda als ruimte erbij, achteraan, met de naam uit Home Assistant."""
+        ruimtes = list(self._installatie.get("ruimtes", []))
+        if any(r["entity"] == entity_id for r in ruimtes):
+            raise InfoFout("deze agenda is al een ruimte")
+        if len(ruimtes) >= MAX_RUIMTES:
+            raise InfoFout(f"er kunnen hooguit {MAX_RUIMTES} ruimtes op het scherm")
+        item = valideer_ruimte({"entity": entity_id, "naam": "", "gemaakt": gemaakt})
+        self._installatie = {**self._installatie, "ruimtes": [*ruimtes, item]}
+        await self._async_save()
+        return dict(item)
+
+    async def async_haal_ruimte_weg(self, entity_id: str) -> dict[str, Any] | None:
+        ruimtes = self._installatie.get("ruimtes", [])
+        weg = next((r for r in ruimtes if r["entity"] == entity_id), None)
+        if weg is None:
+            return None
+        self._installatie = {**self._installatie, "ruimtes": [r for r in ruimtes if r["entity"] != entity_id]}
+        await self._async_save()
+        return dict(weg)
+
+    @callback
+    def ruimte(self, entity_id: str) -> dict[str, Any] | None:
+        return next((dict(r) for r in self._installatie.get("ruimtes", []) if r["entity"] == entity_id), None)
 
     async def async_zet_ruimte_code(self, rauw: Any) -> str:
         self._ruimte_code = valideer_code(rauw)
