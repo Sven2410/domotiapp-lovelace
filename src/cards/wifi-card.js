@@ -9,9 +9,11 @@
  * `wifi-logica.js` -- kort: de QR-code en de netwerknaam wel, het wachtwoord
  * niet. Dat typ je zelf in, als je het als tekst wilt tonen.
  *
- * Drie rasterrijen hoog: de QR is 152 pixels, met de marge 184. Tik op de
- * kaart en de code staat groot in beeld (`wifi-groot.js`), om aan een gast te
- * laten zien.
+ * Drie rasterrijen hoog. De QR is 148 pixels: precies de PNG van UniFi
+ * (schaal 4), dus niets opgeschaald. Met de marge en de rand is dat 182, en
+ * `--dac-raster` maakt er 184 van. Bij 152 was het 186, en dan rondt het raster
+ * op naar vier rijen (gemeten op 16 oktober 2026). Tik op de kaart en de code
+ * staat groot in beeld (`wifi-groot.js`), om aan een gast te laten zien.
  */
 
 import { DacCard, INCOMPLETE, TONES, registerCard, registerEditor } from "../base.js";
@@ -26,16 +28,22 @@ const STANDAARD_TITEL = "Wifi voor gasten";
 
 class WifiCard extends DacCard {
   static css = /* css */ `
-    :host { display: block; }
+    :host { display: block; container-type: inline-size; }
+    *, *::before, *::after { box-sizing: border-box; }
+    /* Het vak heeft één kind, de rij: meetRaster telt de kinderen van het vak
+       ONDER elkaar op, en de code en de tekst naast elkaar telden zo als 298
+       pixels (vijf rijen) terwijl het er 182 waren. */
     .card {
-      display: flex; align-items: center; gap: 16px; padding: 16px;
+      min-height: var(--dac-raster, 56px);
+      display: flex; flex-direction: column; justify-content: center; padding: 16px;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
+    .rij { display: flex; align-items: center; gap: 16px; min-width: 0; }
     .card:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
     /* De PNG van UniFi heeft zijn eigen witte rand (vier modules); een vlak
        eromheen is niet nodig. Scherp opschalen met pixelated. */
     .qr {
-      flex: 0 0 auto; width: 152px; height: 152px; border-radius: var(--dac-radius-sm);
+      flex: 0 0 auto; width: 148px; height: 148px; border-radius: var(--dac-radius-sm);
       overflow: hidden; display: grid; place-items: center;
     }
     .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
@@ -53,6 +61,15 @@ class WifiCard extends DacCard {
     .hint { font-size: 12px; color: var(--dac-ink-3); margin-top: 4px; line-height: 1.35; }
     [hidden] { display: none !important; }
     @media (hover: hover) { .card:hover { background: var(--dac-hover); } }
+    /* Smal (een halve sectie op een telefoon): een kleinere code, anders
+       wordt de tekst ernaast een strookje van een woord breed. */
+    @container (max-width: 330px) {
+      .card { padding: 14px; }
+      .rij { gap: 12px; }
+      .qr { width: 112px; height: 112px; }
+      .naam { font-size: 16px; }
+      .hint { display: none; }
+    }
   `;
 
   validate(config) {
@@ -65,12 +82,14 @@ class WifiCard extends DacCard {
   template() {
     return `
       <div class="card surface" role="button" tabindex="0" style="--tone:${TONES.accent}">
-        <div class="qr"><img alt="QR-code van de wifi" hidden /><div class="leeg" hidden></div></div>
-        <div class="txt">
-          <div class="titel">${resolve("wifi")}<span></span></div>
-          <div class="naam"></div>
-          <div class="ww" hidden>Wachtwoord <b></b></div>
-          <div class="hint">Scan de code met de camera van je telefoon.</div>
+        <div class="rij">
+          <div class="qr"><img alt="QR-code van de wifi" hidden /><div class="leeg" hidden></div></div>
+          <div class="txt">
+            <div class="titel">${resolve("wifi")}<span></span></div>
+            <div class="naam"></div>
+            <div class="ww" hidden>Wachtwoord <b></b></div>
+            <div class="hint">Scan de code met de camera van je telefoon.</div>
+          </div>
         </div>
       </div>`;
   }
@@ -97,7 +116,8 @@ class WifiCard extends DacCard {
 
   paint() {
     const c = this.config;
-    const naam = netwerkNaam(this.hass, c.entity, c.name);
+    // Een QR die niet bestaat heeft geen naam; zijn entity_id is er geen.
+    const naam = this.hass?.states?.[c.entity] ? netwerkNaam(this.hass, c.entity, c.name) : c.name || "";
     this.text(".titel span", c.title || STANDAARD_TITEL);
     this.text(".naam", naam);
     this.$(".ww").hidden = !c.password;
@@ -124,7 +144,9 @@ class WifiCard extends DacCard {
   }
 
   getGridOptions() {
-    return { columns: 6, rows: "auto", min_columns: 4, min_rows: this.minRijen_(".card", 3) };
+    // De hele sectie: de code en de tekst ernaast hebben samen zo'n 360
+    // pixels nodig. Op de helft (zes kolommen) wordt de code kleiner.
+    return { columns: 12, rows: "auto", min_columns: 6, min_rows: this.minRijen_(".card", 3) };
   }
 
   static getConfigElement() {
