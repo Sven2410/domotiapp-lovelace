@@ -74,7 +74,7 @@ is de meting hierboven, op de oude en de nieuwe bundel.
 - `npm run build`, `verify`, `check:registratie`, `check:css`,
   `check:controls`: groen.
 - `npm test`: 1871 tests, alle groen.
-- Python: zie de PR.
+- Python: 821 tests, alle groen (lokaal in Docker en in CI).
 
 ## Samenvatting
 
