@@ -104,7 +104,11 @@ const MIELE_STATUS = {
   rinse_hold: { soort: SOORT.PAUZE, woord: "Spoelstop" },
   program_ended: { soort: SOORT.AF },
   failure: { soort: SOORT.FOUT },
-  program_interrupted: { soort: SOORT.FOUT, woord: "Programma onderbroken" },
+  // Een pauze en geen storing (sinds 0.78.2, akkoord van de eigenaar via de
+  // coach-sessie op 16 oktober 2026). Bij de klant duurde hij dertien tellen,
+  // en daarna werd hetzelfde programma opnieuw klaargezet. De coach telt hem
+  // sinds v0.127.0 ook als pauze; in rood zei de kaart "storing".
+  program_interrupted: { soort: SOORT.PAUZE, woord: "Onderbroken" },
   not_connected: { soort: SOORT.ONBEKEND },
 };
 

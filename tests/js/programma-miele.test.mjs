@@ -11,6 +11,10 @@
  * toestanden zelf, met de sleutels uit de opties van de dump.
  *
  * NIEUW GEDRAG, behalve wat met REGRESSIEWACHT begint.
+ *
+ * Sinds 0.78.2 is `program_interrupted` een pauze ("Onderbroken", oranje) en
+ * geen storing meer ("Programma onderbroken", rood). De twee verwachtingen
+ * hieronder zijn daarop bijgesteld; de toets ervoor staat onderaan.
  */
 
 import assert from "node:assert/strict";
@@ -91,7 +95,7 @@ describe("NIEUW GEDRAG: de status van Miele", () => {
     assert.equal(soort("rinse_hold"), V.SOORT.PAUZE);
     assert.equal(soort("program_ended"), V.SOORT.AF);
     assert.equal(soort("failure"), V.SOORT.FOUT);
-    assert.equal(soort("program_interrupted"), V.SOORT.FOUT);
+    assert.equal(soort("program_interrupted"), V.SOORT.PAUZE);
     assert.equal(soort("not_connected"), V.SOORT.ONBEKEND);
     assert.equal(soort("unavailable"), V.SOORT.ONBEKEND);
   });
@@ -101,7 +105,7 @@ describe("NIEUW GEDRAG: de status van Miele", () => {
     assert.equal(V.toestand({ status: S("programmed") }).tekst, "Klaar om te starten");
     assert.equal(V.toestand({ status: S("in_use"), rest: 72 }).tekst, "Draait · nog 1 u 12 min");
     assert.equal(V.toestand({ status: S("rinse_hold") }).tekst, "Spoelstop");
-    assert.equal(V.toestand({ status: S("program_interrupted") }).tekst, "Programma onderbroken");
+    assert.equal(V.toestand({ status: S("program_interrupted") }).tekst, "Onderbroken");
     assert.equal(V.toestand({ status: S("program_ended") }).tekst, "Programma klaar");
   });
 
@@ -300,5 +304,29 @@ describe("NIEUW GEDRAG: merk, type en foto van Miele", () => {
 
   it("REGRESSIEWACHT: een vaatwasser van een ander merk krijgt geen foto", () => {
     assert.equal(productAfbeelding({ merk: "auto" }, { manufacturer: "Bosch", model: "SMV6ZCX49E" }, P.PROGRAMMA_APPARATEN), "");
+  });
+});
+
+describe("NIEUW GEDRAG (0.78.2): onderbroken is een pauze, geen storing", () => {
+  const S = (state) => ({ state, attributes: { options: DUMP.states["sensor.wasmachine"].attributes.options } });
+
+  it("oranje en \"Onderbroken\", net als de coach hem telt", () => {
+    const t = V.toestand({ status: S("program_interrupted") });
+    assert.deepEqual([t.soort, t.tekst, t.tone], [V.SOORT.PAUZE, "Onderbroken", "warn"]);
+  });
+
+  it("met de deur open erachter, zoals bij een pauze", () => {
+    const t = V.toestand({ status: S("program_interrupted"), deur: { state: "on" }, deurWoord: "Deur" });
+    assert.deepEqual([t.tekst, t.waarschuwing], ["Onderbroken", "Deur open"]);
+  });
+
+  it("de balk blijft staan: er is nog een programma", () => {
+    assert.equal(V.bezig(V.statusDuiding(S("program_interrupted")).soort), true);
+  });
+
+  it("REGRESSIEWACHT: een storing blijft rood, en draaien doet hij niet", () => {
+    const t = V.toestand({ status: S("failure") });
+    assert.deepEqual([t.soort, t.tekst, t.tone], [V.SOORT.FOUT, "Storing", "bad"]);
+    assert.equal(V.draait(S("program_interrupted")), false);
   });
 });
