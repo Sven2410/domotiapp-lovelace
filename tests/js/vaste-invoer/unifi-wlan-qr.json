@@ -1,0 +1,62 @@
+{
+  "_wat": "Een QR-code van een wifi-netwerk uit UniFi Network, zoals Home Assistant 2026.10.1 hem geeft. Echte dump van 16-10-2026 bij een klant, geanonimiseerd: netwerknaam, id's en tokens zijn vervangen. De vorm is ongewijzigd.",
+  "toestand": {
+    "entity_id": "image.gastnetwerk_qr_code",
+    "state": "2026-10-16T11:46:30.903816+00:00",
+    "attributes": {
+      "access_token": "XXX",
+      "entity_picture": "/api/image_proxy/image.gastnetwerk_qr_code?token=XXX",
+      "friendly_name": "Gastnetwerk QR-code"
+    },
+    "last_changed": "2026-10-16T11:46:30.904092+00:00",
+    "last_reported": "2026-10-16T12:34:03.933590+00:00",
+    "last_updated": "2026-10-16T12:34:03.933590+00:00"
+  },
+  "register": {
+    "entity_id": "image.gastnetwerk_qr_code",
+    "unique_id": "qr_code-000000000000000000000001",
+    "platform": "unifi",
+    "translation_key": "wlan_qr_code",
+    "original_name": "QR-code",
+    "name": null,
+    "device_id": "00000000000000000000000000000001",
+    "config_entry_id": "01UNIFI0000000000000000000",
+    "entity_category": "diagnostic",
+    "disabled_by": null,
+    "hidden_by": null,
+    "has_entity_name": true,
+    "original_icon": null,
+    "icon": null,
+    "area_id": null,
+    "labels": [],
+    "categories": {}
+  },
+  "apparaat": {
+    "id": "00000000000000000000000000000001",
+    "name": "Gastnetwerk",
+    "name_by_user": null,
+    "model": "UniFi WLAN",
+    "model_id": null,
+    "manufacturer": "Ubiquiti Networks",
+    "entry_type": "service",
+    "sw_version": null,
+    "hw_version": null,
+    "via_device_id": null,
+    "identifiers": [["unifi", "000000000000000000000001"]],
+    "connections": [],
+    "area_id": null
+  },
+  "image_proxy": {
+    "verzoek": "GET /api/image_proxy/image.gastnetwerk_qr_code?token=XXX (het access_token uit de attributen, zonder Authorization-header)",
+    "http_status": 200,
+    "content_type": "image/png",
+    "bytes": 306,
+    "cache_control": ""
+  },
+  "bijzonderheden": [
+    "UniFi maakt de QR-codes alleen met een beheerdersaccount, en uitgeschakeld (disabled_by: integration). Hier met de hand aangezet.",
+    "De toestand is het tijdstip van het laatst gemaakte beeld, niet de netwerknaam.",
+    "Geen attribuut met de netwerknaam (SSID) of het wachtwoord. De naam staat alleen in het apparaat en in friendly_name, met de vertaalde 'QR-code' erachter.",
+    "Het access_token wisselt ongeveer elke 5 minuten, en daarmee entity_picture."
+  ]
+}

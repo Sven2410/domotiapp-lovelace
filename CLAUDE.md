@@ -572,6 +572,16 @@ programmakaart en de vriezerkaart. Hij speelt de dump uit
 
 Op `kaart-test` staat een view `miele`.
 
+Sinds 16 oktober 2026 staat er ook een **nagebootste UniFi** in
+`.ha-dev-config/custom_components/nep_unifi/` (niet in git), voor de wifikaart:
+twee netwerken ("Gastnetwerk" en "Kantoor"), elk een apparaat met model "UniFi
+WLAN" en een `image` met `translation_key: wlan_qr_code`, een PNG van `segno`
+op schaal 4, net als UniFi zelf (`image.gastnetwerk_qr_code`). De dienst
+`nep_unifi.nieuw_wachtwoord` (`netwerk: gast`) maakt een nieuw wachtwoord, en
+dus een nieuwe code. LET OP: `import segno` alleen is niet genoeg, het is
+`from segno import helpers`. Op `kaart-test` staat een view `wifi`, en het
+wifiblok staat op het scherm waar het afvalblok stond (4,4).
+
 Sinds 16 oktober 2026 staan er twee **Lokale agenda's** als ruimtes:
 `calendar.spreekruimte` en `calendar.kleine_vergaderruimte` (aangemaakt met de
 config flow van `local_calendar`, dus in `.storage`). Ze staan als `rooms` in
@@ -1866,6 +1876,13 @@ die daar niet staan:
    heeft ook in Mededelingen een veld `tot`, en `querySelector` gaf dat
    verborgen veld (een rechthoek van nul) terug.
 
+74. **`meetRaster` telt de kinderen van het vak ONDER elkaar op.** Een kaart die
+   twee dingen NAAST elkaar zet (een QR-code en tekst) als kinderen van het vak,
+   meet dan hun hoogtes bij elkaar op. De wifikaart was zo 148 + 102 + 16 = 298
+   pixels volgens de meting, en vijf rijen hoog, terwijl er 182 nodig was.
+   Gemeten op 16 oktober 2026. Zet wat naast elkaar staat in één rij, en maak
+   die rij het enige kind van het vak.
+
 ---
 
 ## Projectstand
@@ -1886,6 +1903,7 @@ met **dertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; zie `vriezer-logica.js`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
+| Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.73.0 ook **ruimtes boeken**, met een agenda per ruimte, zie SPEC 20.7 en `ruimtes-logica.js`; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 

@@ -136,6 +136,7 @@ import {
   uurStrepen,
   vrijTeller,
 } from "./ruimtes-logica.js";
+import { geenQrReden, netwerkNaam, qrAdres } from "./wifi-logica.js";
 import { SCHERM } from "./infoscherm-logo.js";
 import {
   SOORT_ICOON,
@@ -181,6 +182,7 @@ const PAGINA_KOP = {
   verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
   klimaat: { eyebrow: "Klimaat", titel: "Airco's", onder: "Kies een stand, of tik op – en + voor de temperatuur." },
   ruimtes: { eyebrow: "Ruimtes", titel: "Vandaag", onder: "" },
+  wifi: { eyebrow: "Wifi", titel: "Wifi voor gasten", onder: "" },
   agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
   energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
@@ -942,6 +944,30 @@ const css = /* css */ `
   .r-tijden { display: flex; flex-wrap: wrap; gap: calc(4px * var(--s)) calc(18px * var(--s)); margin-top: calc(4px * var(--s)); font-size: calc(15px * var(--s)); font-variant-numeric: tabular-nums; color: var(--dac-ink-2); }
   .r-tijden .voorbij { color: var(--dac-ink-3); }
 
+  /* wifi (16 oktober 2026). De QR-code is een PNG van UniFi met zijn eigen
+     witte rand; scherp opschalen met pixelated. Naast de code de netwerknaam
+     en (als de receptie het invulde) het wachtwoord. */
+  .bi > .wf { flex: 1 1 auto; min-height: 0; }
+  .wf { display: flex; align-items: center; gap: calc(16px * var(--s)); min-width: 0; }
+  .wf-qr { height: 100%; max-width: 55%; aspect-ratio: 1; flex: 0 0 auto; object-fit: contain; border-radius: var(--dac-radius-sm); image-rendering: pixelated; }
+  .wf-qr.leeg {
+    display: grid; place-items: center; box-sizing: border-box; padding: calc(8px * var(--s));
+    font-size: calc(12px * var(--s)); line-height: 1.35; text-align: center; color: var(--dac-ink-3);
+    background: rgba(var(--dac-tint), 0.05); border: 1px dashed var(--dac-border-hi);
+  }
+  .wf-tekst { min-width: 0; display: flex; flex-direction: column; gap: calc(4px * var(--s)); }
+  .wf-naam { font-size: calc(20px * var(--s)); font-weight: 600; overflow-wrap: anywhere; }
+  .wf-ww { font-size: calc(15px * var(--s)); color: var(--dac-ink-2); overflow-wrap: anywhere; }
+  .wf-ww b { color: var(--dac-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .wf-hint { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); line-height: 1.35; }
+  .blok.klein .wf-hint { display: none; }
+  /* de pagina: de code groot, met de uitleg ernaast */
+  .wf.groot { justify-content: center; gap: calc(48px * var(--s)); min-height: 100%; }
+  .wf.groot .wf-qr { height: auto; width: min(calc(440px * var(--s)), 45vw); max-width: none; }
+  .wf.groot .wf-naam { font-size: calc(34px * var(--s)); }
+  .wf.groot .wf-ww { font-size: calc(22px * var(--s)); }
+  .wf.groot .wf-hint { font-size: calc(17px * var(--s)); max-width: calc(380px * var(--s)); }
+
   /* ------------------------------------------------------------ lagen */
   .laag { position: absolute; inset: 0; display: none; background: var(--dac-bg); color: var(--dac-ink); }
   .laag.open { display: flex; }
@@ -1105,6 +1131,7 @@ export class InfoschermCard extends DacCard {
       verlichting: Array.isArray(i.verlichting) ? i.verlichting : [],
       klimaat: Array.isArray(i.klimaat) ? i.klimaat : [],
       ruimtes: Array.isArray(i.ruimtes) ? i.ruimtes : [],
+      wifi: typeof i.wifi === "string" && i.wifi ? i.wifi : null,
     };
   }
 
@@ -1124,6 +1151,9 @@ export class InfoschermCard extends DacCard {
       "sun.sun",
       ...i.verlichting.map((l) => l.entity),
       ...(i.afval ?? []),
+      // De QR-code van de wifi: het token in zijn adres wisselt elke vijf
+      // minuten, en dat komt als nieuwe toestand binnen.
+      i.wifi,
       // Met de coach ook zijn doel, en de sensor van elke airco van de coach:
       // welke bij welke airco hoort staat in zijn toestand (`klimaat`).
       ...i.klimaat.flatMap((a) => [a.entity, this.aircoCoach_(a.entity)?.rollen.doeltemperatuur]),
@@ -2687,6 +2717,9 @@ export class InfoschermCard extends DacCard {
         zet(`<div class="rlijst ${kol}">${tonen.map((r) => this.htmlRuimte_(r, nu)).join("")}</div>`, vrijTeller(statussen));
         break;
       }
+      case "wifi":
+        zet(this.htmlWifi_(false), "");
+        break;
       case "agenda": {
         const lijst = this.afspraken_;
         const tonen = aantal > 0 ? lijst.slice(0, aantal) : lijst;
@@ -3022,6 +3055,33 @@ export class InfoschermCard extends DacCard {
     }</div>`;
   }
 
+  /**
+   * De wifi: de QR-code van UniFi, de netwerknaam (die van de receptie, of uit
+   * UniFi) en het wachtwoord als de receptie het invulde. `groot` is de pagina.
+   * Het adres van de code komt steeds vers uit hass: het token erin wisselt.
+   */
+  htmlWifi_(groot) {
+    const id = this.installatie_().wifi;
+    const s = this.stand_?.scherm ?? {};
+    const adres = qrAdres(this.hass, id);
+    const naam = netwerkNaam(this.hass, id, s.wifi_naam);
+    const ww = s.wifi_wachtwoord ?? "";
+    const qr = adres
+      ? `<img class="wf-qr" alt="QR-code van de wifi" src="${escapeHtml(adres)}">`
+      : `<div class="wf-qr leeg">${escapeHtml(geenQrReden(this.hass, id) ?? "")}</div>`;
+    const hint = groot
+      ? "Open de camera van uw telefoon en richt hem op de code. Tik dan op de melding die verschijnt, en u bent verbonden."
+      : "Scan de code met de camera van uw telefoon.";
+    return `<div class="wf${groot ? " groot" : ""}">
+      ${qr}
+      <div class="wf-tekst">
+        <div class="wf-naam">${escapeHtml(naam)}</div>
+        ${ww ? `<div class="wf-ww">Wachtwoord <b>${escapeHtml(ww)}</b></div>` : ""}
+        <div class="wf-hint">${escapeHtml(hint)}</div>
+      </div>
+    </div>`;
+  }
+
   /** Naam, toestand en tekst van een ruimte op dit moment. */
   ruimteNu_(r, nu) {
     const naam = r.naam || attrsOf(this.hass, r.entity).friendly_name || r.entity;
@@ -3341,6 +3401,9 @@ export class InfoschermCard extends DacCard {
         );
         break;
       }
+      case "wifi":
+        this.vul_(vak, this.htmlWifi_(true), false);
+        break;
       case "ruimtes": {
         const nu = new Date();
         const boeken = Boolean(this.stand_?.boeken_op_scherm);

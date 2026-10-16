@@ -113,6 +113,7 @@ import {
 } from "./infoscherm-logica.js";
 import { logoOndergrond, logoWaarschuwing } from "./infoscherm-logo.js";
 import { DAGEN_VOORUIT, afsprakenUit, controleerFormulier, dagBegin, perDag, plusDagen, tijdTekst } from "./ruimtes-logica.js";
+import { netwerkNaam, qrAdres } from "./wifi-logica.js";
 import { analyseerLogo, snijLogoBij } from "./infoscherm-logo-beeld.js";
 
 const TAG = "domotiapp-infoscherm-beheer-card";
@@ -143,11 +144,14 @@ const BLOKKEN = [
   { key: "klimaat", titel: "Klimaat", icoon: "airco", secties: ["installatie", "instellingen"] },
   // 16 oktober 2026: de ruimtes, met de code om op het scherm te boeken.
   { key: "ruimtes", titel: "Ruimtes", icoon: "door", secties: ["installatie", "code"] },
+  // 16 oktober 2026: de wifi voor gasten. De QR-code kiest de installateur;
+  // naam en wachtwoord op het scherm staan in `scherm`.
+  { key: "wifi", titel: "Wifi voor gasten", icoon: "wifi", secties: ["scherm"] },
   { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
 ];
 
 /* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
-const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "rooms", "calendars", "waste", "kiosk_users"];
+const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "rooms", "wifi", "calendars", "waste", "kiosk_users"];
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const STANDAARD = {
@@ -157,6 +161,7 @@ const STANDAARD = {
   lights: [],
   climates: [],
   rooms: [],
+  wifi: "",
   calendars: [],
   waste: [],
   kiosk_users: [],
@@ -168,6 +173,7 @@ const STANDAARD = {
   show_verlichting: true,
   show_klimaat: true,
   show_ruimtes: true,
+  show_wifi: true,
   show_instellingen: true,
 };
 
@@ -291,6 +297,8 @@ const css = /* css */ `
   .b-onder { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .plaatje { width: 96px; height: 64px; border-radius: var(--dac-radius-sm); overflow: hidden; background: var(--dac-surface-hi); display: grid; place-items: center; color: var(--dac-ink-3); font-size: 20px; }
   .plaatje img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .plaatje.wifi { width: 96px; height: 96px; }
+  .plaatje.wifi img { object-fit: contain; image-rendering: pixelated; }
   /* Het logo volgt zijn eigen verhouding, net als op het scherm. Flex en geen
      grid, om dezelfde reden als daar (.logo in de infoschermkaart): in een
      grid werd een liggend logo zo hoog als de volle breedte en viel de
@@ -424,6 +432,7 @@ export class InfoschermBeheerCard extends DacCard {
       lights: lijstVan(config.lights),
       climates: lijstVan(config.climates),
       rooms: lijstVan(config.rooms),
+      wifi: typeof config.wifi === "string" ? config.wifi : "",
       calendars: lijstVan(config.calendars),
       waste: lijstVan(config.waste),
       kiosk_users: lijstVan(config.kiosk_users),
@@ -452,6 +461,7 @@ export class InfoschermBeheerCard extends DacCard {
       verlichting: c.lights,
       klimaat: c.climates,
       ruimtes: c.rooms,
+      wifi: c.wifi || null,
       kiosk_gebruikers: c.kiosk_users,
     };
     // De lampen als VERZAMELING: hun volgorde is van de receptie (sinds
@@ -472,6 +482,7 @@ export class InfoschermBeheerCard extends DacCard {
       verlichting: (i.verlichting ?? []).map((l) => l.entity).sort(),
       klimaat: (i.klimaat ?? []).map((a) => a.entity).sort(),
       ruimtes: (i.ruimtes ?? []).map((r) => r.entity).sort(),
+      wifi: i.wifi ?? null,
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
     if (sleutel === nu || sleutel === this.laatstGesynct_) return;
@@ -743,6 +754,7 @@ export class InfoschermBeheerCard extends DacCard {
       verlichting: () => this.htmlVerlichting_(this.werk_.installatie, this.werk_.instellingen),
       klimaat: () => this.htmlKlimaat_(this.werk_.installatie, this.werk_.instellingen),
       ruimtes: () => this.htmlRuimtes_(this.werk_.installatie),
+      wifi: () => this.htmlWifi_(this.werk_.scherm, this.werk_.installatie),
       instellingen: () => this.htmlInstellingen_(this.werk_.scherm, this.werk_.instellingen),
     }[blok]();
     const inhoud = sec.querySelector(".inhoud");
@@ -782,6 +794,7 @@ export class InfoschermBeheerCard extends DacCard {
         const n = (w.installatie?.ruimtes ?? []).length;
         return `${n === 1 ? "1 ruimte" : `${n} ruimtes`}${n && !w.code ? " · boeken op het scherm uit" : ""}`;
       },
+      wifi: () => (w.installatie?.wifi ? netwerkNaam(this.hass, w.installatie.wifi, w.scherm?.wifi_naam) : "geen QR-code gekozen"),
       instellingen: () => `${(w.instellingen?.feeds ?? []).length} nieuwsbron(nen)`,
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
@@ -1086,6 +1099,29 @@ export class InfoschermBeheerCard extends DacCard {
       ${this.veld_("Code", "code", this.werk_.code ?? "", { s: "code", extra: 'inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Bijvoorbeeld 4821"' })}
       <div class="hulp">Met deze code kunnen medewerkers op de iPad zelf een ruimte boeken: op het scherm op Ruimtes tikken, dan op Boeken. Vier tot acht cijfers. Leeg = boeken op het scherm staat uit. De code staat nooit op het scherm zelf.</div>
       ${namenEnVolgorde}`;
+  }
+
+  /**
+   * De wifi voor gasten: de QR-code ter controle, en wat er op het scherm
+   * naast staat. De code zelf kiest de installateur.
+   */
+  htmlWifi_(s = {}, inst = {}) {
+    const id = inst?.wifi;
+    if (!id) {
+      return `<div class="hulp">Er is nog geen QR-code gekozen. Dat doet de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart): bij UniFi Network de entiteit QR-code van het gastnetwerk.</div>`;
+    }
+    const adres = qrAdres(this.hass, id);
+    const uitUnifi = netwerkNaam(this.hass, id, "");
+    return `
+      <div class="b-onder">
+        <div class="plaatje wifi">${adres ? `<img src="${at(adres)}" alt="QR-code van de wifi">` : "–"}</div>
+        <div class="hulp">Deze code staat op het scherm; wie hem scant met de camera van zijn telefoon, is meteen verbonden. Het blok zet je op het scherm met Indeling, Blok toevoegen.</div>
+      </div>
+      <div class="rij twee">
+        ${this.veld_("Netwerknaam op het scherm", "wifi_naam", s.wifi_naam ?? "", { s: "scherm", extra: `placeholder="${at(uitUnifi)}"` })}
+        ${this.veld_("Wachtwoord op het scherm", "wifi_wachtwoord", s.wifi_wachtwoord ?? "", { s: "scherm", extra: 'placeholder="Leeg = alleen de QR-code" autocomplete="off"' })}
+      </div>
+      <div class="hulp">Leeg = de naam uit UniFi. Het wachtwoord geeft UniFi niet door aan Home Assistant; het zit alleen in de QR-code. Vul het in voor wie niet kan scannen. Wordt het in UniFi vernieuwd, dan past de QR-code zich vanzelf aan, deze tekst niet.</div>`;
   }
 
   htmlInstellingen_(s = {}, instellingen = {}) {
@@ -1807,6 +1843,7 @@ const LABELS = {
   lights: "Lampen en schakelaars op het scherm",
   climates: "Airco's op het scherm",
   rooms: "Ruimtes om te boeken (een agenda per ruimte)",
+  wifi: "Wifi voor gasten (de QR-code)",
   calendars: "Agenda's (de afspraken van vandaag)",
   kiosk_users: "Kioskaccounts",
   show_personen: "Blok Medewerkers",
@@ -1817,6 +1854,7 @@ const LABELS = {
   show_verlichting: "Blok Verlichting",
   show_klimaat: "Blok Klimaat",
   show_ruimtes: "Blok Ruimtes",
+  show_wifi: "Blok Wifi voor gasten",
   show_instellingen: "Blok Instellingen en logo",
 };
 
@@ -1829,6 +1867,8 @@ const HELPERS = {
     "Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in.",
   rooms:
     "Per ruimte (spreekruimte, vergaderruimte) een agenda in Home Assistant: maak er een aan met Instellingen, Apparaten en diensten, Integratie toevoegen, Lokale agenda, en noem hem naar de ruimte. De boekingen staan in die agenda; op het scherm staat alleen vrij of bezet.",
+  wifi:
+    "Bij UniFi Network de entiteit QR-code van het GASTnetwerk. Die staat standaard uit (en is er alleen met een beheerdersaccount in UniFi): zet hem aan bij de entiteiten van het netwerk. Kies niet het gewone netwerk: wie de code scant, heeft het wachtwoord.",
   kiosk_users:
     "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen en airco's bedienen, en niets beheren. Alleen een beheerder ziet deze lijst.",
   show_instellingen:
@@ -1882,6 +1922,7 @@ export class InfoschermBeheerEditor extends DacEditor {
             lights: (i.verlichting ?? []).map((l) => l.entity),
             climates: (i.klimaat ?? []).map((a) => a.entity),
             rooms: (i.ruimtes ?? []).map((r) => r.entity),
+            wifi: i.wifi ?? "",
             calendars: i.agendas ?? [],
             kiosk_users: r.stand?.instellingen?.kiosk_gebruikers ?? [],
           };
@@ -1912,6 +1953,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
       { name: "climates", selector: { entity: { multiple: true, domain: "climate" } } },
       { name: "rooms", selector: { entity: { multiple: true, domain: "calendar" } } },
+      { name: "wifi", selector: sel.entity("image") },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
       { name: "waste", selector: { entity: { multiple: true, domain: "sensor" } } },
     ];

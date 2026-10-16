@@ -2553,7 +2553,7 @@ de beheerkaart wél een kleine kopregel.
 
 De inhoud staat in `Store` `domotiapp_lovelace.infoscherm`; de INSTALLATIE
 staat sinds ronde 4 in de kaartconfig van de BEHEERKAART (`weather`,
-`energy`, `lights`, `climates`, `rooms`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
+`energy`, `lights`, `climates`, `rooms`, `wifi`, `calendars`, `waste`, `kiosk_users`) en wordt door die kaart naar
 de opslag gestuurd zodra een beheerder hem met die config ziet
 (`infoscherm/installatie/sync`, alleen admin, alleen bij verschil, en alleen
 als de config die velden heeft; een beheerkaart zonder laat de opslag met
@@ -2564,11 +2564,14 @@ als datum of datum-met-tijd), verjaardagen (naam, geboortedatum, leeftijd
 tonen), `scherm` (logo, accent, uiterlijk, vorm van de foto's, terugvaltijd,
 weergave van de aanwezigen, teller, bewegende weericonen, schaal, de tijd per
 mededeling, en wat er in het welkomblok staat: tekst en logo verbergen;
-`welkom_onder` wordt sinds 0.62.1 niet meer gebruikt),
+`welkom_onder` wordt sinds 0.62.1 niet meer gebruikt; en sinds 16 oktober 2026
+de netwerknaam en het wachtwoord van de wifi op het scherm, `wifi_naam` en
+`wifi_wachtwoord`),
 `installatie` (de kopie van de kaartconfig, met per lamp de naam van de
 receptie; sinds ronde 5 ook `afval`, de sensoren van de afvalkalender, en sinds
 13 oktober 2026 `klimaat`, de airco's, en sinds 16 oktober 2026 `ruimtes`, de
-agenda's van de ruimtes, allebei elk met een naam van de receptie), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
+agenda's van de ruimtes, allebei elk met een naam van de receptie, en `wifi`, de
+QR-code van het gastnetwerk), `indeling` (de blokken van het welkomscherm: soort, x, y, breedte,
 hoogte, aantal, in een raster van zes bij zes zonder overlap), instellingen
 (verlichting tonen, klimaat tonen, klimaat bedienen, feeds, kioskaccounts), de lijst van bestanden,
 en BUITEN de stand de code om op het scherm een ruimte te boeken (`ruimte_code`;
@@ -2583,7 +2586,7 @@ welkomblok. Rechten:
 | een ruimte boeken (`infoscherm/ruimtes/boek`) | iedere ingelogde gebruiker; een kioskaccount alleen met de code, en wat het scherm stuurt (altijd met een code) wordt altijd nagekeken |
 | een boeking vrijgeven, de code instellen (`ruimtes/vrijgeven`, `ruimtes/code`) | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
 | personen, mededelingen, verjaardagen, praktijk, scherm, indeling, feeds, instellingen en de NAMEN en de VOLGORDE van de lampen en de airco's wijzigen | iedere ingelogde gebruiker die niet als kioskgebruiker is aangewezen |
-| de entiteiten (weer, energie, agenda's, lampen, airco's, ruimtes) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
+| de entiteiten (weer, energie, agenda's, lampen, airco's, ruimtes, wifi) kiezen en kioskgebruikers aanwijzen (in de kaarteditor van het beheer; de kaart stuurt het door), gebruikerslijst opvragen | admin |
 
 Het beheer slaat elke wijziging vanzelf op (na een korte adempauze bij
 typen), per onderdeel; er is geen knop Opslaan. Een receptie-account dat een
@@ -2619,7 +2622,7 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
 
 - Het welkomscherm is één scherm zonder tabbladen: een raster van zes bij zes
   met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
-  nieuws, verlichting, agenda, verjaardagen, afval, klimaat, ruimtes) op de plek en maat uit
+  nieuws, verlichting, agenda, verjaardagen, afval, klimaat, ruimtes, wifi) op de plek en maat uit
   `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
   Een blok met een pagina erachter heeft een kop die een knop is ("Alles
   bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
@@ -2745,6 +2748,20 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
     dus ook meteen.
   - Het blok staat niet in de standaardindeling en komt erbij via Indeling,
     Blok toevoegen.
+- **Het blok Wifi** (16 oktober 2026, op verzoek van de eigenaar: *"en ik wil
+  een wifi gastennetwerk kaart hebben dat ook op het dashboard kan ik heb een
+  qr code van unifi als entiteit namelijk"*). De installateur kiest de QR-code
+  van het gastnetwerk in de kaarteditor van het beheer (`wifi`, één
+  `image`-entiteit; bij UniFi Network `translation_key: wlan_qr_code`). Het
+  blok toont de code, de netwerknaam en (als de receptie het invulde) het
+  wachtwoord; de pagina erachter de code groot met uitleg. De netwerknaam is
+  die van de receptie, anders de naam van het apparaat (bij UniFi het netwerk).
+  Het wachtwoord geeft UniFi niet door aan Home Assistant; het staat alleen in
+  de code, en als tekst alleen als de receptie het intypt. Het adres van de
+  code wordt steeds vers uit `hass` gelezen (het token wisselt), met het
+  tijdstip van het beeld erachter, zodat een nieuw wachtwoord in UniFi meteen
+  een nieuwe code op het scherm geeft. Het blok staat niet in de
+  standaardindeling.
 
 ### 20.8 Foutgedrag
 

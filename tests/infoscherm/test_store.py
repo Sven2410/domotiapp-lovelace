@@ -404,6 +404,8 @@ async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAs
         "klimaat": [],
         # 16 oktober 2026: de ruimtes, om dezelfde reden.
         "ruimtes": [],
+        # En de wifi: één QR-code, of niets.
+        "wifi": None,
     }
     assert store.instellingen["kiosk_gebruikers"] == ["u1"]
     # Dezelfde config nog eens: niets gewijzigd.
