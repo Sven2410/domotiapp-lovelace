@@ -56,7 +56,9 @@ import { attrsOf, fmtNumber, isOn, localizeState, shortDate, stateOf } from "../
 import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import {
   Abonnement,
+  AgendaAbonnement,
   bestandUrl,
+  boekRuimte,
   haalStand,
   nogNietGereed,
   zetAanwezig,
@@ -98,6 +100,7 @@ import {
   openingKop,
   openingsGroepen,
   isTellerstand,
+  isoDatum,
   isoDatumTijd,
   klimaatBedienbaar,
   klok,
@@ -112,9 +115,27 @@ import {
   relatieveTijd,
   splitsAanwezig,
   standaardIndeling,
+  tijdenOp,
   verdunReeks,
   vloeiendPad,
 } from "./infoscherm-logica.js";
+import {
+  afsprakenUit,
+  balken as ruimteBalken,
+  beginKeuzes,
+  dagBegin,
+  dagVenster as ruimteVenster,
+  duurKeuzes,
+  eersteKeuze,
+  lokaal,
+  nuPositie,
+  plusDagen,
+  plusMinuten,
+  ruimteStatus,
+  statusTekst as ruimteTekst,
+  uurStrepen,
+  vrijTeller,
+} from "./ruimtes-logica.js";
 import { SCHERM } from "./infoscherm-logo.js";
 import {
   SOORT_ICOON,
@@ -159,6 +180,7 @@ const PAGINA_KOP = {
   weer: { eyebrow: "Weer", titel: "Vandaag en de komende dagen", onder: "" },
   verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
   klimaat: { eyebrow: "Klimaat", titel: "Airco's", onder: "Kies een stand, of tik op – en + voor de temperatuur." },
+  ruimtes: { eyebrow: "Ruimtes", titel: "Vandaag", onder: "" },
   agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
   verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
   energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
@@ -595,7 +617,7 @@ const css = /* css */ `
   .k-naam { font-size: calc(16px * var(--s)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .k-status { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .airco .k-nu { flex: 0 0 auto; font-size: calc(26px * var(--s)); font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-  .bi > .aircos { flex: 1 1 auto; min-height: 0; }
+  .bi > .aircos, .bi > .rlijst { flex: 1 1 auto; min-height: 0; }
   .blok.dicht .aircos, .blok.halfdicht .aircos, .blok.klein .aircos { gap: calc(6px * var(--s)); }
   .blok.klein .airco, .blok.dicht .airco, .blok.halfdicht .airco { min-height: 0; padding: calc(5px * var(--s)) calc(12px * var(--s)) calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
   .blok.klein .airco .chip, .blok.dicht .airco .chip, .blok.halfdicht .airco .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(18px * var(--s)); }
@@ -855,6 +877,71 @@ const css = /* css */ `
 
   .e-pagina .e-titel { font-size: calc(14px * var(--s)); color: var(--dac-ink-2); flex: 0 0 auto; }
 
+  /* ruimtes (16 oktober 2026). Alleen het icoon draagt of een ruimte vrij of
+     bezet is, in de statuskleuren; de tekst blijft neutrale inkt. Geen naam
+     of onderwerp van een boeking: er kijken bezoekers mee. */
+  .ruimte, .r-paneel { --r: var(--dac-ink-3); }
+  [data-toestand="vrij"] { --r: var(--dac-good); }
+  [data-toestand="bezet"] { --r: var(--dac-bad); }
+  .rlijst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(10px * var(--s)); align-content: start; }
+  .rlijst.kol-1 { grid-template-columns: minmax(0, 1fr); }
+  .rlijst.kol-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ruimte {
+    display: flex; align-items: center; gap: calc(12px * var(--s)); padding: calc(10px * var(--s)) calc(14px * var(--s)) calc(10px * var(--s)) calc(12px * var(--s));
+    cursor: pointer; background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
+    box-shadow: var(--dac-shadow); min-height: calc(64px * var(--s)); min-width: 0;
+  }
+  .ruimte:active { background: var(--dac-surface-hi); }
+  .ruimte:focus-visible, .r-paneel button:focus-visible, .boek button:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+  .ruimte .chip, .r-paneel .chip { --tone: var(--r); width: calc(46px * var(--s)); height: calc(46px * var(--s)); font-size: calc(24px * var(--s)); }
+  .ruimte[data-toestand="onbekend"] .chip, .r-paneel[data-toestand="onbekend"] .chip,
+  .ruimte[data-toestand="dood"] .chip, .r-paneel[data-toestand="dood"] .chip {
+    background: var(--dac-surface); border-color: var(--dac-border); color: var(--dac-ink-3);
+  }
+  .ruimte[data-toestand="dood"], .r-paneel[data-toestand="dood"] { opacity: 0.5; }
+  .r-tekst { min-width: 0; flex: 1 1 auto; }
+  .r-naam { font-size: calc(16px * var(--s)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-status { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); margin-top: calc(2px * var(--s)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blok.dicht .rlijst, .blok.halfdicht .rlijst, .blok.klein .rlijst { gap: calc(6px * var(--s)); }
+  .blok.klein .ruimte, .blok.dicht .ruimte, .blok.halfdicht .ruimte { min-height: 0; padding: calc(5px * var(--s)) calc(12px * var(--s)) calc(5px * var(--s)) calc(10px * var(--s)); gap: calc(10px * var(--s)); }
+  .blok.klein .ruimte .chip, .blok.dicht .ruimte .chip, .blok.halfdicht .ruimte .chip { width: calc(32px * var(--s)); height: calc(32px * var(--s)); font-size: calc(18px * var(--s)); }
+
+  /* de pagina Ruimtes: per ruimte een paneel met de dag als tijdlijn */
+  .r-raster { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(14px * var(--s)); align-content: start; }
+  .r-paneel {
+    display: flex; flex-direction: column; gap: calc(14px * var(--s)); padding: calc(16px * var(--s)) calc(20px * var(--s));
+    background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius); box-shadow: var(--dac-shadow); min-width: 0;
+  }
+  .r-kop { display: flex; align-items: center; gap: calc(14px * var(--s)); min-width: 0; }
+  .r-paneel .chip { width: calc(52px * var(--s)); height: calc(52px * var(--s)); font-size: calc(26px * var(--s)); }
+  .r-paneel .r-naam { font-size: calc(20px * var(--s)); }
+  .r-paneel .r-status { font-size: calc(15px * var(--s)); }
+  .r-boek {
+    flex: 0 0 auto; display: flex; align-items: center; gap: calc(8px * var(--s)); height: calc(52px * var(--s));
+    padding: 0 calc(22px * var(--s)) 0 calc(16px * var(--s)); border-radius: var(--dac-radius-pill); cursor: pointer;
+    font: inherit; font-size: calc(17px * var(--s)); font-weight: 600; color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+  }
+  .r-boek .icon { font-size: calc(22px * var(--s)); }
+  .r-boek:active { background: color-mix(in srgb, var(--tone) 24%, transparent); }
+  .r-lijn { display: flex; flex-direction: column; gap: calc(6px * var(--s)); }
+  .r-baan {
+    position: relative; height: calc(44px * var(--s)); border-radius: var(--dac-radius-sm); overflow: hidden;
+    background: rgba(var(--dac-tint), 0.05); border: 1px solid var(--dac-border);
+  }
+  .r-balk {
+    position: absolute; top: 0; bottom: 0; box-sizing: border-box;
+    background: color-mix(in srgb, var(--tone) 22%, transparent); border-left: 2px solid var(--tone);
+  }
+  .r-balk.voorbij { opacity: 0.4; }
+  .r-nu { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--dac-ink); }
+  .r-uren { position: relative; height: calc(16px * var(--s)); }
+  .r-uren span { position: absolute; transform: translateX(-50%); font-size: calc(12px * var(--s)); color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
+  .r-uren span:first-child { transform: none; }
+  .r-uren span:last-child { transform: translateX(-100%); }
+  .r-tijden { display: flex; flex-wrap: wrap; gap: calc(4px * var(--s)) calc(18px * var(--s)); margin-top: calc(4px * var(--s)); font-size: calc(15px * var(--s)); font-variant-numeric: tabular-nums; color: var(--dac-ink-2); }
+  .r-tijden .voorbij { color: var(--dac-ink-3); }
+
   /* ------------------------------------------------------------ lagen */
   .laag { position: absolute; inset: 0; display: none; background: var(--dac-bg); color: var(--dac-ink); }
   .laag.open { display: flex; }
@@ -862,8 +949,8 @@ const css = /* css */ `
   /* Het geopende bericht ligt op een DICHTE achtergrond. Hij was 96%
      doorschijnend, en dat las als "geblurd"; gemeld op 10 september 2026. */
   .detail { padding: calc(32px * var(--s)) calc(36px * var(--s)); flex-direction: column; gap: calc(16px * var(--s)); background: var(--dac-bg); }
-  .detail .sluit { align-self: flex-start; display: flex; align-items: center; gap: calc(6px * var(--s)); font: inherit; font-size: calc(16px * var(--s)); font-weight: 600; color: var(--dac-ink); background: var(--dac-surface); border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-pill); height: calc(48px * var(--s)); padding: 0 calc(18px * var(--s)) 0 calc(12px * var(--s)); cursor: pointer; }
-  .detail .sluit .icon { font-size: calc(22px * var(--s)); }
+  .laag .sluit { align-self: flex-start; display: flex; align-items: center; gap: calc(6px * var(--s)); font: inherit; font-size: calc(16px * var(--s)); font-weight: 600; color: var(--dac-ink); background: var(--dac-surface); border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-pill); height: calc(48px * var(--s)); padding: 0 calc(18px * var(--s)) 0 calc(12px * var(--s)); cursor: pointer; }
+  .laag .sluit .icon { font-size: calc(22px * var(--s)); }
   .detail .d-bron { font-size: calc(13px * var(--s)); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tone); }
   .detail .d-titel { font-size: calc(32px * var(--s)); font-weight: 600; line-height: 1.15; }
   .detail .d-inhoud { display: flex; gap: calc(28px * var(--s)); min-height: 0; flex: 1 1 auto; }
@@ -872,6 +959,46 @@ const css = /* css */ `
   .detail .d-foto:empty { display: none; }
   .detail .d-tekst { font-size: calc(20px * var(--s)); line-height: 1.5; color: var(--dac-ink-2); white-space: pre-wrap; overflow-y: auto; }
   .detail .d-datum { font-size: calc(14px * var(--s)); color: var(--dac-ink-3); }
+
+  /* Een ruimte boeken: links wanneer en hoe lang, rechts de code. Een eigen
+     cijferblok en geen invoerveld, want een invoerveld haalt op een iPad het
+     toetsenbord tevoorschijn, over de helft van het scherm. */
+  .boek { padding: calc(28px * var(--s)) calc(36px * var(--s)); flex-direction: column; gap: calc(18px * var(--s)); }
+  .b-inhoud { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: calc(40px * var(--s)); flex: 1 1 auto; min-height: 0; }
+  .b-links, .b-rechts { display: flex; flex-direction: column; gap: calc(12px * var(--s)); min-width: 0; }
+  .b-titel { font-size: calc(32px * var(--s)); font-weight: 600; line-height: 1.15; }
+  .b-status { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); margin-bottom: calc(8px * var(--s)); }
+  .boek .eyebrow { margin-top: calc(8px * var(--s)); }
+  .boek button {
+    font: inherit; color: var(--dac-ink); cursor: pointer; -webkit-appearance: none; appearance: none;
+    background: var(--dac-surface); border: 1px solid var(--dac-border-hi);
+  }
+  .boek button:active { background: var(--dac-surface-hi); }
+  .boek button:disabled { opacity: 0.35; cursor: default; }
+  .b-stel { display: flex; align-items: center; gap: calc(14px * var(--s)); }
+  .b-stel button { width: calc(64px * var(--s)); height: calc(64px * var(--s)); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .b-stel button .icon { font-size: calc(28px * var(--s)); }
+  .b-waarde { font-size: calc(40px * var(--s)); font-weight: 300; font-variant-numeric: tabular-nums; min-width: calc(130px * var(--s)); text-align: center; }
+  .b-duren { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
+  .b-duren button { min-height: calc(58px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(17px * var(--s)); font-weight: 500; }
+  .boek .b-duren button[aria-pressed="true"] {
+    color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); border-color: color-mix(in srgb, var(--tone) 42%, transparent);
+  }
+  .b-samen { font-size: calc(18px * var(--s)); color: var(--dac-ink-2); min-height: 1.4em; }
+  .b-stippen { display: flex; gap: calc(12px * var(--s)); min-height: calc(20px * var(--s)); align-items: center; }
+  .b-stippen span { width: calc(18px * var(--s)); height: calc(18px * var(--s)); border-radius: 50%; border: 2px solid var(--dac-border-hi); box-sizing: border-box; }
+  .b-stippen span.vol { background: var(--dac-ink); border-color: var(--dac-ink); }
+  .b-toetsen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
+  .b-toetsen button { height: calc(64px * var(--s)); border-radius: var(--dac-radius-sm); font-size: calc(26px * var(--s)); font-variant-numeric: tabular-nums; }
+  .b-toetsen button .icon { font-size: calc(26px * var(--s)); margin: auto; }
+  .boek .b-bevestig {
+    height: calc(64px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(19px * var(--s)); font-weight: 600;
+    color: var(--dac-on-accent); background: var(--tone); border-color: var(--tone);
+  }
+  .b-fout { font-size: calc(16px * var(--s)); color: var(--dac-bad); min-height: 1.4em; }
+  .b-klaar { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(16px * var(--s)); flex: 1 1 auto; text-align: center; }
+  .b-klaar .chip { --tone: var(--dac-good); width: calc(84px * var(--s)); height: calc(84px * var(--s)); font-size: calc(44px * var(--s)); }
+  .b-klaar .b-titel { max-width: 80%; }
 
   .merkje {
     position: absolute; top: calc(10px * var(--s)); right: calc(14px * var(--s)); display: none; align-items: center; gap: calc(6px * var(--s));
@@ -883,7 +1010,7 @@ const css = /* css */ `
 
   /* hover bestaat niet op een wachtkamerscherm; alleen echte muizen. */
   @media (hover: hover) {
-    .persoon:hover, .lamp:hover, .bericht:hover, .terug:hover { background: var(--dac-surface-hi); }
+    .persoon:hover, .lamp:hover, .bericht:hover, .terug:hover, .ruimte:hover { background: var(--dac-surface-hi); }
     .bk[data-pagina]:hover .bk-meer { background: color-mix(in srgb, var(--tone) 26%, transparent); }
   }
 
@@ -934,6 +1061,13 @@ export class InfoschermCard extends DacCard {
     this.weerEntiteit_ = null;
     this.weerOpzeggen_ = [];
     this.agendaSleutel_ = "";
+    /* De ruimtes: per agenda een abonnement op de afspraken van vandaag, en
+       wat daar het laatst van binnenkwam (zie abonneerRuimtes_). */
+    this.ruimteAbos_ = new Map();
+    this.ruimteAfspraken_ = new Map();
+    this.ruimteDag_ = "";
+    /* Het boekscherm: welke ruimte, wanneer, hoe lang, en de code tot nu toe. */
+    this.boek_ = null;
     /* Tot wanneer een scrollbeweging van de mededelingen van onszelf is en
        niet van een vinger; daarna zet een scroll de klok opnieuw. */
     this.mAuto_ = 0;
@@ -970,6 +1104,7 @@ export class InfoschermCard extends DacCard {
       afval: Array.isArray(i.afval) ? i.afval : [],
       verlichting: Array.isArray(i.verlichting) ? i.verlichting : [],
       klimaat: Array.isArray(i.klimaat) ? i.klimaat : [],
+      ruimtes: Array.isArray(i.ruimtes) ? i.ruimtes : [],
     };
   }
 
@@ -1025,6 +1160,8 @@ export class InfoschermCard extends DacCard {
           <div class="d-inhoud"><div class="d-foto"></div><div class="d-tekst"></div></div>
         </div>
 
+        <div class="laag boek"></div>
+
         <div class="merkje">${ICOON.offline}<span>Geen verbinding</span></div>
       </div>`;
   }
@@ -1061,6 +1198,8 @@ export class InfoschermCard extends DacCard {
 
     this.on(scherm, "click", (e) => {
       const doel = e.target;
+      const b = doel.closest(".boek [data-b]");
+      if (b) return b.disabled ? undefined : this.boekActie_(b);
       const stip = doel.closest(".m-stippen span");
       if (stip) return this.mededelingNaar_(stip.closest(".blok")?.querySelector(".m-baan"), [...stip.parentElement.children].indexOf(stip));
       const kop = doel.closest(".bk[data-pagina]");
@@ -1078,6 +1217,9 @@ export class InfoschermCard extends DacCard {
       const kKnop = doel.closest(".k-paneel button[data-actie]");
       if (kKnop) return kKnop.disabled ? undefined : this.tikAirco_(kKnop.closest(".k-paneel").dataset.airco, kKnop);
       if (doel.closest(".airco[data-airco]")) return this.gaNaar_("klimaat");
+      const boek = doel.closest(".r-boek[data-ruimte]");
+      if (boek) return this.openBoek_(boek.dataset.ruimte);
+      if (doel.closest(".ruimte[data-ruimte]")) return this.gaNaar_("ruimtes");
       const bericht = doel.closest(".bericht[data-id]");
       if (bericht) return this.openBericht_(bericht.dataset.id);
       return undefined;
@@ -1127,7 +1269,11 @@ export class InfoschermCard extends DacCard {
     // met een tijdstip komt of gaat op de minuut.
     const naarDeMinuut = () => {
       this.paintKlok_();
+      // Na middernacht een nieuwe dag voor de ruimtes; anders niets.
+      this.abonneerRuimtes_();
       this.paintRaster_();
+      this.paintPagina_("ruimtes");
+      if (this.boek_ && !this.boek_.bezig && !this.boek_.klaar) this.paintBoek_();
       this.klokTimer_ = setTimeout(naarDeMinuut, 60000 - (Date.now() % 60000) + 20);
     };
     naarDeMinuut();
@@ -1152,6 +1298,8 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => this.dashHerkansing_.stop());
     this.teardown_.push(() => this.zegWeerOp_());
     this.teardown_.push(() => this.abo_.stop());
+    this.teardown_.push(() => this.zegRuimtesOp_());
+    this.teardown_.push(() => clearTimeout(this.boekTimer_));
     this.teardown_.push(() => {
       for (const t of this.kTimers_.values()) clearTimeout(t);
       this.kTimers_.clear();
@@ -1222,6 +1370,7 @@ export class InfoschermCard extends DacCard {
     this.abonneerWeer_();
     this.laadEnergie_();
     this.haalAgenda_();
+    this.abonneerRuimtes_();
     this.mededelingStart_();
     this.paint();
   }
@@ -1232,6 +1381,7 @@ export class InfoschermCard extends DacCard {
     if (terug && this.built_) {
       this.haal_();
       this.abo_.start(hass);
+      for (const abo of this.ruimteAbos_.values()) abo.start(hass);
     }
     this.paintMerkje_();
   }
@@ -1274,6 +1424,48 @@ export class InfoschermCard extends DacCard {
         // Een weerbron zonder deze voorspelling: dan blijft dat vak leeg.
       }
     }
+  }
+
+  /**
+   * Per ruimte een abonnement op de afspraken van VANDAAG
+   * (`calendar/event/subscribe`). Een boeking, ook een uit de agenda van Home
+   * Assistant zelf, staat er daarmee binnen een tel. Na middernacht opnieuw,
+   * met de nieuwe dag; een ruimte die uit de installatie gaat, zegt op.
+   */
+  abonneerRuimtes_() {
+    const ruimtes = this.installatie_().ruimtes.map((r) => r.entity);
+    const nu = new Date();
+    const dag = isoDatum(nu);
+    const nieuweDag = dag !== this.ruimteDag_;
+    this.ruimteDag_ = dag;
+    for (const [entity, abo] of [...this.ruimteAbos_]) {
+      if (nieuweDag || !ruimtes.includes(entity)) {
+        abo.stop();
+        this.ruimteAbos_.delete(entity);
+        if (!ruimtes.includes(entity)) this.ruimteAfspraken_.delete(entity);
+      }
+    }
+    if (!this.hass?.connection) return;
+    const van = dagBegin(nu);
+    const tot = plusDagen(van, 1);
+    for (const entity of ruimtes) {
+      if (this.ruimteAbos_.has(entity)) continue;
+      const abo = new AgendaAbonnement(entity, van, tot, (events) => {
+        if (this.ruimteAbos_.get(entity) !== abo) return;
+        // Kon de agenda niet gelezen worden, dan houden we wat er stond.
+        if (events) this.ruimteAfspraken_.set(entity, afsprakenUit(events));
+        this.paintRaster_();
+        this.paintPagina_("ruimtes");
+        if (this.boek_?.ruimte === entity && !this.boek_.bezig && !this.boek_.klaar) this.paintBoek_();
+      });
+      this.ruimteAbos_.set(entity, abo);
+      abo.start(this.hass);
+    }
+  }
+
+  zegRuimtesOp_() {
+    for (const abo of this.ruimteAbos_.values()) abo.stop();
+    this.ruimteAbos_.clear();
   }
 
   async haalAgenda_() {
@@ -1721,6 +1913,7 @@ export class InfoschermCard extends DacCard {
     if (t > 0) {
       this.terugTimer_ = setTimeout(() => {
         this.sluitBericht_();
+        this.sluitBoek_();
         this.gaNaar_("welkom");
       }, t * 1000);
     }
@@ -2225,7 +2418,7 @@ export class InfoschermCard extends DacCard {
       if (nodig > ruimte + 1 && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
       uren.hidden = uren.getBoundingClientRect().bottom > onder() + 1;
     }
-    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .aircos, .afspraken, .ot, .vj-lijst");
+    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .aircos, .rlijst, .afspraken, .ot, .vj-lijst");
     if (!lijst) return;
     const kinderen = [...lijst.children];
     for (const kind of kinderen) kind.hidden = false;
@@ -2270,7 +2463,7 @@ export class InfoschermCard extends DacCard {
       // Passen de gewone tegels niet allemaal, dan eerst halfdicht (de status
       // blijft) en pas daarna dicht -- en alleen als er dan ook echt meer in
       // gaan.
-      if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen, .aircos") && uit.tonen < kinderen.length) {
+      if (!el.classList.contains("klein") && lijst.matches(".tegels, .lampen, .aircos, .rlijst") && uit.tonen < kinderen.length) {
         let vorm = "";
         for (const probeer of ["halfdicht", "dicht"]) {
           if (uit.tonen >= kinderen.length) break;
@@ -2479,6 +2672,19 @@ export class InfoschermCard extends DacCard {
         el.dataset.meer = String(aircos.length - tonen.length);
         const kol = blok.w >= 5 ? "kol-3" : blok.w >= 3 ? "" : "kol-1";
         zet(`<div class="aircos ${kol}">${tonen.map((a) => this.htmlAirco_(a)).join("")}</div>`, "");
+        break;
+      }
+      case "ruimtes": {
+        // Zelfde maat als de airco's: pas vanaf drie breed twee kolommen.
+        const ruimtes = this.installatie_().ruimtes;
+        const tonen = aantal > 0 ? ruimtes.slice(0, aantal) : ruimtes;
+        el.dataset.meer = String(ruimtes.length - tonen.length);
+        const nu = new Date();
+        const statussen = ruimtes
+          .filter((r) => this.ruimteAfspraken_.has(r.entity))
+          .map((r) => ruimteStatus(this.ruimteAfspraken_.get(r.entity), nu));
+        const kol = blok.w >= 5 ? "kol-3" : blok.w >= 3 ? "" : "kol-1";
+        zet(`<div class="rlijst ${kol}">${tonen.map((r) => this.htmlRuimte_(r, nu)).join("")}</div>`, vrijTeller(statussen));
         break;
       }
       case "agenda": {
@@ -2816,6 +3022,231 @@ export class InfoschermCard extends DacCard {
     }</div>`;
   }
 
+  /** Naam, toestand en tekst van een ruimte op dit moment. */
+  ruimteNu_(r, nu) {
+    const naam = r.naam || attrsOf(this.hass, r.entity).friendly_name || r.entity;
+    if (stateOf(this.hass, r.entity) === "unavailable") return { naam, toestand: "dood", tekst: "Niet bereikbaar", status: null };
+    const afspraken = this.ruimteAfspraken_.get(r.entity);
+    if (!afspraken) return { naam, toestand: "onbekend", tekst: "Laden…", status: null };
+    const status = ruimteStatus(afspraken, nu);
+    return { naam, toestand: status.bezet ? "bezet" : "vrij", tekst: ruimteTekst(status), status };
+  }
+
+  /** Een ruimte op het welkomscherm: alleen vrij of bezet, en tot wanneer. */
+  htmlRuimte_(r, nu) {
+    const { naam, toestand, tekst } = this.ruimteNu_(r, nu);
+    return `<div class="ruimte" data-toestand="${toestand}" role="button" tabindex="0" data-ruimte="${escapeHtml(r.entity)}" aria-label="${escapeHtml(`${naam}: ${tekst}`)}">
+      <div class="chip">${resolve("door")}</div>
+      <div class="r-tekst"><div class="r-naam">${escapeHtml(naam)}</div><div class="r-status">${escapeHtml(tekst)}</div></div>
+    </div>`;
+  }
+
+  /**
+   * Een ruimte op de pagina: de dag als tijdlijn met de boekingen erop, en
+   * (als er een code is) een knop Boeken. Alle ruimtes delen hetzelfde
+   * venster, zodat tien uur bij elke ruimte op dezelfde plek staat.
+   */
+  htmlRuimtePaneel_(r, nu, venster, boeken) {
+    const { naam, toestand, tekst } = this.ruimteNu_(r, nu);
+    const afspraken = this.ruimteAfspraken_.get(r.entity) ?? [];
+    const nuPos = nuPositie(nu, nu, venster);
+    // Geen tekst IN de balk: een uur op een dag van zeventien is 75 pixels, en
+    // dan stond er "14:00 – 15:..." met de nu-lijn er dwars doorheen (gemeten
+    // op 16 oktober 2026). De tijden staan als regel onder de lijn.
+    const balken = ruimteBalken(afspraken, nu, venster)
+      .map(
+        (b) =>
+          `<div class="r-balk${b.afspraak.eind <= nu ? " voorbij" : ""}" style="left:${b.links.toFixed(2)}%;width:${b.breedte.toFixed(2)}%" title="${escapeHtml(b.tekst)}"></div>`
+      )
+      .join("");
+    const vandaag = afspraken.filter((a) => a.eind > dagBegin(nu) && a.start < plusDagen(dagBegin(nu), 1));
+    const tijden = vandaag.length
+      ? vandaag
+          .map((a) => `<span class="${a.eind <= nu ? "voorbij" : ""}">${escapeHtml(a.heleDag ? "de hele dag" : `${klok(a.start)} – ${klok(a.eind)}`)}</span>`)
+          .join("")
+      : `<span class="voorbij">Vandaag nog niets geboekt.</span>`;
+    const uren = uurStrepen(venster)
+      .map((u) => `<span style="left:${u.links.toFixed(2)}%">${u.uur}</span>`)
+      .join("");
+    const knop =
+      boeken && toestand !== "dood"
+        ? `<button type="button" class="r-boek" data-ruimte="${escapeHtml(r.entity)}">${resolve("plus")}<span>Boeken</span></button>`
+        : "";
+    return `<div class="r-paneel" data-toestand="${toestand}" data-ruimte="${escapeHtml(r.entity)}">
+      <div class="r-kop">
+        <div class="chip">${resolve("door")}</div>
+        <div class="r-tekst"><div class="r-naam">${escapeHtml(naam)}</div><div class="r-status">${escapeHtml(tekst)}</div></div>
+        ${knop}
+      </div>
+      <div class="r-lijn">
+        <div class="r-baan">${balken}${nuPos == null ? "" : `<div class="r-nu" style="left:${nuPos.toFixed(2)}%"></div>`}</div>
+        <div class="r-uren">${uren}</div>
+        <div class="r-tijden">${tijden}</div>
+      </div>
+    </div>`;
+  }
+
+  /* ------------------------------------------------------------ een ruimte boeken */
+
+  /**
+   * Het boekscherm openen. Het begint op de eerste tijd waarop er iets kan
+   * (nu, als de ruimte vrij is), met een uur als dat past.
+   */
+  openBoek_(entity) {
+    if (!this.stand_?.boeken_op_scherm) return;
+    clearTimeout(this.boekTimer_);
+    const afspraken = this.ruimteAfspraken_.get(entity) ?? [];
+    const eerste = eersteKeuze(afspraken, beginKeuzes(new Date()));
+    this.boek_ = {
+      ruimte: entity,
+      begin: eerste?.begin ?? "nu",
+      minuten: eerste?.minuten ?? null,
+      code: "",
+      fout: "",
+      bezig: false,
+      klaar: "",
+    };
+    this.paintBoek_();
+    this.$(".boek")?.classList.add("open");
+  }
+
+  sluitBoek_() {
+    clearTimeout(this.boekTimer_);
+    this.boek_ = null;
+    this.$(".boek")?.classList.remove("open");
+  }
+
+  /** De begintijd die nu gekozen is, als Date; "nu" is deze minuut. */
+  boekBegin_() {
+    const keuzes = beginKeuzes(new Date());
+    return (keuzes.find((k) => k.waarde === this.boek_.begin) ?? keuzes[0]).tijd;
+  }
+
+  boekActie_(knop) {
+    const b = this.boek_;
+    if (!b) return;
+    const actie = knop.dataset.b;
+    if (actie === "sluit") return this.sluitBoek_();
+    if (b.bezig || b.klaar) return;
+    b.fout = "";
+    if (actie === "eerder" || actie === "later") {
+      const keuzes = beginKeuzes(new Date());
+      const i = Math.max(0, keuzes.findIndex((k) => k.waarde === b.begin));
+      const j = Math.min(keuzes.length - 1, Math.max(0, i + (actie === "later" ? 1 : -1)));
+      b.begin = keuzes[j].waarde;
+      // Past de gekozen duur daar niet meer, dan de langste die wel past.
+      const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
+      const duren = duurKeuzes(afspraken, keuzes[j].tijd);
+      // Een uur of korter, net als bij het openen (eersteKeuze); anders
+      // sprong hij na een stap terug en een stap vooruit van 1 naar 2 uur.
+      if (!duren.find((d) => d.minuten === b.minuten)?.kan) {
+        const passend = duren.filter((d) => d.kan);
+        const kort = passend.filter((d) => d.minuten <= 60);
+        b.minuten = (kort.length ? kort[kort.length - 1] : passend[0])?.minuten ?? null;
+      }
+    } else if (actie === "duur") {
+      b.minuten = Number(knop.dataset.min);
+    } else if (actie === "cijfer") {
+      if (b.code.length < 8) b.code += knop.dataset.cijfer;
+    } else if (actie === "wis") {
+      b.code = b.code.slice(0, -1);
+    } else if (actie === "boek") {
+      this.bevestigBoek_();
+      return;
+    }
+    this.paintBoek_();
+  }
+
+  async bevestigBoek_() {
+    const b = this.boek_;
+    if (!b || b.bezig || !b.minuten || b.code.length < 4) return;
+    const begin = this.boekBegin_();
+    const eind = plusMinuten(begin, b.minuten);
+    b.bezig = true;
+    this.paintBoek_();
+    try {
+      await boekRuimte(this.hass, { ruimte: b.ruimte, start: lokaal(begin), eind: lokaal(eind), code: b.code });
+      if (this.boek_ !== b) return;
+      b.bezig = false;
+      b.klaar = `van ${klok(begin)} tot ${klok(eind)}`;
+      this.paintBoek_();
+      this.boekTimer_ = setTimeout(() => this.sluitBoek_(), 4000);
+    } catch (fout) {
+      if (this.boek_ !== b) return;
+      b.bezig = false;
+      b.fout = fout?.message ?? "Boeken lukte niet.";
+      // Een verkeerde code gaat weg; bij elke andere fout blijft hij staan.
+      if (fout?.code === "verkeerde_code" || fout?.code === "te_vaak") b.code = "";
+      this.paintBoek_();
+    }
+  }
+
+  paintBoek_() {
+    const laag = this.$(".boek");
+    const b = this.boek_;
+    if (!laag || !b) return;
+    const r = this.installatie_().ruimtes.find((x) => x.entity === b.ruimte) ?? { entity: b.ruimte, naam: "" };
+    const nu = new Date();
+    const { naam, tekst } = this.ruimteNu_(r, nu);
+    const sluit = `<button class="sluit" type="button" data-b="sluit">${ICOON.back}<span>${b.klaar ? "Klaar" : "Annuleren"}</span></button>`;
+    if (b.klaar) {
+      laag.innerHTML = `${sluit}<div class="b-klaar">
+        <div class="chip">${resolve("check")}</div>
+        <div class="b-titel">${escapeHtml(naam)} is geboekt</div>
+        <div class="b-status">${escapeHtml(b.klaar)}</div>
+      </div>`;
+      return;
+    }
+    const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
+    const keuzes = beginKeuzes(nu);
+    const i = Math.max(0, keuzes.findIndex((k) => k.waarde === b.begin));
+    const begin = keuzes[i].tijd;
+    const duren = duurKeuzes(afspraken, begin);
+    const gekozen = duren.find((d) => d.minuten === b.minuten && d.kan);
+    const samen = gekozen
+      ? `Van ${klok(begin)} tot ${klok(gekozen.eind)}`
+      : duren.some((d) => d.kan)
+        ? "Kies hoe lang."
+        : "Op deze tijd is de ruimte bezet. Kies een later tijdstip.";
+    const stippen = Array.from({ length: Math.max(4, b.code.length) }, (_, k) => `<span class="${k < b.code.length ? "vol" : ""}"></span>`).join("");
+    const toets = (c) => `<button type="button" data-b="cijfer" data-cijfer="${c}" aria-label="${c}">${c}</button>`;
+    const kan = Boolean(gekozen) && b.code.length >= 4 && !b.bezig;
+    laag.innerHTML = `${sluit}
+      <div class="b-inhoud">
+        <div class="b-links">
+          <div class="eyebrow">Ruimte boeken</div>
+          <div class="b-titel">${escapeHtml(naam)}</div>
+          <div class="b-status">${escapeHtml(tekst)}</div>
+          <div class="eyebrow">Vanaf</div>
+          <div class="b-stel">
+            <button type="button" data-b="eerder" aria-label="Eerder"${i === 0 ? " disabled" : ""}>${resolve("minus")}</button>
+            <div class="b-waarde">${escapeHtml(keuzes[i].label)}</div>
+            <button type="button" data-b="later" aria-label="Later"${i >= keuzes.length - 1 ? " disabled" : ""}>${resolve("plus")}</button>
+          </div>
+          <div class="eyebrow">Hoe lang</div>
+          <div class="b-duren">${duren
+            .map(
+              (d) =>
+                `<button type="button" data-b="duur" data-min="${d.minuten}" aria-pressed="${d.minuten === b.minuten && d.kan}"${d.kan ? "" : " disabled"}>${escapeHtml(d.label)}</button>`
+            )
+            .join("")}</div>
+          <div class="b-samen">${escapeHtml(samen)}</div>
+        </div>
+        <div class="b-rechts">
+          <div class="eyebrow">Code</div>
+          <div class="b-stippen" aria-label="${b.code.length} cijfers">${stippen}</div>
+          <div class="b-toetsen">
+            ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(toets).join("")}
+            <button type="button" data-b="wis" aria-label="Wissen"${b.code ? "" : " disabled"}>${ICOON.back}</button>
+            ${toets(0)}
+            <span></span>
+          </div>
+          <button type="button" class="b-bevestig" data-b="boek"${kan ? "" : " disabled"}>${b.bezig ? "Bezig…" : "Boeken"}</button>
+          <div class="b-fout" role="alert">${escapeHtml(b.fout)}</div>
+        </div>
+      </div>`;
+  }
+
   /* ------------------------------------------------------------ de pagina's */
 
   paintPaginas_() {
@@ -2908,6 +3339,19 @@ export class InfoschermCard extends DacCard {
           </div>`,
           false
         );
+        break;
+      }
+      case "ruimtes": {
+        const nu = new Date();
+        const boeken = Boolean(this.stand_?.boeken_op_scherm);
+        this.text(
+          ".pagina[data-p='ruimtes'] .onder",
+          boeken ? "Tik op Boeken om een ruimte vast te leggen. Daarvoor is de code van de receptie nodig." : ""
+        );
+        const ruimtes = this.installatie_().ruimtes;
+        const alle = ruimtes.flatMap((r) => this.ruimteAfspraken_.get(r.entity) ?? []);
+        const venster = ruimteVenster(alle, nu, tijdenOp(this.stand_?.praktijk, nu).tijden);
+        this.vul_(vak, `<div class="r-raster">${ruimtes.map((r) => this.htmlRuimtePaneel_(r, nu, venster, boeken)).join("")}</div>`, false);
         break;
       }
       case "agenda": {

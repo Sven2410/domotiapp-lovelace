@@ -77,6 +77,49 @@ export const bewaar = (hass, soort, waarde) => roep(hass, `${soort}/save`, { [so
 export const syncInstallatie = (hass, installatie) => roep(hass, "installatie/sync", { installatie });
 
 export const verwijderBestand = (hass, bestand) => roep(hass, "bestand/verwijder", { bestand });
+
+/* ------------------------------------------------------- de ruimtes */
+
+/**
+ * Een ruimte boeken (16 oktober 2026). Het scherm geeft ALTIJD een code mee
+ * (ook een lege), het beheer nooit; zo weet de server wie er vraagt. Een
+ * omschrijving telt alleen vanuit het beheer. Gooit met de fout van de server
+ * (`{code, message}`): `bezet`, `verkeerde_code`, `te_vaak`, `geen_code`, ...
+ */
+export const boekRuimte = (hass, { ruimte, start, eind, omschrijving, code }) =>
+  roep(hass, "ruimtes/boek", {
+    ruimte,
+    start,
+    eind,
+    ...(omschrijving ? { omschrijving } : {}),
+    ...(code !== undefined ? { code } : {}),
+  });
+
+/** Een boeking weghalen; alleen het beheer. Bij een herhalende alleen deze keer. */
+export const geefRuimteVrij = (hass, { ruimte, uid, recurrence_id }) =>
+  roep(hass, "ruimtes/vrijgeven", { ruimte, uid, ...(recurrence_id ? { recurrence_id } : {}) });
+
+/** De code om op het scherm te boeken; leeg zet het uit. Alleen het beheer. */
+export const zetRuimteCode = (hass, code) => roep(hass, "ruimtes/code", { code });
+
+/**
+ * De afspraken van één agenda tussen `van` en `tot`, live: Home Assistant
+ * stuurt een nieuwe lijst zodra de agenda iets wegschrijft
+ * (`calendar/event/subscribe`, er sinds 2026.8). `cb` krijgt de lijst, of
+ * null als de agenda hem niet kon lezen.
+ *
+ * Bestaat de agenda (nog) niet, dan later opnieuw: na een herstart komt de
+ * Lokale agenda soms pas na het scherm.
+ */
+export class AgendaAbonnement extends BlijvendAbonnement {
+  constructor(entity, van, tot, cb, opties = {}) {
+    super(
+      { type: "calendar/event/subscribe", entity_id: entity, start: van.toISOString(), end: tot.toISOString() },
+      (bericht) => cb(Array.isArray(bericht?.events) ? bericht.events : null),
+      { ookBij: (fout) => fout?.code === "not_found", ...opties }
+    );
+  }
+}
 export const ververFeeds = (hass) => roep(hass, "feeds/ververs");
 export const haalGebruikers = (hass) => roep(hass, "gebruikers");
 

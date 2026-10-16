@@ -21,7 +21,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
-import { Abonnement, RUST_NA_FOUT, bestandUrl, haal, upload } from "../../src/infoscherm-client.js";
+import { Abonnement, AgendaAbonnement, RUST_NA_FOUT, bestandUrl, boekRuimte, haal, upload } from "../../src/infoscherm-client.js";
 
 const echteFetch = globalThis.fetch;
 afterEach(() => {
@@ -183,5 +183,92 @@ describe("Abonnement", () => {
     await abo.start(hass);
     await k.tik();
     assert.equal(aanvragen, 1);
+  });
+});
+
+/**
+ * De ruimtes (16 oktober 2026). NIEUW GEDRAG: `AgendaAbonnement` en
+ * `boekRuimte` bestonden niet.
+ */
+describe("AgendaAbonnement", () => {
+  function klok() {
+    const wacht = [];
+    return {
+      opties: { klok: (fn) => (wacht.push(fn), wacht.length), stopKlok: () => wacht.splice(0) },
+      async tik() {
+        const fn = wacht.shift();
+        if (fn) await fn();
+        await new Promise((k) => setTimeout(k, 0));
+      },
+    };
+  }
+
+  it("vraagt calendar/event/subscribe voor die agenda en dat venster, en geeft de lijst door", async () => {
+    const berichten = [];
+    let gevraagd = null;
+    const hass = {
+      connection: {
+        async subscribeMessage(cb, bericht) {
+          gevraagd = bericht;
+          cb({ events: [{ start: "2026-10-16T09:00:00+02:00", end: "2026-10-16T10:00:00+02:00" }] });
+          cb({ events: null });
+          return () => {};
+        },
+      },
+    };
+    const van = new Date(Date.UTC(2026, 9, 15, 22));
+    const tot = new Date(Date.UTC(2026, 9, 16, 22));
+    await new AgendaAbonnement("calendar.spreekruimte", van, tot, (l) => berichten.push(l)).start(hass);
+    assert.deepEqual(gevraagd, {
+      type: "calendar/event/subscribe",
+      entity_id: "calendar.spreekruimte",
+      start: "2026-10-15T22:00:00.000Z",
+      end: "2026-10-16T22:00:00.000Z",
+    });
+    assert.equal(berichten[0].length, 1);
+    assert.equal(berichten[1], null);
+  });
+
+  it("een agenda die er (nog) niet is: later opnieuw, want na een herstart komt hij soms na het scherm", async () => {
+    let aanvragen = 0;
+    const hass = {
+      connection: {
+        async subscribeMessage() {
+          aanvragen += 1;
+          if (aanvragen === 1) throw { code: "not_found", message: "Calendar entity not found" };
+          return () => {};
+        },
+      },
+    };
+    const k = klok();
+    const abo = new AgendaAbonnement("calendar.x", new Date(), new Date(), () => {}, k.opties);
+    await abo.start(hass);
+    assert.equal(abo.actief, false);
+    await k.tik();
+    assert.equal(abo.actief, true);
+    assert.equal(aanvragen, 2);
+  });
+
+  it("REGRESSIEWACHT: het gewone abonnement herhaalt een not_found niet", async () => {
+    let aanvragen = 0;
+    const hass = { connection: { subscribeMessage: async () => { aanvragen += 1; throw { code: "not_found" }; } } };
+    const k = klok();
+    await new Abonnement(() => {}, k.opties).start(hass);
+    await k.tik();
+    assert.equal(aanvragen, 1);
+  });
+});
+
+describe("boekRuimte", () => {
+  it("het scherm stuurt de code mee, ook een lege; het beheer een omschrijving en geen code", async () => {
+    const verstuurd = [];
+    const hass = { connection: { sendMessagePromise: async (b) => (verstuurd.push(b), {}) } };
+    await boekRuimte(hass, { ruimte: "calendar.a", start: "2026-10-16T10:00", eind: "2026-10-16T11:00", code: "" });
+    await boekRuimte(hass, { ruimte: "calendar.a", start: "2026-10-16T10:00", eind: "2026-10-16T11:00", omschrijving: "Overleg" });
+    assert.equal(verstuurd[0].type, "domotiapp_lovelace/infoscherm/ruimtes/boek");
+    assert.equal(verstuurd[0].code, "");
+    assert.ok(!("omschrijving" in verstuurd[0]));
+    assert.ok(!("code" in verstuurd[1]));
+    assert.equal(verstuurd[1].omschrijving, "Overleg");
   });
 });

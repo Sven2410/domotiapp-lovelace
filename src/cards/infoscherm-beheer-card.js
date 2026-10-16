@@ -53,6 +53,15 @@
  * wordt tussendoor bijgewerkt, in het schakelaartje zelf, want die komt van
  * de iPad en die wil je zien.
  *
+ * RUIMTES (16 OKTOBER 2026)
+ *
+ * Het blok Ruimtes leest de boekingen live uit de agenda's van de ruimtes
+ * (`calendar/event/subscribe`, twee weken vooruit) en schrijft via de server
+ * (`ruimtes/boek`, `ruimtes/vrijgeven`), die dubbel boeken weigert. De code
+ * voor het scherm is een eigen onderdeel (`code`), want hij staat niet in de
+ * stand: die gaat ook naar de iPad. Het formulier voor een nieuwe boeking
+ * wordt NIET opgeslagen (`data-s="boeken"`); pas de knop Boeken stuurt het.
+ *
  * ALLES BEGINT DICHT
  *
  * Tot 0.72.0 stond er een instelling "Staat open bij het laden", met
@@ -71,8 +80,11 @@ import { volgRaster } from "../rasterhoogte.js";
 import { vraagBevestiging } from "../vraag.js";
 import {
   Abonnement,
+  AgendaAbonnement,
   bestandUrl,
   bewaar,
+  boekRuimte,
+  geefRuimteVrij,
   haalGebruikers,
   haalStand,
   nogNietGereed,
@@ -81,6 +93,7 @@ import {
   vergeetBestand,
   verwijderBestand,
   ververFeeds,
+  zetRuimteCode,
 } from "../infoscherm-client.js";
 import {
   BLOK_INFO,
@@ -91,6 +104,7 @@ import {
   RIJEN,
   blokOntbreekt,
   initialen,
+  isoDatum,
   isoDatumTijd,
   overlapt,
   pastVrij,
@@ -98,6 +112,7 @@ import {
   vrijePlek,
 } from "./infoscherm-logica.js";
 import { logoOndergrond, logoWaarschuwing } from "./infoscherm-logo.js";
+import { DAGEN_VOORUIT, afsprakenUit, controleerFormulier, dagBegin, perDag, plusDagen, tijdTekst } from "./ruimtes-logica.js";
 import { analyseerLogo, snijLogoBij } from "./infoscherm-logo-beeld.js";
 
 const TAG = "domotiapp-infoscherm-beheer-card";
@@ -126,11 +141,13 @@ const BLOKKEN = [
   { key: "verlichting", titel: "Verlichting", icoon: "bulb", secties: ["installatie", "instellingen"] },
   // 13 oktober 2026: de airco's, net als de lampen.
   { key: "klimaat", titel: "Klimaat", icoon: "airco", secties: ["installatie", "instellingen"] },
+  // 16 oktober 2026: de ruimtes, met de code om op het scherm te boeken.
+  { key: "ruimtes", titel: "Ruimtes", icoon: "door", secties: ["installatie", "code"] },
   { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
 ];
 
 /* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
-const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "calendars", "waste", "kiosk_users"];
+const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "rooms", "calendars", "waste", "kiosk_users"];
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const STANDAARD = {
@@ -139,6 +156,7 @@ const STANDAARD = {
   energy: "",
   lights: [],
   climates: [],
+  rooms: [],
   calendars: [],
   waste: [],
   kiosk_users: [],
@@ -149,6 +167,7 @@ const STANDAARD = {
   show_indeling: true,
   show_verlichting: true,
   show_klimaat: true,
+  show_ruimtes: true,
   show_instellingen: true,
 };
 
@@ -237,6 +256,7 @@ const css = /* css */ `
   .voet { display: flex; justify-content: flex-start; align-items: center; gap: 10px; flex-wrap: wrap; }
   .melding { font-size: 12px; color: var(--dac-ink-3); }
   .melding.fout { color: var(--dac-bad); }
+  .melding.goed { color: var(--dac-good); }
 
   /* lijsten */
   .lijst { display: flex; flex-direction: column; gap: 8px; }
@@ -247,10 +267,15 @@ const css = /* css */ `
   .item.verjaardag { grid-template-columns: minmax(0, 2fr) 170px auto auto; }
   .item.feed { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
   .item.uitz { grid-template-columns: 150px auto 110px 110px minmax(0, 1fr) auto; }
-  .item.lamp, .item.airco { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
-  .item.lamp .ent, .item.airco .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .item.lamp .ent b, .item.airco .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item.lamp .ent span, .item.airco .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.lamp, .item.airco, .item.ruimte { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
+  .item.lamp .ent, .item.airco .ent, .item.ruimte .ent { font-size: 13px; color: var(--dac-ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .item.lamp .ent b, .item.airco .ent b, .item.ruimte .ent b { color: var(--dac-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.lamp .ent span, .item.airco .ent span, .item.ruimte .ent span { font-size: 11px; color: var(--dac-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.boeking { grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1.4fr) auto; padding: 6px 8px 6px 12px; font-size: 13px; }
+  .r-tijd { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .r-ruimte { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-titel { color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-dag { font-size: 12px; font-weight: 600; color: var(--dac-ink-3); margin-top: 4px; }
   .knoppen { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
   /* De greep om een rij te verslepen: echte pointer-events, geen pijltjes.
      Gevraagd op 10 september 2026: "drag en drop ipv pijltjes". */
@@ -366,6 +391,12 @@ export class InfoschermBeheerCard extends DacCard {
     this.uitgesteld_ = new Set();
     this.open_ = null;
     this.meldingen_ = {};
+    /* De boekingen per ruimte, live uit de agenda (zie abonneerRuimtes_),
+       en wat er in het formulier voor een nieuwe staat. */
+    this.ruimteAbos_ = new Map();
+    this.ruimteAfspraken_ = new Map();
+    this.ruimteDag_ = "";
+    this.boekForm_ = {};
     this.logoAnalyses_ = new Map();
     this.herkansing_ = new Herkansing(() => this.haal_());
     this.verbinding_ = new Verbindingswacht();
@@ -392,6 +423,7 @@ export class InfoschermBeheerCard extends DacCard {
       energy: typeof config.energy === "string" ? config.energy : "",
       lights: lijstVan(config.lights),
       climates: lijstVan(config.climates),
+      rooms: lijstVan(config.rooms),
       calendars: lijstVan(config.calendars),
       waste: lijstVan(config.waste),
       kiosk_users: lijstVan(config.kiosk_users),
@@ -419,6 +451,7 @@ export class InfoschermBeheerCard extends DacCard {
       afval: c.waste,
       verlichting: c.lights,
       klimaat: c.climates,
+      ruimtes: c.rooms,
       kiosk_gebruikers: c.kiosk_users,
     };
     // De lampen als VERZAMELING: hun volgorde is van de receptie (sinds
@@ -428,6 +461,7 @@ export class InfoschermBeheerCard extends DacCard {
       ...wens,
       verlichting: [...(c.lights ?? [])].sort(),
       klimaat: [...(c.climates ?? [])].sort(),
+      ruimtes: [...(c.rooms ?? [])].sort(),
     });
     const i = this.stand_.installatie ?? {};
     const nu = JSON.stringify({
@@ -437,6 +471,7 @@ export class InfoschermBeheerCard extends DacCard {
       afval: i.afval ?? [],
       verlichting: (i.verlichting ?? []).map((l) => l.entity).sort(),
       klimaat: (i.klimaat ?? []).map((a) => a.entity).sort(),
+      ruimtes: (i.ruimtes ?? []).map((r) => r.entity).sort(),
       kiosk_gebruikers: this.stand_.instellingen?.kiosk_gebruikers ?? [],
     });
     if (sleutel === nu || sleutel === this.laatstGesynct_) return;
@@ -507,6 +542,10 @@ export class InfoschermBeheerCard extends DacCard {
 
     // `open_` begint op null en verandert alleen door een klik (zie de kop).
     this.teardown_.push(() => this.abo_.stop());
+    this.teardown_.push(() => this.zegRuimtesOp_());
+    // Een beheer staat de hele dag open: na middernacht een nieuw venster.
+    const dag = setInterval(() => this.abonneerRuimtes_(), 10 * 60000);
+    this.teardown_.push(() => clearInterval(dag));
     this.haal_();
     this.abo_.start(this.hass);
   }
@@ -517,6 +556,7 @@ export class InfoschermBeheerCard extends DacCard {
     if (terug && this.built_) {
       this.haal_();
       this.abo_.start(hass);
+      for (const abo of this.ruimteAbos_.values()) abo.start(hass);
     }
   }
 
@@ -532,6 +572,9 @@ export class InfoschermBeheerCard extends DacCard {
       const r = await haalStand(this.hass);
       this.rechten_ = r;
       this.feedFouten_ = r.feed_fouten ?? {};
+      // De code staat niet in de stand (die gaat ook naar de iPad); het
+      // antwoord op `get` geeft hem alleen aan wie mag beheren.
+      if (!this.vuil_.has("code") && !this.bezig_.has("code")) this.werk_.code = r.ruimte_code ?? "";
       this.fout_ = null;
       this.herkansing_.herstel();
       this.nieuweStand_(r.stand, true);
@@ -558,6 +601,7 @@ export class InfoschermBeheerCard extends DacCard {
     const eerste = !this.stand_;
     this.stand_ = stand;
     this.sync_();
+    this.abonneerRuimtes_();
     const opnieuw = new Set();
     for (const s of SECTIES) {
       if (this.vuil_.has(s) || this.bezig_.has(s)) {
@@ -573,6 +617,45 @@ export class InfoschermBeheerCard extends DacCard {
     this.paintKader_();
     for (const key of opnieuw) this.teken_(key);
     return undefined;
+  }
+
+  /**
+   * Per ruimte een abonnement op de boekingen van vandaag tot twee weken
+   * vooruit. Een boeking op de iPad of in de agenda van Home Assistant staat
+   * er daarmee binnen een tel. Alleen voor wie mag beheren.
+   */
+  abonneerRuimtes_() {
+    const mag = this.rechten_.mag_beheren !== false;
+    const ruimtes = mag ? (this.stand_?.installatie?.ruimtes ?? []).map((r) => r.entity) : [];
+    const nu = new Date();
+    const dag = isoDatum(nu);
+    const nieuweDag = dag !== this.ruimteDag_;
+    this.ruimteDag_ = dag;
+    for (const [entity, abo] of [...this.ruimteAbos_]) {
+      if (nieuweDag || !ruimtes.includes(entity)) {
+        abo.stop();
+        this.ruimteAbos_.delete(entity);
+        if (!ruimtes.includes(entity)) this.ruimteAfspraken_.delete(entity);
+      }
+    }
+    if (!this.hass?.connection) return;
+    const van = dagBegin(nu);
+    const tot = plusDagen(van, DAGEN_VOORUIT);
+    for (const entity of ruimtes) {
+      if (this.ruimteAbos_.has(entity)) continue;
+      const abo = new AgendaAbonnement(entity, van, tot, (events) => {
+        if (this.ruimteAbos_.get(entity) !== abo) return;
+        if (events) this.ruimteAfspraken_.set(entity, afsprakenUit(events));
+        this.teken_("ruimtes");
+      });
+      this.ruimteAbos_.set(entity, abo);
+      abo.start(this.hass);
+    }
+  }
+
+  zegRuimtesOp_() {
+    for (const abo of this.ruimteAbos_.values()) abo.stop();
+    this.ruimteAbos_.clear();
   }
 
   /** De aanwezigheid van de iPad in de werkkopie en in de schakelaars, zonder hertekenen. */
@@ -659,6 +742,7 @@ export class InfoschermBeheerCard extends DacCard {
       indeling: () => this.htmlIndeling_(this.werk_.indeling),
       verlichting: () => this.htmlVerlichting_(this.werk_.installatie, this.werk_.instellingen),
       klimaat: () => this.htmlKlimaat_(this.werk_.installatie, this.werk_.instellingen),
+      ruimtes: () => this.htmlRuimtes_(this.werk_.installatie),
       instellingen: () => this.htmlInstellingen_(this.werk_.scherm, this.werk_.instellingen),
     }[blok]();
     const inhoud = sec.querySelector(".inhoud");
@@ -694,6 +778,10 @@ export class InfoschermBeheerCard extends DacCard {
         const uit = w.instellingen?.klimaat_tonen === false ? " · uit" : w.instellingen?.klimaat_bedienen === false ? " · alleen kijken" : "";
         return `${n === 1 ? "1 airco" : `${n} airco's`}${uit}`;
       },
+      ruimtes: () => {
+        const n = (w.installatie?.ruimtes ?? []).length;
+        return `${n === 1 ? "1 ruimte" : `${n} ruimtes`}${n && !w.code ? " · boeken op het scherm uit" : ""}`;
+      },
       instellingen: () => `${(w.instellingen?.feeds ?? []).length} nieuwsbron(nen)`,
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
@@ -707,7 +795,9 @@ export class InfoschermBeheerCard extends DacCard {
   htmlVoet_(blok) {
     const info = this.blokInfo_(blok);
     const fout = info.secties.map((s) => this.fouten_[s]).find(Boolean);
-    const m = this.meldingen_[blok];
+    // De melding van een boeking staat bij de knop Boeken (htmlRuimtes_):
+    // onderaan het blok, onder de lijst van ruimtes, zag je hem niet.
+    const m = blok === "ruimtes" ? null : this.meldingen_[blok];
     if (!fout && !m) return "";
     return `<div class="voet"><span class="melding ${fout || m?.fout ? "fout" : ""}">${at(fout ? `Niet opgeslagen: ${fout}` : m?.tekst)}</span></div>`;
   }
@@ -924,6 +1014,80 @@ export class InfoschermBeheerCard extends DacCard {
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen airco's gekozen.</div>`}</div>`;
   }
 
+  /**
+   * De ruimtes: een nieuwe boeking, wat er geboekt is, de code voor het
+   * scherm, en de namen en de volgorde (net als de lampen en de airco's).
+   */
+  htmlRuimtes_(inst = {}) {
+    const ruimtes = inst.ruimtes ?? [];
+    const naam = (r) => r.naam || this.hass?.states?.[r.entity]?.attributes?.friendly_name || r.entity;
+    const rijen = ruimtes
+      .map((r, i) => {
+        const a = this.hass?.states?.[r.entity]?.attributes ?? {};
+        return `<div class="item ruimte" data-i="${i}" data-lijst="ruimtes">
+          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
+          <div class="ent"><b>${at(a.friendly_name ?? r.entity)}</b><span>${at(r.entity)}</span></div>
+          ${this.veld_("Naam op het scherm", "r_naam", r.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+        </div>`;
+      })
+      .join("");
+    const namenEnVolgorde = `
+      <div class="sub">Ruimtes</div>
+      <div class="hulp">De namen zoals ze op het scherm staan (leeg = de naam uit Home Assistant); slepen aan de greep bepaalt de volgorde. Welke ruimtes er zijn kiest de installateur in de kaartinstellingen van DEZE kaart: per ruimte een agenda in Home Assistant, het liefst een Lokale agenda.</div>
+      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen ruimtes gekozen.</div>`}</div>`;
+    if (!ruimtes.length) return namenEnVolgorde;
+
+    const f = this.boekForm_;
+    if (!ruimtes.some((r) => r.entity === f.ruimte)) f.ruimte = ruimtes[0].entity;
+    if (!f.datum) f.datum = isoDatum(new Date());
+    const nu = new Date();
+    const dagen = perDag(
+      ruimtes.map((r) => ({ entity: r.entity, naam: naam(r), afspraken: this.ruimteAfspraken_.get(r.entity) ?? [] })),
+      nu
+    );
+    const geladen = ruimtes.every((r) => this.ruimteAfspraken_.has(r.entity));
+    const lijst = dagen.length
+      ? dagen
+          .map(
+            (d) => `<div class="r-dag">${at(d.label)}</div>${d.boekingen
+              .map(
+                (b) => `<div class="item boeking">
+                  <span class="r-tijd">${at(tijdTekst(b.afspraak))}</span>
+                  <span class="r-ruimte">${at(b.naam)}</span>
+                  <span class="r-titel">${at(b.afspraak.titel)}</span>
+                  <div class="knoppen">${
+                    b.afspraak.uid
+                      ? `<button class="knop ico gevaar" type="button" data-actie="r_vrij" data-ruimte="${at(b.entity)}" data-uid="${at(b.afspraak.uid)}" data-rid="${at(b.afspraak.recurrence_id ?? "")}" title="Vrijgeven">${resolve("minus")}</button>`
+                      : ""
+                  }</div>
+                </div>`
+              )
+              .join("")}`
+          )
+          .join("")
+      : `<div class="leeg">${geladen ? "De komende twee weken is er niets geboekt." : "De agenda's worden gelezen…"}</div>`;
+
+    return `
+      <div class="hulp">Wat hier geboekt wordt, staat in de agenda van die ruimte in Home Assistant. Op het scherm staat alleen of een ruimte vrij of bezet is en tot wanneer; de omschrijving komt er nooit op.</div>
+      <div class="sub">Nieuwe boeking</div>
+      ${this.keuze_("Ruimte", "ruimte", f.ruimte, ruimtes.map((r) => [r.entity, naam(r)]), { s: "boeken" })}
+      <div class="rij drie">
+        ${this.veld_("Datum", "datum", f.datum ?? "", { type: "date", s: "boeken" })}
+        ${this.veld_("Van", "van", f.van ?? "", { type: "time", s: "boeken" })}
+        ${this.veld_("Tot", "tot", f.tot ?? "", { type: "time", s: "boeken" })}
+      </div>
+      ${this.veld_("Omschrijving (niet op het scherm)", "omschrijving", f.omschrijving ?? "", { s: "boeken", extra: 'placeholder="Bijvoorbeeld: teamoverleg"' })}
+      <div class="voet"><button class="knop" type="button" data-actie="r_boek">${resolve("plus")}<span>Boeken</span></button>${
+        this.meldingen_.ruimtes ? `<span class="melding ${this.meldingen_.ruimtes.fout ? "fout" : "goed"}" role="status">${at(this.meldingen_.ruimtes.tekst)}</span>` : ""
+      }</div>
+      <div class="sub">Geboekt, de komende twee weken</div>
+      <div class="lijst">${lijst}</div>
+      <div class="sub">Boeken op het scherm</div>
+      ${this.veld_("Code", "code", this.werk_.code ?? "", { s: "code", extra: 'inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Bijvoorbeeld 4821"' })}
+      <div class="hulp">Met deze code kunnen medewerkers op de iPad zelf een ruimte boeken: op het scherm op Ruimtes tikken, dan op Boeken. Vier tot acht cijfers. Leeg = boeken op het scherm staat uit. De code staat nooit op het scherm zelf.</div>
+      ${namenEnVolgorde}`;
+  }
+
   htmlInstellingen_(s = {}, instellingen = {}) {
     const feeds = (instellingen.feeds ?? [])
       .map(
@@ -1052,6 +1216,12 @@ export class InfoschermBeheerCard extends DacCard {
     if (!veld) return undefined;
     const blok = el.closest(".blok")?.dataset.blok;
     if (!blok) return undefined;
+    // Het formulier voor een nieuwe boeking: alleen onthouden. Pas de knop
+    // Boeken stuurt het, en dan naar de agenda en niet naar de opslag.
+    if (el.dataset.s === "boeken") {
+      this.boekForm_[veld] = el.value;
+      return undefined;
+    }
     const info = this.blokInfo_(blok);
     const sectie = el.dataset.s || info.secties[0];
     const i = el.dataset.i;
@@ -1104,7 +1274,16 @@ export class InfoschermBeheerCard extends DacCard {
       } else if (veld === "k_naam") {
         const k = w.klimaat?.[Number(i)];
         if (k) k.naam = waarde;
+      } else if (veld === "r_naam") {
+        const r = w.ruimtes?.[Number(i)];
+        if (r) r.naam = waarde;
       }
+    } else if (sectie === "code") {
+      // Alleen cijfers, zoals de server ze wil. Wat er anders getypt wordt,
+      // verdwijnt meteen uit het veld in plaats van straks een fout te geven.
+      const code = String(waarde).replace(/[^0-9]/g, "").slice(0, 8);
+      if (el.value !== code) el.value = code;
+      this.werk_.code = code;
     } else if (sectie === "instellingen") {
       if (veld.startsWith("f_")) {
         const f = w.feeds[Number(i)];
@@ -1345,6 +1524,8 @@ export class InfoschermBeheerCard extends DacCard {
       groep.value = knop.dataset.waarde;
       return this.invoer_({ target: groep, type: "change" });
     }
+    if (actie === "r_boek") return this.boekRuimte_();
+    if (actie === "r_vrij") return this.geefVrij_(knop);
     const i = Number(knop.dataset.i);
     const info = this.blokInfo_(blok);
     const sectie = info?.secties[0];
@@ -1466,6 +1647,43 @@ export class InfoschermBeheerCard extends DacCard {
     this.teken_(blok, true);
   }
 
+  /* ------------------------------------------------------------ ruimtes */
+
+  /** Het formulier naar de agenda van de ruimte, via de server. */
+  async boekRuimte_() {
+    const f = this.boekForm_;
+    const nagekeken = controleerFormulier(f);
+    const meld = (tekst, fout = false) => {
+      this.meldingen_.ruimtes = { tekst, fout };
+      this.teken_("ruimtes", true);
+    };
+    if (nagekeken.fout) return meld(nagekeken.fout, true);
+    try {
+      await boekRuimte(this.hass, { ruimte: f.ruimte, start: nagekeken.start, eind: nagekeken.eind, omschrijving: (f.omschrijving ?? "").trim() });
+    } catch (fout) {
+      return meld(fout?.message ?? "Boeken lukte niet.", true);
+    }
+    const r = (this.werk_.installatie?.ruimtes ?? []).find((x) => x.entity === f.ruimte);
+    const naam = r?.naam || this.hass?.states?.[f.ruimte]?.attributes?.friendly_name || f.ruimte;
+    this.boekForm_ = { ruimte: f.ruimte, datum: f.datum };
+    return meld(`${naam} is geboekt, ${f.van} tot ${f.tot}.`);
+  }
+
+  async geefVrij_(knop) {
+    const { ruimte, uid, rid } = knop.dataset;
+    const rij = knop.closest(".item");
+    const wat = [...(rij?.querySelectorAll(".r-tijd, .r-ruimte") ?? [])].map((x) => x.textContent).join(", ");
+    const ja = await vraagBevestiging({ title: "Vrijgeven?", text: `De boeking ${wat} verdwijnt uit de agenda.`, confirmText: "Vrijgeven" });
+    if (!ja) return;
+    try {
+      await geefRuimteVrij(this.hass, { ruimte, uid, recurrence_id: rid || null });
+      this.meldingen_.ruimtes = { tekst: "Vrijgegeven.", fout: false };
+    } catch (fout) {
+      this.meldingen_.ruimtes = { tekst: fout?.message ?? "Vrijgeven lukte niet.", fout: true };
+    }
+    this.teken_("ruimtes", true);
+  }
+
   /* ------------------------------------------------------------ opslaan */
 
   /** Wat er naar de server gaat: zonder lege rijen en zonder werkvelden. */
@@ -1501,7 +1719,8 @@ export class InfoschermBeheerCard extends DacCard {
     this.bezig_.add(sectie);
     this.status_("Opslaan…", "bezig");
     try {
-      const r = await bewaar(this.hass, sectie, this.payload_(sectie));
+      // De code heeft een eigen commando: hij staat niet in de stand.
+      const r = sectie === "code" ? await zetRuimteCode(this.hass, this.werk_.code ?? "") : await bewaar(this.hass, sectie, this.payload_(sectie));
       const resultaat = r[sectie];
       this.koppel_(sectie, resultaat);
       if (this.stand_) this.stand_[sectie] = kloon(resultaat);
@@ -1587,6 +1806,7 @@ const LABELS = {
   energy: "Energiesensor (vermogen of tellerstand)",
   lights: "Lampen en schakelaars op het scherm",
   climates: "Airco's op het scherm",
+  rooms: "Ruimtes om te boeken (een agenda per ruimte)",
   calendars: "Agenda's (de afspraken van vandaag)",
   kiosk_users: "Kioskaccounts",
   show_personen: "Blok Medewerkers",
@@ -1596,6 +1816,7 @@ const LABELS = {
   show_indeling: "Blok Indeling",
   show_verlichting: "Blok Verlichting",
   show_klimaat: "Blok Klimaat",
+  show_ruimtes: "Blok Ruimtes",
   show_instellingen: "Blok Instellingen en logo",
 };
 
@@ -1606,6 +1827,8 @@ const HELPERS = {
   lights: "De namen en de volgorde op het scherm stelt de receptie in het blok Verlichting in; daar staat ook de schakelaar om ze te tonen. Een nieuwe lamp komt achteraan.",
   climates:
     "Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in.",
+  rooms:
+    "Per ruimte (spreekruimte, vergaderruimte) een agenda in Home Assistant: maak er een aan met Instellingen, Apparaten en diensten, Integratie toevoegen, Lokale agenda, en noem hem naar de ruimte. De boekingen staan in die agenda; op het scherm staat alleen vrij of bezet.",
   kiosk_users:
     "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen en airco's bedienen, en niets beheren. Alleen een beheerder ziet deze lijst.",
   show_instellingen:
@@ -1658,6 +1881,7 @@ export class InfoschermBeheerEditor extends DacEditor {
             energy: i.energie ?? "",
             lights: (i.verlichting ?? []).map((l) => l.entity),
             climates: (i.klimaat ?? []).map((a) => a.entity),
+            rooms: (i.ruimtes ?? []).map((r) => r.entity),
             calendars: i.agendas ?? [],
             kiosk_users: r.stand?.instellingen?.kiosk_gebruikers ?? [],
           };
@@ -1687,6 +1911,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       { name: "energy", selector: sel.entity("sensor") },
       { name: "lights", selector: { entity: { multiple: true, domain: ["light", "switch"] } } },
       { name: "climates", selector: { entity: { multiple: true, domain: "climate" } } },
+      { name: "rooms", selector: { entity: { multiple: true, domain: "calendar" } } },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
       { name: "waste", selector: { entity: { multiple: true, domain: "sensor" } } },
     ];

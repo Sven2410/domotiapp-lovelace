@@ -572,6 +572,15 @@ programmakaart en de vriezerkaart. Hij speelt de dump uit
 
 Op `kaart-test` staat een view `miele`.
 
+Sinds 16 oktober 2026 staan er twee **Lokale agenda's** als ruimtes:
+`calendar.spreekruimte` en `calendar.kleine_vergaderruimte` (aangemaakt met de
+config flow van `local_calendar`, dus in `.storage`). Ze staan als `rooms` in
+BEIDE beheerkaarten, om dezelfde reden als `kiosk_users`. De code om op het
+scherm te boeken is in de testinstance `4821`. Het blok Ruimtes staat op het
+scherm op 4,2 (2×2); het afvalblok is daarvoor een rij gezakt. De demo-agenda's
+`calendar.calendar_1` en `_2` nemen geen boekingen aan: goed om de uitleg
+"Kies een Lokale agenda" te zien.
+
 De wachtwoorden staan in `.ha-dev-config/INLOG.md`. Inloggen als een van hen
 gaat met `dev/inlog_als.py`, elk op een eigen origin
 (`http://receptie.localhost:8127`, `http://ipad.localhost:8127`): de tokens
@@ -1847,6 +1856,16 @@ die daar niet staan:
    onder een echt domein krijgt daarom een hoog nummer (de Dreame-nep staat op
    `9.0.0`). Gemeten op 15 oktober 2026 tegen HA 2026.8.
 
+73. **Een klik op een tijdveld (`<input type="time">`) landt op het uur- OF op
+   het minutendeel, en dan gaan je cijfers naar het verkeerde deel.** Op
+   16 oktober 2026 kwam "1500" in het veld Tot als `--:00` aan: de klik viel op
+   de minuten, het uur bleef leeg, en een onvolledige tijd geeft geen
+   `input`-gebeurtenis, dus de kaart wist van niets. Klik op de eerste tekens
+   van het veld (de linkerrand plus een paar pixels) en kijk na het typen of
+   `value` gevuld is. En zoek zo'n veld op met meer dan `data-veld`: het beheer
+   heeft ook in Mededelingen een veld `tot`, en `querySelector` gaf dat
+   verborgen veld (een rechthoek van nul) terug.
+
 ---
 
 ## Projectstand
@@ -1867,7 +1886,7 @@ met **dertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; zie `vriezer-logica.js`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
-| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
+| Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.73.0 ook **ruimtes boeken**, met een agenda per ruimte, zie SPEC 20.7 en `ruimtes-logica.js`; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
 
 De camerakaart is sinds 27 augustus 2026 de grootste van de familie: live beeld
