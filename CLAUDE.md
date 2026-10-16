@@ -1883,6 +1883,16 @@ die daar niet staan:
    Gemeten op 16 oktober 2026. Zet wat naast elkaar staat in één rij, en maak
    die rij het enige kind van het vak.
 
+75. **Het stijlblad van het infoscherm is één sjabloon van duizend regels, en
+   een klassenaam kies je zonder de rest te kennen.** In 0.73.0 kreeg het
+   boekscherm `.b-titel` (b van boeken), maar dat was al de titel van een
+   nieuwsbericht (b van bericht). De nieuwe regel stond later en won: de
+   nieuwskoppen werden 32 in plaats van 15 pixels, en een blok op vijf toonde
+   er drie. Twee uitgaven lang, en de eigenaar zag het eerder dan wij. Geef een
+   nieuw onderdeel een voorvoegsel dat nog nergens voorkomt (het boekscherm
+   heet nu `rb-`), en grep eerst. `tests/js/infoscherm-css.test.mjs` faalt
+   sindsdien op een losse klasse met twee eigen regels.
+
 ---
 
 ## Projectstand

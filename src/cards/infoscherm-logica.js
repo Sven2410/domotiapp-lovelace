@@ -518,6 +518,41 @@ export function pasLijst({ beschikbaar, hoogte, gap = 0, aantal, kolommen = 1, m
 export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
 
 /**
+ * Wat er rechts in de kop van een blok staat: de knop naar de pagina erachter.
+ *
+ * Tot 0.75.0 stond daar overal "Alles bekijken". Gemeld op 16 oktober 2026:
+ * *"nu zegt elk blok meer bekijken maar dat vind ik niet toepasselijk voor
+ * sommige blokken verander die namen"*. Elke tekst zegt nu wat je er vindt of
+ * kunt doen. Kort, want in een blok van twee breed staat er ook nog de naam en
+ * een teller naast; onder 250 pixels valt de tekst weg en blijft het pijltje.
+ */
+export const MEER = {
+  weer: "Verwachting",
+  mededeling: "Alles lezen",
+  aanwezig: "Aan- en afmelden",
+  nieuws: "Meer nieuws",
+  verlichting: "Bedienen",
+  agenda: "Hele dag",
+  verjaardagen: "Het hele jaar",
+  energie: "Overzicht",
+  afval: "Kalender",
+  klimaat: "Bedienen",
+  ruimtes: "Planning",
+  wifi: "Groot tonen",
+};
+
+/**
+ * De tekst voor dit blok bij deze stand. Twee bewegen mee: de ruimtes zeggen
+ * "Boeken" als er op het scherm geboekt kan worden, en het klimaat zegt
+ * "Bedienen" alleen als dat op het scherm mag.
+ */
+export function meerTekst(soort, stand) {
+  if (soort === "ruimtes" && stand?.boeken_op_scherm) return "Boeken";
+  if (soort === "klimaat" && !klimaatBedienbaar(stand)) return "Alle airco's";
+  return MEER[soort] ?? "Alles bekijken";
+}
+
+/**
  * Sinds ronde 4 is er geen kop meer boven het raster: het welkomblok
  * linksboven draagt logo, klok en welkomtekst. Gemeld op 10 september 2026:
  * *"ik heb nu bovenin loze ruimte; ik wil de klok naar links, dat links het

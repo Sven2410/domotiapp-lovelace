@@ -323,6 +323,8 @@ const css = /* css */ `
   .twee { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .drie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hulp { font-size: 12px; color: var(--dac-ink-3); line-height: 1.4; }
+  .hulp.stappen { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+  .hulp b { color: var(--dac-ink-2); }
   .feedfout { font-size: 12px; color: var(--dac-bad); }
   .sub { font-size: 13px; font-weight: 600; margin-top: 4px; }
 
@@ -898,7 +900,7 @@ export class InfoschermBeheerCard extends DacCard {
         </div>`
       )
       .join("");
-    return `<div class="hulp">Iedereen die op het scherm gefeliciteerd mag worden: medewerkers, vrijwilligers, bewoners. Het blok Verjaardagen op het welkomscherm toont wie er vandaag en binnenkort jarig is; "Alles bekijken" geeft het hele jaar.</div>
+    return `<div class="hulp">Iedereen die op het scherm gefeliciteerd mag worden: medewerkers, vrijwilligers, bewoners. Het blok Verjaardagen op het welkomscherm toont wie er vandaag en binnenkort jarig is; "Het hele jaar" in de kop geeft het hele jaar.</div>
       <div class="lijst">${rijen || `<div class="leeg">Nog geen verjaardagen.</div>`}</div>
       <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Verjaardag toevoegen</button></div>`;
   }
@@ -1048,7 +1050,18 @@ export class InfoschermBeheerCard extends DacCard {
       <div class="sub">Ruimtes</div>
       <div class="hulp">De namen zoals ze op het scherm staan (leeg = de naam uit Home Assistant); slepen aan de greep bepaalt de volgorde. Welke ruimtes er zijn kiest de installateur in de kaartinstellingen van DEZE kaart: per ruimte een agenda in Home Assistant, het liefst een Lokale agenda.</div>
       <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen ruimtes gekozen.</div>`}</div>`;
-    if (!ruimtes.length) return namenEnVolgorde;
+    // Nog geen ruimtes: zeggen hoe, stap voor stap. Gemeld op 16 oktober 2026:
+    // de keuzelijst in de kaarteditor zei "Geen items beschikbaar", want er
+    // was nog geen enkele agenda, en dan staat ook Agenda niet in de zijbalk.
+    if (!ruimtes.length) {
+      return `
+        <div class="hulp">Een ruimte is een agenda in Home Assistant. Zo zet je ze erop (als beheerder):</div>
+        <ol class="hulp stappen">
+          <li>Instellingen, Apparaten en diensten, Integratie toevoegen, <b>Lokale agenda</b>. Geef hem de naam van de ruimte, bijvoorbeeld Spreekruimte. Herhaal dat per ruimte. Daarna staat Agenda ook in de zijbalk.</li>
+          <li>Open de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart) en kies de agenda's bij <b>Ruimtes om te boeken</b>.</li>
+          <li>Hier verschijnen dan de ruimtes, en kun je een code instellen om op de iPad te boeken. Op het scherm komt het blok met Indeling, Blok toevoegen, Ruimtes.</li>
+        </ol>`;
+    }
 
     const f = this.boekForm_;
     if (!ruimtes.some((r) => r.entity === f.ruimte)) f.ruimte = ruimtes[0].entity;
