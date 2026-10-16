@@ -457,7 +457,10 @@ export function laatsteBeurt(reeksen, rollen, opties = null) {
   return {
     start: new Date(start),
     eind: new Date(eind),
-    minuten: Math.max(0, Math.round((eind - start) / 60_000)),
+    // Het verschil tussen de klokken op de statusregel, niet de seconden
+    // afgerond: 12:48:07 tot 13:09:42 is "12:48 – 13:09", en dan hoort er
+    // 21 min te staan en geen 22 (gemeld door beheer, 16 oktober 2026).
+    minuten: Math.max(0, Math.floor(eind / 60_000) - Math.floor(start / 60_000)),
     programma: laatste("programma", tekst),
     energie: num(laatste("energie", isGetal)),
     water: num(laatste("water", isGetal)),

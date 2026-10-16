@@ -20,6 +20,11 @@
  *
  * De toetsen kappen de dag af op een moment dat de machine uit stond, en
  * kijken of de kaart dan die beurt vindt.
+ *
+ * Sinds 0.78.1 is de duur het verschil tussen de klokken op de statusregel.
+ * Bij de klant stond er "12:48 – 13:09" boven "22 min" (de seconden
+ * afgerond). Daardoor zijn de derde beurt van allebei een minuut korter dan in
+ * 0.78.0; de toets daarvoor staat onderaan.
  */
 
 import assert from "node:assert/strict";
@@ -113,7 +118,7 @@ describe("de laatste beurt van de wasmachine", () => {
     assert.deepEqual(beurt(WAS, "17:30"), {
       van: "12:48",
       tot: "13:09",
-      min: 22,
+      min: 21,
       programma: "express_20",
       energie: 0.2,
       water: 17,
@@ -133,7 +138,7 @@ describe("de laatste beurt van de droger", () => {
   it("de eerste, de tweede (zonder klaarzetten) en de derde", () => {
     assert.deepEqual(beurt(DROOG, "11:40"), { van: "10:25", tot: "11:27", min: 62, programma: "cottons", energie: 0.4, water: null, temperatuur: null, droogtegraad: "normal" });
     assert.deepEqual(beurt(DROOG, "12:24:30"), { van: "11:50", tot: "12:17", min: 27, programma: "cottons", energie: 0.1, water: null, temperatuur: null, droogtegraad: "normal" });
-    assert.deepEqual(beurt(DROOG, "17:30"), { van: "12:25", tot: "12:50", min: 26, programma: "cottons", energie: 0.2, water: null, temperatuur: null, droogtegraad: "extra_dry" });
+    assert.deepEqual(beurt(DROOG, "17:30"), { van: "12:25", tot: "12:50", min: 25, programma: "cottons", energie: 0.2, water: null, temperatuur: null, droogtegraad: "extra_dry" });
   });
 });
 
@@ -183,7 +188,7 @@ describe("de woorden en de tegels", () => {
     assert.deepEqual(
       tegels.map((t) => `${t.label}: ${t.waarde}`),
       // Deur en TwinDos uit de toestand van NU (de oudere dump: open, 95 en 100).
-      ["Deur: Open", "Programma: Express 20", "Temperatuur: 40 °C", "Duur: 22 min", "Energie: 0,2 kWh", "Water: 17 L", "TwinDos 1: 95%", "TwinDos 2: 100%"]
+      ["Deur: Open", "Programma: Express 20", "Temperatuur: 40 °C", "Duur: 21 min", "Energie: 0,2 kWh", "Water: 17 L", "TwinDos 1: 95%", "TwinDos 2: 100%"]
     );
     assert.equal(tegels.length, P.programmaTegels({ rollen: r, st, fmt }).length);
   });
@@ -194,7 +199,7 @@ describe("de woorden en de tegels", () => {
     const tegels = P.beurtTegels({ rollen: { ...r, status: "sensor.wasdroger" }, beurt: b, st, fmt });
     assert.deepEqual(
       tegels.map((t) => `${t.label}: ${t.waarde}`),
-      ["Deur: Dicht", "Programma: Katoen", "Droogtegraad: Extra droog", "Duur: 26 min", "Energie: 0,2 kWh"]
+      ["Deur: Dicht", "Programma: Katoen", "Droogtegraad: Extra droog", "Duur: 25 min", "Energie: 0,2 kWh"]
     );
     assert.equal(tegels.length, P.programmaTegels({ rollen: r, st, fmt }).length);
   });
@@ -226,5 +231,37 @@ describe("alleen uitlezen", () => {
     assert.deepEqual(V.editorVelden({ coach: false, entiteiten: {}, apparaat, alleenLezen: true }).zichtbaar, ["status", "door"]);
     const metCoach = V.editorVelden({ coach: true, entiteiten: { start: "button.x", stop: "button.y" }, apparaat: [], alleenLezen: true });
     assert.ok(![...metCoach.zichtbaar, ...metCoach.afwijken].some((v) => ["program", "start", "pause", "stop", "smart"].includes(v)));
+  });
+});
+
+describe("NIEUW GEDRAG (0.78.1): de duur is het verschil tussen de klokken op de statusregel", () => {
+  const klokMinuten = (k) => Number(k.slice(0, 2)) * 60 + Number(k.slice(3));
+
+  it("bij alle zes de beurten van de dump", () => {
+    const zes = [
+      beurt(WAS, "10:20"),
+      beurt(WAS, "12:20"),
+      beurt(WAS, "17:30"),
+      beurt(DROOG, "11:40"),
+      beurt(DROOG, "12:24:30"),
+      beurt(DROOG, "17:30"),
+    ];
+    for (const b of zes) assert.equal(b.min, klokMinuten(b.tot) - klokMinuten(b.van), `${b.van} – ${b.tot}`);
+  });
+
+  it("12:48:07 tot 13:09:42 is 21 min, ook al is dat 21,6 minuut", () => {
+    // Lokale tijd, zoals de statusregel hem toont: dan klopt het in elke tijdzone (ook in CI).
+    const t = (u, m, s) => new Date(2026, 9, 16, u, m, s).getTime();
+    const r = { "sensor.w": [{ s: "off", t: t(12, 0, 0) }, { s: "in_use", t: t(12, 48, 7) }, { s: "program_ended", t: t(13, 9, 42) }, { s: "off", t: t(13, 20, 0) }] };
+    const b = P.laatsteBeurt(r, { status: "sensor.w" }, OPTIES);
+    assert.equal(P.beurtWanneer(b, new Date(b.start.getTime() + 3_600_000)), "vandaag 12:48 – 13:09");
+    assert.equal(b.minuten, 21);
+  });
+
+  it("over een minuutgrens heen is minstens 1 min, binnen één minuut 0", () => {
+    const t = (k) => Date.parse(`2026-10-16T${k}+02:00`);
+    const loop = (van, tot_) => P.laatsteBeurt({ "sensor.w": [{ s: "in_use", t: t(van) }, { s: "off", t: t(tot_) }] }, { status: "sensor.w" }, OPTIES);
+    assert.equal(loop("17:49:50", "17:50:15").minuten, 1);
+    assert.equal(loop("17:49:05", "17:49:55").minuten, 0);
   });
 });
