@@ -2624,8 +2624,12 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
   met blokken (welkom, weer, energie, mededelingen, openingstijden, aanwezig,
   nieuws, verlichting, agenda, verjaardagen, afval, klimaat, ruimtes, wifi) op de plek en maat uit
   `indeling`. Een blok waar niets in te tonen valt staat niet op het scherm.
-  Een blok met een pagina erachter heeft een kop die een knop is ("Alles
-  bekijken"); de pagina heeft een terugknop. Aanwezig en afwezig staan op de
+  Een blok met een pagina erachter heeft een kop die een knop is, met een
+  tekst die zegt wat je erachter vindt of kunt doen ("Meer nieuws",
+  "Bedienen", "Aan- en afmelden", "Boeken"; `MEER` en `meerTekst` in
+  `infoscherm-logica.js`). Tot 0.75.0 was dat overal "Alles bekijken"; de
+  eigenaar vroeg het te veranderen op 16 oktober 2026. De pagina heeft een
+  terugknop. Aanwezig en afwezig staan op de
   pagina gescheiden naast elkaar (of per functie naast elkaar, of als één
   lijst; de receptie kiest). In de indeling ruilen twee blokken van dezelfde
   maat van plek als het ene op het andere wordt losgelaten.

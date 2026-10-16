@@ -24,9 +24,9 @@
  *
  * Het welkomscherm is een raster van zes bij zes waarin de receptie blokken
  * sleept (beheer, blok Indeling). Elk blok heeft een kop, en een kop waar een
- * pagina achter zit is een knop met "Alles bekijken" erin: tik erop en je
- * staat op de volledige lijst, met een terugknop. Na de terugvaltijd staat het
- * scherm vanzelf weer op Welkom.
+ * pagina achter zit is een knop met een tekst als "Meer nieuws" erin (zie
+ * MEER in de logica): tik erop en je staat op de volledige lijst, met een
+ * terugknop. Na de terugvaltijd staat het scherm vanzelf weer op Welkom.
  *
  * DE EERSTE KAART BUITEN HET RASTER
  *
@@ -104,6 +104,7 @@ import {
   isoDatumTijd,
   klimaatBedienbaar,
   klok,
+  meerTekst,
   komendeMededelingen,
   komendeVerjaardagen,
   lijnPad,
@@ -317,7 +318,7 @@ const css = /* css */ `
   .bk .bk-titel { font-size: calc(16px * var(--s)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bk .bk-sub { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); white-space: nowrap; }
   /* Een kop met een pagina erachter is een knop, en dat moet je zien: de
-     titel in het accent en rechts een pil "Alles bekijken" met een pijl. */
+     titel in het accent en rechts een pil met een pijl ("Meer nieuws", "Bedienen"; zie meerTekst). */
   .bk[data-pagina] { cursor: pointer; }
   .bk[data-pagina] .bk-ico, .bk[data-pagina] .bk-titel { color: var(--tone); }
   .bk-meer {
@@ -988,12 +989,18 @@ const css = /* css */ `
 
   /* Een ruimte boeken: links wanneer en hoe lang, rechts de code. Een eigen
      cijferblok en geen invoerveld, want een invoerveld haalt op een iPad het
-     toetsenbord tevoorschijn, over de helft van het scherm. */
+     toetsenbord tevoorschijn, over de helft van het scherm.
+
+     Alles hier heet rb- (ruimte boeken). Tot 0.75.0 was dat b-, en .b-titel is
+     ook de titel van een nieuwsbericht: deze regel stond later en won, en de
+     nieuwskoppen werden 32 in plaats van 15 pixels. Gemeld op 16 oktober
+     2026 met een schermafdruk: drie berichten in een blok dat op vijf stond.
+     tests/js/infoscherm-css.test.mjs bewaakt het nu. */
   .boek { padding: calc(28px * var(--s)) calc(36px * var(--s)); flex-direction: column; gap: calc(18px * var(--s)); }
-  .b-inhoud { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: calc(40px * var(--s)); flex: 1 1 auto; min-height: 0; }
-  .b-links, .b-rechts { display: flex; flex-direction: column; gap: calc(12px * var(--s)); min-width: 0; }
-  .b-titel { font-size: calc(32px * var(--s)); font-weight: 600; line-height: 1.15; }
-  .b-status { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); margin-bottom: calc(8px * var(--s)); }
+  .rb-inhoud { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: calc(40px * var(--s)); flex: 1 1 auto; min-height: 0; }
+  .rb-links, .rb-rechts { display: flex; flex-direction: column; gap: calc(12px * var(--s)); min-width: 0; }
+  .rb-titel { font-size: calc(32px * var(--s)); font-weight: 600; line-height: 1.15; }
+  .rb-status { font-size: calc(16px * var(--s)); color: var(--dac-ink-2); margin-bottom: calc(8px * var(--s)); }
   .boek .eyebrow { margin-top: calc(8px * var(--s)); }
   .boek button {
     font: inherit; color: var(--dac-ink); cursor: pointer; -webkit-appearance: none; appearance: none;
@@ -1001,30 +1008,30 @@ const css = /* css */ `
   }
   .boek button:active { background: var(--dac-surface-hi); }
   .boek button:disabled { opacity: 0.35; cursor: default; }
-  .b-stel { display: flex; align-items: center; gap: calc(14px * var(--s)); }
-  .b-stel button { width: calc(64px * var(--s)); height: calc(64px * var(--s)); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
-  .b-stel button .icon { font-size: calc(28px * var(--s)); }
-  .b-waarde { font-size: calc(40px * var(--s)); font-weight: 300; font-variant-numeric: tabular-nums; min-width: calc(130px * var(--s)); text-align: center; }
-  .b-duren { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
-  .b-duren button { min-height: calc(58px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(17px * var(--s)); font-weight: 500; }
-  .boek .b-duren button[aria-pressed="true"] {
+  .rb-stel { display: flex; align-items: center; gap: calc(14px * var(--s)); }
+  .rb-stel button { width: calc(64px * var(--s)); height: calc(64px * var(--s)); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .rb-stel button .icon { font-size: calc(28px * var(--s)); }
+  .rb-waarde { font-size: calc(40px * var(--s)); font-weight: 300; font-variant-numeric: tabular-nums; min-width: calc(130px * var(--s)); text-align: center; }
+  .rb-duren { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
+  .rb-duren button { min-height: calc(58px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(17px * var(--s)); font-weight: 500; }
+  .boek .rb-duren button[aria-pressed="true"] {
     color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); border-color: color-mix(in srgb, var(--tone) 42%, transparent);
   }
-  .b-samen { font-size: calc(18px * var(--s)); color: var(--dac-ink-2); min-height: 1.4em; }
-  .b-stippen { display: flex; gap: calc(12px * var(--s)); min-height: calc(20px * var(--s)); align-items: center; }
-  .b-stippen span { width: calc(18px * var(--s)); height: calc(18px * var(--s)); border-radius: 50%; border: 2px solid var(--dac-border-hi); box-sizing: border-box; }
-  .b-stippen span.vol { background: var(--dac-ink); border-color: var(--dac-ink); }
-  .b-toetsen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
-  .b-toetsen button { height: calc(64px * var(--s)); border-radius: var(--dac-radius-sm); font-size: calc(26px * var(--s)); font-variant-numeric: tabular-nums; }
-  .b-toetsen button .icon { font-size: calc(26px * var(--s)); margin: auto; }
-  .boek .b-bevestig {
+  .rb-samen { font-size: calc(18px * var(--s)); color: var(--dac-ink-2); min-height: 1.4em; }
+  .rb-stippen { display: flex; gap: calc(12px * var(--s)); min-height: calc(20px * var(--s)); align-items: center; }
+  .rb-stippen span { width: calc(18px * var(--s)); height: calc(18px * var(--s)); border-radius: 50%; border: 2px solid var(--dac-border-hi); box-sizing: border-box; }
+  .rb-stippen span.vol { background: var(--dac-ink); border-color: var(--dac-ink); }
+  .rb-toetsen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
+  .rb-toetsen button { height: calc(64px * var(--s)); border-radius: var(--dac-radius-sm); font-size: calc(26px * var(--s)); font-variant-numeric: tabular-nums; }
+  .rb-toetsen button .icon { font-size: calc(26px * var(--s)); margin: auto; }
+  .boek .rb-bevestig {
     height: calc(64px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(19px * var(--s)); font-weight: 600;
     color: var(--dac-on-accent); background: var(--tone); border-color: var(--tone);
   }
-  .b-fout { font-size: calc(16px * var(--s)); color: var(--dac-bad); min-height: 1.4em; }
-  .b-klaar { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(16px * var(--s)); flex: 1 1 auto; text-align: center; }
-  .b-klaar .chip { --tone: var(--dac-good); width: calc(84px * var(--s)); height: calc(84px * var(--s)); font-size: calc(44px * var(--s)); }
-  .b-klaar .b-titel { max-width: 80%; }
+  .rb-fout { font-size: calc(16px * var(--s)); color: var(--dac-bad); min-height: 1.4em; }
+  .rb-klaar { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(16px * var(--s)); flex: 1 1 auto; text-align: center; }
+  .rb-klaar .chip { --tone: var(--dac-good); width: calc(84px * var(--s)); height: calc(84px * var(--s)); font-size: calc(44px * var(--s)); }
+  .rb-klaar .rb-titel { max-width: 80%; }
 
   .merkje {
     position: absolute; top: calc(10px * var(--s)); right: calc(14px * var(--s)); display: none; align-items: center; gap: calc(6px * var(--s));
@@ -2551,7 +2558,7 @@ export class InfoschermCard extends DacCard {
     if (info.pagina) {
       return `<button class="bk" type="button" data-pagina="${info.pagina}">
         <span class="bk-ico">${icoon(info.icoon)}</span><span class="bk-titel">${info.naam}</span><span class="bk-sub"></span>
-        <span class="bk-meer"><span class="txt">Alles bekijken</span>${resolve("chevronRight")}</span>
+        <span class="bk-meer"><span class="txt">${escapeHtml(meerTekst(soort, this.stand_))}</span>${resolve("chevronRight")}</span>
       </button>`;
     }
     return `<div class="bk"><span class="bk-ico">${icoon(info.icoon)}</span><span class="bk-titel">${info.naam}</span><span class="bk-sub"></span></div>`;
@@ -2560,6 +2567,10 @@ export class InfoschermCard extends DacCard {
   paintBlok_(el, blok) {
     const bi = el.querySelector(".bi");
     const sub = el.querySelector(".bk-sub");
+    // De kop wordt één keer gebouwd; de tekst van de knop kan met de stand
+    // veranderen (zie meerTekst).
+    const meer = el.querySelector(".bk-meer .txt");
+    if (meer) this.text(meer, meerTekst(blok.soort, this.stand_));
     const zet = (html, tekst = "") => {
       this.vul_(bi, html);
       if (sub) {
@@ -3250,10 +3261,10 @@ export class InfoschermCard extends DacCard {
     const { naam, tekst } = this.ruimteNu_(r, nu);
     const sluit = `<button class="sluit" type="button" data-b="sluit">${ICOON.back}<span>${b.klaar ? "Klaar" : "Annuleren"}</span></button>`;
     if (b.klaar) {
-      laag.innerHTML = `${sluit}<div class="b-klaar">
+      laag.innerHTML = `${sluit}<div class="rb-klaar">
         <div class="chip">${resolve("check")}</div>
-        <div class="b-titel">${escapeHtml(naam)} is geboekt</div>
-        <div class="b-status">${escapeHtml(b.klaar)}</div>
+        <div class="rb-titel">${escapeHtml(naam)} is geboekt</div>
+        <div class="rb-status">${escapeHtml(b.klaar)}</div>
       </div>`;
       return;
     }
@@ -3272,37 +3283,37 @@ export class InfoschermCard extends DacCard {
     const toets = (c) => `<button type="button" data-b="cijfer" data-cijfer="${c}" aria-label="${c}">${c}</button>`;
     const kan = Boolean(gekozen) && b.code.length >= 4 && !b.bezig;
     laag.innerHTML = `${sluit}
-      <div class="b-inhoud">
-        <div class="b-links">
+      <div class="rb-inhoud">
+        <div class="rb-links">
           <div class="eyebrow">Ruimte boeken</div>
-          <div class="b-titel">${escapeHtml(naam)}</div>
-          <div class="b-status">${escapeHtml(tekst)}</div>
+          <div class="rb-titel">${escapeHtml(naam)}</div>
+          <div class="rb-status">${escapeHtml(tekst)}</div>
           <div class="eyebrow">Vanaf</div>
-          <div class="b-stel">
+          <div class="rb-stel">
             <button type="button" data-b="eerder" aria-label="Eerder"${i === 0 ? " disabled" : ""}>${resolve("minus")}</button>
-            <div class="b-waarde">${escapeHtml(keuzes[i].label)}</div>
+            <div class="rb-waarde">${escapeHtml(keuzes[i].label)}</div>
             <button type="button" data-b="later" aria-label="Later"${i >= keuzes.length - 1 ? " disabled" : ""}>${resolve("plus")}</button>
           </div>
           <div class="eyebrow">Hoe lang</div>
-          <div class="b-duren">${duren
+          <div class="rb-duren">${duren
             .map(
               (d) =>
                 `<button type="button" data-b="duur" data-min="${d.minuten}" aria-pressed="${d.minuten === b.minuten && d.kan}"${d.kan ? "" : " disabled"}>${escapeHtml(d.label)}</button>`
             )
             .join("")}</div>
-          <div class="b-samen">${escapeHtml(samen)}</div>
+          <div class="rb-samen">${escapeHtml(samen)}</div>
         </div>
-        <div class="b-rechts">
+        <div class="rb-rechts">
           <div class="eyebrow">Code</div>
-          <div class="b-stippen" aria-label="${b.code.length} cijfers">${stippen}</div>
-          <div class="b-toetsen">
+          <div class="rb-stippen" aria-label="${b.code.length} cijfers">${stippen}</div>
+          <div class="rb-toetsen">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(toets).join("")}
             <button type="button" data-b="wis" aria-label="Wissen"${b.code ? "" : " disabled"}>${ICOON.back}</button>
             ${toets(0)}
             <span></span>
           </div>
-          <button type="button" class="b-bevestig" data-b="boek"${kan ? "" : " disabled"}>${b.bezig ? "Bezig…" : "Boeken"}</button>
-          <div class="b-fout" role="alert">${escapeHtml(b.fout)}</div>
+          <button type="button" class="rb-bevestig" data-b="boek"${kan ? "" : " disabled"}>${b.bezig ? "Bezig…" : "Boeken"}</button>
+          <div class="rb-fout" role="alert">${escapeHtml(b.fout)}</div>
         </div>
       </div>`;
   }
