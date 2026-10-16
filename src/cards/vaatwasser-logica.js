@@ -454,10 +454,11 @@ export function metCoachVelden(config, entiteiten) {
  * (`apparaat`, zie programma-logica.js). Wat er dan nog staat is wat je zelf
  * kiest.
  *
- * Sinds 0.78.0 heeft een wasmachine of droger geen knoppen meer
+ * Sinds 0.78.0 heeft een wasmachine of droger geen eigen knoppen meer
  * (`alleenLezen`, zie ALLEEN_LEZEN in programma-logica.js): dan staan de
  * velden voor programmakeuze, start, pauze, stop en slimme sturing er ook
- * niet. Een veld dat niets doet hoort niet in de editor.
+ * niet. Een veld dat niets doet hoort niet in de editor. De knoppen van de
+ * coach (sinds 0.79.0, als hij hem mag sturen) hebben geen veld.
  *
  * @param {object} p
  * @param {boolean} p.coach het vinkje
@@ -523,14 +524,19 @@ export function statusUitCoach(coach) {
  * levert, krijgt geen knop die niets doet. Zolang hij draait is er niets vrij
  * te geven; dan blijft alleen Handmatig over (en dat is de kaart zelf).
  *
+ * Een knop die niet BESCHIKBAAR is staat er sinds 0.79.0 ook niet. De coach
+ * zet ze daarop (sinds v0.127.0) als hij het apparaat alleen uitleest. Dat
+ * geldt voor elk apparaat met een programma, dus ook voor een vaatwasser.
+ *
  * @param {object} p
  * @param {ReturnType<typeof coachStand>} p.coach
  * @param {Record<string, string>} p.rollen uit `coachRollen()`
  * @param {boolean} [p.loopt] draait hij volgens de statussensor?
  * @param {Date} [p.nu]
+ * @param {(entityId: string) => boolean} [p.beschikbaar] is die knop te drukken? (de kaart geeft `knopKan` mee)
  * @returns {{rol: string, entity: string, label: string, kort: string, aria: string, aan: boolean}[]}
  */
-export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) {
+export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date(), beschikbaar = () => true }) {
   if (!coach || loopt || coach.stand === "draait") return [];
   const kort = !coach.type || coach.type === "vaatwasser" ? "Ingeruimd" : "Mag draaien";
   const knoppen = [];
@@ -566,7 +572,9 @@ export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date() }) 
 
   // Het korte woord voor een heel smalle kaart: "Morgen starten" wordt
   // "Morgen", "Nu starten" wordt "Nu". De rest is al kort.
-  return knoppen.filter((k) => k.entity).map((k) => ({ ...k, kort: k.label.replace(/ starten$/, "") }));
+  return knoppen
+    .filter((k) => k.entity && beschikbaar(k.entity))
+    .map((k) => ({ ...k, kort: k.label.replace(/ starten$/, "") }));
 }
 
 /**

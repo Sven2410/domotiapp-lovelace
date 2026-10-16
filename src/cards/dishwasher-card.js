@@ -59,11 +59,14 @@
  *
  * ALLEEN UITLEZEN, EN DE LAATSTE BEURT (sinds 0.78.0)
  *
- * Een wasmachine en een droger hebben geen knoppen meer, ook niet die van de
- * coach: *"wasmachines en drogers moeten alleen read only en info kaarten
- * zijn"*. Staat hij uit, dan tonen de tegels de laatste beurt, uit de recorder
- * (`laatsteBeurt` in programma-logica.js); zodra hij aangaat weer de live
- * gegevens. De vaatwasser blijft zoals hij was.
+ * Een wasmachine en een droger hebben geen eigen knoppen meer: *"wasmachines
+ * en drogers moeten alleen read only en info kaarten zijn"*. Staat hij uit,
+ * dan tonen de tegels de laatste beurt, uit de recorder (`laatsteBeurt` in
+ * programma-logica.js); zodra hij aangaat weer de live gegevens. De
+ * vaatwasser blijft zoals hij was.
+ *
+ * Sinds 0.79.0 staan de knoppen van de COACH er wel, als de coach hem mag
+ * sturen (`welkeKnoppen` in programma-logica.js).
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -100,6 +103,7 @@ import {
   startUitDuur,
   veldenVanApparaat,
   voortgangUitTijden,
+  welkeKnoppen,
 } from "./programma-logica.js";
 import { keuzeNaam } from "./programmanaam.js";
 import {
@@ -464,10 +468,16 @@ class DishwasherCard extends DacCard {
   watched() {
     const c = this.velden_();
     const r = this.rollen_(c.status);
+    const k = this.coach_()?.rollen ?? {};
     return [
       c.status,
       c.remaining,
       this.startSensor_(),
+      // De knoppen van de coach: sinds 0.79.0 staan ze er alleen als ze
+      // beschikbaar zijn, en dat verandert als het vinkje "mag sturen" omgaat.
+      k.ingeruimd_morgen,
+      k.ingeruimd_nu,
+      k.vrijgave_intrekken,
       c.progress,
       c.program,
       c.door,
@@ -924,7 +934,7 @@ class DishwasherCard extends DacCard {
       }
     }
 
-    this.paintBediening_(c, startSt, coach, loopt, alleenLezen);
+    this.paintBediening_(c, startSt, coach, loopt, welkeKnoppen(soortNaam, startSt));
     meetRaster(this.$(".card"));
   }
 
@@ -933,11 +943,15 @@ class DishwasherCard extends DacCard {
    * @param {object|null} startSt de startsensor (van de coach)
    * @param {object|null} coach uit `coachStand()`, of null zonder coach
    * @param {boolean} loopt draait hij volgens de statussensor?
-   * @param {boolean} alleenLezen een wasmachine of droger: geen enkele knop
+   * @param {{eigen: boolean, coach: boolean}} mag uit `welkeKnoppen`: bij een
+   *   wasmachine of droger geen eigen knoppen, en die van de coach alleen als
+   *   die hem mag sturen
    */
-  paintBediening_(c, startSt, coach, loopt, alleenLezen = false) {
-    if (alleenLezen) {
-      for (const s of [".bediening", ".rij.programma", ".rij.knoppen", ".rij.coach", ".coachhint"]) this.$(s).hidden = true;
+  paintBediening_(c, startSt, coach, loopt, mag = { eigen: true, coach: true }) {
+    if (!mag.eigen) {
+      for (const s of [".bediening", ".rij.programma", ".rij.knoppen"]) this.$(s).hidden = true;
+      if (mag.coach) this.paintCoach_(startSt, coach, loopt, false);
+      else for (const s of [".rij.coach", ".coachhint"]) this.$(s).hidden = true;
       return;
     }
     const metCoach = Boolean(this.config.coach);
@@ -1013,7 +1027,8 @@ class DishwasherCard extends DacCard {
     }
 
     const melding = coachMelding(info.keuze, contractVan(startSt));
-    const knoppen = melding ? [] : coachKnoppen({ coach, rollen: info.rollen, loopt });
+    const beschikbaar = (id) => knopKan(stateOf(this.hass, id));
+    const knoppen = melding ? [] : coachKnoppen({ coach, rollen: info.rollen, loopt, beschikbaar });
     this.text(".coachhint", melding);
     hint.hidden = !melding;
 
@@ -1114,7 +1129,7 @@ class DishwasherEditor extends DacEditor {
     return SOORTEN[apparaatSoort(this.apparaat_())];
   }
 
-  /** Een wasmachine of droger: geen knoppen, dus ook geen velden ervoor. */
+  /** Een wasmachine of droger: geen eigen knoppen, dus ook geen velden ervoor. */
   alleenLezen_() {
     return ALLEEN_LEZEN.has(apparaatSoort(this.apparaat_()));
   }
@@ -1213,7 +1228,7 @@ class DishwasherEditor extends DacEditor {
   helper(s) {
     const uitleg = {
       coach: this.alleenLezen_()
-        ? "Leest bij de coach wanneer hij gaat starten. Op een wasmachine of droger staan geen knoppen, ook niet die van de coach."
+        ? "Leest bij de coach wanneer hij gaat starten. Mag de coach hem sturen (het vinkje bij de coach), dan staan zijn knoppen erbij: Mag draaien en Nu starten. De eigen knoppen van de machine staan op een wasmachine of droger niet op de kaart."
         : "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer.",
       coach_device: "Leeg laten: de vaatwasser van de coach, als er precies één is.",
       afwijken:
@@ -1222,7 +1237,7 @@ class DishwasherEditor extends DacEditor {
       model: "Het type bepaalt de productfoto.",
       pause: "Een knop die het programma pauzeert. Staat alleen op de kaart als hij te drukken is.",
       status:
-        "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, TwinDos, verbruik en de geplande start, en bij een vaatwasser start, pauze en stop. Een wasmachine of droger heeft geen knoppen, en toont als hij uit staat de laatste beurt.",
+        "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, TwinDos, verbruik en de geplande start, en bij een vaatwasser start, pauze en stop. Een wasmachine of droger heeft geen eigen knoppen, en toont als hij uit staat de laatste beurt.",
       remaining:
         "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
       progress:
