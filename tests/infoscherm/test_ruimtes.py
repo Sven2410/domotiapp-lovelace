@@ -126,7 +126,10 @@ async def kiosk_op(hass, store, hass_ws_client, gebruiker, token):
 
 def test_een_ruimte_is_een_agenda_met_een_naam_en_dubbel_valt_weg() -> None:
     i = valideer_installatie({"ruimtes": [{"entity": SPREEK, "naam": "Spreekkamer"}, VERGADER, SPREEK]})
-    assert i["ruimtes"] == [{"entity": SPREEK, "naam": "Spreekkamer"}, {"entity": VERGADER, "naam": ""}]
+    assert i["ruimtes"] == [
+        {"entity": SPREEK, "naam": "Spreekkamer", "gemaakt": False},
+        {"entity": VERGADER, "naam": "", "gemaakt": False},
+    ]
 
 
 @pytest.mark.parametrize("fout", ["light.lamp", "sensor.spreekruimte", "climate.spreekruimte"])
@@ -185,14 +188,14 @@ async def test_de_receptie_geeft_ruimtes_een_naam_en_een_volgorde_maar_kiest_ze_
         mag_entiteiten_wijzigen=False,
     )
     assert store().snapshot()["installatie"]["ruimtes"] == [
-        {"entity": VERGADER, "naam": "Vergaderen"},
-        {"entity": SPREEK, "naam": ""},
+        {"entity": VERGADER, "naam": "Vergaderen", "gemaakt": False},
+        {"entity": SPREEK, "naam": "", "gemaakt": False},
     ]
     # En de kaartconfig van de installateur houdt die namen en die volgorde.
     await store().async_zet_installatie_van_kaart({"ruimtes": [SPREEK, VERGADER]})
     assert store().snapshot()["installatie"]["ruimtes"] == [
-        {"entity": VERGADER, "naam": "Vergaderen"},
-        {"entity": SPREEK, "naam": ""},
+        {"entity": VERGADER, "naam": "Vergaderen", "gemaakt": False},
+        {"entity": SPREEK, "naam": "", "gemaakt": False},
     ]
 
 

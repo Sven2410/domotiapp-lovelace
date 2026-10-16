@@ -20,6 +20,8 @@
 | `infoscherm/ruimtes/boek` | iedere ingelogde gebruiker; een kioskaccount alleen met de code |
 | `infoscherm/ruimtes/vrijgeven` | iedereen behalve kiosk |
 | `infoscherm/ruimtes/code` | iedereen behalve kiosk |
+| `infoscherm/ruimtes/nieuw` | iedereen behalve kiosk: maakt een Lokale agenda, ook zonder adminrecht |
+| `infoscherm/ruimtes/weg` | iedereen behalve kiosk, alleen voor een ruimte die het beheer maakte |
 
 Zie `const.py` voor waarom de grens niet bij HA's adminvlag ligt maar bij het
 kioskaccount. Een kioskaccount dat toch een beheercommando stuurt krijgt
@@ -87,6 +89,8 @@ def async_register(hass: HomeAssistant) -> None:
         ws_ruimte_boek,
         ws_ruimte_vrijgeven,
         ws_ruimte_code,
+        ws_ruimte_nieuw,
+        ws_ruimte_weg,
     ):
         websocket_api.async_register_command(hass, commando)
     data[DATA_WS_REGISTERED] = True
@@ -494,3 +498,40 @@ async def ws_ruimte_code(hass: HomeAssistant, connection, msg: dict[str, Any]) -
     """De code om op het scherm te boeken. Leeg zet boeken op het scherm uit.
     De stand gaat rond, want `boeken_op_scherm` kan veranderd zijn."""
     await _zet(hass, connection, msg, "code", lambda s, v: s.async_zet_ruimte_code(v))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/ruimtes/nieuw", vol.Required("naam"): cv.string}
+)
+@websocket_api.async_response
+async def ws_ruimte_nieuw(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Een ruimte maken, met een eigen Lokale agenda. Ook voor een receptie
+    zonder adminrecht: zie de kop van ruimtes.py."""
+    store = _beheer(hass, connection, msg)
+    if store is None:
+        return
+    try:
+        resultaat = await hass.data[DOMAIN][DATA_RUIMTES].async_nieuw(msg["naam"])
+    except RuimteFout as fout:
+        connection.send_error(msg["id"], fout.code, str(fout))
+        return
+    async_meld_stand(hass)
+    connection.send_result(msg["id"], resultaat)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/ruimtes/weg", vol.Required("ruimte"): cv.entity_id}
+)
+@websocket_api.async_response
+async def ws_ruimte_weg(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Een ruimte die het beheer maakte weghalen, met zijn agenda."""
+    store = _beheer(hass, connection, msg)
+    if store is None:
+        return
+    try:
+        resultaat = await hass.data[DOMAIN][DATA_RUIMTES].async_weg(msg["ruimte"])
+    except RuimteFout as fout:
+        connection.send_error(msg["id"], fout.code, str(fout))
+        return
+    async_meld_stand(hass)
+    connection.send_result(msg["id"], resultaat)

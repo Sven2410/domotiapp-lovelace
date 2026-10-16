@@ -15,3 +15,9 @@ home-assistant-frontend==20260729.6
 # De NATIVE libturbojpeg hoeft er niet bij te staan: HA vangt het ontbreken
 # ervan af met "Camera snapshot performance will be sub-optimal" en werkt door.
 PyTurboJPEG==1.8.3
+
+# De Lokale agenda van Home Assistant (local_calendar) leest en schrijft met
+# `ical`. Sinds 0.76.0 maakt het beheer zelf een ruimte, en de tests doen dat
+# met de echte Lokale agenda. Versie gelijk aan die van HA 2026.8 (de manifest
+# van local_calendar).
+ical==14.0.1
