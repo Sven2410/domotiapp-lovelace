@@ -53,6 +53,14 @@ De code waarmee je op het scherm boekt staat hier wel, maar BUITEN de stand
 (`ruimte_code`): de stand gaat naar elk scherm, ook naar de iPad, en daar
 hoort de code niet te staan. Wat het scherm ervan weet is alleen of er een
 is (`boeken_op_scherm`).
+
+## Sinds 16 oktober 2026: de wifi voor gasten
+
+`installatie.wifi` is de QR-code van het gastnetwerk (een `image`, bij UniFi
+Network `translation_key: wlan_qr_code`), gekozen door de installateur. De naam
+en het wachtwoord op het scherm staan in `scherm` (`wifi_naam`,
+`wifi_wachtwoord`): die zijn van de receptie, en UniFi geeft het wachtwoord
+niet door aan Home Assistant.
 """
 
 from __future__ import annotations
@@ -435,6 +443,8 @@ def leeg_scherm() -> dict[str, Any]:
         "welkom_tekst": "Welkom",
         "logo_verbergen": False,
         "welkom_onder": True,
+        "wifi_naam": "",
+        "wifi_wachtwoord": "",
     }
 
 
@@ -476,6 +486,10 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
         # het blok Openingstijden. Blijft hier, zodat een opgeslagen scherm met
         # deze sleutel gewoon geldig blijft.
         "welkom_onder": bool(rauw.get("welkom_onder", True)),
+        # 16 oktober 2026: de wifi voor gasten. De naam leeg = die uit UniFi;
+        # het wachtwoord leeg = alleen de QR-code.
+        "wifi_naam": _tekst(rauw.get("wifi_naam"), "wifi_naam", MAX_KORT),
+        "wifi_wachtwoord": _tekst(rauw.get("wifi_wachtwoord"), "wifi_wachtwoord", MAX_KORT),
     }
 
 
@@ -493,6 +507,7 @@ def leeg_installatie() -> dict[str, Any]:
         "afval": [],
         "klimaat": [],
         "ruimtes": [],
+        "wifi": None,
     }
 
 
@@ -579,6 +594,7 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     if not isinstance(rauw, dict):
         raise InfoFout("'installatie' is een object")
     weer = rauw.get("weer") or None
+    wifi = rauw.get("wifi") or None
     # Ronde 4 (10 september 2026): een energiesensor voor het blok Energie.
     energie = rauw.get("energie") or None
     lampen = _eerste_per_entiteit([valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)])
@@ -605,6 +621,7 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
         "afval": list(dict.fromkeys(afval)),
         "klimaat": aircos,
         "ruimtes": ruimtes,
+        "wifi": _entiteit(wifi, "wifi", ("image",)) if wifi else None,
     }
 
 
@@ -862,6 +879,7 @@ class InfoStore:
                 "verlichting": [dict(l) for l in self._installatie["verlichting"]],
                 "klimaat": [dict(a) for a in self._installatie.get("klimaat", [])],
                 "ruimtes": [dict(r) for r in self._installatie.get("ruimtes", [])],
+                "wifi": self._installatie.get("wifi"),
             },
             "indeling": {"blokken": [dict(b) for b in self._indeling["blokken"]]},
             "instellingen": dict(self._instellingen),
@@ -956,6 +974,7 @@ class InfoStore:
                 "verlichting": _namen_en_volgorde(self._installatie["verlichting"], nieuw["verlichting"]),
                 "klimaat": _namen_en_volgorde(self._installatie.get("klimaat", []), nieuw["klimaat"]),
                 "ruimtes": _namen_en_volgorde(self._installatie.get("ruimtes", []), nieuw["ruimtes"]),
+                "wifi": self._installatie.get("wifi"),
             }
         self._installatie = nieuw
         await self._async_save()
@@ -984,6 +1003,7 @@ class InfoStore:
                 "verlichting": rauw.get("verlichting"),
                 "klimaat": rauw.get("klimaat"),
                 "ruimtes": rauw.get("ruimtes"),
+                "wifi": rauw.get("wifi"),
             }
         )
         nieuw["verlichting"] = _houd_namen(nieuw["verlichting"], self._installatie["verlichting"])

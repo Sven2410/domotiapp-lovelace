@@ -92,7 +92,7 @@ CODE_MAX: Final = 8
 # vier cijfers af te kunnen lopen.
 CODE_POGINGEN: Final = 5
 CODE_WACHT: Final = timedelta(minutes=5)
-# Elk soort blok hooguit één keer. Met het ruimteblok zijn er dertien
+# Elk soort blok hooguit één keer. Met het wifiblok zijn er veertien
 # soorten; de grens heeft nog ruimte voor de volgende.
 MAX_BLOKKEN: Final = 16
 
@@ -133,6 +133,8 @@ BLOK_SOORTEN: Final = (
     # 16 oktober 2026: de ruimtes. Op het blok per ruimte vrij of bezet; op de
     # pagina erachter de dag, en boeken met een code.
     "ruimtes",
+    # 16 oktober 2026: de wifi voor gasten, de QR-code van UniFi Network.
+    "wifi",
 )
 AANWEZIG_WEERGAVEN: Final = ("gescheiden", "functie", "lijst")
 

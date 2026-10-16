@@ -344,6 +344,7 @@ export function paginas(stand, feeds, nu = null) {
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
   if (klimaatZichtbaar(stand)) uit.push("klimaat");
   if (ruimtesZichtbaar(stand)) uit.push("ruimtes");
+  if (stand?.installatie?.wifi) uit.push("wifi");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
   if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
   return uit;
@@ -444,6 +445,7 @@ export const BLOK_INFO = {
   afval: { naam: "Afvalkalender", icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
   klimaat: { naam: "Klimaat", icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
   ruimtes: { naam: "Ruimtes", icoon: "door", pagina: "ruimtes", aantal: true, maat: [2, 2] },
+  wifi: { naam: "Wifi", icoon: "wifi", pagina: "wifi", aantal: false, maat: [2, 2] },
 };
 
 /**
@@ -609,6 +611,8 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
       return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
     case "ruimtes":
       return ruimtesZichtbaar(s) ? null : "Geen ruimtes gekozen (kaartinstellingen van het beheer)";
+    case "wifi":
+      return s.installatie?.wifi ? null : "Geen QR-code van de wifi gekozen (kaartinstellingen van het beheer)";
     case "afval":
       return (s.installatie?.afval?.length ?? 0) > 0
         ? null
