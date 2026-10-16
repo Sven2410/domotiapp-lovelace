@@ -121,15 +121,22 @@ import {
   vloeiendPad,
 } from "./infoscherm-logica.js";
 import {
+  DAGEN_VOORUIT,
   afsprakenUit,
   balken as ruimteBalken,
   beginKeuzes,
+  boekDagen,
   dagBegin,
+  dagBezet,
   dagVenster as ruimteVenster,
   duurKeuzes,
   eersteKeuze,
+  geboektTekst,
+  keuzeOpDag,
   lokaal,
   nuPositie,
+  openingVan,
+  passendeDuur,
   plusDagen,
   plusMinuten,
   ruimteStatus,
@@ -1011,7 +1018,11 @@ const css = /* css */ `
   .rb-stel { display: flex; align-items: center; gap: calc(14px * var(--s)); }
   .rb-stel button { width: calc(64px * var(--s)); height: calc(64px * var(--s)); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
   .rb-stel button .icon { font-size: calc(28px * var(--s)); }
-  .rb-waarde { font-size: calc(40px * var(--s)); font-weight: 300; font-variant-numeric: tabular-nums; min-width: calc(130px * var(--s)); text-align: center; }
+  /* Even breed voor elke dag en elke tijd: dan staan de knoppen van Dag en
+     Vanaf onder elkaar, en schuift de knop rechts niet bij elke dag op. */
+  .rb-waarde { font-size: calc(40px * var(--s)); font-weight: 300; font-variant-numeric: tabular-nums; width: calc(220px * var(--s)); flex: 0 0 auto; text-align: center; }
+  /* De dag ("woensdag 28 okt") is langer dan een tijd, dus kleiner. */
+  .rb-dag { font-size: calc(26px * var(--s)); font-weight: 400; }
   .rb-duren { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(10px * var(--s)); }
   .rb-duren button { min-height: calc(58px * var(--s)); border-radius: var(--dac-radius-pill); font-size: calc(17px * var(--s)); font-weight: 500; }
   .boek .rb-duren button[aria-pressed="true"] {
@@ -1464,10 +1475,14 @@ export class InfoschermCard extends DacCard {
   }
 
   /**
-   * Per ruimte een abonnement op de afspraken van VANDAAG
+   * Per ruimte een abonnement op de afspraken van vandaag en de dagen erna
    * (`calendar/event/subscribe`). Een boeking, ook een uit de agenda van Home
    * Assistant zelf, staat er daarmee binnen een tel. Na middernacht opnieuw,
    * met de nieuwe dag; een ruimte die uit de installatie gaat, zegt op.
+   *
+   * Tot 0.77.0 alleen vandaag, want het scherm toont vandaag. Maar op een
+   * andere dag boeken moet weten wat er die dag al staat; alles wat vandaag
+   * toont (de status, de tijdlijn) knipt zelf de dag eruit.
    */
   abonneerRuimtes_() {
     const ruimtes = this.installatie_().ruimtes.map((r) => r.entity);
@@ -1484,7 +1499,7 @@ export class InfoschermCard extends DacCard {
     }
     if (!this.hass?.connection) return;
     const van = dagBegin(nu);
-    const tot = plusDagen(van, 1);
+    const tot = plusDagen(van, DAGEN_VOORUIT);
     for (const entity of ruimtes) {
       if (this.ruimteAbos_.has(entity)) continue;
       const abo = new AgendaAbonnement(entity, van, tot, (events) => {
@@ -3160,16 +3175,18 @@ export class InfoschermCard extends DacCard {
   /* ------------------------------------------------------------ een ruimte boeken */
 
   /**
-   * Het boekscherm openen. Het begint op de eerste tijd waarop er iets kan
-   * (nu, als de ruimte vrij is), met een uur als dat past.
+   * Het boekscherm openen. Het begint vandaag op de eerste tijd waarop er iets
+   * kan (nu, als de ruimte vrij is), met een uur als dat past.
    */
   openBoek_(entity) {
     if (!this.stand_?.boeken_op_scherm) return;
     clearTimeout(this.boekTimer_);
+    const nu = new Date();
     const afspraken = this.ruimteAfspraken_.get(entity) ?? [];
-    const eerste = eersteKeuze(afspraken, beginKeuzes(new Date()));
+    const eerste = eersteKeuze(afspraken, beginKeuzes(nu));
     this.boek_ = {
       ruimte: entity,
+      dag: isoDatum(nu),
       begin: eerste?.begin ?? "nu",
       minuten: eerste?.minuten ?? null,
       code: "",
@@ -3187,9 +3204,26 @@ export class InfoschermCard extends DacCard {
     this.$(".boek")?.classList.remove("open");
   }
 
+  /**
+   * De dagen en de begintijden van het boekscherm, voor de dag die gekozen is.
+   * Is die dag voorbij (het scherm stond over middernacht open), dan vandaag.
+   */
+  boekKeuzes_(nu = new Date()) {
+    const b = this.boek_;
+    const dagen = boekDagen(nu);
+    let d = dagen.findIndex((x) => x.waarde === b.dag);
+    if (d < 0) {
+      d = 0;
+      b.dag = dagen[0].waarde;
+    }
+    const dag = dagen[d].dag;
+    const keuzes = beginKeuzes(nu, dag);
+    return { dagen, d, dag, keuzes, vanaf: openingVan(dag, tijdenOp(this.stand_?.praktijk, dag).tijden) };
+  }
+
   /** De begintijd die nu gekozen is, als Date; "nu" is deze minuut. */
   boekBegin_() {
-    const keuzes = beginKeuzes(new Date());
+    const { keuzes } = this.boekKeuzes_();
     return (keuzes.find((k) => k.waarde === this.boek_.begin) ?? keuzes[0]).tijd;
   }
 
@@ -3200,21 +3234,26 @@ export class InfoschermCard extends DacCard {
     if (actie === "sluit") return this.sluitBoek_();
     if (b.bezig || b.klaar) return;
     b.fout = "";
-    if (actie === "eerder" || actie === "later") {
-      const keuzes = beginKeuzes(new Date());
+    const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
+    if (actie === "dag-eerder" || actie === "dag-later") {
+      const nu = new Date();
+      const { dagen, d } = this.boekKeuzes_(nu);
+      const j = Math.min(dagen.length - 1, Math.max(0, d + (actie === "dag-later" ? 1 : -1)));
+      if (j !== d) {
+        const vorige = b.begin === "nu" ? null : this.boekBegin_();
+        b.dag = dagen[j].waarde;
+        const { keuzes, vanaf } = this.boekKeuzes_(nu);
+        const k = keuzeOpDag(afspraken, keuzes, { vorige, minuten: b.minuten, vanaf });
+        b.begin = k?.begin ?? keuzes[0].waarde;
+        b.minuten = k?.minuten ?? null;
+      }
+    } else if (actie === "eerder" || actie === "later") {
+      const { keuzes } = this.boekKeuzes_();
       const i = Math.max(0, keuzes.findIndex((k) => k.waarde === b.begin));
       const j = Math.min(keuzes.length - 1, Math.max(0, i + (actie === "later" ? 1 : -1)));
       b.begin = keuzes[j].waarde;
       // Past de gekozen duur daar niet meer, dan de langste die wel past.
-      const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
-      const duren = duurKeuzes(afspraken, keuzes[j].tijd);
-      // Een uur of korter, net als bij het openen (eersteKeuze); anders
-      // sprong hij na een stap terug en een stap vooruit van 1 naar 2 uur.
-      if (!duren.find((d) => d.minuten === b.minuten)?.kan) {
-        const passend = duren.filter((d) => d.kan);
-        const kort = passend.filter((d) => d.minuten <= 60);
-        b.minuten = (kort.length ? kort[kort.length - 1] : passend[0])?.minuten ?? null;
-      }
+      b.minuten = passendeDuur(afspraken, keuzes[j].tijd, b.minuten);
     } else if (actie === "duur") {
       b.minuten = Number(knop.dataset.min);
     } else if (actie === "cijfer") {
@@ -3239,7 +3278,7 @@ export class InfoschermCard extends DacCard {
       await boekRuimte(this.hass, { ruimte: b.ruimte, start: lokaal(begin), eind: lokaal(eind), code: b.code });
       if (this.boek_ !== b) return;
       b.bezig = false;
-      b.klaar = `van ${klok(begin)} tot ${klok(eind)}`;
+      b.klaar = geboektTekst(begin, eind, new Date());
       this.paintBoek_();
       this.boekTimer_ = setTimeout(() => this.sluitBoek_(), 4000);
     } catch (fout) {
@@ -3269,7 +3308,9 @@ export class InfoschermCard extends DacCard {
       return;
     }
     const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
-    const keuzes = beginKeuzes(nu);
+    const { dagen, d, dag, keuzes } = this.boekKeuzes_(nu);
+    // Vandaag de toestand van nu; op een andere dag wat er dan al staat.
+    const status = d === 0 ? tekst : dagBezet(afspraken, dag, nu);
     const i = Math.max(0, keuzes.findIndex((k) => k.waarde === b.begin));
     const begin = keuzes[i].tijd;
     const duren = duurKeuzes(afspraken, begin);
@@ -3278,7 +3319,7 @@ export class InfoschermCard extends DacCard {
       ? `Van ${klok(begin)} tot ${klok(gekozen.eind)}`
       : duren.some((d) => d.kan)
         ? "Kies hoe lang."
-        : "Op deze tijd is de ruimte bezet. Kies een later tijdstip.";
+        : "Op deze tijd is de ruimte bezet. Kies een andere tijd of een andere dag.";
     const stippen = Array.from({ length: Math.max(4, b.code.length) }, (_, k) => `<span class="${k < b.code.length ? "vol" : ""}"></span>`).join("");
     const toets = (c) => `<button type="button" data-b="cijfer" data-cijfer="${c}" aria-label="${c}">${c}</button>`;
     const kan = Boolean(gekozen) && b.code.length >= 4 && !b.bezig;
@@ -3287,7 +3328,13 @@ export class InfoschermCard extends DacCard {
         <div class="rb-links">
           <div class="eyebrow">Ruimte boeken</div>
           <div class="rb-titel">${escapeHtml(naam)}</div>
-          <div class="rb-status">${escapeHtml(tekst)}</div>
+          <div class="rb-status">${escapeHtml(status)}</div>
+          <div class="eyebrow">Dag</div>
+          <div class="rb-stel">
+            <button type="button" data-b="dag-eerder" aria-label="Dag eerder"${d === 0 ? " disabled" : ""}>${resolve("chevronLeft")}</button>
+            <div class="rb-waarde rb-dag">${escapeHtml(dagen[d].label)}</div>
+            <button type="button" data-b="dag-later" aria-label="Dag later"${d >= dagen.length - 1 ? " disabled" : ""}>${resolve("chevronRight")}</button>
+          </div>
           <div class="eyebrow">Vanaf</div>
           <div class="rb-stel">
             <button type="button" data-b="eerder" aria-label="Eerder"${i === 0 ? " disabled" : ""}>${resolve("minus")}</button>

@@ -2747,9 +2747,12 @@ hoogte af, zodat hij ook zónder kiosk-mode in beeld past.
     is; voor alle ruimtes hetzelfde venster), een lijn voor nu, en de tijden
     van vandaag als regel eronder.
   - Is er in het beheer een code ingesteld (vier tot acht cijfers), dan staat
-    bij elke ruimte een knop **Boeken**: begintijd (nu, of per kwartier),
-    duur (30 min, 1 uur, 1,5 uur, 2 uur; niet over een andere boeking of
-    middernacht heen) en de code op een eigen cijferblok. De server kijkt de
+    bij elke ruimte een knop **Boeken**: de dag (vandaag tot twee weken
+    vooruit, net als het beheer; sinds 0.77.0), begintijd (vandaag nu of per
+    kwartier, op een andere dag per kwartier vanaf de eerste openingstijd of
+    8 uur), duur (30 min, 1 uur, 1,5 uur, 2 uur; niet over een andere boeking
+    of middernacht heen) en de code op een eigen cijferblok. Op een andere dag
+    staan de tijden die al geboekt zijn erbij, zonder titel. De server kijkt de
     code na (na vijf verkeerde vijf minuten niet) en weigert een boeking die
     overlapt, ook als twee mensen tegelijk boeken.
   - In het beheer: boeken met datum, begin, eind en een omschrijving (die

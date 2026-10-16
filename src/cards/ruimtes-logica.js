@@ -190,6 +190,33 @@ export function uurStrepen(venster) {
 
 /* ------------------------------------------------------------ boeken op het scherm */
 
+/*
+ * Sinds 0.77.0 ook op een andere dag dan vandaag: *"ik wil ook dat je een datum
+ * kan kiezen om te boeken nu is het alleen vandaag op de ipad"* (16 oktober
+ * 2026). Even ver vooruit als het beheer toont (`DAGEN_VOORUIT`), zodat wat op
+ * de iPad geboekt wordt daar ook in de lijst staat.
+ */
+
+/** De dagen om uit te kiezen: vandaag en de dagen erna, met "Vandaag", "Morgen", "dinsdag 20 okt". */
+export function boekDagen(nu, dagen = DAGEN_VOORUIT) {
+  const begin = dagBegin(nu);
+  return Array.from({ length: dagen }, (_, i) => {
+    const dag = plusDagen(begin, i);
+    return { waarde: isoDatum(dag), dag, label: dagLabel(dag, nu) };
+  });
+}
+
+/**
+ * Hoe laat het boekscherm op een andere dag begint: de eerste openingstijd van
+ * die dag (`tijden` zoals `tijdenOp` ze geeft), anders 8 uur. Zonder dat stond
+ * hij morgen op middernacht, 32 tikken van negen uur vandaan.
+ */
+export function openingVan(dag, tijden = []) {
+  const eerste = tijden?.length ? tijden.map(([a]) => a).sort()[0] : "08:00";
+  const [u, m] = String(eerste).split(":").map(Number);
+  return new Date(dag.getFullYear(), dag.getMonth(), dag.getDate(), u || 0, m || 0);
+}
+
 /** Is de ruimte vrij van `start` tot `eind`? Aansluiten mag. */
 export const isVrij = (afspraken, start, eind) => !(afspraken ?? []).some((a) => a.start < eind && a.eind > start);
 
@@ -201,10 +228,20 @@ export function duurLabel(minuten) {
 }
 
 /**
- * De begintijden om uit te kiezen: "Nu", en daarna elk kwartier tot
- * middernacht. Vandaag, want het scherm toont vandaag.
+ * De begintijden om uit te kiezen. Vandaag: "Nu", en daarna elk kwartier tot
+ * middernacht. Op een andere `dag`: elk kwartier van de hele dag, op de klok
+ * en niet in minuten opgeteld, zodat de nacht dat de klok verzet geen
+ * dubbele 02:00 geeft.
  */
-export function beginKeuzes(nu) {
+export function beginKeuzes(nu, dag = nu) {
+  if (isoDatum(dag) !== isoDatum(nu)) {
+    const uit = new Map();
+    for (let minuut = 0; minuut < 24 * 60; minuut += STAP) {
+      const k = new Date(dag.getFullYear(), dag.getMonth(), dag.getDate(), Math.floor(minuut / 60), minuut % 60);
+      if (isoDatum(k) === isoDatum(dag) && !uit.has(lokaal(k))) uit.set(lokaal(k), { waarde: lokaal(k), tijd: k, label: klok(k) });
+    }
+    return [...uit.values()];
+  }
   const uit = [{ waarde: "nu", tijd: new Date(Math.floor(nu.getTime() / 60000) * 60000), label: "Nu" }];
   const t = new Date(nu);
   t.setSeconds(0, 0);
@@ -229,15 +266,81 @@ export function duurKeuzes(afspraken, start, duren = DUREN) {
 }
 
 /**
+ * De duur bij een begintijd: `minuten` als die daar past, anders de langste
+ * die past tot een uur, anders de kortste die past, anders null. Tot een uur,
+ * want anders sprong hij na een stap terug en een stap vooruit van 1 naar 2 uur.
+ */
+export function passendeDuur(afspraken, start, minuten, duren = DUREN) {
+  const keuzes = duurKeuzes(afspraken, start, duren);
+  if (keuzes.find((d) => d.minuten === minuten)?.kan) return minuten;
+  const passend = keuzes.filter((d) => d.kan);
+  const kort = passend.filter((d) => d.minuten <= 60);
+  return (kort.length ? kort[kort.length - 1] : passend[0])?.minuten ?? null;
+}
+
+const pastKortste = (afspraken, k, duren) => duurKeuzes(afspraken, k.tijd, [duren[0]])[0].kan;
+
+/**
  * Waar het boekscherm mee opent: de eerste begintijd waarop de kortste duur
  * past (nu, als de ruimte vrij is), en de langste duur die daar dan past, tot
- * een uur. Null als er vandaag niets meer kan.
+ * een uur. Met `vanaf` (op een andere dag de opening) eerst vanaf dat tijdstip.
+ * Null als er die dag niets meer kan.
  */
-export function eersteKeuze(afspraken, keuzes, duren = DUREN) {
-  const begin = keuzes.find((k) => duurKeuzes(afspraken, k.tijd, [duren[0]])[0].kan);
+export function eersteKeuze(afspraken, keuzes, { vanaf = null, duren = DUREN } = {}) {
+  const begin =
+    (vanaf && keuzes.find((k) => k.tijd >= vanaf && pastKortste(afspraken, k, duren))) ||
+    keuzes.find((k) => pastKortste(afspraken, k, duren));
   if (!begin) return null;
-  const passend = duurKeuzes(afspraken, begin.tijd, duren).filter((d) => d.kan && d.minuten <= 60);
-  return { begin: begin.waarde, minuten: passend.length ? passend[passend.length - 1].minuten : duren[0] };
+  return { begin: begin.waarde, minuten: passendeDuur(afspraken, begin.tijd, null, duren) };
+}
+
+/**
+ * Een andere dag gekozen. Stond er een tijd (`vorige`, null bij "Nu"), dan
+ * dezelfde tijd of het eerste kwartier erna waarop het kan: wie om twee uur
+ * wilde en naar morgen gaat, wil morgen om twee uur en niet om acht. Anders
+ * de eerste keuze vanaf de opening. Kan er die dag niets, dan de opening
+ * zonder duur; het scherm zegt dan dat de ruimte bezet is.
+ */
+export function keuzeOpDag(afspraken, keuzes, { vorige = null, minuten = null, vanaf = null, duren = DUREN } = {}) {
+  if (!keuzes.length) return null;
+  if (vorige) {
+    const tijd = klok(vorige);
+    const k = keuzes.find((x) => klok(x.tijd) >= tijd && pastKortste(afspraken, x, duren));
+    if (k) return { begin: k.waarde, minuten: passendeDuur(afspraken, k.tijd, minuten, duren) };
+  }
+  const eerste = eersteKeuze(afspraken, keuzes, { vanaf, duren });
+  if (eerste) return { begin: eerste.begin, minuten: passendeDuur(afspraken, keuzes.find((k) => k.waarde === eerste.begin).tijd, minuten, duren) };
+  return { begin: (keuzes.find((k) => vanaf && k.tijd >= vanaf) ?? keuzes[0]).waarde, minuten: null };
+}
+
+/** Een tijd van een afspraak binnen één dag: wat ervoor of erna valt, is 00:00 of 24:00. */
+function binnenDag(a, begin, eind) {
+  if (a.heleDag || (a.start <= begin && a.eind >= eind)) return "de hele dag";
+  return `${a.start < begin ? "00:00" : klok(a.start)} – ${a.eind > eind ? "24:00" : klok(a.eind)}`;
+}
+
+const metHoofdletter = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Wat er op een andere dag al geboekt is, voor het boekscherm: "Morgen al
+ * geboekt: 10:00 – 11:00, 14:00 – 15:00". Alleen tijden, net als op de rest
+ * van het scherm: in een wachtkamer kijken bezoekers mee.
+ */
+export function dagBezet(afspraken, dag, nu) {
+  const begin = dagBegin(dag);
+  const eind = plusDagen(begin, 1);
+  const op = (afspraken ?? []).filter((a) => a.start < eind && a.eind > begin);
+  const label = metHoofdletter(dagLabel(dag, nu));
+  if (!op.length) return `${label} is nog niets geboekt.`;
+  return `${label} al geboekt: ${op.map((a) => binnenDag(a, begin, eind)).join(", ")}`;
+}
+
+/** "van 10:00 tot 11:00", of op een andere dag "morgen van ..." en "dinsdag 20 okt van ...". */
+export function geboektTekst(begin, eind, nu) {
+  const tijd = `van ${klok(begin)} tot ${klok(eind)}`;
+  if (isoDatum(begin) === isoDatum(nu)) return tijd;
+  const label = dagLabel(begin, nu);
+  return `${label.charAt(0).toLowerCase()}${label.slice(1)} ${tijd}`;
 }
 
 /* ------------------------------------------------------------ het beheer */
