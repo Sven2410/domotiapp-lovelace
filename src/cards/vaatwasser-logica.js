@@ -450,16 +450,23 @@ export function metCoachVelden(config, entiteiten) {
  * (`apparaat`, zie programma-logica.js). Wat er dan nog staat is wat je zelf
  * kiest.
  *
+ * Sinds 0.78.0 heeft een wasmachine of droger geen knoppen meer
+ * (`alleenLezen`, zie ALLEEN_LEZEN in programma-logica.js): dan staan de
+ * velden voor programmakeuze, start, pauze, stop en slimme sturing er ook
+ * niet. Een veld dat niets doet hoort niet in de editor.
+ *
  * @param {object} p
  * @param {boolean} p.coach het vinkje
  * @param {Record<string, string>} p.entiteiten wat de coach levert (leeg als er geen coach gevonden is)
  * @param {string[]} [p.apparaat] de velden die het apparaat zelf levert
+ * @param {boolean} [p.alleenLezen] een wasmachine of droger
  * @returns {{zichtbaar: string[], afwijken: string[]}}
  */
-export function editorVelden({ coach, entiteiten, apparaat = [] }) {
+export function editorVelden({ coach, entiteiten, apparaat = [], alleenLezen = false }) {
   const vanApparaat = new Set(apparaat);
+  const knoppen = new Set(alleenLezen ? ["program", "start", "pause", "stop", "smart"] : []);
   const alle = ["status", "remaining", "progress", "program", "start", "pause", "stop", "door", "smart"].filter(
-    (v) => !vanApparaat.has(v)
+    (v) => !vanApparaat.has(v) && !knoppen.has(v)
   );
   if (!coach) return { zichtbaar: alle, afwijken: [] };
   const vanCoach = new Set(VELDEN_UIT_COACH.map(([v]) => v).filter((v) => uitCoach(v, entiteiten)));

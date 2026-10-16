@@ -56,6 +56,14 @@
  * start, pauze en stop (alleen als Miele ze beschikbaar maakt), TwinDos, het
  * verbruik en de geplande start. Zie programma-logica.js. Het `type` bleef
  * `domotiapp-dishwasher-card`, want dat staat in dashboards.
+ *
+ * ALLEEN UITLEZEN, EN DE LAATSTE BEURT (sinds 0.78.0)
+ *
+ * Een wasmachine en een droger hebben geen knoppen meer, ook niet die van de
+ * coach: *"wasmachines en drogers moeten alleen read only en info kaarten
+ * zijn"*. Staat hij uit, dan tonen de tegels de laatste beurt, uit de recorder
+ * (`laatsteBeurt` in programma-logica.js); zodra hij aangaat weer de live
+ * gegevens. De vaatwasser blijft zoals hij was.
  */
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -74,13 +82,21 @@ import {
 import { huidigeKeuze, keuzes, kiesOproep } from "./keuzeveld.js";
 import { metType, merkKeuzes, productAfbeelding, typeKeuzes } from "./productfoto.js";
 import {
+  ALLEEN_LEZEN,
+  BEURT_DAGEN,
+  BEURT_ROLLEN,
   PROGRAMMA_APPARATEN,
+  ROLLEN,
   SOORTEN,
   apparaatRollen,
   apparaatSoort,
+  beurtTegels,
+  beurtWanneer,
   knopKan,
+  laatsteBeurt,
   metApparaatVelden,
   programmaTegels,
+  reeksenUitWs,
   startUitDuur,
   veldenVanApparaat,
   voortgangUitTijden,
@@ -96,12 +112,23 @@ import {
   drukOproep,
   metCoachVelden,
   restMinuten,
+  SOORT,
   startMoment,
+  statusDuiding,
   statusUitCoach,
   toestand,
   vindStartSensor,
   voortgangPct,
 } from "./vaatwasser-logica.js";
+
+/** De rollen van het apparaat, met wat alleen de laatste beurt leest. */
+const ALLE_ROLLEN = { ...ROLLEN, ...BEURT_ROLLEN };
+
+/**
+ * Zo lang na het uitgaan leest de kaart de recorder pas: die schrijft met
+ * vertraging weg (valkuil 32, vijf seconden bleek genoeg).
+ */
+const RECORDER_MARGE = 8_000;
 
 /** Van een kleurnaam uit de logica naar de token van het thema. */
 const TOON = {
@@ -473,7 +500,7 @@ class DishwasherCard extends DacCard {
     if (!hass || !statusId) return {};
     const m = this.rollenMemo_;
     if (m && m.entities === hass.entities && m.status === statusId) return m.uit;
-    const uit = apparaatRollen(hass, statusId);
+    const uit = apparaatRollen(hass, statusId, ALLE_ROLLEN);
     this.rollenMemo_ = { entities: hass.entities, status: statusId, uit };
     return uit;
   }
@@ -628,7 +655,49 @@ class DishwasherCard extends DacCard {
     this.teardown_.push(() => {
       clearTimeout(this.tik_);
       this.tik_ = null;
+      // Weer in beeld is opnieuw lezen: ondertussen kan er een beurt bij zijn.
+      clearTimeout(this.beurtTimer_);
+      this.beurtMemo_ = null;
     });
+  }
+
+  /**
+   * De laatste beurt van een wasmachine of droger die uit staat, of null.
+   *
+   * Uit de recorder, één keer per keer dat hij uitging: de sleutel is het
+   * moment waarop de status "uit" werd. Net na het uitgaan pas na
+   * `RECORDER_MARGE`, anders mist de recorder de laatste regels. Tot het
+   * antwoord er is staat er null, en dan tekent de kaart de tegels van nu.
+   */
+  beurt_(statusSt, r) {
+    const sleutel = `${statusSt.entity_id}|${statusSt.last_changed}`;
+    const m = this.beurtMemo_;
+    if (m?.sleutel === sleutel) return m.beurt;
+    const memo = { sleutel, beurt: null };
+    this.beurtMemo_ = memo;
+    clearTimeout(this.beurtTimer_);
+    const wacht = Math.max(0, Date.parse(statusSt.last_changed) + RECORDER_MARGE - Date.now());
+    const opties = statusSt.attributes?.options ?? null;
+    this.beurtTimer_ = setTimeout(() => this.haalBeurt_(memo, { ...r, status: statusSt.entity_id }, opties), wacht);
+    return null;
+  }
+
+  async haalBeurt_(memo, rollen, opties) {
+    const ids = [...new Set(["status", "programma", "energie", "water", "temperatuur", "droogtegraad"].map((x) => rollen[x]).filter(Boolean))];
+    try {
+      const antwoord = await this.hass.callWS({
+        type: "history/history_during_period",
+        start_time: new Date(Date.now() - BEURT_DAGEN * 86_400_000).toISOString(),
+        entity_ids: ids,
+        minimal_response: true,
+        no_attributes: true,
+      });
+      if (this.beurtMemo_ !== memo) return;
+      memo.beurt = laatsteBeurt(reeksenUitWs(antwoord), rollen, opties);
+      if (this.hass_ && this.isConnected) this.paint();
+    } catch {
+      // Geen recorder, of geen recht: dan blijven de tegels van nu staan.
+    }
   }
 
   /**
@@ -765,10 +834,17 @@ class DishwasherCard extends DacCard {
       voortgangPct(st(c.progress)) ??
       (r.verstreken && !c.progress ? voortgangUitTijden(restMinuten(st(r.verstreken)), restMinuten(st(r.rest))) : null);
     const start = startMoment(startSt) ?? startUitDuur(st(r.startIn));
-    const soort = SOORTEN[apparaatSoort(this.apparaat_(c.status))];
+    const soortNaam = apparaatSoort(this.apparaat_(c.status));
+    const soort = SOORTEN[soortNaam];
+    const alleenLezen = ALLEEN_LEZEN.has(soortNaam);
 
     const nu = toestand({ status, deur, rest, pct, start, deurWoord: soort.deur });
-    this.planTik_(start);
+    // Een wasmachine of droger die uit staat: de laatste beurt (zie de kop).
+    const beurt =
+      alleenLezen && status?.entity_id && statusDuiding(status).soort === SOORT.UIT ? this.beurt_(status, r) : null;
+    if (beurt) nu.tekst = `${nu.tekst} · laatste beurt ${beurtWanneer(beurt)}`;
+    // Met een beurt erop ook om middernacht: dan wordt "vandaag" "gisteren".
+    this.planTik_(start ?? (beurt ? new Date(Date.now() + 86_400_000 * 2) : null));
     const loopt = draait(status);
 
     this.toggleAttribute("draait", loopt);
@@ -820,7 +896,12 @@ class DishwasherCard extends DacCard {
     // De tegels: deur, programma, fase, klaar om, verbruik en TwinDos, in de
     // woorden van Home Assistant, altijd (programma-logica.js).
     const fmt = this.hass?.formatEntityState ? (s) => this.hass.formatEntityState(s) : null;
-    this.paintTegels_(programmaTegels({ rollen: r, st, fmt, deurWoord: soort.deur }));
+    this.paintTegels_(
+      beurt
+        ? beurtTegels({ rollen: { ...r, status: c.status }, beurt, st, fmt, deurWoord: soort.deur })
+        : programmaTegels({ rollen: r, st, fmt, deurWoord: soort.deur })
+    );
+    this.toggleAttribute("beurt", Boolean(beurt));
 
     // De balk hoort bij een LOPEND programma en niet bij een sensor die zijn
     // laatste waarde vasthoudt: een balk op 38% naast het woord "Uit" leest als
@@ -843,7 +924,7 @@ class DishwasherCard extends DacCard {
       }
     }
 
-    this.paintBediening_(c, startSt, coach, loopt);
+    this.paintBediening_(c, startSt, coach, loopt, alleenLezen);
     meetRaster(this.$(".card"));
   }
 
@@ -852,8 +933,13 @@ class DishwasherCard extends DacCard {
    * @param {object|null} startSt de startsensor (van de coach)
    * @param {object|null} coach uit `coachStand()`, of null zonder coach
    * @param {boolean} loopt draait hij volgens de statussensor?
+   * @param {boolean} alleenLezen een wasmachine of droger: geen enkele knop
    */
-  paintBediening_(c, startSt, coach, loopt) {
+  paintBediening_(c, startSt, coach, loopt, alleenLezen = false) {
+    if (alleenLezen) {
+      for (const s of [".bediening", ".rij.programma", ".rij.knoppen", ".rij.coach", ".coachhint"]) this.$(s).hidden = true;
+      return;
+    }
     const metCoach = Boolean(this.config.coach);
 
     // De programmakeuze wordt pas gebouwd als de opties bekend zijn.
@@ -1028,6 +1114,11 @@ class DishwasherEditor extends DacEditor {
     return SOORTEN[apparaatSoort(this.apparaat_())];
   }
 
+  /** Een wasmachine of droger: geen knoppen, dus ook geen velden ervoor. */
+  alleenLezen_() {
+    return ALLEEN_LEZEN.has(apparaatSoort(this.apparaat_()));
+  }
+
   /**
    * Een merk uit de lijst heeft altijd een type: dat van het apparaat als het
    * dat merk is, en anders het eerste. Een ander merk heeft geen type.
@@ -1052,6 +1143,7 @@ class DishwasherEditor extends DacEditor {
       coach: Boolean(c.coach),
       entiteiten: this.coachEntiteiten_(),
       apparaat: veldenVanApparaat(apparaatRollen(this.hass_, this.status_())),
+      alleenLezen: this.alleenLezen_(),
     });
     const types = typeKeuzes(c.merk, PROGRAMMA_APPARATEN);
     return [
@@ -1120,8 +1212,9 @@ class DishwasherEditor extends DacEditor {
 
   helper(s) {
     const uitleg = {
-      coach:
-        "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer.",
+      coach: this.alleenLezen_()
+        ? "Leest bij de coach wanneer hij gaat starten. Op een wasmachine of droger staan geen knoppen, ook niet die van de coach."
+        : "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer.",
       coach_device: "Leeg laten: de vaatwasser van de coach, als er precies één is.",
       afwijken:
         "Kies zelf andere sensoren of knoppen dan de coach gebruikt. Wat je daar invult gaat voor; wat je leeg laat, komt van de coach.",
@@ -1129,7 +1222,7 @@ class DishwasherEditor extends DacEditor {
       model: "Het type bepaalt de productfoto.",
       pause: "Een knop die het programma pauzeert. Staat alleen op de kaart als hij te drukken is.",
       status:
-        "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, start, pauze en stop, TwinDos, verbruik en de geplande start.",
+        "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, TwinDos, verbruik en de geplande start, en bij een vaatwasser start, pauze en stop. Een wasmachine of droger heeft geen knoppen, en toont als hij uit staat de laatste beurt.",
       remaining:
         "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
       progress:

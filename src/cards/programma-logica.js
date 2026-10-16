@@ -28,6 +28,7 @@
  */
 
 import { getalTekst } from "./laadpaal-logica.js";
+import { SOORT, statusDuiding } from "./vaatwasser-logica.js";
 
 /**
  * De entiteiten van het apparaat per rol, op `domein:translation_key`.
@@ -56,6 +57,16 @@ export const ROLLEN = {
 };
 
 /**
+ * Rollen die alleen de laatste beurt leest (sinds 0.78.0). Live staan ze niet
+ * op de kaart: *"Bouw alleen de noodzakelijke dingen"* (0.70.0). Apart, zodat
+ * `apparaatRollen` zonder tweede argument blijft wat hij was.
+ */
+export const BEURT_ROLLEN = {
+  "sensor:target_temperature": "temperatuur",
+  "sensor:drying_step": "droogtegraad",
+};
+
+/**
  * De entiteiten die bij de statussensor horen, per rol: `{rest: "sensor.x", ...}`.
  *
  * Alleen van hetzelfde apparaat EN dezelfde integratie: een klant kan een
@@ -69,9 +80,10 @@ export const ROLLEN = {
  *
  * @param {object} hass
  * @param {string} statusId
+ * @param {Record<string, string>} [rollen] standaard `ROLLEN`
  * @returns {Record<string, string>}
  */
-export function apparaatRollen(hass, statusId) {
+export function apparaatRollen(hass, statusId, rollen = ROLLEN) {
   const reg = hass?.entities?.[statusId];
   if (!reg?.device_id) return {};
   const uit = {};
@@ -84,7 +96,7 @@ export function apparaatRollen(hass, statusId) {
       continue;
     }
     if (!e.translation_key) continue;
-    const rol = ROLLEN[`${domein}:${e.translation_key}`];
+    const rol = rollen[`${domein}:${e.translation_key}`];
     if (rol && !(rol in uit)) uit[rol] = id;
   }
   return uit;
@@ -322,3 +334,199 @@ export const PROGRAMMA_APPARATEN = {
     },
   },
 };
+
+/*
+ * ALLEEN UITLEZEN, EN DE LAATSTE BEURT (sinds 0.78.0)
+ *
+ * De eigenaar op 16 oktober 2026, na de eerste echte beurten bij een klant:
+ * *"wasmachines en drogers moeten alleen read only en info kaarten zijn ik wil
+ * ook dan de laatste beurt als geschiedenis op de kaart zien tot dat hij aan
+ * staat dan de live data zien"*. Starten op afstand werkte daar niet: Miele
+ * vraagt dat op de machine zelf, bij elk programma opnieuw.
+ *
+ * Dus bij een wasmachine en een droger: geen knoppen, ook niet die van de
+ * coach. De vaatwasser noemde hij niet; die houdt ze.
+ *
+ * En staat hij UIT, dan de laatste beurt. Miele zet bij "uit" bijna alles op
+ * `unknown`: programma, verbruik, temperatuur, de tijden. Wat er liep moet dus
+ * uit de recorder komen. Zodra hij aangaat (ook alleen klaargezet) weer de
+ * live gegevens.
+ *
+ * Gemeten in een dump van een hele dag bij die klant (drie was- en drie
+ * droogbeurten, `vaste-invoer/miele-beurten.json`):
+ * - de status loopt off, programmed, in_use, program_ended, off;
+ * - een afgebroken start ziet eruit als in_use, program_interrupted,
+ *   programmed, in_use: de beurt begint bij de in_use na de LAATSTE programmed;
+ * - zonder programmed (meteen aan de knop) begint hij bij de eerste in_use;
+ * - een pauze hoort bij de beurt;
+ * - verbruik, programma en temperatuur blijven staan tot de status "off"
+ *   wordt, en zijn op dat moment allemaal tegelijk `unknown`.
+ */
+
+/** De soorten apparaten zonder knoppen op de kaart. */
+export const ALLEEN_LEZEN = new Set(["wasmachine", "droger"]);
+
+/** Hoe ver de kaart terugkijkt: de recorder bewaart standaard tien dagen. */
+export const BEURT_DAGEN = 10;
+
+/**
+ * Een reeks per entiteit, `{id: [{s, t}]}` met `t` in milliseconden, uit het
+ * antwoord van `history/history_during_period` met `minimal_response` en
+ * `no_attributes` (`{id: [{s, lu, lc?}]}`, tijden in seconden).
+ */
+export function reeksenUitWs(antwoord) {
+  const uit = {};
+  for (const [id, lijst] of Object.entries(antwoord ?? {})) {
+    uit[id] = (lijst ?? [])
+      .map((x) => ({ s: String(x.s ?? ""), t: Math.round((x.lc ?? x.lu ?? 0) * 1000) }))
+      .sort((a, b) => a.t - b.t);
+  }
+  return uit;
+}
+
+/** Hetzelfde uit het antwoord van `/api/history/period` (een lijst van lijsten). */
+export function reeksenUitRest(antwoord) {
+  const uit = {};
+  for (const lijst of antwoord ?? []) {
+    if (!lijst?.length) continue;
+    uit[lijst[0].entity_id] = lijst
+      .map((x) => ({ s: String(x.state ?? ""), t: Date.parse(x.last_changed) }))
+      .sort((a, b) => a.t - b.t);
+  }
+  return uit;
+}
+
+const IN_BEURT = new Set([SOORT.DRAAIT, SOORT.PAUZE]);
+const KLAARGEZET = new Set([SOORT.KLAAR, SOORT.UITGESTELD]);
+
+/**
+ * De laatste beurt uit de geschiedenis, of null.
+ *
+ * @param {Record<string, {s: string, t: number}[]>} reeksen uit `reeksenUitWs`
+ * @param {Record<string, string>} rollen met `status` erin
+ * @param {string[]|null} opties de opties van de statussensor (Miele herken je daaraan)
+ * @returns {{start: Date, eind: Date, minuten: number, programma: string|null, energie: number|null,
+ *   water: number|null, temperatuur: number|null, droogtegraad: string|null}|null}
+ */
+export function laatsteBeurt(reeksen, rollen, opties = null) {
+  const status = reeksen?.[rollen?.status] ?? [];
+  const soort = status.map((e) => statusDuiding({ state: e.s, attributes: { options: opties } }).soort);
+  let j = -1;
+  for (let i = 0; i < status.length; i++) if (IN_BEURT.has(soort[i])) j = i;
+  // Geen beurt, of hij loopt nog.
+  if (j < 0 || j + 1 >= status.length) return null;
+
+  let uitVoor = -1;
+  for (let i = j; i >= 0; i--) {
+    if (soort[i] === SOORT.UIT) {
+      uitVoor = i;
+      break;
+    }
+  }
+  let klaargezet = -1;
+  for (let i = j; i > uitVoor; i--) {
+    if (KLAARGEZET.has(soort[i])) {
+      klaargezet = i;
+      break;
+    }
+  }
+  let b = Math.max(uitVoor, klaargezet) + 1;
+  while (b < j && !IN_BEURT.has(soort[b])) b++;
+  let uitNa = status.length;
+  for (let i = j + 1; i < status.length; i++) {
+    if (soort[i] === SOORT.UIT) {
+      uitNa = i;
+      break;
+    }
+  }
+
+  // Wat er tijdens die ronde (van uit tot uit) het laatst bekend was.
+  const van = uitVoor >= 0 ? status[uitVoor].t : -Infinity;
+  const tot = uitNa < status.length ? status[uitNa].t : Infinity;
+  const laatste = (rol, geldig) => {
+    let w = null;
+    for (const x of reeksen?.[rollen?.[rol]] ?? []) if (x.t > van && x.t < tot && geldig(x.s)) w = x.s;
+    return w;
+  };
+  const tekst = (s) => !LEEG.has(s) && !NIETS.has(s);
+  const isGetal = (s) => !LEEG.has(s) && Number.isFinite(Number(s));
+  const num = (s) => (s == null ? null : Number(s));
+
+  const start = status[b].t;
+  const eind = status[j + 1].t;
+  return {
+    start: new Date(start),
+    eind: new Date(eind),
+    minuten: Math.max(0, Math.round((eind - start) / 60_000)),
+    programma: laatste("programma", tekst),
+    energie: num(laatste("energie", isGetal)),
+    water: num(laatste("water", isGetal)),
+    temperatuur: num(laatste("temperatuur", isGetal)),
+    droogtegraad: laatste("droogtegraad", tekst),
+  };
+}
+
+/** "21 min", "1 u 10 min", "2 uur". */
+export function duurTekst(minuten) {
+  if (minuten == null) return STREEP;
+  if (minuten < 60) return `${minuten} min`;
+  const u = Math.floor(minuten / 60);
+  const m = minuten % 60;
+  return m ? `${u} u ${m} min` : `${u} uur`;
+}
+
+const DAGEN_KORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+/** "vandaag 12:48 – 13:09", "gisteren ...", "di 14 okt ...". Op de kalender, niet in uren. */
+export function beurtWanneer(beurt, nu = new Date()) {
+  const dag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const dagen = Math.round((dag(nu) - dag(beurt.start)) / 86_400_000);
+  const d = beurt.start;
+  const welke =
+    dagen === 0 ? "vandaag" : dagen === 1 ? "gisteren" : `${DAGEN_KORT[d.getDay()]} ${d.getDate()} ${MAANDEN_KORT[d.getMonth()]}`;
+  return `${welke} ${KLOK(beurt.start)} – ${KLOK(beurt.eind)}`;
+}
+
+/**
+ * De tegels van de laatste beurt, in dezelfde aantallen als de tegels van nu,
+ * zodat de kaart niet van hoogte verspringt als hij aan- of uitgaat:
+ * - wasmachine: deur, programma, temperatuur, duur, energie, water, TwinDos 1
+ *   en 2 (de fase en "klaar om" van nu worden temperatuur en duur);
+ * - droger: deur, programma, droogtegraad, duur, energie.
+ * De deur en TwinDos zijn die van NU: die horen niet bij een beurt.
+ *
+ * @param {object} p zoals `programmaTegels`, plus
+ * @param {object} p.beurt uit `laatsteBeurt()`
+ */
+export function beurtTegels({ rollen = {}, beurt, st, fmt, deurWoord = "Deur" }) {
+  const live = programmaTegels({ rollen, st, fmt, deurWoord });
+  const uit = live.filter((t) => t.sleutel === "deur");
+  // Een waarde van toen in de woorden van Home Assistant: de state van nu met
+  // de sleutel van toen, zodat de vertaling van de integratie geldt.
+  const woord = (rol, sleutel) => woordVan({ ...(st(rollen[rol]) ?? {}), state: sleutel }, fmt);
+
+  if (rollen.programma) {
+    const w = beurt.programma ? woord("programma", beurt.programma) : STREEP;
+    uit.push({ sleutel: "programma", label: "Programma", waarde: w, id: rollen.programma });
+  }
+  if (rollen.temperatuur) {
+    const w = beurt.temperatuur == null ? STREEP : `${getalTekst(Math.round(beurt.temperatuur))} °C`;
+    uit.push({ sleutel: "temperatuur", label: "Temperatuur", waarde: w, id: rollen.temperatuur });
+  }
+  if (rollen.droogtegraad) {
+    const w = beurt.droogtegraad ? woord("droogtegraad", beurt.droogtegraad) : STREEP;
+    uit.push({ sleutel: "droogtegraad", label: "Droogtegraad", waarde: w, id: rollen.droogtegraad });
+  }
+  uit.push({ sleutel: "duur", label: "Duur", waarde: duurTekst(beurt.minuten), id: rollen.status ?? "" });
+  if (rollen.energie) {
+    const w = beurt.energie == null ? STREEP : `${getalTekst(Math.round(beurt.energie * 10) / 10)} kWh`;
+    uit.push({ sleutel: "energie", label: "Energie", waarde: w, id: rollen.energie });
+  }
+  if (rollen.water) {
+    const w = beurt.water == null ? STREEP : `${getalTekst(Math.round(beurt.water))} L`;
+    uit.push({ sleutel: "water", label: "Water", waarde: w, id: rollen.water });
+  }
+  uit.push(...live.filter((t) => t.sleutel === "twinDos1" || t.sleutel === "twinDos2"));
+  return uit;
+}
