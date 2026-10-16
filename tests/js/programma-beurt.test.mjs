@@ -25,6 +25,9 @@
  * Bij de klant stond er "12:48 – 13:09" boven "22 min" (de seconden
  * afgerond). Daardoor zijn de derde beurt van allebei een minuut korter dan in
  * 0.78.0; de toets daarvoor staat onderaan.
+ *
+ * Sinds 0.78.2 is een onderbreking een pauze, en eindigt een beurt waar hij
+ * ophield te draaien. Ook die toets staat onderaan.
  */
 
 import assert from "node:assert/strict";
@@ -263,5 +266,43 @@ describe("NIEUW GEDRAG (0.78.1): de duur is het verschil tussen de klokken op de
     const loop = (van, tot_) => P.laatsteBeurt({ "sensor.w": [{ s: "in_use", t: t(van) }, { s: "off", t: t(tot_) }] }, { status: "sensor.w" }, OPTIES);
     assert.equal(loop("17:49:50", "17:50:15").minuten, 1);
     assert.equal(loop("17:49:05", "17:49:55").minuten, 0);
+  });
+});
+
+describe("0.78.2: een beurt eindigt waar hij ophield te draaien", () => {
+  // Lokale tijd, net als hierboven: dan klopt de klok in elke tijdzone.
+  const t = (u, m) => new Date(2026, 9, 16, u, m, 0).getTime();
+  const reeks = (...stappen) => ({ "sensor.w": stappen.map(([s, u, m]) => ({ s, t: t(u, m) })) });
+  const loop = (...stappen) => P.laatsteBeurt(reeks(...stappen), { status: "sensor.w" }, OPTIES);
+  const klok = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const vanTot = (b) => b && `${klok(b.start)} – ${klok(b.eind)} (${b.minuten} min)`;
+
+  it("NIEUW GEDRAG: gepauzeerd en daarna uit telt tot de pauze, niet tot uit", () => {
+    const b = loop(["off", 9, 0], ["in_use", 9, 10], ["pause", 9, 40], ["off", 10, 30]);
+    assert.equal(vanTot(b), "09:10 – 09:40 (30 min)");
+  });
+
+  it("NIEUW GEDRAG: zolang hij onderbroken staat, is er geen laatste beurt", () => {
+    assert.equal(loop(["off", 9, 0], ["in_use", 9, 10], ["program_interrupted", 9, 40]), null);
+  });
+
+  it("REGRESSIEWACHT: onderbroken en daarna uit telt tot de onderbreking, zoals toen het een storing was", () => {
+    const b = loop(["off", 9, 0], ["in_use", 9, 10], ["program_interrupted", 9, 40], ["off", 10, 30]);
+    assert.equal(vanTot(b), "09:10 – 09:40 (30 min)");
+  });
+
+  it("REGRESSIEWACHT: een onderbreking of pauze middenin hoort bij de beurt", () => {
+    const een = loop(["off", 9, 0], ["in_use", 9, 10], ["program_interrupted", 9, 20], ["in_use", 9, 25], ["program_ended", 10, 0], ["off", 10, 5]);
+    const twee = loop(["off", 9, 0], ["in_use", 9, 10], ["pause", 9, 20], ["in_use", 9, 25], ["program_ended", 10, 0], ["off", 10, 5]);
+    assert.equal(vanTot(een), "09:10 – 10:00 (50 min)");
+    assert.equal(vanTot(twee), "09:10 – 10:00 (50 min)");
+  });
+
+  it("REGRESSIEWACHT: gepauzeerd is nog geen laatste beurt", () => {
+    assert.equal(loop(["off", 9, 0], ["in_use", 9, 10], ["pause", 9, 40]), null);
+  });
+
+  it("REGRESSIEWACHT: de afgebroken start van 08:59 in de dump telt nog steeds niet", () => {
+    assert.equal(beurt(WAS, "10:20").van, "09:00");
   });
 });

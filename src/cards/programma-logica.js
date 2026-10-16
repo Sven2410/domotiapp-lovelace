@@ -358,7 +358,10 @@ export const PROGRAMMA_APPARATEN = {
  * - een afgebroken start ziet eruit als in_use, program_interrupted,
  *   programmed, in_use: de beurt begint bij de in_use na de LAATSTE programmed;
  * - zonder programmed (meteen aan de knop) begint hij bij de eerste in_use;
- * - een pauze hoort bij de beurt;
+ * - een pauze hoort bij de beurt, en een onderbreking ook (sinds 0.78.2 is
+ *   program_interrupted een pauze, zie `MIELE_STATUS`);
+ * - hij eindigt waar hij ophoudt te DRAAIEN. Een pauze of onderbreking aan het
+ *   eind, waarna hij uitgaat, hoort er dus niet bij;
  * - verbruik, programma en temperatuur blijven staan tot de status "off"
  *   wordt, en zijn op dat moment allemaal tegelijk `unknown`.
  */
@@ -411,10 +414,13 @@ const KLAARGEZET = new Set([SOORT.KLAAR, SOORT.UITGESTELD]);
 export function laatsteBeurt(reeksen, rollen, opties = null) {
   const status = reeksen?.[rollen?.status] ?? [];
   const soort = status.map((e) => statusDuiding({ state: e.s, attributes: { options: opties } }).soort);
+  // Het laatste moment dat hij DRAAIDE, en niet het laatste in de beurt: een
+  // beurt die onderbroken werd en daarna uitging, eindigt bij de onderbreking.
+  // Tot 0.78.2 was een onderbreking een storing, en toen ging dat vanzelf zo.
   let j = -1;
-  for (let i = 0; i < status.length; i++) if (IN_BEURT.has(soort[i])) j = i;
-  // Geen beurt, of hij loopt nog.
-  if (j < 0 || j + 1 >= status.length) return null;
+  for (let i = 0; i < status.length; i++) if (soort[i] === SOORT.DRAAIT) j = i;
+  // Geen beurt, of hij loopt nog (ook gepauzeerd of onderbroken).
+  if (j < 0 || IN_BEURT.has(soort.at(-1))) return null;
 
   let uitVoor = -1;
   for (let i = j; i >= 0; i--) {
