@@ -1,0 +1,1818 @@
+{
+ "_toelichting": "Antwoord van /api/history/period over een hele dag (16-10-2026 00:00-17:30, significant_changes_only=0) bij een klant met een Miele-wasmachine (WWI880) en -droger (TWH780WP), core-integratie miele. Gemaakt door een beheersessie. Ingekort tot de sensoren die de laatste beurt leest, en alleen de attributen friendly_name, device_class en unit_of_measurement. Er stonden geen namen of serienummers in. Drie wasbeurten en drie droogbeurten; zie de kop van tests/js/programma-beurt.test.mjs.",
+ "history": [
+  [
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T08:59:18.706973+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T08:59:26.500676+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "program_interrupted",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T08:59:42.899442+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T08:59:55.806525+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T09:00:16.303443+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "pause",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T09:00:30.203447+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T09:00:46.005552+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T10:10:26.925235+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T10:14:32.097145+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T10:27:04.500677+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T10:27:12.099012+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T11:33:22.133395+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T11:46:43.208419+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "on",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T12:17:28.049915+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T12:17:35.352944+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "on",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T12:47:32.427501+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T12:47:52.210191+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T12:48:07.920721+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T13:09:42.775749+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine"
+    },
+    "last_changed": "2026-10-16T13:14:18.212343+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T08:59:18.712271+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T10:14:32.098234+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T10:27:04.50591+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T11:46:43.211098+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "express_20",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T12:47:52.21549+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasmachine Programma"
+    },
+    "last_changed": "2026-10-16T13:14:18.215255+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T08:59:26.50204+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T08:59:55.807827+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T09:00:16.304795+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T09:13:22.120085+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.2",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T09:17:53.905024+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.3",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:05:03.453478+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:14:32.098522+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:27:12.10037+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:49:12.319226+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.2",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:55:02.576741+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:46:43.211435+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:48:07.922137+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:50:13.791773+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "0.2",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T13:09:03.411226+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasmachine Energieverbruik"
+    },
+    "last_changed": "2026-10-16T13:14:18.215585+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T08:59:26.502139+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T08:59:55.807917+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:00:16.304884+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "1.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:00:46.242721+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "2.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:00:59.53826+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "3.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:02:21.364586+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "5.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:02:43.143095+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "6.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:08:05.667792+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "8.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:11:00.947777+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "10.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:42:58.292905+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "12.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:43:11.283818+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "13.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:48:01.427557+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "16.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:48:14.838711+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "18.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:48:29.651906+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "20.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:48:47.564451+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "21.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:48:52.8438+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "23.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:49:08.556463+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "24.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:49:13.757511+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "26.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:49:29.448945+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "28.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:49:50.347431+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "29.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:49:52.546461+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "31.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:54:30.990666+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "32.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:54:33.285964+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "34.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:55:09.926855+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "35.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:55:12.116547+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "37.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:55:30.823909+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "38.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:55:36.044044+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "40.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:55:51.640563+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "43.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:56:12.638831+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "45.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:56:33.747362+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "46.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T09:56:35.747875+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:14:32.09862+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:27:12.100461+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "2.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:27:39.8514+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "3.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:29:08.660372+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "4.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:29:24.274973+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "6.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T10:47:05.371051+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "7.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:09:01.87332+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "9.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:09:16.678053+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "10.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:09:31.590785+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "12.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:14:51.189012+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "13.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:14:56.433386+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "15.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:15:12.13326+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "16.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:15:17.336282+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "18.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:15:33.004753+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "19.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:15:38.234464+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "21.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:15:53.960965+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "22.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:22:35.776529+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "24.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:22:49.170747+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "25.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:23:09.199316+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "27.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:23:24.878919+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "29.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:23:45.885269+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "30.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:23:48.077423+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "32.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:24:05.691109+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "33.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:24:09.036774+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T11:46:43.211518+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:48:07.922229+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "2.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:48:25.655221+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "3.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:48:42.05543+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "5.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:48:55.613495+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "6.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:49:08.559698+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "7.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:49:10.983185+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "8.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T12:49:28.879241+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "10.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:00:57.375277+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "12.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:01:30.557137+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "14.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:01:48.477444+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "16.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:02:03.336148+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "17.0",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:02:05.577076+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_waterverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "L",
+     "device_class": "water",
+     "friendly_name": "Wasmachine Waterverbruik"
+    },
+    "last_changed": "2026-10-16T13:14:18.215698+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "40.0",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T08:59:18.713016+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "30.0",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T08:59:26.502447+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T10:14:32.098952+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "40.0",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T10:27:04.507499+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "30.0",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T10:27:12.100749+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T11:46:43.211824+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "40.0",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T12:47:52.21703+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_temperatuur",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "°C",
+     "device_class": "temperature",
+     "friendly_name": "Wasmachine Temperatuur"
+    },
+    "last_changed": "2026-10-16T13:14:18.215985+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "1600",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T08:59:18.712705+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T10:14:32.098706+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "1600",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T10:27:04.506309+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T11:46:43.211579+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "0",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T12:17:28.055383+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T12:17:35.358284+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "0",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T12:47:32.434523+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "1200",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T12:47:52.215861+02:00"
+   },
+   {
+    "entity_id": "sensor.wasmachine_centrifugetoerental",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "rpm",
+     "friendly_name": "Wasmachine Centrifugetoerental"
+    },
+    "last_changed": "2026-10-16T13:14:18.215759+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T10:18:13.280755+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T10:22:39.618582+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T10:24:51.95366+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T10:25:06.355243+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T11:27:33.31985+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T11:28:02.122312+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T11:50:48.580155+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:17:24.110112+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:24:14.289778+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "programmed",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:24:23.253865+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:24:59.302733+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "in_use",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:25:08.217935+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "program_ended",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:50:55.395643+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger",
+    "state": "off",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger"
+    },
+    "last_changed": "2026-10-16T12:53:08.107489+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T10:18:13.286989+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "eco",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T10:22:39.11797+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T10:22:39.62358+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T10:24:51.959731+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T11:28:02.125738+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T11:50:48.583622+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T12:24:14.293019+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T12:24:23.258983+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T12:24:59.30797+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "cottons",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T12:25:08.22102+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_programma",
+    "state": "no_program",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Programma"
+    },
+    "last_changed": "2026-10-16T12:53:08.111035+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:25:06.358858+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:36:07.135252+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.2",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T10:53:08.591776+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.3",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:09:10.126225+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.4",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:24:11.421343+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:28:02.126005+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:50:48.583894+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T11:50:48.801763+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:01:48.044642+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:24:14.293297+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.0",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:25:08.221289+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.1",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:34:07.53149+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "0.2",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:50:08.963963+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_energieverbruik",
+    "state": "unknown",
+    "attributes": {
+     "unit_of_measurement": "kWh",
+     "device_class": "energy",
+     "friendly_name": "Wasdroger Energieverbruik"
+    },
+    "last_changed": "2026-10-16T12:53:08.111323+02:00"
+   }
+  ],
+  [
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T00:00:00+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "normal",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T10:18:13.287591+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T10:22:39.624068+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "normal",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T10:24:51.960314+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T11:28:02.126262+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "normal",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T11:50:48.58423+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:24:14.293566+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "normal",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:24:23.259551+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "extra_dry",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:24:24.692181+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:24:59.308482+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "extra_dry",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:25:08.223958+02:00"
+   },
+   {
+    "entity_id": "sensor.wasdroger_droogtegraad",
+    "state": "unknown",
+    "attributes": {
+     "device_class": "enum",
+     "friendly_name": "Wasdroger Droogtegraad"
+    },
+    "last_changed": "2026-10-16T12:53:08.111596+02:00"
+   }
+  ]
+ ]
+}
