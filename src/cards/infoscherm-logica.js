@@ -322,6 +322,14 @@ export function klimaatZichtbaar(stand) {
 export const klimaatBedienbaar = (stand) => stand?.instellingen?.klimaat_bedienen !== false;
 
 /**
+ * Staan er ruimtes op het scherm? Alleen als de installateur er agenda's voor
+ * koos (kaarteditor van het beheer, sinds 16 oktober 2026). Het blok zelf zet
+ * de receptie erop met Indeling; een schakelaar om ze te verbergen is er niet,
+ * want zonder blok staan ze er al niet.
+ */
+export const ruimtesZichtbaar = (stand) => (stand?.installatie?.ruimtes?.length ?? 0) > 0;
+
+/**
  * Welke pagina's er achter de koppen zitten. Welkom is het scherm zelf; de
  * rest is er alleen als er iets te tonen valt.
  */
@@ -335,6 +343,7 @@ export function paginas(stand, feeds, nu = null) {
   if ((stand?.installatie?.afval?.length ?? 0) > 0) uit.push("afval");
   if (verlichtingZichtbaar(stand)) uit.push("verlichting");
   if (klimaatZichtbaar(stand)) uit.push("klimaat");
+  if (ruimtesZichtbaar(stand)) uit.push("ruimtes");
   if ((stand?.installatie?.agendas?.length ?? 0) > 0) uit.push("agenda");
   if ((stand?.verjaardagen?.length ?? 0) > 0) uit.push("verjaardagen");
   return uit;
@@ -434,14 +443,15 @@ export const BLOK_INFO = {
   energie: { naam: "Energie", icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
   afval: { naam: "Afvalkalender", icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
   klimaat: { naam: "Klimaat", icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
+  ruimtes: { naam: "Ruimtes", icoon: "door", pagina: "ruimtes", aantal: true, maat: [2, 2] },
 };
 
 /**
  * De blokken die een LIJST tonen (tegels, berichten, lampen, afspraken,
- * verjaardagen, airco's). Die schalen alleen met de breedte: een hoger blok toont
+ * verjaardagen, airco's, ruimtes). Die schalen alleen met de breedte: een hoger blok toont
  * meer, geen groter. Alle andere blokken schalen met allebei.
  */
-export const LIJSTBLOKKEN = new Set(["aanwezig", "nieuws", "verlichting", "agenda", "verjaardagen", "klimaat"]);
+export const LIJSTBLOKKEN = new Set(["aanwezig", "nieuws", "verlichting", "agenda", "verjaardagen", "klimaat", "ruimtes"]);
 
 /* De schaal per breedte en per hoogte in rastercellen; 2 cellen is 1. */
 const SCHAAL_BREEDTE = [0, 0.85, 1, 1.12, 1.25, 1.35, 1.45];
@@ -597,6 +607,8 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
       return klimaatZichtbaar(s) ? null : "Klimaat staat uit in het beheer";
     case "agenda":
       return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
+    case "ruimtes":
+      return ruimtesZichtbaar(s) ? null : "Geen ruimtes gekozen (kaartinstellingen van het beheer)";
     case "afval":
       return (s.installatie?.afval?.length ?? 0) > 0
         ? null

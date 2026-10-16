@@ -250,11 +250,15 @@ export class BlijvendAbonnement {
   /**
    * @param {object} bericht  bijvoorbeeld `{type: "domotiapp_lovelace/infoscherm/subscribe"}`
    * @param {Function} cb  krijgt elk bericht
-   * @param {object} [opties]  doorgegeven aan `Herkansing` (wachttijden, klok)
+   * @param {object} [opties]  doorgegeven aan `Herkansing` (wachttijden, klok);
+   *   plus `ookBij(fout)`: nog een fout waarbij het later opnieuw moet. Een
+   *   agenda van Home Assistant kan na een herstart nog even niet bestaan
+   *   (`not_found`), en dat is bij een agenda net zo goed "nog niet klaar".
    */
   constructor(bericht, cb, opties = {}) {
     this.bericht_ = bericht;
     this.cb_ = cb;
+    this.ookBij_ = typeof opties.ookBij === "function" ? opties.ookBij : null;
     this.hass_ = null;
     this.opzeggen_ = null;
     this.nr_ = 0;
@@ -280,7 +284,7 @@ export class BlijvendAbonnement {
       this.opzeggen_ = opzeggen;
       this.herkansing_.herstel();
     } catch (fout) {
-      if (nr === this.nr_ && nogNietGereed(fout)) this.herkansing_.plan();
+      if (nr === this.nr_ && (nogNietGereed(fout) || this.ookBij_?.(fout))) this.herkansing_.plan();
     }
   }
 

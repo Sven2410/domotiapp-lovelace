@@ -17,10 +17,17 @@
 | `infoscherm/bestand/verwijder` | idem |
 | `infoscherm/feeds/ververs` | idem |
 | `infoscherm/gebruikers` | alleen admin |
+| `infoscherm/ruimtes/boek` | iedere ingelogde gebruiker; een kioskaccount alleen met de code |
+| `infoscherm/ruimtes/vrijgeven` | iedereen behalve kiosk |
+| `infoscherm/ruimtes/code` | iedereen behalve kiosk |
 
 Zie `const.py` voor waarom de grens niet bij HA's adminvlag ligt maar bij het
 kioskaccount. Een kioskaccount dat toch een beheercommando stuurt krijgt
 `unauthorized`; de kaart op de iPad toont dat beheer niet eens.
+
+De code om een ruimte te boeken zit NIET in de stand, want die gaat ook naar
+de iPad. `infoscherm/get` geeft hem alleen aan wie mag beheren
+(`ruimte_code`); zie `ruimtes.py`.
 
 Na elke wijziging gaat de HELE stand naar elke abonnee. Hij is klein (tekst en
 een paar ID's), en het scheelt een kaart die per soort wijziging iets anders
@@ -44,11 +51,13 @@ from . import bestanden
 from .const import (
     DATA_ABONNEES,
     DATA_FEEDS,
+    DATA_RUIMTES,
     DATA_STORE,
     DATA_WS_REGISTERED,
     EVENT_FEEDS,
     EVENT_STAND,
 )
+from .ruimtes import RuimteFout
 from .store import InfoFout
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,6 +84,9 @@ def async_register(hass: HomeAssistant) -> None:
         ws_bestand_verwijder,
         ws_feeds_ververs,
         ws_gebruikers,
+        ws_ruimte_boek,
+        ws_ruimte_vrijgeven,
+        ws_ruimte_code,
     ):
         websocket_api.async_register_command(hass, commando)
     data[DATA_WS_REGISTERED] = True
@@ -160,13 +172,16 @@ def ws_get(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     if store is None:
         return
     lezer = hass.data.get(DOMAIN, {}).get(DATA_FEEDS)
+    rechten = _rechten(store, connection)
     connection.send_result(
         msg["id"],
         {
             "stand": store.snapshot(),
             "feeds": lezer.items() if lezer else [],
             "feed_fouten": lezer.fouten() if lezer else {},
-            **_rechten(store, connection),
+            **rechten,
+            # Alleen voor wie mag beheren; de iPad krijgt hem nooit.
+            **({"ruimte_code": store.ruimte_code} if rechten["mag_beheren"] else {}),
         },
     )
 
@@ -402,3 +417,80 @@ async def ws_gebruikers(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
             ]
         },
     )
+
+
+# --------------------------------------------------------------------------
+# Ruimtes (16 oktober 2026)
+# --------------------------------------------------------------------------
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/infoscherm/ruimtes/boek",
+        vol.Required("ruimte"): cv.entity_id,
+        vol.Required("start"): cv.string,
+        vol.Required("eind"): cv.string,
+        vol.Optional("omschrijving"): vol.Any(cv.string, None),
+        vol.Optional("code"): vol.Any(cv.string, None),
+    }
+)
+@websocket_api.async_response
+async def ws_ruimte_boek(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Een ruimte boeken. Het scherm stuurt altijd een code mee, het beheer
+    niet; een kioskaccount zonder code krijgt `geen_code`."""
+    store = _store(hass, connection, msg)
+    if store is None:
+        return
+    ruimtes = hass.data[DOMAIN][DATA_RUIMTES]
+    gebruiker = connection.user
+    op_scherm = "code" in msg or not _mag_beheren(store, connection)
+    try:
+        if op_scherm:
+            ruimtes.controleer_code(gebruiker.id if gebruiker else "", msg.get("code"))
+        resultaat = await ruimtes.async_boek(
+            ruimte=msg["ruimte"],
+            start=msg["start"],
+            eind=msg["eind"],
+            # Op het scherm is er geen veld voor; wat er toch meekomt telt niet.
+            titel=None if op_scherm else msg.get("omschrijving"),
+            op_scherm=op_scherm,
+            door=(gebruiker.name or "") if gebruiker else "",
+        )
+    except RuimteFout as fout:
+        connection.send_error(msg["id"], fout.code, str(fout))
+        return
+    connection.send_result(msg["id"], resultaat)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/infoscherm/ruimtes/vrijgeven",
+        vol.Required("ruimte"): cv.entity_id,
+        vol.Required("uid"): cv.string,
+        vol.Optional("recurrence_id"): vol.Any(cv.string, None),
+    }
+)
+@websocket_api.async_response
+async def ws_ruimte_vrijgeven(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Een boeking weghalen. Alleen in het beheer."""
+    store = _beheer(hass, connection, msg)
+    if store is None:
+        return
+    try:
+        await hass.data[DOMAIN][DATA_RUIMTES].async_vrijgeven(
+            ruimte=msg["ruimte"], uid=msg["uid"], recurrence_id=msg.get("recurrence_id")
+        )
+    except RuimteFout as fout:
+        connection.send_error(msg["id"], fout.code, str(fout))
+        return
+    connection.send_result(msg["id"], {"vrijgegeven": True})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/infoscherm/ruimtes/code", vol.Required("code"): vol.Any(str, None)}
+)
+@websocket_api.async_response
+async def ws_ruimte_code(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """De code om op het scherm te boeken. Leeg zet boeken op het scherm uit.
+    De stand gaat rond, want `boeken_op_scherm` kan veranderd zijn."""
+    await _zet(hass, connection, msg, "code", lambda s, v: s.async_zet_ruimte_code(v))

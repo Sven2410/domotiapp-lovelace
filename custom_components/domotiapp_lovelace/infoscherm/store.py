@@ -41,6 +41,18 @@ weg (de welkomsttekst verhuist naar `scherm.welkom_tekst`).
 
 Het logo en het accent stonden tot 0.36.0 in `praktijk`; bij het laden
 verhuizen ze eenmalig naar `scherm` (zie `async_load`).
+
+## Sinds 16 oktober 2026: de ruimtes
+
+`installatie.ruimtes` zijn agenda's, één per ruimte (spreekruimte, kleine
+vergaderruimte). Net als de lampen en de airco's: de installateur kiest de
+entiteiten, de receptie de namen en de volgorde. De boekingen zelf staan NIET
+hier maar in die agenda's; zie `ruimtes.py`.
+
+De code waarmee je op het scherm boekt staat hier wel, maar BUITEN de stand
+(`ruimte_code`): de stand gaat naar elk scherm, ook naar de iPad, en daar
+hoort de code niet te staan. Wat het scherm ervan weet is alleen of er een
+is (`boeken_op_scherm`).
 """
 
 from __future__ import annotations
@@ -59,6 +71,8 @@ from .bestanden import SOORTEN, is_geldig_id
 from .const import (
     AANWEZIG_WEERGAVEN,
     BLOK_SOORTEN,
+    CODE_MAX,
+    CODE_MIN,
     DAGEN,
     KOLOMMEN,
     MAX_AFVAL,
@@ -73,6 +87,7 @@ from .const import (
     MAX_MEDEDELINGEN,
     MAX_MIDDEL,
     MAX_PERSONEN,
+    MAX_RUIMTES,
     MAX_UITZONDERINGEN,
     MAX_VERJAARDAGEN,
     RIJEN,
@@ -470,7 +485,15 @@ def valideer_scherm(rauw: Any) -> dict[str, Any]:
 
 
 def leeg_installatie() -> dict[str, Any]:
-    return {"weer": None, "energie": None, "agendas": [], "verlichting": [], "afval": [], "klimaat": []}
+    return {
+        "weer": None,
+        "energie": None,
+        "agendas": [],
+        "verlichting": [],
+        "afval": [],
+        "klimaat": [],
+        "ruimtes": [],
+    }
 
 
 def _in_volgorde_van(lampen: list[dict[str, Any]], volgorde: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -503,6 +526,19 @@ def valideer_airco(rauw: Any) -> dict[str, Any]:
     return {
         "entity": _entiteit(rauw.get("entity"), "klimaat.entity", ("climate",)),
         "naam": _tekst(rauw.get("naam"), "klimaat.naam", MAX_KORT),
+    }
+
+
+def valideer_ruimte(rauw: Any) -> dict[str, Any]:
+    """Een ruimte om te boeken: een agenda, met de naam die de receptie hem
+    geeft. Sinds 16 oktober 2026."""
+    if isinstance(rauw, str):
+        rauw = {"entity": rauw}
+    if not isinstance(rauw, dict):
+        raise InfoFout("een ruimte is een object met 'entity' en 'naam'")
+    return {
+        "entity": _entiteit(rauw.get("entity"), "ruimtes.entity", ("calendar",)),
+        "naam": _tekst(rauw.get("naam"), "ruimtes.naam", MAX_KORT),
     }
 
 
@@ -547,6 +583,7 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     energie = rauw.get("energie") or None
     lampen = _eerste_per_entiteit([valideer_lamp(l) for l in _lijst(rauw.get("verlichting"), "verlichting", MAX_LAMPEN)])
     aircos = _eerste_per_entiteit([valideer_airco(a) for a in _lijst(rauw.get("klimaat"), "klimaat", MAX_AIRCOS)])
+    ruimtes = _eerste_per_entiteit([valideer_ruimte(r) for r in _lijst(rauw.get("ruimtes"), "ruimtes", MAX_RUIMTES)])
     agendas = [
         _entiteit(a, "agendas", ("calendar",))
         for a in _lijst(rauw.get("agendas"), "agendas", MAX_AGENDAS)
@@ -567,7 +604,21 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
         "verlichting": lampen,
         "afval": list(dict.fromkeys(afval)),
         "klimaat": aircos,
+        "ruimtes": ruimtes,
     }
+
+
+def valideer_code(rauw: Any) -> str:
+    """De code om op het scherm te boeken: leeg (dan kan het niet), of vier
+    tot acht cijfers."""
+    if rauw is None:
+        return ""
+    if not isinstance(rauw, str):
+        raise InfoFout("de code is tekst")
+    code = rauw.strip()
+    if code and not (code.isdigit() and code.isascii() and CODE_MIN <= len(code) <= CODE_MAX):
+        raise InfoFout(f"de code is {CODE_MIN} tot {CODE_MAX} cijfers, of leeg")
+    return code
 
 
 # --------------------------------------------------------------------------
@@ -712,6 +763,7 @@ class InfoStore:
         self._indeling = standaard_indeling()
         self._instellingen = leeg_instellingen()
         self._bestanden: dict[str, dict[str, Any]] = {}
+        self._ruimte_code = ""
 
     async def async_load(self) -> None:
         data = await self._store.async_load()
@@ -729,6 +781,10 @@ class InfoStore:
         self._personen = self._lees_lijst(data.get("personen"), valideer_persoon, "persoon")
         self._mededelingen = self._lees_lijst(data.get("mededelingen"), valideer_mededeling, "mededeling")
         self._verjaardagen = self._lees_lijst(data.get("verjaardagen"), valideer_verjaardag, "verjaardag")
+        try:
+            self._ruimte_code = valideer_code(data.get("ruimte_code"))
+        except InfoFout as fout:
+            _LOGGER.warning("Infoscherm: de code voor de ruimtes in de opslag overgeslagen: %s", fout)
         bestanden = data.get("bestanden") or {}
         self._bestanden = {
             bid: meta
@@ -805,10 +861,14 @@ class InfoStore:
                 "afval": list(self._installatie.get("afval", [])),
                 "verlichting": [dict(l) for l in self._installatie["verlichting"]],
                 "klimaat": [dict(a) for a in self._installatie.get("klimaat", [])],
+                "ruimtes": [dict(r) for r in self._installatie.get("ruimtes", [])],
             },
             "indeling": {"blokken": [dict(b) for b in self._indeling["blokken"]]},
             "instellingen": dict(self._instellingen),
             "bestanden": {bid: dict(meta) for bid, meta in self._bestanden.items()},
+            # Of er op het scherm geboekt kan worden. De code zelf staat hier
+            # met opzet NIET in: deze stand gaat ook naar de iPad.
+            "boeken_op_scherm": bool(self._ruimte_code),
         }
 
     @callback
@@ -828,6 +888,14 @@ class InfoStore:
     @property
     def instellingen(self) -> dict[str, Any]:
         return dict(self._instellingen)
+
+    @property
+    def ruimte_code(self) -> str:
+        return self._ruimte_code
+
+    @callback
+    def is_ruimte(self, entity_id: str) -> bool:
+        return any(r["entity"] == entity_id for r in self._installatie.get("ruimtes", []))
 
     # ----------------------------------------------------------- schrijven
 
@@ -874,7 +942,7 @@ class InfoStore:
 
     async def async_zet_installatie(self, rauw: Any, *, mag_entiteiten_wijzigen: bool) -> dict[str, Any]:
         """De entiteiten kiest de installateur (admin); de receptie mag alleen de
-        NAMEN en de VOLGORDE van de lampen en de airco's wijzigen. Stuurt een
+        NAMEN en de VOLGORDE van de lampen, de airco's en de ruimtes wijzigen. Stuurt een
         receptie-account een andere lijst, dan blijven de entiteiten zoals ze
         waren: de bekende krijgen de namen en de volgorde die ze meestuurt, en
         een die ze niet meestuurde gaat achteraan."""
@@ -887,6 +955,7 @@ class InfoStore:
                 "afval": list(self._installatie.get("afval", [])),
                 "verlichting": _namen_en_volgorde(self._installatie["verlichting"], nieuw["verlichting"]),
                 "klimaat": _namen_en_volgorde(self._installatie.get("klimaat", []), nieuw["klimaat"]),
+                "ruimtes": _namen_en_volgorde(self._installatie.get("ruimtes", []), nieuw["ruimtes"]),
             }
         self._installatie = nieuw
         await self._async_save()
@@ -914,10 +983,12 @@ class InfoStore:
                 "afval": rauw.get("afval"),
                 "verlichting": rauw.get("verlichting"),
                 "klimaat": rauw.get("klimaat"),
+                "ruimtes": rauw.get("ruimtes"),
             }
         )
         nieuw["verlichting"] = _houd_namen(nieuw["verlichting"], self._installatie["verlichting"])
         nieuw["klimaat"] = _houd_namen(nieuw["klimaat"], self._installatie.get("klimaat", []))
+        nieuw["ruimtes"] = _houd_namen(nieuw["ruimtes"], self._installatie.get("ruimtes", []))
         kiosk = valideer_kiosk_gebruikers(rauw.get("kiosk_gebruikers"))
         gewijzigd = nieuw != self._installatie or kiosk != self._instellingen["kiosk_gebruikers"]
         if gewijzigd:
@@ -938,6 +1009,11 @@ class InfoStore:
         self._instellingen = nieuw
         await self._async_save()
         return dict(self._instellingen)
+
+    async def async_zet_ruimte_code(self, rauw: Any) -> str:
+        self._ruimte_code = valideer_code(rauw)
+        await self._async_save()
+        return self._ruimte_code
 
     async def async_registreer_bestand(self, bestand_id: str, meta: dict[str, Any]) -> None:
         if len(self._bestanden) >= MAX_BESTANDEN:
@@ -970,6 +1046,7 @@ class InfoStore:
                 "indeling": self._indeling,
                 "instellingen": self._instellingen,
                 "bestanden": self._bestanden,
+                "ruimte_code": self._ruimte_code,
             }
         )
 

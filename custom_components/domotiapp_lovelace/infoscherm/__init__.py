@@ -10,6 +10,7 @@ afbreken; de inhoud staat in:
 | `bestanden.py` | logo en foto's op schijf |
 | `feeds.py` | nieuws van buiten (RSS/Atom) |
 | `http.py` | uploaden en uitserveren |
+| `ruimtes.py` | een ruimte boeken en vrijgeven, met de code |
 | `websocket.py` | de commando's en het abonnement voor de kaarten |
 """
 
@@ -22,8 +23,9 @@ from homeassistant.core import HomeAssistant, callback
 from ..const import DOMAIN
 from . import http as infoscherm_http
 from . import websocket as infoscherm_ws
-from .const import DATA_FEEDS, DATA_STORE
+from .const import DATA_FEEDS, DATA_RUIMTES, DATA_STORE
 from .feeds import FeedLezer
+from .ruimtes import Ruimtes
 from .store import InfoStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,6 +44,9 @@ async def async_zet_op(hass: HomeAssistant) -> None:
         store = InfoStore(hass)
         await store.async_load()
         data[DATA_STORE] = store
+
+    if DATA_RUIMTES not in data:
+        data[DATA_RUIMTES] = Ruimtes(hass, data[DATA_STORE])
 
     infoscherm_ws.async_register(hass)
     infoscherm_http.async_registreer(hass)
@@ -62,4 +67,5 @@ def async_stop(hass: HomeAssistant) -> None:
     data = hass.data.get(DOMAIN, {})
     if (lezer := data.pop(DATA_FEEDS, None)) is not None:
         lezer.async_stop()
+    data.pop(DATA_RUIMTES, None)
     data.pop(DATA_STORE, None)
