@@ -12,8 +12,10 @@ Starten op afstand werkte daar niet. Miele vraagt "start op afstand" op de
 machine zelf, bij elk programma opnieuw. Daardoor werd de startknop nooit
 beschikbaar, en de knop aan/uit gaf "Failed to set state".
 
-**Dit is een voorstel.** Op zijn verzoek eerst schermafdrukken, net als bij
-0.71.0. De PR wordt pas gemerged en uitgebracht na zijn akkoord.
+**Dit was eerst een voorstel.** Op zijn verzoek kwamen er eerst
+schermafdrukken, net als bij 0.71.0. Op 16 oktober 2026 gaf hij akkoord
+("uitbrengen"), en daarna is het gemerged en uitgebracht. Over het toerental
+(zie hieronder) zei hij niets, dus dat staat er niet op.
 
 ## Wat er gebouwd is
 
@@ -198,7 +200,8 @@ droogtegraad zit in een aparte lijst (`BEURT_ROLLEN`).
 - `npm run build` (met `check:css`), `verify`, `check:registratie`,
   `check:controls`: groen.
 - `npm test`: 1966 tests, alle groen.
-- Python: zie de PR. Aan de serverkant is niets veranderd.
+- Python: 874 tests, alle groen (lokaal in Docker en in CI). Aan de
+  serverkant is niets veranderd.
 
 ## Samenvatting
 
@@ -218,7 +221,8 @@ hele knopdeel over vóórdat de coach aan bod komt (`paintBediening_`).
 
 - **Alleen wasmachine en droger**, aan het apparaat herkend. Een vaatwasser
   houdt zijn knoppen.
-- **Toerental niet op de kaart** (zie hierboven); de vraag aan de eigenaar.
+- **Toerental niet op de kaart** (zie hierboven). De vraag ligt bij de
+  eigenaar; bij zijn akkoord zei hij er niets over.
 - **"Aan" (Miele `on`, het display aan zonder programma) telt als aan**, en
   toont dus de live tegels (met strepen), niet de laatste beurt. Zo stond het
   in de vraag: *"zodra hij aangaat (status niet meer off)"*.
