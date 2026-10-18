@@ -1,5 +1,6 @@
 /**
- * Wat een vriezerkaart moet zeggen, los van hoe hij eruitziet.
+ * Wat een vriezerkaart moet zeggen, los van hoe hij eruitziet. Sinds 0.80.0
+ * ook een koelkast.
  *
  * Gevraagd op 15 oktober 2026, via de beheersessie, voor een Miele FNS 7710 E
  * bij een klant: een eigen kaart met de temperatuur, het instellen ervan, en
@@ -14,7 +15,21 @@
  * Miele maakt bij deze vriezer ook `climate.vriezer_zone_2` en `_zone_3`, met
  * een bereik van 7 tot 35 en geen temperatuur: spookzones, een FNS 7710 E heeft
  * één vak. De kaart kiest bij het toevoegen daarom een climate MET een
- * temperatuur (`isEchteZone`).
+ * temperatuur (`isEchteZone`). "Geen temperatuur" was in de dump van
+ * 15 oktober 2026 `null`; op 18 oktober stond er bij dezelfde klant -328, bij
+ * de vriezer en bij de koelkast (Miele's "geen waarde" is -32768 honderdsten).
+ * Een temperatuur onder het absolute nulpunt telt daarom als geen
+ * (`graden`).
+ *
+ * DE KOELKAST (sinds 0.80.0)
+ *
+ * Gevraagd op 18 oktober 2026, via de beheersessie, voor een Miele K 7747 C
+ * bij dezelfde klant: "net als de vriezer". Dus dezelfde kaart: temperatuur,
+ * instellen, deur en melding, en superkoelen en de modus NIET. Wat verschilt
+ * is alleen hoe hij heet (`koelSoort`): de naam als het apparaat er geen
+ * heeft, en de zin bij een melding. Het `type` bleef
+ * `domotiapp-vriezer-card`, net als bij de vaatwasserkaart die ook de
+ * wasmachine werd.
  *
  * Geen DOM en geen `hass` in de rekenfuncties: dit hoort in een gewone Node-test.
  */
@@ -29,8 +44,40 @@ function getal(x) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Het absolute nulpunt, in °C. Wat eronder ligt is geen meting. */
+const NULPUNT = -273.15;
+
+/** Een temperatuur, of null als er geen is: leeg, of Miele's -328. */
+function graden(x) {
+  const n = getal(x);
+  return n != null && n > NULPUNT ? n : null;
+}
+
 /** Een zone met een eigen temperatuur. Miele's spookzones hebben er geen. */
-export const isEchteZone = (st) => st?.attributes?.current_temperature != null;
+export const isEchteZone = (st) => graden(st?.attributes?.current_temperature) != null;
+
+/**
+ * Koelkast of vriezer.
+ *
+ * Miele zegt het in de `translation_key` van de climate (`refrigerator`,
+ * `freezer`). Een ander merk zegt het met het bereik: een koelkast stel je
+ * boven nul in (de K 7747 C van 3 tot 9), een vriezer eronder (de FNS 7710 E
+ * van -28 tot -15). Zonder bereik blijft het een vriezer, zoals de kaart was.
+ *
+ * @param {object|null} st de state van de climate
+ * @param {object|null} reg de climate uit `hass.entities`
+ * @returns {"koelkast"|"vriezer"}
+ */
+export function koelSoort(st, reg) {
+  const sleutel = reg?.translation_key;
+  if (sleutel === "refrigerator") return "koelkast";
+  if (sleutel === "freezer") return "vriezer";
+  const max = graden(st?.attributes?.max_temp);
+  return max != null && max > 0 ? "koelkast" : "vriezer";
+}
+
+/** Hoe de soort heet: als naam, en in een zin ("op de koelkast"). */
+export const SOORTNAAM = { koelkast: "Koelkast", vriezer: "Vriezer" };
 
 /**
  * De delen van het apparaat bij deze climate.
@@ -66,16 +113,18 @@ export function vriezerDelen(hass, climateId) {
  *
  * @param {object|null} st de state van de climate
  * @param {{temperatuur?: object, deur?: object, storing?: object, melding?: object}} delen de states
+ * @param {"koelkast"|"vriezer"} soort zie `koelSoort`
  */
-export function vriezerStand(st, delen = {}) {
+export function vriezerStand(st, delen = {}, soort = "vriezer") {
   if (!st || st.state === "unavailable") return null;
   const a = st.attributes ?? {};
-  const sensor = delen.temperatuur && !LEEG.has(String(delen.temperatuur.state)) ? getal(delen.temperatuur.state) : null;
+  const sensor = delen.temperatuur && !LEEG.has(String(delen.temperatuur.state)) ? graden(delen.temperatuur.state) : null;
   return {
-    temperatuur: sensor ?? getal(a.current_temperature),
-    doel: getal(a.temperature),
-    min: getal(a.min_temp) ?? -28,
-    max: getal(a.max_temp) ?? -15,
+    soort,
+    temperatuur: sensor ?? graden(a.current_temperature),
+    doel: graden(a.temperature),
+    min: getal(a.min_temp) ?? (soort === "koelkast" ? 3 : -28),
+    max: getal(a.max_temp) ?? (soort === "koelkast" ? 9 : -15),
     stap: getal(a.target_temp_step) ?? 1,
     eenheid: String(delen.temperatuur?.attributes?.unit_of_measurement ?? "°C"),
     deurOpen: delen.deur?.state === "on",
@@ -109,7 +158,7 @@ export function vriezerMelding(s) {
   const regels = [];
   if (s.deurOpen) regels.push("Deur open");
   if (s.storing) regels.push("Storing");
-  if (s.melding) regels.push("Melding op de vriezer");
+  if (s.melding) regels.push(`Melding op de ${(SOORTNAAM[s.soort] ?? SOORTNAAM.vriezer).toLowerCase()}`);
   if (s.deurBekend && !s.deurOpen) regels.push("Deur dicht");
   const tone = s.storing ? "bad" : s.deurOpen || s.melding ? "warn" : "neutral";
   return { tekst: regels.join(" · "), regels, tone };
@@ -119,7 +168,7 @@ export function vriezerMelding(s) {
  * De volgende doeltemperatuur na een tik op − of +, of null als dat niet kan.
  *
  * Op het rooster van de stap, binnen min en max: -28 tot -15 in hele graden
- * bij Miele.
+ * bij de vriezer van Miele, 3 tot 9 bij de koelkast.
  *
  * @param {ReturnType<typeof vriezerStand>} s
  * @param {number} van de waarde die er nu staat (de getikte, als die er is)
@@ -138,16 +187,18 @@ export const doelOproep = (climateId, waarde) => ["climate", "set_temperature", 
 
 /**
  * Merk en type met een productfoto (zie productfoto.js). Miele zet het type in
- * `model_id`. Productfoto van Miele, met toestemming van de eigenaar als
- * installateur (15 oktober 2026). De foto toont de vriezer met de deur open,
- * zo levert Miele hem aan.
+ * `model_id`. Productfoto's van Miele, met toestemming van de eigenaar als
+ * installateur (15 oktober 2026). Ze tonen het apparaat met de deur open, zo
+ * levert Miele ze aan. Koelkasten en vriezers staan in één lijst, met de
+ * soort in het label: het is één kaart.
  */
-export const VRIEZERS = {
+export const KOELEN_EN_VRIEZEN = {
   miele: {
     label: "Miele",
     fabrikant: "miele",
     modellen: {
-      fns_7710_e: { label: "FNS 7710 E", pad: "vriezers/miele-fns-7710-e.webp", codes: ["FNS 7710 E"] },
+      fns_7710_e: { label: "FNS 7710 E (vriezer)", pad: "vriezers/miele-fns-7710-e.webp", codes: ["FNS 7710 E"] },
+      k_7747_c: { label: "K 7747 C (koelkast)", pad: "koelkasten/miele-k-7747-c.webp", codes: ["K 7747 C"] },
     },
   },
 };

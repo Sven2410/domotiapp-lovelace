@@ -3,7 +3,8 @@
  *
  * Gevraagd op 15 oktober 2026, voor een Miele FNS 7710 E bij een klant. Zie
  * vriezer-logica.js voor wat erop staat en waarom supervriezen en de modus er
- * niet op staan.
+ * niet op staan. Sinds 0.80.0 ook de koelkast (een Miele K 7747 C): dezelfde
+ * kaart, die zelf ziet welke van de twee het is (`koelSoort`).
  *
  *   [foto/chip] Vriezer                     -18 °C
  *               Deur dicht (altijd, sinds 0.71.0)
@@ -25,10 +26,12 @@ import { moreInfo, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { metType, merkKeuzes, productAfbeelding, typeKeuzes } from "./productfoto.js";
 import {
-  VRIEZERS,
+  KOELEN_EN_VRIEZEN,
+  SOORTNAAM,
   doelOproep,
   gradenTekst,
   isEchteZone,
+  koelSoort,
   volgendDoel,
   vriezerDelen,
   vriezerMelding,
@@ -121,7 +124,7 @@ class VriezerCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig: zonder entiteit een uitlegkaart.
     const c = { name: "", merk: "auto", ...config };
-    if (!c.entity) c[INCOMPLETE] = "Kies de climate van de vriezer.";
+    if (!c.entity) c[INCOMPLETE] = "Kies de climate van de koelkast of de vriezer.";
     return c;
   }
 
@@ -158,15 +161,23 @@ class VriezerCard extends DacCard {
     return reg?.device_id ? this.hass_?.devices?.[reg.device_id] ?? null : null;
   }
 
+  soort_() {
+    return koelSoort(stateOf(this.hass, this.config.entity), this.hass_?.entities?.[this.config.entity]);
+  }
+
   stand_() {
     const d = this.delen_();
     const st = (id) => stateOf(this.hass, id);
-    return vriezerStand(st(this.config.entity), {
-      temperatuur: st(d.temperatuur),
-      deur: st(d.deur),
-      storing: st(d.storing),
-      melding: st(d.melding),
-    });
+    return vriezerStand(
+      st(this.config.entity),
+      {
+        temperatuur: st(d.temperatuur),
+        deur: st(d.deur),
+        storing: st(d.storing),
+        melding: st(d.melding),
+      },
+      this.soort_(),
+    );
   }
 
   template() {
@@ -233,7 +244,7 @@ class VriezerCard extends DacCard {
 
     const apparaat = this.apparaat_();
     const naam =
-      c.name || apparaat?.name_by_user || apparaat?.name || stateOf(this.hass, c.entity)?.attributes?.friendly_name || "Vriezer";
+      c.name || apparaat?.name_by_user || apparaat?.name || stateOf(this.hass, c.entity)?.attributes?.friendly_name || SOORTNAAM[this.soort_()];
     this.text(".nm", naam);
 
     // Foto of chip; met een foto draagt het icoontje in de statusregel de kleur.
@@ -276,7 +287,7 @@ class VriezerCard extends DacCard {
 
   /** De productfoto bij merk en type, of geen. Een foto die niet laadt geeft de chip terug. */
   paintFoto_() {
-    const bron = productAfbeelding(this.config, this.apparaat_(), VRIEZERS);
+    const bron = productAfbeelding(this.config, this.apparaat_(), KOELEN_EN_VRIEZEN);
     const img = this.$(".foto");
     if (img.dataset.bron !== bron) {
       img.dataset.bron = bron;
@@ -308,11 +319,11 @@ class VriezerCard extends DacCard {
     return document.createElement("domotiapp-vriezer-card-editor");
   }
 
-  /** Een vriezer met een eigen temperatuur: niet een van Miele's spookzones. */
+  /** Een vriezer of koelkast met een eigen temperatuur: niet een van Miele's spookzones. */
   static getStubConfig(hass, entities) {
     const climates = (entities ?? []).filter((e) => String(e).startsWith("climate."));
     const echt = climates.filter((e) => isEchteZone(hass?.states?.[e]));
-    const vriezer = echt.find((e) => /vriez|freez/i.test(e)) ?? echt[0];
+    const vriezer = echt.find((e) => /vriez|freez|koel|fridge|refrig/i.test(e)) ?? echt[0];
     return vriezer ? { entity: vriezer } : {};
   }
 }
@@ -335,7 +346,7 @@ class VriezerEditor extends DacEditor {
   }
 
   schema() {
-    const types = typeKeuzes(this.config_?.merk, VRIEZERS);
+    const types = typeKeuzes(this.config_?.merk, KOELEN_EN_VRIEZEN);
     return [
       { name: "entity", required: true, selector: sel.entity(["climate"]) },
       { name: "name", selector: sel.text() },
@@ -345,17 +356,17 @@ class VriezerEditor extends DacEditor {
   }
 
   serialize(config) {
-    return metType(config, this.apparaat_(), VRIEZERS);
+    return metType(config, this.apparaat_(), KOELEN_EN_VRIEZEN);
   }
 
   label(s) {
-    return { entity: "Vriezer", name: "Naam", merk: "Merk", model: "Type" }[s.name] ?? super.label(s);
+    return { entity: "Koelkast of vriezer", name: "Naam", merk: "Merk", model: "Type" }[s.name] ?? super.label(s);
   }
 
   helper(s) {
     return {
       entity:
-        "De climate van de vriezer. Kies het vak met een temperatuur: Miele maakt er ook twee zonder (zone 2 en 3), en die hebben geen vak. Deur, storing en melding van hetzelfde apparaat zoekt de kaart zelf.",
+        "De climate van de koelkast of de vriezer. Kies het vak met een temperatuur: Miele maakt er ook twee zonder (zone 2 en 3), en die hebben geen vak. Deur, storing en melding van hetzelfde apparaat zoekt de kaart zelf.",
       name: "Leeg laten: de naam van het apparaat in Home Assistant.",
       merk: "Automatisch toont de productfoto als het type bekend is, en anders het icoon.",
       model: "Het type bepaalt de productfoto.",
@@ -365,8 +376,8 @@ class VriezerEditor extends DacEditor {
 
 registerEditor("domotiapp-vriezer-card-editor", VriezerEditor);
 registerCard("domotiapp-vriezer-card", VriezerCard, {
-  name: "DomotiApp Vriezer",
-  description: "De vriezer: de temperatuur, waar hij op staat, en of de deur open staat of er een melding is. Met een productfoto per merk en type.",
+  name: "DomotiApp Koelkast en vriezer",
+  description: "De koelkast of de vriezer: de temperatuur, waar hij op staat, en of de deur open staat of er een melding is. Met een productfoto per merk en type.",
 });
 
 export { VriezerCard };

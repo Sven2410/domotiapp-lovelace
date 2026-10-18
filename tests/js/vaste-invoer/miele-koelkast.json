@@ -1,0 +1,274 @@
+{
+  "_toelichting": "Een Miele K 7747 C (inbouwkoelkast) via de core-integratie miele (cloud), 18-10-2026, alleen gelezen bij een klant. Serienummer en hw_version waren al verwijderd; de unique_ids en tijdstippen zijn eruit. In de vorm van de frontend: devices, entities (register) en states. De zones 2 en 3 zijn spookzones met -328 als temperatuur (in de vriezerdump van 15-10 stond daar null).",
+  "devices": {
+    "d0000000000000000000000000000004": {
+      "manufacturer": "Miele",
+      "model": "Refrigerator",
+      "model_id": "K 7747 C",
+      "sw_version": "33.22",
+      "name": "Koelkast",
+      "name_by_user": null
+    }
+  },
+  "entities": {
+    "binary_sensor.koelkast_deur": {
+      "entity_id": "binary_sensor.koelkast_deur",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": null,
+      "hidden": false,
+      "disabled_by": null
+    },
+    "binary_sensor.koelkast_notificatie_actief": {
+      "entity_id": "binary_sensor.koelkast_notificatie_actief",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "notification_active",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "binary_sensor.koelkast_probleem": {
+      "entity_id": "binary_sensor.koelkast_probleem",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": null,
+      "hidden": false,
+      "disabled_by": null
+    },
+    "binary_sensor.koelkast_bediening_op_afstand": {
+      "entity_id": "binary_sensor.koelkast_bediening_op_afstand",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "remote_control",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "binary_sensor.koelkast_smart_grid": {
+      "entity_id": "binary_sensor.koelkast_smart_grid",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "smart_grid",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "binary_sensor.koelkast_start_op_afstand": {
+      "entity_id": "binary_sensor.koelkast_start_op_afstand",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "mobile_start",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "climate.koelkast": {
+      "entity_id": "climate.koelkast",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "refrigerator",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "climate.koelkast_zone_2": {
+      "entity_id": "climate.koelkast_zone_2",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "zone_2",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "climate.koelkast_zone_3": {
+      "entity_id": "climate.koelkast_zone_3",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "zone_3",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "select.koelkast_modus": {
+      "entity_id": "select.koelkast_modus",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "fridge_freezer_mode",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "sensor.koelkast": {
+      "entity_id": "sensor.koelkast",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "status",
+      "hidden": false,
+      "disabled_by": null
+    },
+    "sensor.koelkast_temperatuur": {
+      "entity_id": "sensor.koelkast_temperatuur",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": null,
+      "hidden": false,
+      "disabled_by": null
+    },
+    "switch.koelkast_superkoelen": {
+      "entity_id": "switch.koelkast_superkoelen",
+      "device_id": "d0000000000000000000000000000004",
+      "platform": "miele",
+      "translation_key": "supercooling",
+      "hidden": false,
+      "disabled_by": null
+    }
+  },
+  "states": {
+    "binary_sensor.koelkast_deur": {
+      "entity_id": "binary_sensor.koelkast_deur",
+      "state": "off",
+      "attributes": {
+        "device_class": "door",
+        "friendly_name": "Koelkast Deur"
+      }
+    },
+    "binary_sensor.koelkast_notificatie_actief": {
+      "entity_id": "binary_sensor.koelkast_notificatie_actief",
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "Koelkast Notificatie actief"
+      }
+    },
+    "binary_sensor.koelkast_probleem": {
+      "entity_id": "binary_sensor.koelkast_probleem",
+      "state": "off",
+      "attributes": {
+        "device_class": "problem",
+        "friendly_name": "Koelkast Probleem"
+      }
+    },
+    "binary_sensor.koelkast_bediening_op_afstand": {
+      "entity_id": "binary_sensor.koelkast_bediening_op_afstand",
+      "state": "on",
+      "attributes": {
+        "friendly_name": "Koelkast Bediening op afstand"
+      }
+    },
+    "binary_sensor.koelkast_smart_grid": {
+      "entity_id": "binary_sensor.koelkast_smart_grid",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Koelkast Smart grid"
+      }
+    },
+    "binary_sensor.koelkast_start_op_afstand": {
+      "entity_id": "binary_sensor.koelkast_start_op_afstand",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Koelkast Start op afstand"
+      }
+    },
+    "climate.koelkast": {
+      "entity_id": "climate.koelkast",
+      "state": "cool",
+      "attributes": {
+        "hvac_modes": [
+          "cool"
+        ],
+        "min_temp": 3,
+        "max_temp": 9,
+        "target_temp_step": 1.0,
+        "current_temperature": 5,
+        "temperature": 5,
+        "friendly_name": "Koelkast",
+        "supported_features": 1
+      }
+    },
+    "climate.koelkast_zone_2": {
+      "entity_id": "climate.koelkast_zone_2",
+      "state": "cool",
+      "attributes": {
+        "hvac_modes": [
+          "cool"
+        ],
+        "min_temp": 7,
+        "max_temp": 35,
+        "target_temp_step": 1.0,
+        "current_temperature": -328,
+        "temperature": -328,
+        "friendly_name": "Koelkast Zone 2",
+        "supported_features": 1
+      }
+    },
+    "climate.koelkast_zone_3": {
+      "entity_id": "climate.koelkast_zone_3",
+      "state": "cool",
+      "attributes": {
+        "hvac_modes": [
+          "cool"
+        ],
+        "min_temp": 7,
+        "max_temp": 35,
+        "target_temp_step": 1.0,
+        "current_temperature": -328,
+        "temperature": -328,
+        "friendly_name": "Koelkast Zone 3",
+        "supported_features": 1
+      }
+    },
+    "select.koelkast_modus": {
+      "entity_id": "select.koelkast_modus",
+      "state": "normal",
+      "attributes": {
+        "options": [
+          "holiday",
+          "normal",
+          "party",
+          "sabbath"
+        ],
+        "friendly_name": "Koelkast Modus"
+      }
+    },
+    "sensor.koelkast": {
+      "entity_id": "sensor.koelkast",
+      "state": "in_use",
+      "attributes": {
+        "options": [
+          "autocleaning",
+          "failure",
+          "idle",
+          "in_use",
+          "not_connected",
+          "off",
+          "on",
+          "pause",
+          "program_ended",
+          "program_interrupted",
+          "programmed",
+          "reserved",
+          "rinse_hold",
+          "service",
+          "supercooling",
+          "supercooling_superfreezing",
+          "superfreezing",
+          "superheating",
+          "waiting_to_start"
+        ],
+        "device_class": "enum",
+        "icon": "mdi:fridge-industrial-outline",
+        "friendly_name": "Koelkast"
+      }
+    },
+    "sensor.koelkast_temperatuur": {
+      "entity_id": "sensor.koelkast_temperatuur",
+      "state": "5.0",
+      "attributes": {
+        "state_class": "measurement",
+        "unit_of_measurement": "°C",
+        "device_class": "temperature",
+        "friendly_name": "Koelkast Temperatuur"
+      }
+    },
+    "switch.koelkast_superkoelen": {
+      "entity_id": "switch.koelkast_superkoelen",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Koelkast Superkoelen"
+      }
+    }
+  }
+}
