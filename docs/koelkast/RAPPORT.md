@@ -131,7 +131,7 @@ Labels in `tests/js/vriezer-logica.test.mjs`:
 | `check:controls` | OK |
 | `check:css` | OK |
 | `npm test` | 2002 groen (was 1990) |
-| Python (Docker) | zie onder |
+| Python (Docker) | 876 groen (was 874; de nieuwe foto telt twee keer: in de repo en geserveerd) |
 
 ### In de browser
 
@@ -219,16 +219,8 @@ met de nieuwe omschrijving.
 
 ## git status --porcelain
 
-Vlak vóór de commit:
+Na de commit van deze ronde (het rapport zelf kwam in een tweede commit):
 
 ```
- M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
- M custom_components/domotiapp_lovelace/manifest.json
- M src/cards/vriezer-card.js
- M src/cards/vriezer-logica.js
- M tests/js/vriezer-logica.test.mjs
- M tests/test_afbeeldingen.py
-?? custom_components/domotiapp_lovelace/afbeeldingen/koelkasten/
-?? docs/koelkast/
-?? tests/js/vaste-invoer/miele-koelkast.json
+(leeg)
 ```
