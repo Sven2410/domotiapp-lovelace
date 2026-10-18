@@ -122,6 +122,27 @@ Labels in `tests/js/vriezer-logica.test.mjs`:
 - **NIEUW GEDRAG:** de spookzones op -328 (drie tests) en de koelkast (zeven
   tests).
 
+### Een wankele test uit 0.73.0
+
+In CI viel `test_get_geeft_de_code_alleen_aan_wie_mag_beheren` om
+(`tests/infoscherm/test_ruimtes.py`). Lokaal slaagden alle 876 tests. Die test
+kijkt of de boekcode "2468" nergens in het antwoord voor het kioskaccount
+staat, en deed dat met `"2468" not in repr(antwoord)`. In het antwoord staat
+ook het gebruikers-id, en dat is willekeurig hex. In CI was dat
+`0766e1c2aa824681b0e102834029aa24`, en daar staat "2468" in.
+
+De toets kijkt nu naar de WAARDEN in het antwoord, niet naar de tekst ervan.
+Nagespeeld met het antwoord uit CI:
+
+```
+oude toets vindt 2468 in repr: True
+nieuwe toets ziet een lek: False
+nieuwe toets ziet een echt lek: True
+```
+
+Een code die onder een andere sleutel meekomt, wordt dus nog steeds gevangen.
+De 34 ruimtetests slagen lokaal.
+
 ### Alle checks lokaal
 
 | | |

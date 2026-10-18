@@ -214,8 +214,22 @@ async def test_get_geeft_de_code_alleen_aan_wie_mag_beheren(
     kiosk = await kiosk_op(hass, store, hass_ws_client, hass_read_only_user, hass_read_only_access_token)
     antwoord = (await stuur(kiosk, "get"))["result"]
     assert "ruimte_code" not in antwoord
-    assert "2468" not in repr(antwoord)
+    # Op WAARDEN en niet op repr(): het gebruikers-id is willekeurig hex, en in
+    # CI stond er op 18-10-2026 "...aa824681b0..." in, dus ook "2468".
+    assert not any(w in ("2468", 2468) for w in bladeren(antwoord))
     assert antwoord["stand"]["boeken_op_scherm"] is True
+
+
+def bladeren(x):
+    """Elke waarde onderin een antwoord van dicts en lijsten."""
+    if isinstance(x, dict):
+        for w in x.values():
+            yield from bladeren(w)
+    elif isinstance(x, (list, tuple)):
+        for w in x:
+            yield from bladeren(w)
+    else:
+        yield x
 
 
 async def test_de_code_instellen_mag_het_beheer_en_niet_de_kiosk(
