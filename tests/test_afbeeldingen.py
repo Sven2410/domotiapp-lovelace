@@ -82,6 +82,8 @@ VASTE_WEBP = [
     "wasmachines/miele-wwi880.webp",
     "wasdrogers/miele-twh780wp.webp",
     "vriezers/miele-fns-7710-e.webp",
+    # de koelkast op de vriezerkaart (0.80.0), ook van Miele (18 oktober 2026)
+    "koelkasten/miele-k-7747-c.webp",
 ]
 
 

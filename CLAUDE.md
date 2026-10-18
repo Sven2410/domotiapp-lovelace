@@ -555,10 +555,13 @@ Sinds 15 oktober 2026 staat er ook een **nagebootste Miele** in
 programmakaart en de vriezerkaart. Hij speelt de dump uit
 `tests/js/vaste-invoer/miele-was-droog-vries.json` na:
 - **Apparaten:** een wasmachine (WWI880), een droger (TWH780WP) en een
-  vriezer (FNS 7710 E).
+  vriezer (FNS 7710 E). Sinds 18 oktober 2026 ook een koelkast (K 7747 C,
+  uit `tests/js/vaste-invoer/miele-koelkast.json`), met `climate.koelkast`
+  van 3 tot 9.
 - **Zelfde vorm als de dump:** dezelfde entity_id's, `translation_key`'s en
-  opties, en `model` en `model_id` zoals Miele ze zet. De spookzones van de
-  vriezer zitten er ook in.
+  opties, en `model` en `model_id` zoals Miele ze zet. De spookzones van
+  vriezer en koelkast zitten er ook in, op -328 zoals Miele ze sinds
+  18 oktober 2026 meldt.
 - **Vertalingen:** de map `translations/` is gekopieerd uit de echte
   integratie in de container. Daardoor zegt Home Assistant "Katoen" en
   "Wassen".
@@ -570,7 +573,12 @@ programmakaart en de vriezerkaart. Hij speelt de dump uit
   "cottons", rest: 90, op_afstand: true}`. Elke aanroep komt als `nep_miele` op
   de bus.
 
-Op `kaart-test` staat een view `miele`.
+Op `kaart-test` staat een view `miele`, met een sectie Koelkast.
+
+De **nagebootste coach** heeft sinds 16 oktober 2026 ook een wasmachine
+(`was.py`, met de entity_id's uit de dump van coach v0.128.0). De dienst
+`domotiapp_coach.mag_sturen {aan}` zet het vinkje "mag sturen". Op view
+`miele` staat een tweede wasmachinekaart met de coach aan.
 
 Sinds 16 oktober 2026 staat er ook een **nagebootste UniFi** in
 `.ha-dev-config/custom_components/nep_unifi/` (niet in git), voor de wifikaart:
@@ -1893,6 +1901,15 @@ die daar niet staan:
    heet nu `rb-`), en grep eerst. `tests/js/infoscherm-css.test.mjs` faalt
    sindsdien op een losse klasse met twee eigen regels.
 
+76. **Miele zegt "geen temperatuur" niet altijd met `null`.** De spookzones
+   van een Miele-koelkast of -vriezer (`_zone_2`, `_zone_3`) hadden in de dump
+   van 15 oktober 2026 `null` als temperatuur, en bij dezelfde installatie op
+   18 oktober -328: -32768 honderdsten, Miele's "geen waarde". Een toets op
+   `!= null` liet ze toen als echte zone door. Een temperatuur onder het
+   absolute nulpunt is geen meting; zie `graden` in `vriezer-logica.js`. Wie
+   een andere Miele-temperatuur leest (de wasmachine, een oven), loopt er
+   net zo in.
+
 ---
 
 ## Projectstand
@@ -1912,7 +1929,7 @@ met **dertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
-| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; zie `vriezer-logica.js`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
+| Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.73.0 ook **ruimtes boeken**, met een agenda per ruimte, zie SPEC 20.7 en `ruimtes-logica.js`; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
 | Kop van de view (BADGES, geen kaarten) | **badge** (een pil met Jinja erin: icoon, een kop en een waarde, alle drie een sjabloon; sinds 0.51.0 met een **soort**: eigen tekst, lampenteller, energie of alarm, elk met een kleur per band of stand) en **terug** (een pijltje naar een vast pad, of een stap terug); bij allebei kunnen achtergrond en rand er helemaal af. Ze staan in de BADGEkiezer (het plusje boven in de view), niet in de kaartkiezer -- dat is twee keer voor verwarring gezorgd, en daarom is de terugknop er sinds 0.46.0 OOK als kaart |
