@@ -163,7 +163,7 @@ class DishwasherCard extends DacCard {
 
     .top { display: flex; align-items: center; gap: 11px; min-height: 40px; cursor: pointer; }
     .chip { width: 40px; height: 40px; }
-    .chip .icon { width: 20px; height: 20px; }
+    .chip .icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     .nm {
@@ -179,7 +179,7 @@ class DishwasherCard extends DacCard {
     /* Met een foto in de kop draagt dit icoontje de toestand, net als op de
        robotstofzuiger: alleen het icoon draagt de kleur (Vormregels). */
     .st .stip { flex: 0 0 auto; width: 13px; height: 13px; color: var(--tone); display: grid; }
-    .st .stip .icon { width: 13px; height: 13px; }
+    .st .stip .icon { width: 13px; height: 13px; --mdc-icon-size: 13px; }
     .st .stip[hidden] { display: none; }
 
 

@@ -922,6 +922,20 @@ export const DAI = "dai:";
  * tak zou hij bij `<ha-icon icon="dai:bulb">` belanden -- en die tekent niets,
  * zonder fout en zonder log.
  *
+ * ## Waarom de `ha-icon` `--ha-icon-display: block` meekrijgt (sinds 0.80.1)
+ *
+ * In een `ha-icon` staat een `ha-svg-icon`, en die is standaard `inline-flex`
+ * met `vertical-align: middle`. Hij staat dus op een tekstregel, en die regel
+ * is zo hoog als de `line-height` die hij erft (20px op een kaart). Is het
+ * icoon kleiner dan die regel, dan zakt de tekening onder het vak dat wij
+ * maten. Het vak van de `ha-icon` stond keurig in het midden; de tekening
+ * erin niet. De eigenaar zag het op 19 oktober 2026 aan de kamers op de
+ * stofzuigerkaart (15px, 3,2px te laag), en de separator, de entiteiten, de
+ * badges en de terugknop hadden het net zo. Home Assistant zet in zijn eigen
+ * frontend op dezelfde plekken `--ha-icon-display: block`. Het staat hier en
+ * niet in `baseCss`, omdat de editors en de schermen aan `document.body` dat
+ * stijlblad niet hebben en dezelfde `ha-icon` krijgen.
+ *
  * @param {string|undefined|null} name
  * @param {string} fallback a key in `icons`, used when name is empty
  */
@@ -932,7 +946,9 @@ export function resolve(name, fallback = "question") {
     const kaal = name.slice(DAI.length);
     return icons[kaal] ?? icons[fallback] ?? icons.question;
   }
-  if (name.includes(":")) return `<ha-icon class="icon" icon="${name}"></ha-icon>`;
+  if (name.includes(":")) {
+    return `<ha-icon class="icon" icon="${name}" style="--ha-icon-display: block"></ha-icon>`;
+  }
   return icons[fallback] ?? icons.question;
 }
 

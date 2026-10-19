@@ -489,6 +489,12 @@ een paar nagebootste toestanden (`sensor.test_gft`, `sensor.test_printer_status`
 een herstart van de container niet overleven; de kaarten tonen dan "niet
 bereikbaar", en dat is geen fout van de kaart.
 
+Sinds 19 oktober 2026 staat er ook een view **`iconen`**: dezelfde kaarten als
+`thema`, maar met `mdi:sofa` op elke plek waar een icoon gekozen kan worden.
+Erboven staan vriezer, koelkast, stofzuiger, boiler en airco met datzelfde
+icoon. Daarmee meet je een icoon van Home Assistant op elke plek tegelijk;
+zie valkuil 77.
+
 Sinds 12 oktober 2026 staat het infoscherm er ook zoals bij een klant: twee
 dashboards en drie soorten accounts.
 
@@ -1909,6 +1915,20 @@ die daar niet staan:
    absolute nulpunt is geen meting; zie `graden` in `vriezer-logica.js`. Wie
    een andere Miele-temperatuur leest (de wasmachine, een oven), loopt er
    net zo in.
+
+77. **Een `ha-icon` meten zegt niets over waar de TEKENING staat.** In een
+   `ha-icon` zit een `ha-svg-icon`. Die is standaard `inline-flex` met
+   `vertical-align: middle`, en staat dus op een tekstregel met de
+   `line-height` die hij erft (20px op een kaart). Is het icoon kleiner dan die
+   regel, dan zakt de tekening, terwijl het vak van de `ha-icon` keurig in het
+   midden staat. Gemeten op 19 oktober 2026: de kamers op de stofzuigerkaart
+   hadden 3,2 px. Daarom zet `resolve()` er sinds 0.80.1
+   `--ha-icon-display: block` op, zoals Home Assistant het zelf doet. De tweede
+   val: **`width` en `height` maken alleen het VAK kleiner.** De tekening
+   volgt `--mdc-icon-size`, standaard 24px. Zet die er dus altijd bij;
+   `tests/js/icoon-maat.test.mjs` bewaakt het voor de chip en de stip. Meet
+   een icoon dus op de `ha-svg-icon` in zijn shadow root, niet op de
+   `ha-icon`. Daarvoor is de view `iconen` op `kaart-test`.
 
 ---
 

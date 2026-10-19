@@ -246,7 +246,7 @@ class MediaCard extends DacCard {
     }
     .hoesgroot:active { transform: scale(.99); }
     .hoesgroot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .hoesgroot .icon { width: 64px; height: 64px; color: var(--tone); opacity: .8; }
+    .hoesgroot .icon { width: 64px; height: 64px; --mdc-icon-size: 64px; color: var(--tone); opacity: .8; }
     :host(:not([layout="groot"])) .hoesgroot { display: none; }
 
     /* De naam en wat er speelt komen onder de hoes te staan, gecentreerd, en

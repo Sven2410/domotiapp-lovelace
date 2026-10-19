@@ -54,7 +54,7 @@ class VriezerCard extends DacCard {
     .kop { display: flex; align-items: center; gap: 12px; min-width: 0; cursor: pointer; }
     .kop.dood { opacity: .42; }
     .chip { width: 40px; height: 40px; }
-    .chip .icon { width: 20px; height: 20px; }
+    .chip .icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
     /* Staand op een eigen vlak in de tint van het thema, net als de wasmachine:
        een witte vriezer verdwijnt anders op een lichte kaart. */
     .foto {
@@ -72,7 +72,7 @@ class VriezerCard extends DacCard {
     }
     .st { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.3; color: var(--dac-ink-2); }
     .st .stip { flex: 0 0 auto; width: 13px; height: 13px; color: var(--tone); display: grid; }
-    .st .stip .icon { width: 13px; height: 13px; }
+    .st .stip .icon { width: 13px; height: 13px; --mdc-icon-size: 13px; }
     /* Mag doorlopen, ook breed: met de deur erbij is het "Storing · deur
        dicht", en afgekapt viel juist de deur weg (gemeten op 15 oktober 2026). */
     .st { align-items: flex-start; }
