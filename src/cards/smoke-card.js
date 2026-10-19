@@ -66,7 +66,7 @@ class SmokeCard extends DacCard {
 
     .top { display: flex; align-items: center; gap: 11px; min-height: 40px; cursor: pointer; }
     .chip { width: 40px; height: 40px; }
-    .chip .icon { width: 20px; height: 20px; }
+    .chip .icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     /* De naam BREEKT AF en wordt niet afgekapt.

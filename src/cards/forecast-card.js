@@ -51,7 +51,7 @@ class ForecastCard extends DacCard {
     .nu { display: flex; align-items: center; gap: 11px; min-height: 40px; cursor: pointer; }
     .nu[hidden] { display: none; }
     .chip { width: 40px; height: 40px; }
-    .chip .icon { width: 22px; height: 22px; }
+    .chip .icon { width: 22px; height: 22px; --mdc-icon-size: 22px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     .nm {

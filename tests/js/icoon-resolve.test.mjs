@@ -46,6 +46,16 @@ describe("resolve: waar een icoonnaam vandaan komt", () => {
     assert.match(uit, /icon="mdi:washing-machine"/);
   });
 
+  it("zet de tekening in een ha-icon niet op een tekstregel (NIEUW GEDRAG)", () => {
+    // Zonder dit is de ha-svg-icon in de ha-icon `inline-flex` met
+    // `vertical-align: middle`, op een regel van 20px: een icoon van 15px
+    // zakte 3,2px onder zijn vak (de kamers op de stofzuigerkaart, 19 oktober
+    // 2026). Zie de kop van resolve.
+    assert.match(resolve("mdi:sofa"), /style="--ha-icon-display: block"/);
+    // Onze eigen tekeningen zijn een svg met display: block, en hebben het niet nodig.
+    assert.doesNotMatch(resolve("bulb"), /--ha-icon-display/);
+  });
+
   it("valt terug als de dai:-naam niet bestaat", () => {
     assert.equal(resolve("dai:bestaatniet", "shield"), icons.shield);
   });

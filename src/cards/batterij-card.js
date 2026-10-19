@@ -90,7 +90,7 @@ class BatterijCard extends DacCard {
     /* Alleen het icoon draagt de stand (Vormregels). */
     .st { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--dac-ink); }
     .st .stip { flex: 0 0 auto; width: 15px; height: 15px; color: var(--tone); display: grid; }
-    .st .stip .icon { width: 15px; height: 15px; }
+    .st .stip .icon { width: 15px; height: 15px; --mdc-icon-size: 15px; }
     .st .woord { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* Heel, niet na twee regels afgekapt. De eigenaar op 12 oktober 2026, met
        een schermafdruk van "... wat het huis vraagt komt…": "ook op pc snijd de

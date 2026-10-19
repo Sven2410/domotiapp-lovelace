@@ -80,7 +80,7 @@ class MeldingenCard extends DacCard {
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     .chip { width: 40px; height: 40px; flex: 0 0 auto; }
-    .chip .icon { width: 20px; height: 20px; }
+    .chip .icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     .pn {

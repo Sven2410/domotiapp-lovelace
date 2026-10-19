@@ -130,7 +130,7 @@ class StofzuigerCard extends DacCard {
       font-size: 12px; line-height: 1.3; color: var(--dac-ink-2);
     }
     .st .stip { flex: 0 0 auto; width: 14px; height: 14px; color: var(--tone); display: grid; }
-    .st .stip .icon { width: 14px; height: 14px; }
+    .st .stip .icon { width: 14px; height: 14px; --mdc-icon-size: 14px; }
     .st .woord { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .st .detail { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dac-ink-3); }
     .st .detail::before { content: "·"; margin-right: 6px; }

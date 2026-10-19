@@ -90,7 +90,7 @@ class HvacCard extends DacCard {
       width: 40px; height: 40px;
       transition: color 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
     }
-    .chip .icon { width: 20px; height: 20px; }
+    .chip .icon { width: 20px; height: 20px; --mdc-icon-size: 20px; }
     /* Alleen als er echt iets gebeurt gloeit het icoon; standby is stil. */
     :host([bezig]) .chip {
       box-shadow: 0 0 14px -2px color-mix(in srgb, var(--tone) 55%, transparent);
