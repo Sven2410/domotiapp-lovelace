@@ -1775,6 +1775,11 @@ die daar niet staan:
    zijn `sensor.py` op dat moment, en niet wat er in een notitie of een
    eerder rapport over de vorm staat.
 
+   En sinds coach v0.140.0 (19 oktober 2026) kan die tekst ENGELS zijn: één
+   taal per installatie. "om 14:00" wordt dan "at 14:00". De laatste plek
+   die op de tekst leunde ("nu" op de startsensor) leest sinds 0.80.2
+   `stand: "start_nu"`; zie `docs/coach-in-het-engels/RAPPORT.md`.
+
 68. **`git worktree add ""` WIST DE HELE HUIDIGE MAP, `.git` incluis.** Op
    11 oktober 2026 om 23:03 is zo de hele projectmap leeggemaakt, met
    `git version 2.55.0.windows.3`. Git zegt alleen "fatal: The empty string is

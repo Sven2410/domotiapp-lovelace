@@ -258,12 +258,20 @@ function tijdstip(s) {
  *
  * Waar het vandaan komt, in deze volgorde:
  *
- *   1. het attribuut `start` (de coach): daar staat het tijdstip, en de
+ *   1. de stand `start_nu` (de coach start hem op dit moment): dan is het
+ *      moment nu. `start` staat dan op null;
+ *   2. het attribuut `start` (de coach): daar staat het tijdstip, en de
  *      toestand is dan tekst die de kaart niet hoeft te ontleden;
- *   2. "nu" (de coach start hem op dit moment): dan is het moment nu;
- *   3. de toestand zelf: een tijdstip, of een kale klok ("02:00") -- vandaag,
+ *   3. "nu" of "now" als toestand: hetzelfde als 1, voor een coach van vóór
+ *      v0.110.0, die nog geen `stand` had;
+ *   4. de toestand zelf: een tijdstip, of een kale klok ("02:00") -- vandaag,
  *      of morgen als dat al voorbij is, want een nachtelijke start wordt
  *      's avonds gepland.
+ *
+ * Waarom 1 vóór 3 staat: de coach schrijft sinds v0.140.0 Engels als de
+ * installatie op Engels staat (19 oktober 2026), en de toestand is tekst voor
+ * mensen (valkuil 67). Zolang de kaart "nu" aan de toestand herkende, verdween
+ * "Start nu" bij elk ander woord dan "nu" of "now".
  *
  * Een toestand `unknown` of `unavailable` wint van alles: dan is er niets
  * gepland, wat er ook nog in de attributen staat.
@@ -276,6 +284,8 @@ export function startMoment(st, nu = new Date()) {
   const s = String(st.state ?? "").trim();
   if (!s || s === "unknown" || s === "unavailable") return null;
   const telt = (d) => (+d < +nu - START_MARGE_MS ? null : d);
+
+  if (st.attributes?.stand === "start_nu") return new Date(+nu);
 
   const uitAttribuut = tijdstip(st.attributes?.start);
   if (uitAttribuut) return telt(uitAttribuut);
