@@ -256,14 +256,24 @@ class LaadpaalCard extends DacCard {
        dan niets aan van width: 100%. In Chrome gebeurt het niet, dus hier
        niet na te meten. Twee lagen: appearance none (dan volgt hij de breedte),
        en het vak knipt af wat er toch nog uitsteekt -- met de focusring naar
-       binnen, anders valt die weg. */
+       binnen, anders valt die weg.
+
+       Het veld is een flexvak met align-items center, en NIET display: block.
+       Safari op iOS centreert de tijd zelf zo (input[type=time] is daar
+       inline-flex met align-items center, html.css van WebKit). Een block zet
+       zijn waarde bovenaan het vak: tot 0.80.3 stond de tijd daardoor ruim
+       6px hoger dan de 100% van Laden tot ernaast (gemeld op 19 oktober 2026,
+       met een schermafdruk van een iPhone). In Chrome stond hij wel goed.
+       De achtergrond is die van de stapper ernaast: in licht was het tijdveld
+       wit en de stapper grijs, en dan oogt het witte vak kleiner. */
     .veld.klaar { overflow: hidden; }
     .tijd {
-      -webkit-appearance: none; appearance: none; display: block;
+      -webkit-appearance: none; appearance: none;
+      display: flex; align-items: center; justify-content: center;
       width: 100%; min-width: 0; max-width: 100%; height: 38px;
       font: inherit; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;
       color: var(--dac-ink); color-scheme: var(--dac-scheme);
-      background-color: var(--dac-surface);
+      background-color: rgba(var(--dac-tint), .05);
       border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
       padding: 0 12px; cursor: pointer; text-align: center;
     }
