@@ -117,6 +117,31 @@ describe("NIEUW GEDRAG: de coach zet tekst in de toestand en het tijdstip in sta
     assert.equal(V.startTekst(V.startMoment(nu, NU), NU), "Start nu");
   });
 
+  it("NIEUW GEDRAG: 'nu' komt uit de stand, niet uit de woorden", () => {
+    // De coach schrijft sinds v0.140.0 Engels als de installatie op Engels
+    // staat (19 oktober 2026). De toestand is dan een ander woord, de stand
+    // blijft `start_nu` (het contract, entiteit.py in domotiapp-coach).
+    for (const woord of ["starting now", "Start now", "nu meteen"]) {
+      const st = S(woord, { start: null, rule: "cheapest-start", stand: "start_nu" });
+      assert.equal(+V.startMoment(st, NU), +NU, woord);
+      assert.equal(V.startTekst(V.startMoment(st, NU), NU), "Start nu", woord);
+    }
+  });
+
+  it("REGRESSIEWACHT: een Engelse tekst met het tijdstip in start", () => {
+    // "om 14:00" wordt "at 14:00"; het tijdstip staat in `start` en de woorden
+    // maakt de kaart zelf.
+    const st = S("at 14:00", { start: OM(26, 14).toISOString(), stand: "gepland" });
+    assert.equal(+V.startMoment(st, NU), +OM(26, 14));
+    assert.equal(V.startTekst(V.startMoment(st, NU), NU), "Start om 14:00");
+  });
+
+  it("REGRESSIEWACHT: unknown wint van de stand", () => {
+    // De toestand is unknown zodra hij draait; een stand die nog achterloopt
+    // maakt daar geen plan van.
+    assert.equal(V.startMoment(S("unknown", { start: null, stand: "start_nu" }), NU), null);
+  });
+
   it("zet het plan op de kaart in plaats van klaar om te starten", () => {
     // De kaart rekent met het moment; de woorden maakt hij zelf, zodat ze op
     // elke kaart hetzelfde zijn. Hier in lokale tijd, los van de tijdzone van
