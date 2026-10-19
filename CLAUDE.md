@@ -1935,6 +1935,17 @@ die daar niet staan:
    een icoon dus op de `ha-svg-icon` in zijn shadow root, niet op de
    `ha-icon`. Daarvoor is de view `iconen` op `kaart-test`.
 
+78. **Geef een tijdveld nooit `display: block`.** Safari op iOS centreert de
+   tijd in een `input[type=time]` met de flexbox van het veld zelf
+   (`inline-flex` met `align-items: center`, in `html.css` van WebKit). Een
+   block zet de tijd bovenaan het vak. Op de laadpaalkaart stond hij zo van
+   0.62.2 tot 0.80.3 ruim 6px te hoog naast de stapper. In Chrome staat hij
+   ook met een block op het midden, dus in de werkbank zie je het niet. Heeft
+   het veld een eigen `display` nodig, maak het dan `flex` met
+   `align-items: center`. `tests/js/tijdveld-css.test.mjs` bewaakt het voor
+   elke kaart. Zie ook de wekkereditor: iOS past daar `box-sizing` niet toe
+   op een tijdveld.
+
 ---
 
 ## Projectstand
