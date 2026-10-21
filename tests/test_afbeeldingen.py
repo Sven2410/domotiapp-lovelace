@@ -84,6 +84,9 @@ VASTE_WEBP = [
     "vriezers/miele-fns-7710-e.webp",
     # de koelkast op de vriezerkaart (0.80.0), ook van Miele (18 oktober 2026)
     "koelkasten/miele-k-7747-c.webp",
+    # Sinds 0.84.3: de printerkaart. Productfoto van HP, met toestemming van de
+    # eigenaar als installateur (21 oktober 2026).
+    "printers/hp-officejet-pro-9730e.webp",
 ]
 
 

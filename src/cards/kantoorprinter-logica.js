@@ -188,6 +188,15 @@ export function printerMelding(s) {
 /**
  * Merk en type met een productfoto (zie productfoto.js). IPP zet de reeks in
  * `model` ("HP OfficeJet Pro 9730 Series"), zonder de e, en `model_id` is leeg.
- * De foto komt erbij zodra hij er is; tot dan staat hier alleen het merk niet.
+ * Productfoto van HP, met toestemming van de eigenaar als installateur
+ * (21 oktober 2026), van de productpagina van HP.
  */
-export const PRINTERS = {};
+export const PRINTERS = {
+  hp: {
+    label: "HP",
+    fabrikant: "hp",
+    modellen: {
+      officejet_pro_9730e: { label: "OfficeJet Pro 9730e", pad: "printers/hp-officejet-pro-9730e.webp", codes: ["HP OfficeJet Pro 9730 Series"] },
+    },
+  },
+};

@@ -119,3 +119,13 @@ describe("printerkaart: standaardbreedte", () => {
     assert.match(bron.match(/getGridOptions\(\) \{[\s\S]*?\}/)[0], /columns: 12,/);
   });
 });
+
+// NIEUW GEDRAG (0.84.3): de productfoto van de HP, op het model zoals IPP het zet.
+describe("printerkaart: productfoto", () => {
+  it("Automatisch vindt de foto bij het apparaat uit de dump", async () => {
+    const { productAfbeelding } = await import("../../src/cards/productfoto.js");
+    const { PRINTERS } = await import("../../src/cards/kantoorprinter-logica.js");
+    assert.equal(productAfbeelding({ merk: "auto" }, DUMP.device, PRINTERS), "/domotiapp_lovelace/afbeeldingen/printers/hp-officejet-pro-9730e.webp");
+    assert.equal(productAfbeelding({ merk: "auto" }, { manufacturer: "HP", model: "HP LaserJet M110w" }, PRINTERS), "");
+  });
+});
