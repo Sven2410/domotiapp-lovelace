@@ -124,6 +124,7 @@ import {
   vindStartSensor,
   voortgangPct,
 } from "./vaatwasser-logica.js";
+import { nt, t } from "../taal.js";
 
 /** De rollen van het apparaat, met wat alleen de laatste beurt leest. */
 const ALLE_ROLLEN = { ...ROLLEN, ...BEURT_ROLLEN };
@@ -444,8 +445,9 @@ class DishwasherCard extends DacCard {
     // Met de coach is er altijd iets te tonen: zijn stand, en anders de zin
     // waarom niet.
     if (!c.coach && !c.status && !c.remaining && !c.progress && !c.program) {
-      c[INCOMPLETE] =
-        "Kies minstens een statussensor. Resterende tijd, voortgang, programma en de knoppen mogen daarna.";
+      c[INCOMPLETE] = t(
+        "Kies minstens een statussensor. Resterende tijd, voortgang, programma en de knoppen mogen daarna."
+      );
     }
     return c;
   }
@@ -579,9 +581,9 @@ class DishwasherCard extends DacCard {
         <div class="tegels" hidden></div>
 
         <div class="rij coach" hidden>
-          ${knop("vrijgave", "check", "Ingeruimd")}
-          ${knop("nu", "play", "Nu starten")}
-          ${knop("hand", "handmatig", "Handmatig")}
+          ${knop("vrijgave", "check", t("Ingeruimd"))}
+          ${knop("nu", "play", t("Nu starten"))}
+          ${knop("hand", "handmatig", t("Handmatig"))}
         </div>
         <p class="coachhint" hidden></p>
 
@@ -591,10 +593,10 @@ class DishwasherCard extends DacCard {
           </div>
 
           <div class="rij knoppen" hidden>
-            ${knop("slim", "bolt", "Slim")}
-            ${knop("start", "play", "Start")}
-            ${knop("pauze", "pause", "Pauze")}
-            ${knop("stop", "stop", "Stop")}
+            ${knop("slim", "bolt", t("Slim"))}
+            ${knop("start", "play", t("Start"))}
+            ${knop("pauze", "pause", t("Pauze"))}
+            ${knop("stop", "stop", t("Stop"))}
           </div>
         </div>
       </div>`;
@@ -614,8 +616,8 @@ class DishwasherCard extends DacCard {
     // Een tegel opent zijn sensor: daar staat de geschiedenis.
     const tegels = this.$(".tegels");
     const openTegel = (e) => {
-      const t = e.target?.closest?.(".tegel");
-      if (t?.dataset.id) this.moreInfo_(t.dataset.id);
+      const tegel = e.target?.closest?.(".tegel");
+      if (tegel?.dataset.id) this.moreInfo_(tegel.dataset.id);
     };
     this.on(tegels, "click", openTegel);
     this.on(tegels, "keydown", (e) => {
@@ -778,10 +780,10 @@ class DishwasherCard extends DacCard {
     vak.dataset.sig = sig;
     vak.innerHTML = lijst
       .map(
-        (t) => `
-        <div class="tegel" role="button" tabindex="0" data-id="${escapeHtml(t.id)}" title="${escapeHtml(`${t.label}: ${t.waarde}`)}" aria-label="${escapeHtml(`${t.label}: ${t.waarde}`)}">
-          <span class="w">${escapeHtml(t.waarde)}</span>
-          <span class="l">${escapeHtml(t.label)}</span>
+        (tegel) => `
+        <div class="tegel" role="button" tabindex="0" data-id="${escapeHtml(tegel.id)}" title="${escapeHtml(`${tegel.label}: ${tegel.waarde}`)}" aria-label="${escapeHtml(`${tegel.label}: ${tegel.waarde}`)}">
+          <span class="w">${escapeHtml(tegel.waarde)}</span>
+          <span class="l">${escapeHtml(tegel.label)}</span>
         </div>`
       )
       .join("");
@@ -848,11 +850,12 @@ class DishwasherCard extends DacCard {
     const soort = SOORTEN[soortNaam];
     const alleenLezen = ALLEEN_LEZEN.has(soortNaam);
 
-    const nu = toestand({ status, deur, rest, pct, start, deurWoord: soort.deur });
+    const deurWoord = t(soort.deur);
+    const nu = toestand({ status, deur, rest, pct, start, deurWoord });
     // Een wasmachine of droger die uit staat: de laatste beurt (zie de kop).
     const beurt =
       alleenLezen && status?.entity_id && statusDuiding(status).soort === SOORT.UIT ? this.beurt_(status, r) : null;
-    if (beurt) nu.tekst = `${nu.tekst} · laatste beurt ${beurtWanneer(beurt)}`;
+    if (beurt) nu.tekst = `${nu.tekst} · ${t("laatste beurt {wanneer}", { wanneer: beurtWanneer(beurt) })}`;
     // Met een beurt erop ook om middernacht: dan wordt "vandaag" "gisteren".
     this.planTik_(start ?? (beurt ? new Date(Date.now() + 86_400_000 * 2) : null));
     const loopt = draait(status);
@@ -892,7 +895,7 @@ class DishwasherCard extends DacCard {
     const apparaat = this.hass?.devices?.[this.coach_()?.keuze.id ?? ""];
     this.text(
       ".nm",
-      c.name || apparaat?.name_by_user || apparaat?.name || nameOf(this.hass, c.status, null) || soort.naam
+      c.name || apparaat?.name_by_user || apparaat?.name || nameOf(this.hass, c.status, null) || t(soort.naam)
     );
     const stEl = this.$(".st .sw");
     const tekst = escapeHtml(nu.tekst);
@@ -908,8 +911,8 @@ class DishwasherCard extends DacCard {
     const fmt = this.hass?.formatEntityState ? (s) => this.hass.formatEntityState(s) : null;
     this.paintTegels_(
       beurt
-        ? beurtTegels({ rollen: { ...r, status: c.status }, beurt, st, fmt, deurWoord: soort.deur })
-        : programmaTegels({ rollen: r, st, fmt, deurWoord: soort.deur })
+        ? beurtTegels({ rollen: { ...r, status: c.status }, beurt, st, fmt, deurWoord })
+        : programmaTegels({ rollen: r, st, fmt, deurWoord })
     );
     this.toggleAttribute("beurt", Boolean(beurt));
 
@@ -974,7 +977,7 @@ class DishwasherCard extends DacCard {
     if (slot.dataset.opties !== vinger) {
       slot.dataset.opties = vinger;
       slot.innerHTML = opties.length
-        ? `<select class="keuze" aria-label="Programma">${opties
+        ? `<select class="keuze" aria-label="${escapeHtml(t("Programma"))}">${opties
             .map((o, i) => `<option value="${escapeHtml(o)}">${escapeHtml(namen[i])}</option>`)
             .join("")}</select>`
         : "";
@@ -1052,8 +1055,8 @@ class DishwasherCard extends DacCard {
     hand.setAttribute("aria-expanded", String(Boolean(this.handOpen_)));
     // In een smalle kolom valt het woord weg (zie de @container hierboven);
     // dan is dit de enige naam die de knop nog heeft.
-    hand.setAttribute("aria-label", "Handmatige besturing");
-    hand.title = "Handmatige besturing";
+    hand.setAttribute("aria-label", t("Handmatige besturing"));
+    hand.title = t("Handmatige besturing");
     rij.hidden = !knoppen.length && !handmatig;
   }
 
@@ -1081,7 +1084,7 @@ class DishwasherCard extends DacCard {
       entities?.find((e) => e.startsWith(voorvoegsel) && patroon.test(e)) ?? "";
     return {
       status: zoek("sensor.", /vaatwas|dishwash/i),
-      name: "Vaatwasser",
+      name: t("Vaatwasser"),
     };
   }
 }
@@ -1107,9 +1110,9 @@ class DishwasherEditor extends DacEditor {
   /** De fotokiezer alleen bij een ander merk: anders is het een veld dat niets doet. */
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: this.soort_().icoon, auto: false },
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: this.soort_().icoon, auto: false },
       ...(this.config_?.merk === "eigen"
-        ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: this.soort_().icoon }]
+        ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: this.soort_().icoon }]
         : []),
     ];
   }
@@ -1160,6 +1163,7 @@ class DishwasherEditor extends DacEditor {
       apparaat: veldenVanApparaat(apparaatRollen(this.hass_, this.status_())),
       alleenLezen: this.alleenLezen_(),
     });
+    // Merk en type komen al vertaald uit productfoto.js.
     const types = typeKeuzes(c.merk, PROGRAMMA_APPARATEN);
     return [
       { name: "name", selector: sel.text() },
@@ -1198,7 +1202,7 @@ class DishwasherEditor extends DacEditor {
       ...velden.zichtbaar.map((naam) => VELD[naam]),
       ...(c.coach && velden.afwijken.length ? [{ name: "afwijken", selector: sel.bool() }] : []),
       ...(c.coach && c.afwijken && velden.afwijken.length
-        ? [section("Afwijken van de coach", "mdi:pencil", velden.afwijken.map((naam) => VELD[naam]), true)]
+        ? [section(t("Afwijken van de coach"), "mdi:pencil", velden.afwijken.map((naam) => VELD[naam]), true)]
         : []),
     ];
   }
@@ -1206,21 +1210,21 @@ class DishwasherEditor extends DacEditor {
   label(s) {
     return (
       {
-        name: "Naam",
-        merk: "Merk",
-        model: "Type",
-        pause: "Pauze",
-        coach: "In combinatie met DomotiApp Coach",
-        coach_device: "Apparaat bij de coach",
-        afwijken: "Afwijken van de coach",
-        status: "Statussensor",
-        remaining: "Resterende tijd",
-        progress: "Voortgang (0-100%)",
-        program: "Programmakeuze",
-        start: "Start / pauze",
-        stop: "Stop",
-        door: "Klep- of deursensor",
-        smart: "Slimme sturing",
+        name: t("Naam"),
+        merk: t("Merk"),
+        model: t("Type"),
+        pause: t("Pauze"),
+        coach: t("In combinatie met DomotiApp Coach"),
+        coach_device: t("Apparaat bij de coach"),
+        afwijken: t("Afwijken van de coach"),
+        status: t("Statussensor"),
+        remaining: t("Resterende tijd"),
+        progress: t("Voortgang (0-100%)"),
+        program: t("Programmakeuze"),
+        start: t("Start / pauze"),
+        stop: t("Stop"),
+        door: t("Klep- of deursensor"),
+        smart: t("Slimme sturing"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -1228,25 +1232,25 @@ class DishwasherEditor extends DacEditor {
   helper(s) {
     const uitleg = {
       coach: this.alleenLezen_()
-        ? "Leest bij de coach wanneer hij gaat starten. Mag de coach hem sturen (het vinkje bij de coach), dan staan zijn knoppen erbij: Mag draaien en Nu starten. De eigen knoppen van de machine staan op een wasmachine of droger niet op de kaart."
-        : "Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer.",
-      coach_device: "Leeg laten: de vaatwasser van de coach, als er precies één is.",
+        ? t("Leest bij de coach wanneer hij gaat starten. Mag de coach hem sturen (het vinkje bij de coach), dan staan zijn knoppen erbij: Mag draaien en Nu starten. De eigen knoppen van de machine staan op een wasmachine of droger niet op de kaart.")
+        : t("Zet de knoppen van de coach op de kaart: Ingeruimd, Nu starten en Handmatig. Daarvoor is coach 0.110.0 of nieuwer nodig. Wat de coach al weet (status, programma, knoppen, klep) haalt de kaart daar vandaan; die velden staan hieronder dan niet meer."),
+      coach_device: t("Leeg laten: de vaatwasser van de coach, als er precies één is."),
       afwijken:
-        "Kies zelf andere sensoren of knoppen dan de coach gebruikt. Wat je daar invult gaat voor; wat je leeg laat, komt van de coach.",
-      merk: "Automatisch toont de productfoto als het type bekend is, en anders het icoon.",
-      model: "Het type bepaalt de productfoto.",
-      pause: "Een knop die het programma pauzeert. Staat alleen op de kaart als hij te drukken is.",
+        t("Kies zelf andere sensoren of knoppen dan de coach gebruikt. Wat je daar invult gaat voor; wat je leeg laat, komt van de coach."),
+      merk: t("Automatisch toont de productfoto als het type bekend is, en anders het icoon."),
+      model: t("Het type bepaalt de productfoto."),
+      pause: t("Een knop die het programma pauzeert. Staat alleen op de kaart als hij te drukken is."),
       status:
-        "De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, TwinDos, verbruik en de geplande start, en bij een vaatwasser start, pauze en stop. Een wasmachine of droger heeft geen eigen knoppen, en toont als hij uit staat de laatste beurt.",
+        t("De sensor die Run, Ready, Finished of iets in die geest meldt. De kaart vertaalt dat zelf. Bij Miele zoekt de kaart de rest van het apparaat zelf: resterende tijd, programma en fase, TwinDos, verbruik en de geplande start, en bij een vaatwasser start, pauze en stop. Een wasmachine of droger heeft geen eigen knoppen, en toont als hij uit staat de laatste beurt."),
       remaining:
-        "Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur.",
+        t("Een tijdstip, een aantal minuten of een klok als 1:24:00 — alle drie worden gelezen. Een tijdstip is het moment waarop hij klaar is, geen duur."),
       progress:
-        "Zonder deze sensor is er geen stand, en schuift er een streepje heen en weer zolang hij draait.",
-      program: "Een keuzelijst met de programma's. Verschijnt als uitklaplijst op de kaart.",
-      start: "Een knop, een script of een schakelaar — de kaart kiest zelf de juiste service.",
-      stop: "Idem. Deze knop is rood, want hij onderbreekt iets dat loopt.",
-      door: "Staat de klep open, dan zegt de kaart dat in plaats van 'klaar om te starten'.",
-      smart: "De input_boolean van je eigen slimme sturing. De knop licht op als hij aanstaat.",
+        t("Zonder deze sensor is er geen stand, en schuift er een streepje heen en weer zolang hij draait."),
+      program: t("Een keuzelijst met de programma's. Verschijnt als uitklaplijst op de kaart."),
+      start: t("Een knop, een script of een schakelaar — de kaart kiest zelf de juiste service."),
+      stop: t("Idem. Deze knop is rood, want hij onderbreekt iets dat loopt."),
+      door: t("Staat de klep open, dan zegt de kaart dat in plaats van 'klaar om te starten'."),
+      smart: t("De input_boolean van je eigen slimme sturing. De knop licht op als hij aanstaat."),
     };
     return uitleg[s.name];
   }
@@ -1254,9 +1258,10 @@ class DishwasherEditor extends DacEditor {
 
 registerEditor("domotiapp-dishwasher-card-editor", DishwasherEditor);
 registerCard("domotiapp-dishwasher-card", DishwasherCard, {
-  name: "DomotiApp Vaatwasser, wasmachine en droger",
-  description:
-    "Een apparaat met een programma: status, resterende tijd met voortgangsbalk, programma en de knoppen, met een productfoto per merk en type. Bij Miele vindt hij de rest van het apparaat zelf.",
+  name: nt("DomotiApp Vaatwasser, wasmachine en droger"),
+  description: nt(
+    "Een apparaat met een programma: status, resterende tijd met voortgangsbalk, programma en de knoppen, met een productfoto per merk en type. Bij Miele vindt hij de rest van het apparaat zelf."
+  ),
 });
 
 export { DishwasherCard };

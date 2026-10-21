@@ -29,6 +29,28 @@
  */
 
 import { registreerWanneerGereed } from "./scene/registreer.js";
+import { t } from "./taal.js";
+
+/**
+ * Naam en beschrijving in de taal van het moment dat de kiezer ze leest
+ * (sinds 0.81.0). Bij het laden van de bundel is de taal nog niet bekend, dus
+ * de Nederlandse tekst gaat erin en een getter vertaalt hem.
+ */
+function inKiezer({ type, name, description, preview, documentationURL }) {
+  const naam = name ?? type;
+  const uitleg = description ?? "";
+  return {
+    type,
+    get name() {
+      return t(naam);
+    },
+    get description() {
+      return t(uitleg);
+    },
+    preview,
+    documentationURL: documentationURL ?? "https://github.com/Sven2410/domotiapp-lovelace",
+  };
+}
 
 /** Wat er gedefinieerd moet worden zodra de frontend van HA er is. */
 const wachtrij = [];
@@ -42,13 +64,7 @@ export function meldAan(tag, cls) {
 export function meldInKiezer({ type, name, description, preview = true, documentationURL }) {
   window.customCards = window.customCards ?? [];
   if (window.customCards.some((kaart) => kaart.type === type)) return;
-  window.customCards.push({
-    type,
-    name: name ?? type,
-    description: description ?? "",
-    preview,
-    documentationURL: documentationURL ?? "https://github.com/Sven2410/domotiapp-lovelace",
-  });
+  window.customCards.push(inKiezer({ type, name, description, preview, documentationURL }));
 }
 
 /**
@@ -70,13 +86,7 @@ export function meldInKiezer({ type, name, description, preview = true, document
 export function meldBadgeInKiezer({ type, name, description, preview = true, documentationURL }) {
   window.customBadges = window.customBadges ?? [];
   if (window.customBadges.some((badge) => badge.type === type)) return;
-  window.customBadges.push({
-    type,
-    name: name ?? type,
-    description: description ?? "",
-    preview,
-    documentationURL: documentationURL ?? "https://github.com/Sven2410/domotiapp-lovelace",
-  });
+  window.customBadges.push(inKiezer({ type, name, description, preview, documentationURL }));
 }
 
 /**

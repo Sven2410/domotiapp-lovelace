@@ -357,10 +357,12 @@ const wsWekkers = {
 // er in de opslag staat.
 const legeScenes = () => ["een", "twee", "drie"].map((icon) => ({ icon, lights: {} }));
 
+// De taal van Home Assistant (sinds 0.81.0): ?taal=en.
+const TAAL = new URLSearchParams(location.search).get("taal") ?? "nl";
 const hass = {
   states,
-  language: "nl",
-  locale: { language: "nl" },
+  language: TAAL,
+  locale: { language: TAAL },
   user: { name: "Bram" },
   config: { unit_system: { wind_speed: "km/h" } },
   themes: {},

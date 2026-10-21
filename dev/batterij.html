@@ -35,12 +35,16 @@
 
   De foto komt van de integratie en is hier niet te zien; het adres wel.
 -->
+<button id="taalknop" type="button" style="margin-bottom:12px">Taal wisselen</button>
 <div id="situaties"></div>
 <div id="log"></div>
 <script type="module">
 import "./ha-form-stub.js";
 if (!customElements.get("home-assistant")) customElements.define("home-assistant", class extends HTMLElement {});
 if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement {});
+
+// De taal van Home Assistant (sinds 0.81.0): ?taal=en, of de knop bovenaan.
+let TAAL = new URLSearchParams(location.search).get("taal") ?? "nl";
 
 await import(`../custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js?t=${Date.now()}`);
 
@@ -62,7 +66,7 @@ function hassUit(wijzig = {}) {
   return {
     states, entities,
     devices: { bt: { id: "bt", name: "Thuisbatterij", manufacturer: "DomotiApp Coach", model: "Thuisbatterij" } },
-    language: "nl", locale: { language: "nl" }, user: { name: "proef" }, config: {}, themes: {},
+    language: TAAL, locale: { language: TAAL }, user: { name: "proef" }, config: {}, themes: {},
     async callService(domein, dienst, data) { log(`callService ${domein}.${dienst} ${JSON.stringify(data)}`); },
     async callWS(b) { log(`ws ${b.type}`); return null; },
   };
@@ -114,6 +118,11 @@ ed.addEventListener("config-changed", (e) => {
 });
 doos.append(ed, uit);
 doel.appendChild(doos);
+document.getElementById("taalknop").addEventListener("click", () => {
+  TAAL = TAAL === "nl" ? "en" : "nl";
+  for (const k of document.querySelectorAll("domotiapp-batterij-card")) k.hass = { ...k.hass, language: TAAL, locale: { language: TAAL } };
+  log(`taal ${TAAL}`);
+});
 log("klaar");
 </script>
 </body>

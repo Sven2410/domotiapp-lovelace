@@ -44,6 +44,8 @@
  * Geen DOM: dit hoort in een gewone Node-test.
  */
 
+import { t } from "../taal.js";
+
 /** Zo heet de coach als fabrikant van zijn apparaten. */
 export const COACH_FABRIKANT = "DomotiApp Coach";
 
@@ -165,9 +167,9 @@ export function klantEntiteiten(st) {
  * @param {string} [versie] de coach die deze kaart nodig heeft (laadpaal en batterij: 0.112.1)
  */
 export function coachMelding(keuze, contract, versie = "0.110.0") {
-  if (keuze.reden === "geen") return `Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach ${versie} of nieuwer nodig.`;
-  if (keuze.reden === "meerdere") return "Kies in de editor welk apparaat van de coach deze kaart volgt.";
-  if (keuze.reden === "weg") return "Het gekozen apparaat van de coach bestaat niet meer.";
-  if (!contract) return `Werk DomotiApp Coach bij naar ${versie} of nieuwer.`;
+  if (keuze.reden === "geen") return t("Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach {versie} of nieuwer nodig.", { versie });
+  if (keuze.reden === "meerdere") return t("Kies in de editor welk apparaat van de coach deze kaart volgt.");
+  if (keuze.reden === "weg") return t("Het gekozen apparaat van de coach bestaat niet meer.");
+  if (!contract) return t("Werk DomotiApp Coach bij naar {versie} of nieuwer.", { versie });
   return "";
 }

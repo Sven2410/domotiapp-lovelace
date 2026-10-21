@@ -54,6 +54,7 @@ import {
 import { COACH_FABRIKANT, coachMelding, coachRollen, contractVan, kiesApparaat, klantEntiteiten } from "./coach-logica.js";
 import { drukOproep } from "./vaatwasser-logica.js";
 import { getalTekst, stapWaarde } from "./laadpaal-logica.js";
+import { nt, t } from "../taal.js";
 
 const klok = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
@@ -282,27 +283,27 @@ class BatterijCard extends DacCard {
         <div class="rij opdrachten" hidden></div>
 
         <div class="leeg" hidden>
-          <span class="kopje">Leegladen tot</span>
-          <div class="set" aria-label="Leegladen tot">
-            <button type="button" data-d="-1" aria-label="Minder">${resolve("minus")}</button>
+          <span class="kopje">${t("Leegladen tot")}</span>
+          <div class="set" aria-label="${t("Leegladen tot")}">
+            <button type="button" data-d="-1" aria-label="${t("Minder")}">${resolve("minus")}</button>
             <span class="waarde"></span>
-            <button type="button" data-d="1" aria-label="Meer">${resolve("plus")}</button>
+            <button type="button" data-d="1" aria-label="${t("Meer")}">${resolve("plus")}</button>
           </div>
         </div>
 
         <div class="vakantierij" hidden>
           <span class="uitleg"></span>
-          <button type="button" class="knop vakantieknop" aria-pressed="false">${resolve("beach")}<span class="lb">Vakantie</span></button>
+          <button type="button" class="knop vakantieknop" aria-pressed="false">${resolve("beach")}<span class="lb">${t("Vakantie")}</span></button>
         </div>
 
         <div class="plan" hidden>
-          <span class="kopje">Plan</span>
+          <span class="kopje">${t("Plan")}</span>
           <div class="grafiek"><span class="nul"></span><span class="staven"></span></div>
           <div class="tikken"></div>
-          <div class="legenda"><span><i class="l"></i>laden</span><span><i class="o"></i>ontladen</span></div>
+          <div class="legenda"><span><i class="l"></i>${t("laden")}</span><span><i class="o"></i>${t("ontladen")}</span></div>
         </div>
 
-        <div class="opgeleverd" hidden><span class="kopje">Opgeleverd</span><span class="wat"></span></div>
+        <div class="opgeleverd" hidden><span class="kopje">${t("Opgeleverd")}</span><span class="wat"></span></div>
       </div>`;
   }
 
@@ -395,7 +396,7 @@ class BatterijCard extends DacCard {
     const melding = info ? coachMelding(info.keuze, contractVan(coachSt), "0.112.1") : "";
 
     const apparaat = this.hass?.devices?.[info?.keuze.id ?? ""];
-    this.text(".nm", c.name || apparaat?.name_by_user || apparaat?.name || "Thuisbatterij");
+    this.text(".nm", c.name || apparaat?.name_by_user || apparaat?.name || t("Thuisbatterij"));
 
     const vorm = standVorm(s?.stand);
     this.$(".card").style.setProperty("--tone", TONES[vorm.tone] ?? TONES.neutral);
@@ -404,7 +405,7 @@ class BatterijCard extends DacCard {
       stip.dataset.icoon = vorm.icoon;
       stip.innerHTML = resolve(vorm.icoon);
     }
-    this.text(".woord", s ? s.tekst || vorm.label : "Niet bereikbaar");
+    this.text(".woord", s ? s.tekst || t(vorm.label) : t("Niet bereikbaar"));
     this.text(".reden", s?.reden ?? "");
     this.$(".reden").hidden = !s?.reden;
     this.$(".kop").setAttribute("aria-label", `${this.$(".nm").textContent}, ${this.$(".woord").textContent}`);
@@ -511,7 +512,7 @@ class BatterijCard extends DacCard {
       const basis = { ...totSt, state: String(v) };
       this.$('.set [data-d="-1"]').disabled = stapWaarde(basis, -1) == null;
       this.$('.set [data-d="1"]').disabled = stapWaarde(basis, 1) == null;
-      this.$(".set").setAttribute("aria-label", `Leegladen tot ${Math.round(v)}%`);
+      this.$(".set").setAttribute("aria-label", t("Leegladen tot {pct}%", { pct: Math.round(v) }));
     }
 
     // De vakantiestand: aan of uit, met de grens van de installateur erbij.
@@ -525,8 +526,12 @@ class BatterijCard extends DacCard {
       this.text(
         ".vakantierij .uitleg",
         aan
-          ? `Vakantiestand staat aan${max != null ? `: de batterij blijft onder ${max}%` : ""}.`
-          : `Vakantiestand staat uit${max != null ? `. Aan blijft de batterij onder ${max}%` : ""}.`
+          ? max != null
+            ? t("Vakantiestand staat aan: de batterij blijft onder {pct}%.", { pct: max })
+            : t("Vakantiestand staat aan.")
+          : max != null
+            ? t("Vakantiestand staat uit. Aan blijft de batterij onder {pct}%.", { pct: max })
+            : t("Vakantiestand staat uit.")
       );
     }
   }
@@ -541,11 +546,12 @@ class BatterijCard extends DacCard {
     plan.dataset.sig = sig;
     this.$(".staven").innerHTML = p.staven
       .map((b) => {
-        const titel = `${klok(b.start)}–${klok(b.eind)}, ${b.kw > 0 ? "laden" : "ontladen"} ${getalTekst(Math.abs(b.kw))} kW`;
+        const kw = getalTekst(Math.abs(b.kw));
+        const titel = `${klok(b.start)}–${klok(b.eind)}, ${b.kw > 0 ? t("laden {kw} kW", { kw }) : t("ontladen {kw} kW", { kw })}`;
         return `<span class="staaf" data-richting="${b.richting}" style="left:${b.links}%;width:${b.breedte}%;height:${b.hoogte / 2}%" title="${escapeHtml(titel)}"></span>`;
       })
       .join("");
-    this.$(".tikken").innerHTML = p.tikken.map((t) => `<span style="left:${t.pct}%">${escapeHtml(t.tekst)}</span>`).join("");
+    this.$(".tikken").innerHTML = p.tikken.map((tik) => `<span style="left:${tik.pct}%">${escapeHtml(tik.tekst)}</span>`).join("");
     const richtingen = new Set(p.staven.map((b) => b.richting));
     this.$(".legenda .l").parentElement.hidden = !richtingen.has("laden");
     this.$(".legenda .o").parentElement.hidden = !richtingen.has("ontladen");
@@ -569,10 +575,10 @@ class BatterijCard extends DacCard {
 }
 
 const AFBEELDING_KEUZES = [
-  { value: "auto", label: "Automatisch (merk en model van de batterij)" },
+  { value: "auto", label: nt("Automatisch (merk en model van de batterij)") },
   ...Object.entries(BATTERIJ_FOTOS).map(([value, f]) => ({ value, label: f.label })),
-  { value: "eigen", label: "Eigen afbeelding" },
-  { value: "geen", label: "Geen afbeelding" },
+  { value: "eigen", label: nt("Eigen afbeelding") },
+  { value: "geen", label: nt("Geen afbeelding") },
 ];
 
 class BatterijEditor extends DacEditor {
@@ -582,7 +588,7 @@ class BatterijEditor extends DacEditor {
 
   pickers() {
     return this.config_?.afbeelding === "eigen"
-      ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "battery" }]
+      ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "battery" }]
       : [];
   }
 
@@ -593,30 +599,35 @@ class BatterijEditor extends DacEditor {
         name: "coach_device",
         selector: { device: { filter: BATTERIJ_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })) } },
       },
-      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES) },
+      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
     ];
   }
 
   label(s) {
-    return { name: "Naam", coach_device: "Thuisbatterij bij de coach", afbeelding: "Afbeelding" }[s.name] ?? super.label(s);
+    return (
+      { name: t("Naam"), coach_device: t("Thuisbatterij bij de coach"), afbeelding: t("Afbeelding") }[s.name] ?? super.label(s)
+    );
   }
 
   helper(s) {
     return {
-      name: "Leeg laten: de naam die de batterij bij de coach heeft.",
-      coach_device:
-        "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.",
-      afbeelding:
-        "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC). Een Growatt ARK herkent hij aan de capaciteit bij de coach; staat daar iets anders, kies het type dan hier.",
+      name: t("Leeg laten: de naam die de batterij bij de coach heeft."),
+      coach_device: t(
+        "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig."
+      ),
+      afbeelding: t(
+        "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC). Een Growatt ARK herkent hij aan de capaciteit bij de coach; staat daar iets anders, kies het type dan hier."
+      ),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-batterij-card-editor", BatterijEditor);
 registerCard("domotiapp-batterij-card", BatterijCard, {
-  name: "DomotiApp Thuisbatterij",
-  description:
-    "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen.",
+  name: nt("DomotiApp Thuisbatterij"),
+  description: nt(
+    "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen."
+  ),
 });
 
 export { BatterijCard };

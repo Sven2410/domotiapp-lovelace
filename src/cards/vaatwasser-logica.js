@@ -18,7 +18,13 @@
  *
  * Geen DOM en geen `hass`: dit hoort in een gewone Node-test, en de rest van de
  * kaart niet.
+ *
+ * De zinnen die hier gemaakt worden zijn in de taal van nu (taal.js, sinds
+ * 0.81.0); de woorden in de tabellen blijven Nederlands (`nt`). Wat de coach
+ * zegt (`later`) komt al in zijn taal en wordt niet vertaald.
  */
+
+import { locale, nt, t } from "../taal.js";
 
 /** Hoe de toestand van de machine heet, ongeacht wie hem meldt. */
 export const SOORT = {
@@ -92,23 +98,23 @@ export function soortVan(state) {
  */
 const MIELE_STATUS = {
   off: { soort: SOORT.UIT },
-  on: { soort: SOORT.KLAAR, woord: "Aan" },
-  idle: { soort: SOORT.KLAAR, woord: "Aan" },
+  on: { soort: SOORT.KLAAR, woord: nt("Aan") },
+  idle: { soort: SOORT.KLAAR, woord: nt("Aan") },
   programmed: { soort: SOORT.KLAAR },
-  reserved: { soort: SOORT.KLAAR, woord: "Aan" },
-  service: { soort: SOORT.KLAAR, woord: "Instellingen" },
+  reserved: { soort: SOORT.KLAAR, woord: nt("Aan") },
+  service: { soort: SOORT.KLAAR, woord: nt("Instellingen") },
   waiting_to_start: { soort: SOORT.UITGESTELD },
   in_use: { soort: SOORT.DRAAIT },
   autocleaning: { soort: SOORT.DRAAIT },
   pause: { soort: SOORT.PAUZE },
-  rinse_hold: { soort: SOORT.PAUZE, woord: "Spoelstop" },
+  rinse_hold: { soort: SOORT.PAUZE, woord: nt("Spoelstop") },
   program_ended: { soort: SOORT.AF },
   failure: { soort: SOORT.FOUT },
   // Een pauze en geen storing (sinds 0.78.2, akkoord van de eigenaar via de
   // coach-sessie op 16 oktober 2026). Bij de klant duurde hij dertien tellen,
   // en daarna werd hetzelfde programma opnieuw klaargezet. De coach telt hem
   // sinds v0.127.0 ook als pauze; in rood zei de kaart "storing".
-  program_interrupted: { soort: SOORT.PAUZE, woord: "Onderbroken" },
+  program_interrupted: { soort: SOORT.PAUZE, woord: nt("Onderbroken") },
   not_connected: { soort: SOORT.ONBEKEND },
 };
 
@@ -131,8 +137,8 @@ export function statusDuiding(st) {
   if (isMieleStatus(st)) {
     const s = String(st.state ?? "");
     if (!s || s === "unknown" || s === "unavailable") return { soort: SOORT.ONBEKEND, woord: "" };
-    const m = MIELE_STATUS[s] ?? { soort: SOORT.KLAAR, woord: "Aan" };
-    return { soort: m.soort, woord: m.woord ?? "" };
+    const m = MIELE_STATUS[s] ?? { soort: SOORT.KLAAR, woord: nt("Aan") };
+    return { soort: m.soort, woord: m.woord ? t(m.woord) : "" };
   }
   return { soort: soortVan(st?.state), woord: "" };
 }
@@ -183,11 +189,16 @@ export function restMinuten(st, nu = new Date()) {
  */
 export function restTekst(minuten) {
   if (minuten == null) return "";
-  if (minuten <= 0) return "Klaar";
-  if (minuten < 60) return `nog ${minuten} min`;
+  if (minuten <= 0) return t("Klaar");
+  return t("nog {duur}", { duur: duurTekst(minuten) });
+}
+
+/** "12 min", "1 u 24 min", "2 uur" (in het Engels "1 h 24 min", "2 h"). */
+function duurTekst(minuten) {
+  if (minuten < 60) return `${minuten} min`;
   const u = Math.floor(minuten / 60);
   const m = minuten % 60;
-  return m ? `nog ${u} u ${m} min` : `nog ${u} uur`;
+  return m ? t("{u} u {m} min", { u, m }) : t("{u} uur", { u });
 }
 
 /**
@@ -308,8 +319,8 @@ export function startMoment(st, nu = new Date()) {
   return null;
 }
 
-const DAGEN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
-const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+/** "maandag" (of "Monday"): de naam van de dag in de taal van nu. */
+const dagNaam = (d) => d.toLocaleDateString(locale(), { weekday: "long" });
 
 /** Het aantal kalenderdagen tussen twee momenten, in lokale tijd. */
 const dagenTussen = (van, tot) =>
@@ -331,13 +342,15 @@ const dagenTussen = (van, tot) =>
  */
 export function startTekst(moment, nu = new Date()) {
   if (!moment) return "";
-  if (+moment <= +nu) return "Start nu";
+  if (+moment <= +nu) return t("Start nu");
   const klok = `${String(moment.getHours()).padStart(2, "0")}:${String(moment.getMinutes()).padStart(2, "0")}`;
   const dagen = dagenTussen(nu, moment);
-  if (dagen <= 0) return `Start om ${klok}`;
-  if (dagen === 1) return `Start morgen om ${klok}`;
-  if (dagen < 7) return `Start ${DAGEN[moment.getDay()]} om ${klok}`;
-  return `Start ${moment.getDate()} ${MAANDEN[moment.getMonth()]} om ${klok}`;
+  if (dagen <= 0) return t("Start om {klok}", { klok });
+  if (dagen === 1) return t("Start morgen om {klok}", { klok });
+  if (dagen < 7) return t("Start {dag} om {klok}", { dag: dagNaam(moment), klok });
+  // "16 okt" of "16 Oct".
+  const datum = moment.toLocaleDateString(locale(), { day: "numeric", month: "short" });
+  return t("Start {datum} om {klok}", { datum, klok });
 }
 
 /**
@@ -548,24 +561,28 @@ export function statusUitCoach(coach) {
  */
 export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date(), beschikbaar = () => true }) {
   if (!coach || loopt || coach.stand === "draait") return [];
-  const kort = !coach.type || coach.type === "vaatwasser" ? "Ingeruimd" : "Mag draaien";
+  const kort = !coach.type || coach.type === "vaatwasser" ? t("Ingeruimd") : t("Mag draaien");
   const knoppen = [];
 
   if (coach.vrijgegeven) {
     knoppen.push({
       rol: "vrijgave",
       entity: rollen.vrijgave_intrekken,
-      label: "Vrijgegeven",
-      aria: "Vrijgegeven. Druk om de vrijgave in te trekken.",
+      label: t("Vrijgegeven"),
+      kort: t("Vrijgegeven"),
+      aria: t("Vrijgegeven. Druk om de vrijgave in te trekken."),
       aan: true,
     });
   } else {
+    // `later` is een woord van de coach ("morgen", in het Engels "tomorrow"),
+    // of van `laterWoord`; allebei al in de taal van nu.
     const later = coach.later ?? laterWoord(coach.klaarOm, nu);
     knoppen.push({
       rol: "vrijgave",
       entity: rollen.ingeruimd_morgen,
-      label: later ? `${later[0].toUpperCase()}${later.slice(1)} starten` : kort,
-      aria: later ? `${kort}, ${later} starten` : kort,
+      label: later ? hoofdletter(t("{dag} starten", { dag: later })) : kort,
+      kort: later ? hoofdletter(later) : kort,
+      aria: later ? t("{kort}, {dag} starten", { kort, dag: later }) : kort,
       aan: false,
     });
   }
@@ -574,18 +591,21 @@ export function coachKnoppen({ coach, rollen, loopt = false, nu = new Date(), be
     knoppen.push({
       rol: "nu",
       entity: rollen.ingeruimd_nu,
-      label: "Nu starten",
-      aria: coach.vrijgegeven ? "Toch nu starten" : `${kort}, nu starten`,
+      label: t("Nu starten"),
+      kort: t("Nu"),
+      aria: coach.vrijgegeven ? t("Toch nu starten") : t("{kort}, nu starten", { kort }),
       aan: false,
     });
   }
 
-  // Het korte woord voor een heel smalle kaart: "Morgen starten" wordt
-  // "Morgen", "Nu starten" wordt "Nu". De rest is al kort.
-  return knoppen
-    .filter((k) => k.entity && beschikbaar(k.entity))
-    .map((k) => ({ ...k, kort: k.label.replace(/ starten$/, "") }));
+  // Het korte woord (`kort`) is voor een heel smalle kaart: "Morgen starten"
+  // wordt "Morgen", "Nu starten" wordt "Nu". De rest is al kort. Sinds 0.81.0
+  // per knop gezet en niet meer uit het label geknipt: in het Engels staat
+  // "Start" vooraan.
+  return knoppen.filter((k) => k.entity && beschikbaar(k.entity));
 }
+
+const hoofdletter = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /**
  * "morgen", "maandag", of "" als de klaar-tijd vandaag is.
@@ -600,8 +620,8 @@ function laterWoord(klaarOm, nu) {
   if (!klaarOm) return "";
   const dagen = dagenTussen(nu, klaarOm);
   if (dagen <= 0) return "";
-  if (dagen === 1) return "morgen";
-  return dagen < 7 ? DAGEN[klaarOm.getDay()] : "";
+  if (dagen === 1) return t("morgen");
+  return dagen < 7 ? dagNaam(klaarOm) : "";
 }
 
 /** Zie `coach-logica.js`; hier doorgegeven omdat de vaatwasser hem als eerste had. */
@@ -640,13 +660,13 @@ export const bezig = (soort) =>
  *
  * @param {Date|null} [start] het geplande startmoment uit `startMoment`
  * @param {Date} [nu]
- * @param {string} [deurWoord] "Klep" of "Deur"
+ * @param {string} [deurWoord] "Klep" of "Deur", al in de taal van nu
  * @returns {{soort: string, tekst: string, tone: string, waarschuwing: string}}
  */
-export function toestand({ status, deur, rest, pct, start = null, nu = new Date(), deurWoord = "Klep" } = {}) {
+export function toestand({ status, deur, rest, pct, start = null, nu = new Date(), deurWoord = t("Klep") } = {}) {
   const { soort, woord } = statusDuiding(status);
   const open = klepOpen(deur);
-  const klep = `${deurWoord} open`;
+  const klep = t("{deur} open", { deur: deurWoord });
 
   if (soort === SOORT.DRAAIT) {
     const stukjes = [];
@@ -656,31 +676,31 @@ export function toestand({ status, deur, rest, pct, start = null, nu = new Date(
       soort,
       // Een echte punt en geen twee streepjes: dit is tekst voor op het scherm,
       // niet voor in een commentaarblok.
-      tekst: stukjes.length ? `Draait · ${stukjes.join(" ")}` : "Draait",
+      tekst: stukjes.length ? `${t("Draait")} · ${stukjes.join(" ")}` : t("Draait"),
       tone: "accent",
       waarschuwing: "",
     };
   }
 
   if (soort === SOORT.PAUZE) {
-    return { soort, tekst: woord || "Gepauzeerd", tone: "warn", waarschuwing: open ? klep : "" };
+    return { soort, tekst: woord || t("Gepauzeerd"), tone: "warn", waarschuwing: open ? klep : "" };
   }
 
   if (soort === SOORT.FOUT) {
-    return { soort, tekst: woord || "Storing", tone: "bad", waarschuwing: open ? klep : "" };
+    return { soort, tekst: woord || t("Storing"), tone: "bad", waarschuwing: open ? klep : "" };
   }
 
   if (soort === SOORT.AF) {
-    return { soort, tekst: "Programma klaar", tone: "good", waarschuwing: "" };
+    return { soort, tekst: t("Programma klaar"), tone: "good", waarschuwing: "" };
   }
 
   if (soort === SOORT.UITGESTELD) {
     // Een klokmoment uit de sensor gaat voor een aftelling van de machine:
     // "Start om 14:00" is wat je wilt weten, "over 2 u 13 min" moet je
     // uitrekenen.
-    let tekst = "Uitgestelde start";
+    let tekst = t("Uitgestelde start");
     if (start) tekst = startTekst(start, nu);
-    else if (rest != null) tekst = `Start over ${restTekst(rest).replace(/^nog /, "")}`;
+    else if (rest != null) tekst = t("Start over {duur}", { duur: rest <= 0 ? t("Klaar") : duurTekst(rest) });
     return { soort, tekst, tone: "accent", waarschuwing: open ? klep : "" };
   }
 
@@ -692,11 +712,11 @@ export function toestand({ status, deur, rest, pct, start = null, nu = new Date(
     return { soort, tekst: klep, tone: "warn", waarschuwing: "" };
   }
 
-  if (soort === SOORT.UIT) return { soort, tekst: "Uit", tone: "neutral", waarschuwing: "" };
+  if (soort === SOORT.UIT) return { soort, tekst: t("Uit"), tone: "neutral", waarschuwing: "" };
   if (soort === SOORT.KLAAR)
-    return { soort, tekst: woord || "Klaar om te starten", tone: "neutral", waarschuwing: "" };
+    return { soort, tekst: woord || t("Klaar om te starten"), tone: "neutral", waarschuwing: "" };
 
-  return { soort: SOORT.ONBEKEND, tekst: "Niet bereikbaar", tone: "neutral", waarschuwing: "" };
+  return { soort: SOORT.ONBEKEND, tekst: t("Niet bereikbaar"), tone: "neutral", waarschuwing: "" };
 }
 
 /**

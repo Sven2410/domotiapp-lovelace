@@ -1,6 +1,10 @@
 /**
  * Licht of donker: meten, en het op het element zetten.
  *
+ * Hier wordt ook de taal opgehaald (sinds 0.81.0): die staat in hetzelfde
+ * antwoord van de lader, en een gewijzigde keuze moet op dezelfde momenten
+ * aankomen. De taal zelf staat in taal.js.
+ *
  * De beslissing zelf staat in thema-logica.js en is daar zonder browser te
  * toetsen. Hier staat wat een browser nodig heeft: de tekstkleur van het thema
  * uitlezen, het attribuut `dac-thema` zetten, en de instelling van de
@@ -35,6 +39,7 @@
 
 import { GLOBALE, alsInstelling, gemetenThema, instellingUit, themaVoor } from "./thema-logica.js";
 import { LADER_URL, hashUit } from "./verouderd.js";
+import { taalUit, zetInstelling } from "./taal.js";
 
 /** Niet vaker dan dit opnieuw vragen, hoeveel kaarten er ook in beeld komen. */
 const TUSSENPOOS = 5000;
@@ -127,7 +132,10 @@ async function vraagInstelling() {
   try {
     const antwoord = await fetch(LADER_URL, { cache: "no-store" });
     if (!antwoord?.ok) return;
-    const nieuw = instellingUit(await antwoord.text());
+    const tekst = await antwoord.text();
+    // De taal reist met dezelfde lader mee (sinds 0.81.0, zie taal.js).
+    zetInstelling(taalUit(tekst));
+    const nieuw = instellingUit(tekst);
     // Een lader die de instelling niet noemt is een lader van een oudere
     // versie (de bundel is dan vers en de server nog niet herstart). Dat is
     // geen reden om een bekende instelling weg te gooien.

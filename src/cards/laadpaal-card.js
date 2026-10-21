@@ -53,6 +53,7 @@ import {
 import {
   LAADPAAL_FOTOS,
   LAADPAAL_MODELLEN,
+  MODI,
   accustandInvoer,
   accustandVeld,
   getalTekst,
@@ -69,8 +70,15 @@ import {
   weekSchema,
 } from "./laadpaal-logica.js";
 import { veldWaarde, zetOproep } from "./tijdveld.js";
+import { nt, t } from "../taal.js";
 
 const klok = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+/** De modus als woord in een zin ("snel"); een modus zonder knop zoals de coach hem noemt. */
+const modusWoord = (sleutel) => {
+  const m = MODI.find((x) => x.sleutel === sleutel);
+  return m ? t(m.label).toLowerCase() : String(sleutel);
+};
 
 class LaadpaalCard extends DacCard {
   static css = /* css */ `
@@ -424,46 +432,46 @@ class LaadpaalCard extends DacCard {
         <div class="feiten" hidden></div>
 
         <div class="vraag" hidden>
-          <label class="kopje" for="accustand">Hoe vol is de auto nu?</label>
+          <label class="kopje" for="accustand">${t("Hoe vol is de auto nu?")}</label>
           <div class="invoer">
             <label class="getalvak">
               <input id="accustand" class="pct" type="number" min="0" max="100" step="1"
                      inputmode="numeric" enterkeyhint="done" autocomplete="off" />
               <span class="eenheid" aria-hidden="true">%</span>
             </label>
-            <button type="button" class="doorgeven">Doorgeven</button>
+            <button type="button" class="doorgeven">${t("Doorgeven")}</button>
           </div>
           <p class="uitleg"></p>
         </div>
 
         <div class="rij modi" hidden><span class="modusregel" hidden></span><span class="knoppen"></span></div>
         <div class="rij schakels" hidden>
-          <button type="button" class="schakel pauze" hidden>${resolve("pause")}<span class="lb">Pauze</span></button>
-          <button type="button" class="schakel schema" hidden>${resolve("calendar")}<span class="lb">Schema</span></button>
+          <button type="button" class="schakel pauze" hidden>${resolve("pause")}<span class="lb">${t("Pauze")}</span></button>
+          <button type="button" class="schakel schema" hidden>${resolve("calendar")}<span class="lb">${t("Schema")}</span></button>
         </div>
         <p class="noot" hidden></p>
 
         <div class="velden" hidden>
           <label class="veld klaar" hidden>
-            <span class="kopje">Klaar om</span>
-            <input class="tijd" type="time" step="60" aria-label="Klaar om" />
+            <span class="kopje">${t("Klaar om")}</span>
+            <input class="tijd" type="time" step="60" aria-label="${t("Klaar om")}" />
           </label>
           <div class="veld tot" hidden>
-            <span class="kopje">Laden tot</span>
+            <span class="kopje">${t("Laden tot")}</span>
             <div class="set">
-              <button type="button" data-d="-1" aria-label="Minder">${icons.minus}</button>
+              <button type="button" data-d="-1" aria-label="${t("Minder")}">${icons.minus}</button>
               <span class="waarde"></span>
-              <button type="button" data-d="1" aria-label="Meer">${icons.plus}</button>
+              <button type="button" data-d="1" aria-label="${t("Meer")}">${icons.plus}</button>
             </div>
           </div>
         </div>
         <div class="week" hidden></div>
 
         <div class="plan" hidden>
-          <span class="kopje">Laadplan</span>
+          <span class="kopje">${t("Laadplan")}</span>
           <div class="baan"></div>
           <div class="tikken"></div>
-          <div class="legenda"><span><i class="z"></i>zon</span><span><i class="n"></i>net</span></div>
+          <div class="legenda"><span><i class="z"></i>${t("zon")}</span><span><i class="n"></i>${t("net")}</span></div>
         </div>
 
         <div class="sessie" hidden><span class="kopje"></span><span class="wat"></span></div>
@@ -628,7 +636,7 @@ class LaadpaalCard extends DacCard {
 
     // ----- kop
     const apparaat = this.hass?.devices?.[info?.keuze.id ?? ""];
-    this.text(".nm", c.name || apparaat?.name_by_user || apparaat?.name || "Laadpaal");
+    this.text(".nm", c.name || apparaat?.name_by_user || apparaat?.name || t("Laadpaal"));
 
     const vorm = standVorm(s?.stand);
     const tone = TONES[vorm.tone] ?? TONES.neutral;
@@ -638,7 +646,7 @@ class LaadpaalCard extends DacCard {
       stip.dataset.icoon = vorm.icoon;
       stip.innerHTML = resolve(vorm.icoon);
     }
-    this.text(".woord", s ? s.tekst || vorm.label : "Niet bereikbaar");
+    this.text(".woord", s ? s.tekst || t(vorm.label) : t("Niet bereikbaar"));
     this.text(".reden", s?.reden ?? "");
     this.$(".reden").hidden = !s?.reden;
     this.$(".kop").setAttribute("aria-label", `${this.$(".nm").textContent}, ${this.$(".woord").textContent}`);
@@ -673,8 +681,8 @@ class LaadpaalCard extends DacCard {
     const feiten = [];
     // "Verwacht klaar" en niet "klaar om": dat laatste is de tijd die je
     // hieronder instelt, en twee keer "klaar om" met twee tijden is er één te veel.
-    if (s?.klaarVerwacht) feiten.push(`verwacht klaar <b>${klok(s.klaarVerwacht)}</b>`);
-    if (s?.kwhNodig != null && s.kwhNodig > 0) feiten.push(`nog <b>${getalTekst(s.kwhNodig)} kWh</b>`);
+    if (s?.klaarVerwacht) feiten.push(t("verwacht klaar <b>{klok}</b>", { klok: klok(s.klaarVerwacht) }));
+    if (s?.kwhNodig != null && s.kwhNodig > 0) feiten.push(t("nog <b>{kwh} kWh</b>", { kwh: getalTekst(s.kwhNodig) }));
     const vermogen = vermogenTekst(stateOf(this.hass, this.vermogenId_()));
     if (vermogen) feiten.push(`<b>${vermogen}</b>${s?.amps ? ` · ${Math.round(s.amps)} A` : ""}`);
     this.$(".feiten").hidden = !feiten.length;
@@ -754,7 +762,7 @@ class LaadpaalCard extends DacCard {
       knoppen.innerHTML = modi
         .map(
           (m) =>
-            `<button type="button" class="seg" data-modus="${escapeHtml(m.sleutel)}" aria-pressed="false">${resolve(m.icoon)}<span class="lb">${escapeHtml(m.label)}</span></button>`
+            `<button type="button" class="seg" data-modus="${escapeHtml(m.sleutel)}" aria-pressed="false">${resolve(m.icoon)}<span class="lb">${escapeHtml(t(m.label))}</span></button>`
         )
         .join("");
     }
@@ -769,7 +777,7 @@ class LaadpaalCard extends DacCard {
     const rEl = this.$(".modusregel");
     rEl.hidden = !regel;
     const rHtml = regel
-      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd ? ` · klaar om ${escapeHtml(regel.tijd)}` : ""}</span>`
+      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd ? ` · ${t("klaar om {tijd}", { tijd: escapeHtml(regel.tijd) })}` : ""}</span>`
       : "";
     if (rEl.dataset.html !== rHtml) {
       rEl.dataset.html = rHtml;
@@ -792,11 +800,13 @@ class LaadpaalCard extends DacCard {
 
     // Wat er per beurt geldt, in één zin onder de knoppen.
     const perBeurt = [];
-    if (s?.pauze) perBeurt.push("pauze");
+    if (s?.pauze) perBeurt.push(t("pauze"));
     else if (s?.modusBeurt && (s.modusActief ?? s.modus) && (s.modusActief ?? s.modus) !== "planning")
-      perBeurt.push(`${s.modusActief ?? s.modus}`);
-    if (s?.doelBeurt && s.doel != null) perBeurt.push(`laden tot ${Math.round(s.doel)}%`);
-    const noot = perBeurt.length ? `${perBeurt.join(" en ").replace(/^./, (x) => x.toUpperCase())}: geldt tot de kabel eruit gaat.` : "";
+      perBeurt.push(modusWoord(s.modusActief ?? s.modus));
+    if (s?.doelBeurt && s.doel != null) perBeurt.push(t("laden tot {pct}%", { pct: Math.round(s.doel) }));
+    const noot = perBeurt.length
+      ? t("{wat}: geldt tot de kabel eruit gaat.", { wat: perBeurt.join(` ${t("en")} `).replace(/^./, (x) => x.toUpperCase()) })
+      : "";
     this.text(".noot", noot);
     this.$(".noot").hidden = !noot;
 
@@ -822,7 +832,7 @@ class LaadpaalCard extends DacCard {
       const basis = { ...totSt, state: String(v) };
       this.$('.set [data-d="-1"]').disabled = stapWaarde(basis, -1) == null;
       this.$('.set [data-d="1"]').disabled = stapWaarde(basis, 1) == null;
-      this.$(".set").setAttribute("aria-label", `Laden tot ${Math.round(v)}%, ${a.min ?? 0} tot ${a.max ?? 100}`);
+      this.$(".set").setAttribute("aria-label", t("Laden tot {pct}%, {min} tot {max}", { pct: Math.round(v), min: a.min ?? 0, max: a.max ?? 100 }));
     }
     const velden = this.$(".velden");
     velden.hidden = !metKlaar && !metTot;
@@ -839,10 +849,10 @@ class LaadpaalCard extends DacCard {
       wEl.innerHTML = week
         .map(
           (d) =>
-            `<span class="dag" data-aan="${d.aan}" data-vandaag="${d.vandaag}">${d.dag}<b>${d.aan && d.klaarOm ? d.klaarOm : "—"}</b></span>`
+            `<span class="dag" data-aan="${d.aan}" data-vandaag="${d.vandaag}">${t(d.dag)}<b>${d.aan && d.klaarOm ? d.klaarOm : "—"}</b></span>`
         )
         .join("");
-      wEl.setAttribute("aria-label", "Weekschema, te wijzigen in DomotiApp Coach");
+      wEl.setAttribute("aria-label", t("Weekschema, te wijzigen in DomotiApp Coach"));
     }
   }
 
@@ -856,12 +866,12 @@ class LaadpaalCard extends DacCard {
     plan.dataset.sig = sig;
     this.$(".baan").innerHTML = balk.blokken
       .map((b) => {
-        const titel = `${klok(b.start)}–${klok(b.eind)}${b.kw ? `, ${getalTekst(b.kw)} kW` : ""}${b.zonDeel ? `, ${Math.round(b.zonDeel * 100)}% zon` : ""}`;
+        const titel = `${klok(b.start)}–${klok(b.eind)}${b.kw ? `, ${getalTekst(b.kw)} kW` : ""}${b.zonDeel ? `, ${t("{pct}% zon", { pct: Math.round(b.zonDeel * 100) })}` : ""}`;
         return `<span class="blok" data-soort="${b.soort}" style="left:${b.links}%;width:${b.breedte}%" title="${escapeHtml(titel)}"></span>`;
       })
       .join("");
     this.$(".tikken").innerHTML = balk.tikken
-      .map((t) => `<span style="left:${t.pct}%">${escapeHtml(t.tekst)}</span>`)
+      .map((tik) => `<span style="left:${tik.pct}%">${escapeHtml(tik.tekst)}</span>`)
       .join("");
     // Een legenda voor een kleur die niet in de balk staat is ruis.
     const soorten = new Set(balk.blokken.map((b) => b.soort));
@@ -870,12 +880,12 @@ class LaadpaalCard extends DacCard {
   }
 
   paintSessie_(s) {
-    const t = sessieTekst(s?.sessie ?? null);
+    const beurt = sessieTekst(s?.sessie ?? null);
     const el = this.$(".sessie");
-    el.hidden = !t || !t.tekst;
+    el.hidden = !beurt || !beurt.tekst;
     if (el.hidden) return;
-    this.text(".sessie .kopje", [t.kop, t.tijd, t.accu].filter(Boolean).join(" · "));
-    this.text(".sessie .wat", t.tekst);
+    this.text(".sessie .kopje", [beurt.kop, beurt.tijd, beurt.accu].filter(Boolean).join(" · "));
+    this.text(".sessie .wat", beurt.tekst);
   }
 
   /** Het plan schuift met de klok mee, ook als de coach even niets meldt. */
@@ -908,10 +918,10 @@ class LaadpaalCard extends DacCard {
 
 /** De keuzes voor de foto, in de volgorde waarin hij ze noemde. */
 const AFBEELDING_KEUZES = [
-  { value: "auto", label: "Automatisch (merk en model van de paal)" },
+  { value: "auto", label: nt("Automatisch (merk en model van de paal)") },
   ...Object.entries(LAADPAAL_FOTOS).map(([value, f]) => ({ value, label: f.label })),
-  { value: "eigen", label: "Eigen afbeelding" },
-  { value: "geen", label: "Geen afbeelding" },
+  { value: "eigen", label: nt("Eigen afbeelding") },
+  { value: "geen", label: nt("Geen afbeelding") },
 ];
 
 class LaadpaalEditor extends DacEditor {
@@ -922,7 +932,7 @@ class LaadpaalEditor extends DacEditor {
   /** De fotokiezer alleen bij "eigen afbeelding": anders is het een veld dat niets doet. */
   pickers() {
     return this.config_?.afbeelding === "eigen"
-      ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "plug" }]
+      ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "plug" }]
       : [];
   }
 
@@ -933,7 +943,7 @@ class LaadpaalEditor extends DacEditor {
         name: "coach_device",
         selector: { device: { filter: LAADPAAL_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })) } },
       },
-      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES) },
+      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
       { name: "power", selector: sel.entity(["sensor"]) },
     ];
   }
@@ -941,30 +951,32 @@ class LaadpaalEditor extends DacEditor {
   label(s) {
     return (
       {
-        name: "Naam",
-        coach_device: "Laadpaal bij de coach",
-        afbeelding: "Afbeelding",
-        power: "Vermogen",
+        name: t("Naam"),
+        coach_device: t("Laadpaal bij de coach"),
+        afbeelding: t("Afbeelding"),
+        power: t("Vermogen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      name: "Leeg laten: de naam die de laadpaal bij de coach heeft.",
-      coach_device:
-        "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.",
-      afbeelding: "Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen).",
-      power: "Leeg laten: de vermogenssensor die bij de coach is ingevuld.",
+      name: t("Leeg laten: de naam die de laadpaal bij de coach heeft."),
+      coach_device: t(
+        "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig."
+      ),
+      afbeelding: t("Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen)."),
+      power: t("Leeg laten: de vermogenssensor die bij de coach is ingevuld."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-laadpaal-card-editor", LaadpaalEditor);
 registerCard("domotiapp-laadpaal-card", LaadpaalCard, {
-  name: "DomotiApp Laadpaal",
-  description:
-    "De laadpaal zoals DomotiApp Coach hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan.",
+  name: nt("DomotiApp Laadpaal"),
+  description: nt(
+    "De laadpaal zoals DomotiApp Coach hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan."
+  ),
 });
 
 export { LaadpaalCard };

@@ -17,7 +17,13 @@
  * vaste sleutel. Zie valkuil 67.
  *
  * Geen DOM en geen `hass`: dit hoort in een gewone Node-test.
+ *
+ * De namen in de tabellen hieronder blijven Nederlands (`nt`); de kaart
+ * vertaalt ze waar ze getoond worden. De zinnen die hier gemaakt worden zijn al
+ * in de taal van nu (taal.js).
  */
+
+import { locale, nt, t } from "../taal.js";
 
 /** Het model van een laadpaal bij de coach. */
 export const LAADPAAL_MODELLEN = ["Laadpaal"];
@@ -30,13 +36,13 @@ export const LAADPAAL_MODELLEN = ["Laadpaal"];
  * kritiek. Wachten en geen auto zijn rust.
  */
 export const STANDEN = {
-  laadt_zon: { label: "Laadt op zon", icoon: "sun", tone: "solar" },
-  laadt: { label: "Laadt", icoon: "bolt", tone: "accent" },
-  wacht: { label: "Wacht", icoon: "clock", tone: "neutral" },
-  vol: { label: "Vol", icoon: "battery", tone: "good" },
-  geen_auto: { label: "Geen auto", icoon: "plug", tone: "neutral" },
-  pauze: { label: "Gepauzeerd", icoon: "pause", tone: "warn" },
-  storing: { label: "Storing", icoon: "warning", tone: "bad" },
+  laadt_zon: { label: nt("Laadt op zon"), icoon: "sun", tone: "solar" },
+  laadt: { label: nt("Laadt"), icoon: "bolt", tone: "accent" },
+  wacht: { label: nt("Wacht"), icoon: "clock", tone: "neutral" },
+  vol: { label: nt("Vol"), icoon: "battery", tone: "good" },
+  geen_auto: { label: nt("Geen auto"), icoon: "plug", tone: "neutral" },
+  pauze: { label: nt("Gepauzeerd"), icoon: "pause", tone: "warn" },
+  storing: { label: nt("Storing"), icoon: "warning", tone: "bad" },
 };
 
 /**
@@ -48,9 +54,9 @@ export const STANDEN = {
  * knoppen (`modusRegel`). De select houdt zijn vier opties.
  */
 export const MODI = [
-  { sleutel: "snel", label: "Snel", icoon: "bolt" },
-  { sleutel: "continu", label: "Continu", icoon: "plug" },
-  { sleutel: "zon", label: "Zon", icoon: "sun" },
+  { sleutel: "snel", label: nt("Snel"), icoon: "bolt" },
+  { sleutel: "continu", label: nt("Continu"), icoon: "plug" },
+  { sleutel: "zon", label: nt("Zon"), icoon: "sun" },
 ];
 
 const LEEG = new Set(["", "unknown", "unavailable"]);
@@ -84,7 +90,7 @@ export function laadpaalStand(st) {
   // De tekst van de coach zoals hij is, met een hoofdletter vooraan. Zonder
   // tekst het woord van de stand.
   const tekst = LEEG.has(ruw)
-    ? STANDEN[stand]?.label ?? ""
+    ? t(STANDEN[stand]?.label ?? "")
     : ruw.charAt(0).toUpperCase() + ruw.slice(1);
   const sessie = a.sessie && typeof a.sessie === "object" ? a.sessie : null;
   return {
@@ -188,11 +194,11 @@ export function modusRegel(st, stand, klaarSt = null) {
   if (!st || st.state === "unavailable") return null;
   const actief = stand?.modusActief ?? st.state;
   if (actief !== "planning") return null;
-  if (stand?.modusActief == null) return { icoon: "calendar", woord: "Planning", tijd: "" };
-  if (!stand.planningNu) return { icoon: "clock", woord: "Goedkoopst", tijd: "" };
+  if (stand?.modusActief == null) return { icoon: "calendar", woord: t("Planning"), tijd: "" };
+  if (!stand.planningNu) return { icoon: "clock", woord: t("Goedkoopst"), tijd: "" };
   const uitTijd = /^\d{1,2}:\d{2}/.test(String(klaarSt?.state ?? "")) ? String(klaarSt.state).slice(0, 5) : "";
   const tijd = stand.klaarOmVolgende ? klok(stand.klaarOmVolgende) : uitTijd;
-  return { icoon: "calendar", woord: "Planning", tijd };
+  return { icoon: "calendar", woord: t("Planning"), tijd };
 }
 
 /* ------------------------------------------------------------- het plan */
@@ -261,7 +267,7 @@ const klok = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinu
 export function tikken(van, tot) {
   const uren = (+tot - +van) / 3_600_000;
   const stap = uren <= 6 ? 2 : uren <= 12 ? 3 : 6;
-  const uit = [{ pct: 0, tekst: "nu" }];
+  const uit = [{ pct: 0, tekst: t("nu") }];
   const eerste = new Date(+van);
   eerste.setMinutes(0, 0, 0);
   eerste.setHours(eerste.getHours() + 1);
@@ -277,7 +283,7 @@ export function tikken(van, tot) {
 /* ------------------------------------------------------------ het schema */
 
 /** Dagen in de volgorde van de coach: INDEX 0 IS MAANDAG (Python `weekday()`). */
-export const DAGEN_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+export const DAGEN_KORT = [nt("ma"), nt("di"), nt("wo"), nt("do"), nt("vr"), nt("za"), nt("zo")];
 
 /**
  * Welke plek in `schema_dagen` vandaag is.
@@ -307,22 +313,20 @@ export function weekSchema(dagen, nu = new Date()) {
 
 /* ------------------------------------------------------- de laadbeurt */
 
-const NL = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 });
-const EURO = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" });
+/** Een getal zoals een mens het schrijft: 12,4 (of 12.4 in het Engels). */
+export const getalTekst = (n) => (n == null ? "" : new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(n));
 
-/** Een getal zoals een mens het schrijft: 12,4. */
-export const getalTekst = (n) => (n == null ? "" : NL.format(n));
-
-const DAGNAMEN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+const euro = (n) => new Intl.NumberFormat(locale(), { style: "currency", currency: "EUR" }).format(n);
 
 /** "18:02", "gisteren 18:02" of "zaterdag 18:02". */
 function wanneer(d, nu) {
   const dag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
   const verschil = Math.round((+dag(nu) - +dag(d)) / 86_400_000);
   if (verschil <= 0) return klok(d);
-  if (verschil === 1) return `gisteren ${klok(d)}`;
-  if (verschil < 7) return `${DAGNAMEN[d.getDay()]} ${klok(d)}`;
-  return `${d.getDate()}-${d.getMonth() + 1} ${klok(d)}`;
+  if (verschil === 1) return t("gisteren {klok}", { klok: klok(d) });
+  if (verschil < 7) return `${d.toLocaleDateString(locale(), { weekday: "long" })} ${klok(d)}`;
+  // 11-10 in het Nederlands, 11/10 in het Engels.
+  return `${d.toLocaleDateString(locale(), { day: "numeric", month: "numeric" })} ${klok(d)}`;
 }
 
 /**
@@ -356,23 +360,23 @@ export function sessieTekst(sessie, nu = new Date()) {
   const kosten = getal(sessie.kosten);
   const zon = getal(sessie.zon_kwh);
   if (kwh != null) delen.push(`${getalTekst(kwh)} kWh`);
-  if (zon != null && zon > 0) delen.push(`${getalTekst(zon)} kWh zon`);
+  if (zon != null && zon > 0) delen.push(t("{kwh} kWh zon", { kwh: getalTekst(zon) }));
   // Wat er uit de thuisbatterij kwam (coach 0.112.0, gezien in de dump van
   // 0.112.1). De eigenaar op 11 oktober 2026: ja, tonen.
   const uitAccu = getal(sessie.accu_kwh);
-  if (uitAccu != null && uitAccu > 0) delen.push(`${getalTekst(uitAccu)} kWh accu`);
+  if (uitAccu != null && uitAccu > 0) delen.push(t("{kwh} kWh accu", { kwh: getalTekst(uitAccu) }));
   // Sinds coach 0.112.0 ook `kosten_net`: alleen het net, het bedrag uit het
   // verslag op de telefoon. Dat staat dan vooraan, want dat is wat hij kent.
   const net = getal(sessie.kosten_net);
-  if (net != null) delen.push(`${EURO.format(net)} net`);
-  if (kosten != null) delen.push(`${EURO.format(kosten)} incl. zon`);
+  if (net != null) delen.push(t("{bedrag} net", { bedrag: euro(net) }));
+  if (kosten != null) delen.push(t("{bedrag} incl. zon", { bedrag: euro(kosten) }));
   let tijd = "";
-  if (begin && loopt) tijd = `sinds ${wanneer(begin, nu)}`;
+  if (begin && loopt) tijd = t("sinds {wanneer}", { wanneer: wanneer(begin, nu) });
   else if (begin && einde) tijd = `${wanneer(begin, nu)} – ${klok(einde)}`;
   const van = getal(sessie.soc_begin);
   const tot = getal(sessie.soc_eind);
   const accu = van != null && tot != null ? `${Math.round(van)}% → ${Math.round(tot)}%` : "";
-  return { kop: loopt ? "Deze laadbeurt" : "Vorige laadbeurt", tekst: delen.join(" · "), tijd, accu };
+  return { kop: loopt ? t("Deze laadbeurt") : t("Vorige laadbeurt"), tekst: delen.join(" · "), tijd, accu };
 }
 
 /* ------------------------------------------------------ de accustand */
@@ -414,16 +418,16 @@ export function accustandVeld(st) {
     return {
       waarde: String(Math.round(n)),
       opgegeven: true,
-      uitleg: "Dit loopt mee met wat de paal erin doet. Zegt de auto iets anders, vul dat in en druk op Doorgeven.",
+      uitleg: t("Dit loopt mee met wat de paal erin doet. Zegt de auto iets anders, vul dat in en druk op Doorgeven."),
     };
   }
   // De eerste zin alleen bij een auto met een accusensor (`sensor`): die
   // zwijgt nu. Een auto zonder sensor heeft nooit iets doorgegeven.
-  const stil = a.sensor === true ? "De auto geeft zijn accustand nu niet door. " : "";
+  const stil = a.sensor === true ? t("De auto geeft zijn accustand nu niet door.") + " " : "";
   const verder =
     a.wacht === true
-      ? "Hier wacht de coach op. Zonder dit gaat hij uit van een lege accu."
-      : "Geef dit door, dan kan de coach het gunstigste moment kiezen.";
+      ? t("Hier wacht de coach op. Zonder dit gaat hij uit van een lege accu.")
+      : t("Geef dit door, dan kan de coach het gunstigste moment kiezen.");
   return { waarde: "", opgegeven: false, uitleg: stil + verder };
 }
 

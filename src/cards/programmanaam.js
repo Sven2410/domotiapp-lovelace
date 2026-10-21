@@ -24,7 +24,16 @@
  * Stap 3 alleen zou al genoeg zijn geweest om van de klacht af te zijn --
  * "Kurz 60" leest een stuk beter dan `dishcare_dishwasher_program_kurz_60`.
  * Maar Kurz is geen Nederlands, en de kaart hangt in een Nederlands huis.
+ *
+ * IN HET ENGELS (sinds 0.81.0)
+ *
+ * Stap 1 volgt vanzelf de taal van Home Assistant. Het woordenboek van stap 2
+ * is een eigen vertaling naar het Nederlands, en daarom staat er een Engelse
+ * tegenhanger naast (`WOORDEN_EN`), met dezelfde sleutels: Duits wordt Engels,
+ * en een Engels woord blijft zichzelf. Welke van de twee geldt, zegt `taal()`.
  */
+
+import { taal } from "../taal.js";
 
 /**
  * Woorden die in een programmasleutel voorkomen, met hun Nederlandse naam.
@@ -103,6 +112,74 @@ const WOORDEN = {
 };
 
 /**
+ * Hetzelfde woordenboek voor een kaart in het Engels: dezelfde sleutels, met de
+ * Engelse naam. Brits gespeld ("favourite"), op kleine letters, net als
+ * hierboven.
+ */
+const WOORDEN_EN = {
+  // ---- de programma's zelf
+  auto: "auto",
+  automatic: "automatic",
+  eco: "eco",
+  intensiv: "intensive",
+  intensive: "intensive",
+  kurz: "short",
+  quick: "quick",
+  express: "express",
+  speed: "speed",
+  glas: "glass",
+  glass: "glass",
+  delicate: "delicate",
+  normal: "normal",
+  night: "night",
+  silence: "silence",
+  quiet: "quiet",
+  hygiene: "hygiene",
+  hygienic: "hygiene",
+  favorite: "favourite",
+  favourite: "favourite",
+  steam: "steam",
+  fresh: "fresh",
+  care: "care",
+  machinecare: "machine care",
+  machine: "machine",
+  prerinse: "pre-rinse",
+  rinse: "rinse",
+  presoak: "pre-soak",
+  soak: "soak",
+  wash: "wash",
+  dry: "dry",
+  half: "half",
+  load: "load",
+  mixed: "mixed",
+  maximum: "maximum",
+  cleaning: "cleaning",
+  clean: "clean",
+  pots: "pots",
+  chef: "chef",
+  kitchen: "kitchen",
+  party: "party",
+  daily: "daily",
+  super: "super",
+  turbo: "turbo",
+  energy: "energy",
+  saving: "saving",
+  // ---- standen die geen programma zijn maar wel in zo'n lijst staan
+  off: "off",
+  on: "on",
+  none: "none",
+  standby: "standby",
+  ready: "ready",
+  pause: "pause",
+  stop: "stop",
+  start: "start",
+  finished: "finished",
+  low: "low",
+  medium: "medium",
+  high: "high",
+};
+
+/**
  * Voorvoegsels die niets zeggen over het programma zelf.
  *
  * `dishcare_dishwasher_program_` is het pad naar de lijst, niet de naam van de
@@ -140,7 +217,8 @@ export function woordenVan(sleutel) {
 }
 
 /**
- * De Nederlandse naam van een keuze, of een opgeschoonde versie ervan.
+ * De Nederlandse naam van een keuze (in het Engels de Engelse), of een
+ * opgeschoonde versie ervan.
  *
  * Een getal in het temperatuurbereik krijgt er "°C" achter: `kurz_60` is een
  * programma van zestig graden en niet programma nummer zestig. Een lager getal
@@ -150,6 +228,7 @@ export function woordenVan(sleutel) {
 export function programmaNaam(sleutel) {
   const woorden = woordenVan(sleutel);
   if (!woorden.length) return "";
+  const lijst = taal() === "en" ? WOORDEN_EN : WOORDEN;
 
   const uit = [];
   for (let i = 0; i < woorden.length; i++) {
@@ -167,14 +246,14 @@ export function programmaNaam(sleutel) {
     // verzorging". Waar het paar niets oplevert blijven de woorden los, en dan
     // wordt `night_wash` gewoon "Nacht wassen" -- dat leest prima.
     const volgende = woorden[i + 1]?.toLowerCase();
-    const paar = volgende ? WOORDEN[klein + volgende] : undefined;
+    const paar = volgende ? lijst[klein + volgende] : undefined;
     if (paar) {
       uit.push(paar);
       i++;
       continue;
     }
 
-    uit.push(WOORDEN[klein] ?? woord);
+    uit.push(lijst[klein] ?? woord);
   }
 
   // Alleen de EERSTE letter van de hele naam wordt een hoofdletter, en daarom

@@ -26,6 +26,8 @@
  * Geen DOM en geen `hass`: dit hoort in een gewone Node-test.
  */
 
+import { t } from "../taal.js";
+
 /** Waar de integratie haar afbeeldingen serveert. */
 export const AFBEELDINGEN_BASIS = "/domotiapp_lovelace/afbeeldingen/";
 
@@ -86,19 +88,25 @@ export function productAfbeelding(config, apparaat, lijst) {
   return gekozen?.pad ? AFBEELDINGEN_BASIS + gekozen.pad : "";
 }
 
-/** De keuzes voor Merk in de editor. Valkuil 55: geen enkele met de waarde "". */
+/**
+ * De keuzes voor Merk in de editor. Valkuil 55: geen enkele met de waarde "".
+ *
+ * Al in de taal van nu (sinds 0.81.0): de editor vraagt hierom bij het
+ * tekenen, niet bij het laden. Een label uit een tabel gaat door `t()`; een
+ * merknaam zonder Engels ("Miele") blijft gewoon staan.
+ */
 export function merkKeuzes(lijst) {
   return [
-    { value: "auto", label: "Automatisch" },
-    ...Object.entries(lijst ?? {}).map(([value, m]) => ({ value, label: m.label })),
-    { value: "eigen", label: "Ander merk (eigen afbeelding)" },
-    { value: "geen", label: "Geen afbeelding (icoon)" },
+    { value: "auto", label: t("Automatisch") },
+    ...Object.entries(lijst ?? {}).map(([value, m]) => ({ value, label: t(m.label) })),
+    { value: "eigen", label: t("Ander merk (eigen afbeelding)") },
+    { value: "geen", label: t("Geen afbeelding (icoon)") },
   ];
 }
 
-/** De keuzes voor Type bij een merk, of [] als het geen merk uit de lijst is. */
+/** De keuzes voor Type bij een merk, of [] als het geen merk uit de lijst is. In de taal van nu. */
 export function typeKeuzes(merk, lijst) {
-  return Object.entries(lijst?.[merk]?.modellen ?? {}).map(([value, t]) => ({ value, label: t.label }));
+  return Object.entries(lijst?.[merk]?.modellen ?? {}).map(([value, m]) => ({ value, label: t(m.label) }));
 }
 
 /**

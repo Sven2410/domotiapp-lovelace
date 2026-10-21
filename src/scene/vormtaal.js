@@ -15,6 +15,7 @@ import { css, unsafeCSS } from "lit";
 
 import { baseCss, themaCss, tokens } from "../theme.js";
 import { meetOpnieuw, volgThema } from "../thema.js";
+import { volgTaal, zieHass } from "../taal.js";
 
 export const vormtaal = css`
   ${unsafeCSS(themaCss)}
@@ -42,17 +43,24 @@ export const MetThema = (Basis, opties) =>
     connectedCallback() {
       super.connectedCallback();
       this._themaLos = volgThema(this, opties);
+      // De taal (sinds 0.81.0): een Lit-element tekent zijn tekst bij elke
+      // render, dus opnieuw renderen is genoeg.
+      this._taalLos = volgTaal(() => this.requestUpdate());
     }
 
     disconnectedCallback() {
       super.disconnectedCallback();
       this._themaLos?.();
       this._themaLos = null;
+      this._taalLos?.();
+      this._taalLos = null;
     }
 
     // `update` en niet `updated`: de kaarten overschrijven `updated` zonder
     // de basisklasse aan te roepen, en dan zou dit stil niet draaien.
     update(gewijzigd) {
+      // Vóór het renderen, zodat de eerste render al in de goede taal staat.
+      zieHass(this.hass);
       super.update(gewijzigd);
       const oud = gewijzigd?.get?.("hass");
       if (oud && oud.themes !== this.hass?.themes) meetOpnieuw(this);

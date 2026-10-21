@@ -21,10 +21,15 @@
  * knoppen gaan weg: die bestaan wel, maar doen niets. Zie `uitgelezenStand`.
  *
  * Geen DOM en geen `hass`: dit hoort in een gewone Node-test.
+ *
+ * De namen in de tabellen hieronder blijven Nederlands (`nt`); de kaart
+ * vertaalt ze waar ze getoond worden. De zinnen die hier gemaakt worden zijn al
+ * in de taal van nu (taal.js).
  */
 
 import { klantEntiteiten } from "./coach-logica.js";
 import { getalTekst, tikken } from "./laadpaal-logica.js";
+import { locale, nt, t } from "../taal.js";
 
 /** Het model van een thuisbatterij bij de coach. */
 export const BATTERIJ_MODELLEN = ["Thuisbatterij"];
@@ -37,11 +42,11 @@ export const BATTERIJ_MODELLEN = ["Thuisbatterij"];
  * is geen oordeel. Stil is rust.
  */
 export const STANDEN = {
-  nul_op_de_meter: { label: "Nul op de meter", icoon: "house", tone: "accent" },
-  zonneladen: { label: "Zonneladen", icoon: "sun", tone: "solar" },
-  laden: { label: "Laden", icoon: "arrowUp", tone: "accent" },
-  ontladen: { label: "Ontladen", icoon: "arrowDown", tone: "accent" },
-  stil: { label: "Stil", icoon: "pause", tone: "neutral" },
+  nul_op_de_meter: { label: nt("Nul op de meter"), icoon: "house", tone: "accent" },
+  zonneladen: { label: nt("Zonneladen"), icoon: "sun", tone: "solar" },
+  laden: { label: nt("Laden"), icoon: "arrowUp", tone: "accent" },
+  ontladen: { label: nt("Ontladen"), icoon: "arrowDown", tone: "accent" },
+  stil: { label: nt("Stil"), icoon: "pause", tone: "neutral" },
 };
 
 /** Het icoon en de kleur bij een stand; een onbekende stand is rust. */
@@ -86,7 +91,7 @@ export function batterijStand(st) {
     capaciteit: getal(a.capaciteit),
     alleenLezen: a.alleen_lezen === true,
     entiteiten: klantEntiteiten(st),
-    tekst: LEEG.has(ruw) ? STANDEN[stand]?.label ?? "" : ruw.charAt(0).toUpperCase() + ruw.slice(1),
+    tekst: LEEG.has(ruw) ? t(STANDEN[stand]?.label ?? "") : ruw.charAt(0).toUpperCase() + ruw.slice(1),
     reden: String(a.reason ?? ""),
     zelf: a.zelf === true,
     soc: getal(a.soc),
@@ -178,7 +183,7 @@ export function uitgelezenStand(stand, toestand) {
   return {
     ...stand,
     stand: sleutel,
-    tekst: sleutel ? STANDEN[sleutel].label : "Vermogen onbekend",
+    tekst: sleutel ? t(STANDEN[sleutel].label) : t("Vermogen onbekend"),
     reden: "",
     zelf: false,
     soc,
@@ -209,12 +214,12 @@ export function opdrachtKnoppen(stand, rollen) {
   // doen niets (coach 0.123.0). Verbergen is het eerlijkst.
   if (!stand || stand.alleenLezen) return [];
   const uit = [
-    { rol: "vol", entity: rollen.vol_laden, label: "Vol laden", kort: "Vol laden", icoon: "arrowUp", aan: stand.override === "vol" },
-    { rol: "leeg", entity: rollen.leegladen, label: "Leegladen", kort: "Leegladen", icoon: "arrowDown", aan: stand.override === "leeg" },
+    { rol: "vol", entity: rollen.vol_laden, label: t("Vol laden"), kort: t("Vol laden"), icoon: "arrowUp", aan: stand.override === "vol" },
+    { rol: "leeg", entity: rollen.leegladen, label: t("Leegladen"), kort: t("Leegladen"), icoon: "arrowDown", aan: stand.override === "leeg" },
   ];
   if (stand.override) {
     // "Naar plan" op een smalle kaart: de hele naam werd daar afgekapt.
-    uit.push({ rol: "plan", entity: rollen.terug_naar_plan, label: "Terug naar het plan", kort: "Naar plan", icoon: "calendar", aan: false });
+    uit.push({ rol: "plan", entity: rollen.terug_naar_plan, label: t("Terug naar het plan"), kort: t("Naar plan"), icoon: "calendar", aan: false });
   }
   return uit.filter((k) => k.entity);
 }
@@ -272,8 +277,7 @@ export function planStaven(plan, nu = new Date(), { minUren = 6, maxUren = 24 } 
   return { van, tot, staven, tikken: tikken(van, tot), max };
 }
 
-const EURO = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" });
-const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const euro = (n) => new Intl.NumberFormat(locale(), { style: "currency", currency: "EUR" }).format(n);
 
 /**
  * Wat de batterij heeft opgeleverd, als een regel tekst, of "".
@@ -285,12 +289,20 @@ const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", 
 export function opgeleverdTekst(stand) {
   if (!stand) return "";
   const delen = [];
-  if (stand.vandaag != null) delen.push(`vandaag ${EURO.format(stand.vandaag)}`);
-  if (stand.maand != null) delen.push(`deze maand ${EURO.format(stand.maand)}`);
+  if (stand.vandaag != null) delen.push(t("vandaag {bedrag}", { bedrag: euro(stand.vandaag) }));
+  if (stand.maand != null) delen.push(t("deze maand {bedrag}", { bedrag: euro(stand.maand) }));
   if (stand.totaal != null) {
     const m = stand.sinds.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    const sinds = m ? ` sinds ${Number(m[3])} ${MAANDEN[Number(m[2]) - 1]} ${m[1]}` : "";
-    delen.push(`${EURO.format(stand.totaal)}${sinds}`);
+    // "1 mrt 2026", of "1 Mar 2026" in het Engels.
+    const datum = m
+      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString(locale(), {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "";
+    const bedrag = euro(stand.totaal);
+    delen.push(datum ? t("{bedrag} sinds {datum}", { bedrag, datum }) : bedrag);
   }
   return delen.join(" · ");
 }
@@ -299,9 +311,9 @@ export function opgeleverdTekst(stand) {
 export function grenzenTekst(stand) {
   if (!stand) return "";
   const delen = [];
-  if (stand.ondergrens != null) delen.push(`ondergrens ${Math.round(stand.ondergrens)}%`);
-  if (stand.reserve != null) delen.push(`reserve ${Math.round(stand.reserve)}%`);
-  if (stand.vakantie && stand.vakantieMax != null) delen.push(`vakantie tot ${Math.round(stand.vakantieMax)}%`);
+  if (stand.ondergrens != null) delen.push(t("ondergrens {pct}%", { pct: Math.round(stand.ondergrens) }));
+  if (stand.reserve != null) delen.push(t("reserve {pct}%", { pct: Math.round(stand.reserve) }));
+  if (stand.vakantie && stand.vakantieMax != null) delen.push(t("vakantie tot {pct}%", { pct: Math.round(stand.vakantieMax) }));
   return delen.join(" · ");
 }
 
@@ -338,7 +350,7 @@ export const BATTERIJ_FOTOS = {
     pad: "thuisbatterijen/anker-solarbank-max-ac.webp",
   },
   anker_solarbank_max_ac_uitbreiding: {
-    label: "Anker SOLIX Solarbank Max AC met uitbreiding",
+    label: nt("Anker SOLIX Solarbank Max AC met uitbreiding"),
     pad: "thuisbatterijen/anker-solarbank-max-ac-uitbreiding.webp",
   },
   // Sinds 0.69.0, met toestemming van de eigenaar als installateur

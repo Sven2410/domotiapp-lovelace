@@ -53,19 +53,20 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .const import CONF_THEMA, DATA_STORE, DOMAIN, THEMA_AUTO, THEMAS
+from .const import CONF_TAAL, CONF_THEMA, DATA_STORE, DOMAIN, TAAL_AUTO, TALEN, THEMA_AUTO, THEMAS
 from .store import StoreUnusableError
 
 CONF_GROEP = "groep"
 CONF_BEVESTIGD = "bevestigd"
 
 
-def _thema_schema(huidig: str) -> vol.Schema:
-    """De keuze automatisch, licht of donker, als drie keuzerondjes.
+def _thema_schema(huidig: str, taal: str = TAAL_AUTO) -> vol.Schema:
+    """Het thema (automatisch, licht of donker) en de taal, als keuzerondjes.
 
     Een lijst en geen uitklapmenu: het zijn er drie, en dan zie je ze liever
     alle drie staan dan dat je eerst moet tikken om te weten wat er te kiezen
-    valt. De namen komen uit `selector.thema.options` in de vertalingen.
+    valt. De namen komen uit `selector.thema.options` en `selector.taal.options`
+    in de vertalingen.
     """
     return vol.Schema(
         {
@@ -75,7 +76,14 @@ def _thema_schema(huidig: str) -> vol.Schema:
                     mode=SelectSelectorMode.LIST,
                     translation_key=CONF_THEMA,
                 )
-            )
+            ),
+            vol.Required(CONF_TAAL, default=taal): SelectSelector(
+                SelectSelectorConfig(
+                    options=list(TALEN),
+                    mode=SelectSelectorMode.LIST,
+                    translation_key=CONF_TAAL,
+                )
+            ),
         }
     )
 
@@ -83,6 +91,11 @@ def _thema_schema(huidig: str) -> vol.Schema:
 def _als_thema(waarde: Any) -> str:
     """Een bekende keuze, of `auto`."""
     return waarde if waarde in THEMAS else THEMA_AUTO
+
+
+def _als_taal(waarde: Any) -> str:
+    """Een bekende taal, of `auto`."""
+    return waarde if waarde in TALEN else TAAL_AUTO
 
 
 class DomotiappSceneConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -108,7 +121,10 @@ class DomotiappSceneConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(
             title="DomotiApp Lovelace",
             data={},
-            options={CONF_THEMA: _als_thema(user_input.get(CONF_THEMA))},
+            options={
+                CONF_THEMA: _als_thema(user_input.get(CONF_THEMA)),
+                CONF_TAAL: _als_taal(user_input.get(CONF_TAAL)),
+            },
         )
 
     @staticmethod
@@ -149,10 +165,11 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
         automatisch, want dat is ook wat de kaarten zonder keuze doen.
         """
         huidig = _als_thema(self.config_entry.options.get(CONF_THEMA))
+        taal = _als_taal(self.config_entry.options.get(CONF_TAAL))
 
         if user_input is None:
             return self.async_show_form(
-                step_id="uiterlijk", data_schema=_thema_schema(huidig)
+                step_id="uiterlijk", data_schema=_thema_schema(huidig, taal)
             )
 
         # De rest van de options blijft staan: `async_create_entry` VERVANGT ze.
@@ -161,6 +178,7 @@ class DomotiappSceneOptionsFlow(OptionsFlow):
             data={
                 **self.config_entry.options,
                 CONF_THEMA: _als_thema(user_input.get(CONF_THEMA)),
+                CONF_TAAL: _als_taal(user_input.get(CONF_TAAL)),
             },
         )
 

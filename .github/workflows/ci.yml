@@ -48,6 +48,10 @@ jobs:
       - name: CSS van de kaarten
         run: npm run check:css
 
+      # Elke zin in een t("...") heeft Engels (sinds 0.81.0, zie docs/taal.md).
+      - name: Engels op de kaarten
+        run: npm run check:taal
+
       - name: Toon het verschil bij een mislukking
         if: failure()
         run: |
