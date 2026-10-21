@@ -227,10 +227,21 @@ describe("standen, huidigeStand en standOproep", () => {
     const cl = st("climate.a", "cool", { hvac_modes: ["off", "cool", "heat", "fan_only"] });
     assert.deepEqual(
       standen(cl).map((s) => s.label),
-      ["Uit", "Koelen", "Verwarmen", "Ventileren"]
+      ["Uit", "Verwarmen", "Koelen", "Ventileren"]
     );
     assert.equal(huidigeStand(cl), "cool");
     assert.deepEqual(standOproep(cl, "heat"), ["climate", "set_hvac_mode", { entity_id: "climate.a", hvac_mode: "heat" }]);
+  });
+
+  // NIEUW GEDRAG (0.83.1): acht Daikins bij een klant gaven hun hvac_modes in
+  // twee volgordes, en dan stonden de knoppen onder elkaar door elkaar.
+  it("een climate: de standen in de volgorde van Home Assistant, niet van het apparaat", () => {
+    const a = st("climate.a", "off", { hvac_modes: ["off", "auto", "dry", "cool", "heat", "fan_only"] });
+    const b = st("climate.b", "off", { hvac_modes: ["off", "fan_only", "heat", "cool", "heat_cool", "dry"] });
+    assert.deepEqual(standen(a).map((s) => s.waarde), ["off", "heat", "cool", "auto", "dry", "fan_only"]);
+    assert.deepEqual(standen(b).map((s) => s.waarde), ["off", "heat", "cool", "heat_cool", "dry", "fan_only"]);
+    const vreemd = st("climate.c", "off", { hvac_modes: ["eigen", "cool", "off"] });
+    assert.deepEqual(standen(vreemd).map((s) => s.waarde), ["off", "cool", "eigen"]);
   });
 
   it("een boiler: de operation_list", () => {

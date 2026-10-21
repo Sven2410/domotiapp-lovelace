@@ -79,8 +79,11 @@ class HvacCard extends DacCard {
 
     .card {
       min-height: var(--dac-raster, 56px);
-      padding: 8px 12px;
-      display: flex; flex-direction: column; justify-content: center; gap: 8px;
+      /* 7 en niet 8: kop, standen, doel en ventilator zijn samen 145,5 hoog,
+         en met 8 kwam de kaart 3,5 boven de drie rijen uit. Dan werd hij
+         248 hoog, met een lege band boven de kop. */
+      padding: 7px 12px;
+      display: flex; flex-direction: column; justify-content: center; gap: 7px;
     }
     :host([bare]) .card { background: none; box-shadow: none; }
 
