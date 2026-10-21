@@ -82,6 +82,16 @@ versienummer in de bundel.
 - **Licht thema:** de kaart is wit (`rgb(255,255,255)`), de balk van zwart is
   de inkt van het thema, en "Zwart" bij bijna op is oranje.
 
+## 0.84.2: standaard op volle breedte
+
+Bij de klant kwam de kaart zonder `grid_options` op de halve breedte van een
+pop-up (gemeld door de beheersessie, die er `columns: 12` bij zette). De
+standaard is nu 12 kolommen, net als bij de andere kaarten met een rij tegels
+(batterij, stofzuiger, boiler). Een eigen `grid_options` blijft winnen. Er
+is een test bij gekomen in `kantoorprinter.test.mjs`; tegen `main` faalt
+hij (`fail 1`). In Chrome, met bundel `cc2d907281fa6417` (gelijk aan schijf),
+geeft `getGridOptions()` `{"columns":12,"rows":"auto","min_columns":4,"min_rows":2}`.
+
 ## Wat niet lukte
 
 - **Geen productfoto:** `_ref/printers/` is nog leeg. Die komt in een volgende

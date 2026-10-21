@@ -110,3 +110,12 @@ describe("andere printers: andere patronen", () => {
     );
   });
 });
+
+// NIEUW GEDRAG (0.84.2): zonder grid_options kwam de kaart bij een klant op de
+// halve breedte van een pop-up, en vier patronen passen dan alleen als getal.
+describe("printerkaart: standaardbreedte", () => {
+  it("volle breedte, zoals de andere kaarten met een rij tegels", () => {
+    const bron = readFileSync(new URL("../../src/cards/kantoorprinter-card.js", import.meta.url), "utf8");
+    assert.match(bron.match(/getGridOptions\(\) \{[\s\S]*?\}/)[0], /columns: 12,/);
+  });
+});

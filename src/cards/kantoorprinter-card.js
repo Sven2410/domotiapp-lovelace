@@ -280,8 +280,9 @@ class KantoorprinterCard extends DacCard {
     return 2;
   }
 
+  /** Volle breedte, net als de andere kaarten met een rij tegels (batterij, stofzuiger, boiler). */
   getGridOptions() {
-    return { columns: 6, rows: "auto", min_columns: 4, min_rows: this.minRijen_(".card", 2) };
+    return { columns: 12, rows: "auto", min_columns: 4, min_rows: this.minRijen_(".card", 2) };
   }
 
   static getConfigElement() {
