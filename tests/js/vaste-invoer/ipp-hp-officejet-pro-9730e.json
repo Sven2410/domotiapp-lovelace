@@ -1,0 +1,111 @@
+{
+ "_toelichting": "Een HP OfficeJet Pro 9730e via de integratie ipp (core), 21 oktober 2026, van de beheersessie van een klant. Serienummer, IP en uuid zijn eruit (XXXXXX). translation_key en entity_category staan bij elke entiteit zoals hass.entities ze geeft; de uptime-sensor staat uit en heeft dus geen toestand. De friendly_names zijn NAGEBOUWD (niet in de dump); de kaart leest de kleur ook uit de entity_id.",
+ "device": {
+  "manufacturer": "HP",
+  "model": "HP OfficeJet Pro 9730 Series",
+  "name": "HP OfficeJet Pro 9730e Series",
+  "model_id": null
+ },
+ "states": [
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series",
+   "state": "idle",
+   "translation_key": "printer",
+   "attributes": {
+    "device_class": "enum",
+    "options": [
+     "idle",
+     "printing",
+     "stopped"
+    ],
+    "info": "HP OfficeJet Pro 9730e Series [XXXXXX]",
+    "location": "",
+    "state_message": "",
+    "state_reason": null,
+    "command_set": "PWGRASTER,URF,JPEG,TIFF,PCL3GUI,PCLm",
+    "friendly_name": "HP OfficeJet Pro 9730e Series"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_black_cartridge",
+   "state": "30",
+   "translation_key": "marker",
+   "attributes": {
+    "marker_high_level": 100,
+    "marker_low_level": 20,
+    "marker_type": "ink-cartridge",
+    "unit_of_measurement": "%",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Black cartridge"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_cyan_cartridge",
+   "state": "50",
+   "translation_key": "marker",
+   "attributes": {
+    "marker_high_level": 100,
+    "marker_low_level": 20,
+    "marker_type": "ink-cartridge",
+    "unit_of_measurement": "%",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Cyan cartridge"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_magenta_cartridge",
+   "state": "50",
+   "translation_key": "marker",
+   "attributes": {
+    "marker_high_level": 100,
+    "marker_low_level": 20,
+    "marker_type": "ink-cartridge",
+    "unit_of_measurement": "%",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Magenta cartridge"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_yellow_cartridge",
+   "state": "60",
+   "translation_key": "marker",
+   "attributes": {
+    "marker_high_level": 100,
+    "marker_low_level": 20,
+    "marker_type": "ink-cartridge",
+    "unit_of_measurement": "%",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Yellow cartridge"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_impressions_completed",
+   "state": "994",
+   "translation_key": "impressions_completed",
+   "entity_category": "diagnostic",
+   "attributes": {
+    "unit_of_measurement": "impressions",
+    "state_class": "total_increasing",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Impressions completed"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_monochrome_impressions_completed",
+   "state": "199",
+   "translation_key": "monochrome_impressions_completed",
+   "entity_category": "diagnostic",
+   "attributes": {
+    "unit_of_measurement": "impressions",
+    "state_class": "total_increasing",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Monochrome impressions completed"
+   }
+  },
+  {
+   "entity_id": "sensor.hp_officejet_pro_9730e_series_color_impressions_completed",
+   "state": "795",
+   "translation_key": "color_impressions_completed",
+   "entity_category": "diagnostic",
+   "attributes": {
+    "unit_of_measurement": "impressions",
+    "state_class": "total_increasing",
+    "friendly_name": "HP OfficeJet Pro 9730e Series Color impressions completed"
+   }
+  }
+ ]
+}

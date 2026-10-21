@@ -1,5 +1,24 @@
-/** Het Engels van vriezer en koelkast, 3D-printer, auto en wifi (sinds 0.83.0). */
+/** Het Engels van vriezer en koelkast, 3D-printer, printer, auto en wifi (sinds 0.83.0). */
 export const APPARATUUR = {
+  // kantoorprinter-logica.js en -card.js (sinds 0.84.0)
+  "Gestopt": "Stopped",
+  "Fotozwart": "Photo black",
+  "Zwart": "Black",
+  "Lichtcyaan": "Light cyan",
+  "Cyaan": "Cyan",
+  "Lichtmagenta": "Light magenta",
+  "{inkt} bijna op": "{inkt} running low",
+  "{inkt}, bijna op": "{inkt}, running low",
+  "Kies de statussensor van de printer.": "Choose the status sensor of the printer.",
+  "afdrukken": "pages",
+  "Printer": "Printer",
+  "{zwartwit} zwart-wit, {kleur} in kleur": "{zwartwit} black and white, {kleur} in colour",
+  "De sensor met de status van de printer (Klaar, Printen, Gestopt), van de integratie Internet Printing Protocol (IPP). De inkt en het aantal afdrukken van hetzelfde apparaat zoekt de kaart zelf.":
+    "The sensor with the status of the printer (Idle, Printing, Stopped), from the Internet Printing Protocol (IPP) integration. The card finds the ink and the page count of the same device itself.",
+  "DomotiApp Printer": "DomotiApp Printer",
+  "Een printer voor papier: of hij klaar is, de inkt per kleur en het aantal afdrukken. Met een productfoto per merk en type.":
+    "A paper printer: whether it is ready, the ink per colour and the number of pages printed. With a product photo per brand and model.",
+
   // vriezer-logica.js
   "Koelkast": "Fridge",
   "Vriezer": "Freezer",
