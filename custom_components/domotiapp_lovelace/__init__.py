@@ -54,6 +54,7 @@ from .const import (
     AFBEELDINGEN_URL_PATH,
     CARD_FILENAME,
     CARD_URL_PATH,
+    CONF_TAAL,
     CONF_THEMA,
     DATA_ENTRY_COUNT,
     DATA_JS_URL,
@@ -189,6 +190,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # bundel zetten. Dit is de route uit de wekkerintegratie; zie loader.py voor
     # de meting waar hij uit voortkomt.
     loader.zet_thema(hass, entry.options.get(CONF_THEMA))
+    loader.zet_taal(hass, entry.options.get(CONF_TAAL))
     loader.async_registreer(hass, bundel_hash)
     # Een andere keuze in Configureren hoeft de integratie niet te herladen:
     # alleen de lader moet het weten. De kaarten halen hem daar zelf op.
@@ -244,7 +246,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_opties_gewijzigd(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """De keuze licht, donker of automatisch is verzet (zie config_flow.py)."""
     thema = loader.zet_thema(hass, entry.options.get(CONF_THEMA))
-    _LOGGER.debug("Thema van de kaarten: %s", thema)
+    taal = loader.zet_taal(hass, entry.options.get(CONF_TAAL))
+    _LOGGER.debug("Thema van de kaarten: %s, taal: %s", thema, taal)
 
 
 async def _async_ruim_snapshots_op(hass: HomeAssistant) -> None:

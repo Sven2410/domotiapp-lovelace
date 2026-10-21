@@ -5,10 +5,12 @@
         "title": "DomotiApp Lovelace",
         "description": "Once added, the cards are available on every dashboard. Choose how they look; you can change this later under Configure.",
         "data": {
-          "thema": "Card theme"
+          "thema": "Card theme",
+          "taal": "Taal / Language"
         },
         "data_description": {
-          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background."
+          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background.",
+          "taal": "Automatic uses the Home Assistant language: English when that is English, otherwise Dutch. Names you gave yourself stay as they are."
         }
       }
     },
@@ -21,7 +23,7 @@
       "init": {
         "title": "DomotiApp Lovelace",
         "menu_options": {
-          "uiterlijk": "Appearance: light or dark",
+          "uiterlijk": "Appearance: light or dark, and the language",
           "scenes": "Clean up stored scenes"
         }
       },
@@ -29,10 +31,12 @@
         "title": "Appearance of the cards",
         "description": "Applies to every DomotiApp card on every dashboard. An open dashboard follows by itself, within five minutes at most; no restart is needed.\n\nThe info screen is not affected: it has its own Appearance setting in its management card.",
         "data": {
-          "thema": "Card theme"
+          "thema": "Card theme",
+          "taal": "Taal / Language"
         },
         "data_description": {
-          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background."
+          "thema": "Automatic follows the Home Assistant theme: light on a light dashboard, dark on a dark one. Choose Light or Dark to pin it, for example on a dashboard with a photo as its background.",
+          "taal": "Automatic uses the Home Assistant language: English when that is English, otherwise Dutch. Names you gave yourself stay as they are."
         }
       },
       "scenes": {
@@ -66,6 +70,13 @@
         "auto": "Automatic (follows Home Assistant)",
         "licht": "Light",
         "donker": "Dark"
+      }
+    },
+    "taal": {
+      "options": {
+        "auto": "Automatic (follows Home Assistant)",
+        "nl": "Nederlands",
+        "en": "English"
       }
     }
   },

@@ -24,6 +24,7 @@
 
 import { baseCss, sheet, themaCss, tokens } from "./theme.js";
 import { isLicht, meetOpnieuw, volgThema } from "./thema.js";
+import { t, volgTaal, zieHass } from "./taal.js";
 import { entitiesChanged } from "./ha.js";
 import { opgegevenRijen, volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldBadgeInKiezer, meldInKiezer } from "./registratie.js";
@@ -112,7 +113,7 @@ const placeholder = (message) => `
       <circle cx="12" cy="12" r="8.6"/>
       <path d="M9.6 9.6a2.4 2.4 0 1 1 3.2 2.3c-.5.2-.8.7-.8 1.2v.6M12 16.6v.1"/>
     </svg></span>
-    <span><b>Nog niets gekozen</b><span>${message}</span></span>
+    <span><b>${t("Nog niets gekozen")}</b><span>${message}</span></span>
   </div>`;
 
 /**
@@ -214,6 +215,9 @@ export class DacCard extends HTMLElement {
   /* ------------------------------------------------ Lovelace contract */
 
   setConfig(config) {
+    // Bewaard voor een andere taal: dan gaat de kaart opnieuw door validate()
+    // en template(), want daar staat zijn tekst (zie taalGewisseld_).
+    this.ruw_ = config;
     const next = this.validate(config ?? {});
     this.config = next;
     // A config edit can change the shape of the card, not just its values, so
@@ -231,6 +235,9 @@ export class DacCard extends HTMLElement {
   set hass(hass) {
     const prev = this.hass_;
     this.hass_ = hass;
+    // Vóór het bouwen, zodat een eerste opbouw al in de goede taal staat. Een
+    // andere taal laat via volgTaal elke kaart opnieuw opbouwen, ook deze.
+    zieHass(hass);
     // Een ander thema in Home Assistant (of een telefoon die 's avonds naar
     // donker gaat) komt binnen als een nieuwe `themes`. Dan opnieuw meten.
     if (prev && prev.themes !== hass?.themes && this.themaLos_) meetOpnieuw(this);
@@ -250,6 +257,12 @@ export class DacCard extends HTMLElement {
   }
 
   connectedCallback() {
+    if (!this.taalLos_) {
+      // Home Assistant zet `hass` soms pas ná de config; zonder dit zou de
+      // eerste opbouw in het Nederlands staan en meteen omslaan.
+      zieHass(document.querySelector("home-assistant")?.hass);
+      this.taalLos_ = volgTaal(() => this.taalGewisseld_());
+    }
     // Vóór het bouwen: `paint()` mag al weten of de kaart licht is.
     if (this.constructor.volgtThema && !this.themaLos_) {
       const wasLicht = this.licht_;
@@ -278,6 +291,8 @@ export class DacCard extends HTMLElement {
   disconnectedCallback() {
     this.themaLos_?.();
     this.themaLos_ = null;
+    this.taalLos_?.();
+    this.taalLos_ = null;
     this.destroy_();
     this.wired_ = false;
   }
@@ -295,6 +310,15 @@ export class DacCard extends HTMLElement {
    */
   themaGewisseld_() {
     if (this.built_ && this.wired_ && this.hass_ && !this.config?.[INCOMPLETE]) this.paint();
+  }
+
+  /**
+   * De taal is gewisseld. De tekst staat in de DOM uit `template()` en in wat
+   * `validate()` meldt, dus de kaart bouwt zich opnieuw op, precies zoals bij
+   * een nieuwe config.
+   */
+  taalGewisseld_() {
+    if (this.ruw_ !== undefined) this.setConfig(this.ruw_);
   }
 
   /* ------------------------------------------------------- subclass API */

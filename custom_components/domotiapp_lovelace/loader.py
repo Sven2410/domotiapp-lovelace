@@ -90,9 +90,13 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CARD_URL_PATH,
     DATA_LOADER_REGISTERED,
+    DATA_TAAL,
     DATA_THEMA,
     DOMAIN,
     LOADER_URL_PATH,
+    TAAL_AUTO,
+    TAAL_GLOBALE,
+    TALEN,
     THEMA_AUTO,
     THEMA_GLOBALE,
     THEMAS,
@@ -126,12 +130,14 @@ class KaartLaderView(HomeAssistantView):
         # test bij te verzinnen (valkuil 34, derde rij).
         hash_nu = self._hass.data[DOMAIN][DATA_LOADER_REGISTERED]
         thema = self._hass.data[DOMAIN].get(DATA_THEMA, THEMA_AUTO)
+        taal = self._hass.data[DOMAIN].get(DATA_TAAL, TAAL_AUTO)
 
         return web.Response(
             # De globale EERST: de import hieronder start de bundel, en die
             # leest hem bij het laden.
             text=(
                 f'globalThis.{THEMA_GLOBALE}="{thema}";\n'
+                f'globalThis.{TAAL_GLOBALE}="{taal}";\n'
                 f'import("{CARD_URL_PATH}?v={hash_nu}");\n'
             ),
             content_type="text/javascript",
@@ -152,6 +158,16 @@ def zet_thema(hass: HomeAssistant, thema: str | None) -> str:
     """
     keuze = thema if thema in THEMAS else THEMA_AUTO
     hass.data.setdefault(DOMAIN, {})[DATA_THEMA] = keuze
+    return keuze
+
+
+def zet_taal(hass: HomeAssistant, taal: str | None) -> str:
+    """Leg vast welke taal de lader doorgeeft. Geeft terug wat het werd.
+
+    Net als bij het thema: alleen een bekende keuze gaat het JavaScript in.
+    """
+    keuze = taal if taal in TALEN else TAAL_AUTO
+    hass.data.setdefault(DOMAIN, {})[DATA_TAAL] = keuze
     return keuze
 
 

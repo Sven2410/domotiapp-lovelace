@@ -62,6 +62,18 @@ DATA_THEMA: Final = "thema"
 # De globale waarin de lader de keuze zet, vóórdat de bundel geladen is.
 THEMA_GLOBALE: Final = "__domotiappLovelaceThema"
 
+# --- De taal van de kaarten (sinds 0.81.0) --------------------------------
+#
+# Eén keuze voor de hele installatie, net als het thema. `auto` neemt de taal
+# van Home Assistant (Engels als die met "en" begint, anders Nederlands);
+# `nl` en `en` winnen daarvan. Dezelfde drie als `installation.language` van
+# DomotiApp Coach. De waarden staan ook in src/taal.js.
+CONF_TAAL: Final = "taal"
+TAAL_AUTO: Final = "auto"
+TALEN: Final = (TAAL_AUTO, "nl", "en")
+DATA_TAAL: Final = "taal"
+TAAL_GLOBALE: Final = "__domotiappLovelaceTaal"
+
 # --- Opslag (SPEC 10.4 en 10.6) -----------------------------------------
 STORAGE_KEY: Final = f"{DOMAIN}.scenes"
 STORAGE_VERSION: Final = 1

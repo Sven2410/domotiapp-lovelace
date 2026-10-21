@@ -5,10 +5,12 @@
         "title": "DomotiApp Lovelace",
         "description": "De kaarten zijn na het toevoegen beschikbaar op elk dashboard. Kies hoe ze eruitzien; dat is later te wijzigen via Configureren.",
         "data": {
-          "thema": "Thema van de kaarten"
+          "thema": "Thema van de kaarten",
+          "taal": "Taal / Language"
         },
         "data_description": {
-          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond."
+          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond.",
+          "taal": "Automatisch neemt de taal van Home Assistant: Engels als die Engels is, anders Nederlands. De namen die je zelf gaf blijven zoals ze zijn."
         }
       }
     },
@@ -21,7 +23,7 @@
       "init": {
         "title": "DomotiApp Lovelace",
         "menu_options": {
-          "uiterlijk": "Uiterlijk: licht of donker",
+          "uiterlijk": "Uiterlijk: licht of donker, en de taal",
           "scenes": "Opgeslagen scenes opruimen"
         }
       },
@@ -29,10 +31,12 @@
         "title": "Uiterlijk van de kaarten",
         "description": "Geldt voor alle DomotiApp-kaarten op alle dashboards. Een dashboard dat openstaat volgt vanzelf, uiterlijk binnen vijf minuten; een herstart is niet nodig.\n\nHet infoscherm doet hier niet aan mee: dat heeft zijn eigen keuze Uiterlijk in het beheer.",
         "data": {
-          "thema": "Thema van de kaarten"
+          "thema": "Thema van de kaarten",
+          "taal": "Taal / Language"
         },
         "data_description": {
-          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond."
+          "thema": "Automatisch volgt het thema van Home Assistant: licht op een licht dashboard, donker op een donker. Kies Licht of Donker om het vast te zetten, bijvoorbeeld op een dashboard met een foto als achtergrond.",
+          "taal": "Automatisch neemt de taal van Home Assistant: Engels als die Engels is, anders Nederlands. De namen die je zelf gaf blijven zoals ze zijn."
         }
       },
       "scenes": {
@@ -66,6 +70,13 @@
         "auto": "Automatisch (volgt Home Assistant)",
         "licht": "Licht",
         "donker": "Donker"
+      }
+    },
+    "taal": {
+      "options": {
+        "auto": "Automatisch (volgt Home Assistant)",
+        "nl": "Nederlands",
+        "en": "English"
       }
     }
   },
