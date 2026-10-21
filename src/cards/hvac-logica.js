@@ -490,6 +490,20 @@ const PCT_STAPPEN = [
 ];
 
 /**
+ * De volgorde van `HVACMode` in Home Assistant zelf. Het apparaat geeft zijn
+ * `hvac_modes` in zijn eigen volgorde, en die verschilt per toestel: acht
+ * Daikins van één merk onder elkaar gaven twee verschillende rijen knoppen
+ * (gemeten op 21 oktober 2026). Een onbekende stand komt erachter, in de
+ * volgorde van het apparaat.
+ */
+const HVAC_VOLGORDE = ["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"];
+
+const opVolgorde = (modes) => {
+  const plek = (m) => (HVAC_VOLGORDE.includes(m) ? HVAC_VOLGORDE.indexOf(m) : HVAC_VOLGORDE.length);
+  return modes.map((m, i) => [m, i]).sort((x, y) => plek(x[0]) - plek(y[0]) || x[1] - y[1]).map(([m]) => m);
+};
+
+/**
  * De standen waaruit gekozen kan worden op de hoofdentiteit.
  *
  * De waarde is wat straks naar de service gaat; het label in de taal van nu. Bij
@@ -504,7 +518,7 @@ export function standen(hoofd) {
   const domein = domeinVan(hoofd.entity_id);
   const lijst = (arr) => (Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x !== "") : []);
 
-  if (domein === "climate") return lijst(a.hvac_modes).map((m) => ({ waarde: m, label: HVAC_MODE[m] ? t(HVAC_MODE[m]) : standLabel(m) }));
+  if (domein === "climate") return opVolgorde(lijst(a.hvac_modes)).map((m) => ({ waarde: m, label: HVAC_MODE[m] ? t(HVAC_MODE[m]) : standLabel(m) }));
   if (domein === "water_heater") return lijst(a.operation_list).map((m) => ({ waarde: m, label: standLabel(m) }));
   if (domein === "select" || domein === "input_select") return lijst(a.options).map((m) => ({ waarde: m, label: standLabel(m) }));
   if (domein === "fan") {
