@@ -27,7 +27,7 @@
  * in de taal van nu (taal.js).
  */
 
-import { klantEntiteiten } from "./coach-logica.js";
+import { klantEntiteiten, spreektAnders } from "./coach-logica.js";
 import { getalTekst, tikken } from "./laadpaal-logica.js";
 import { locale, nt, t } from "../taal.js";
 
@@ -77,6 +77,9 @@ export function batterijStand(st) {
   if (!a || st.state === "unavailable") return null;
   const stand = String(a.stand ?? "");
   const ruw = String(st.state ?? "").trim();
+  // Een coach in een andere taal: zijn tekst niet, het woord van de stand wel.
+  const anders = spreektAnders(st);
+  const eigen = t(STANDEN[stand]?.label ?? "");
   const override = a.override === "vol" || a.override === "leeg" ? a.override : null;
   return {
     stand,
@@ -91,8 +94,8 @@ export function batterijStand(st) {
     capaciteit: getal(a.capaciteit),
     alleenLezen: a.alleen_lezen === true,
     entiteiten: klantEntiteiten(st),
-    tekst: LEEG.has(ruw) ? t(STANDEN[stand]?.label ?? "") : ruw.charAt(0).toUpperCase() + ruw.slice(1),
-    reden: String(a.reason ?? ""),
+    tekst: LEEG.has(ruw) || (anders && eigen) ? eigen : ruw.charAt(0).toUpperCase() + ruw.slice(1),
+    reden: anders ? "" : String(a.reason ?? ""),
     zelf: a.zelf === true,
     soc: getal(a.soc),
     temperatuur: getal(a.temperatuur),

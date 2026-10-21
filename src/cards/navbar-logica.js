@@ -241,3 +241,13 @@ export function actieVoor(padOfKnop) {
     return { action: "url", url_path: p };
   return { action: "navigate", navigation_path: p };
 }
+
+/**
+ * Hoort een wrapper van Home Assistant bij bewerken of een voorbeeld?
+ *
+ * Op de tagnaam (zie `inBewerker` in navbar-card.js). Daar staat de balk in
+ * zijn vak in plaats van onderaan het scherm. `picker` kwam er in 0.83.0 bij:
+ * in de kaartkiezer staat het voorbeeld onder `hui-card-picker`, en daar zweefde
+ * de balk onderin over de kiezer heen (gemeten in HA 2026.8 op 21 oktober 2026).
+ */
+export const isBewerkTag = (tag) => /(^|-)(edit|preview|picker)/.test(String(tag).toLowerCase());

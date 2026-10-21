@@ -45,6 +45,7 @@ import { nt, t } from "../taal.js";
 import {
   actieVoor,
   heeftSub,
+  isBewerkTag,
   itemsVan,
   klemBalk,
   subVan,
@@ -84,8 +85,7 @@ function* voorouders(start) {
  */
 function inBewerker(el) {
   for (const v of voorouders(el)) {
-    const tag = v.tagName?.toLowerCase?.() ?? "";
-    if (/(^|-)(edit|preview)/.test(tag)) return true;
+    if (isBewerkTag(v.tagName ?? "")) return true;
   }
   return false;
 }

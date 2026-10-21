@@ -41,7 +41,10 @@ export function zinnen(pad) {
   for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])tc\\(\\s*${LIT},\\s*${LIT}`, "g"))) {
     uit.add(`${JSON.parse(`"${m[2]}"`)}|${JSON.parse(`"${m[1]}"`)}`);
   }
-  for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])tn\\([^,()]+(?:\\([^()]*\\))?[^,()]*,\\s*${LIT},\\s*${LIT}`, "g"))) {
+  // Het getal mag haakjes hebben, ook vooraan: tn((w.lijst ?? []).length, ...).
+  // Tot 0.83.0 moest het met iets anders dan een haakje beginnen, en dan zag
+  // deze controle zo'n tn() helemaal niet.
+  for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])tn\\([^,()]*(?:\\([^()]*\\)[^,()]*)*,\\s*${LIT},\\s*${LIT}`, "g"))) {
     uit.add(JSON.parse(`"${m[1]}"`));
     uit.add(JSON.parse(`"${m[2]}"`));
   }

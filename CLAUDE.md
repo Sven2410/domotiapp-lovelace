@@ -339,6 +339,11 @@ staan in `docs/taal.md`. Voor elke kaart die je schrijft of aanraakt geldt:
 4. **Wat van Home Assistant of de coach komt, vertaal je niet.** Wat
    vergeleken of herkend wordt ook niet.
 5. **Een woord met twee betekenissen** krijgt `tc("context", "Stil")`.
+6. **Een telling krijgt `tn()`**, met een enkelvoud: `tn(n, "{n} lamp", "{n}
+   lampen")`. Geen "lamp(en)".
+7. **Tekst van de coach komt alleen op de kaart als hij dezelfde taal spreekt**
+   (`spreektAnders` in `coach-logica.js`, sinds 0.83.0). Anders staat er het
+   eigen woord bij de stand. De kaart volgt nooit de taal van de coach.
 
 De keuze staat bij de integratie (Uiterlijk, Taal: Automatisch, Nederlands of
 English) en reist met de lader mee, net als het thema. De serverkant heeft

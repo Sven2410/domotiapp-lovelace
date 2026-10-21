@@ -44,7 +44,7 @@
  * Geen DOM: dit hoort in een gewone Node-test.
  */
 
-import { t } from "../taal.js";
+import { t, taal } from "../taal.js";
 
 /** Zo heet de coach als fabrikant van zijn apparaten. */
 export const COACH_FABRIKANT = "DomotiApp Coach";
@@ -134,6 +134,30 @@ export function coachRollen(hass, deviceId) {
 export function contractVan(st) {
   const n = Number(st?.attributes?.contract);
   return Number.isInteger(n) && n > 0 ? n : 0;
+}
+
+/**
+ * Spreekt de coach een andere taal dan de kaart?
+ *
+ * Sinds coach v0.140.2 draagt elke sensor `taal` ("nl" of "en"): de taal van
+ * zijn tekst (de toestand, `reason`, `later`). Die tekst komt dan letterlijk op
+ * de kaart, en een Engelse kaart met een Nederlandse zin erin leest als kapot.
+ * Bij een andere taal laat de kaart die tekst weg en gebruikt hij zijn eigen
+ * woord bij de stand. Gezien in een echte dump van 21 oktober 2026, met "nl"
+ * (`tests/js/vaste-invoer/coach-0.140.2-taal.json`).
+ *
+ * De taal van de KAART blijft die van de gebruiker. Bij een Engels huis met
+ * een Nederlandse coach zou de coach laten winnen een Nederlands dashboard
+ * geven, en dat is het omgekeerde van wat de keuze Automatisch belooft.
+ * Zonder attribuut (een coach van vóór v0.140.2) is er niets bekend, en blijft
+ * de tekst staan zoals altijd.
+ *
+ * @param {object|null} st de state van de coach-sensor
+ */
+export function spreektAnders(st) {
+  const ruw = st?.attributes?.taal;
+  if (typeof ruw !== "string" || !ruw) return false;
+  return (ruw.toLowerCase().startsWith("en") ? "en" : "nl") !== taal();
 }
 
 /**

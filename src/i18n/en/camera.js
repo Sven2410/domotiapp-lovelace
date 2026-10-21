@@ -43,9 +43,11 @@ export const CAMERA = {
   "dit beeld van {naam}": "this image from {naam}",
   "de camera": "the camera",
   "dit beeld": "this image",
-  // Altijd een of meer; het Nederlands zegt ook bij één "beelden".
+  "{n} beeld van {dag}": "the image from {dag} ({n})",
   "{n} beelden van {dag}": "the images from {dag} ({n})",
+  "{n} beeld": "{n} image",
   "alle {n} beelden": "all images ({n})",
+  "{n} beeld · {grootte}": "{n} image · {grootte}",
   "{n} beelden · {grootte}": "{n} images · {grootte}",
   "Zonder datum": "No date",
   "Wis deze dag": "Clear this day",

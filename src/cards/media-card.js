@@ -89,7 +89,7 @@ import { toonBronkiezer } from "../media/bronkiezer.js";
 import { toonSpelerKiezer } from "../media/spelerkiezer.js";
 import { toonSleepTimer } from "../media/sleeptimer.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
-import { nt, t } from "../taal.js";
+import { nt, t, tn } from "../taal.js";
 
 /** Het icoon en het voorleeslabel per knop. */
 const KNOPPEN = {
@@ -697,7 +697,7 @@ class MediaCard extends DacCard {
       const naam = bron.nu || t("Bron");
       this.text(bronknop.querySelector("b"), naam);
       bronknop.setAttribute("aria-label", t("Bron kiezen, nu {naam}", { naam }));
-      bronknop.title = t("Kies uit {n} bronnen", { n: bron.aantal });
+      bronknop.title = tn(bron.aantal, "Kies uit {n} bron", "Kies uit {n} bronnen");
     }
 
     const gedempt = isGedempt(gst);

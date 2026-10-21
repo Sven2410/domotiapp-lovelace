@@ -40,7 +40,7 @@ import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { alsGrootte, dagInZin, dagLabel, perDag } from "./camera-filters.js";
-import { t, taal } from "../taal.js";
+import { t, taal, tn } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -261,7 +261,7 @@ class CameraArchief extends HTMLElement {
         if (!groep) return;
         return this.opts_?.wis?.(
           groep.beelden.map((b) => b.id),
-          t("{n} beelden van {dag}", { n: groep.beelden.length, dag: dagInZin(groep.dag) })
+          tn(groep.beelden.length, "{n} beeld van {dag}", "{n} beelden van {dag}", { dag: dagInZin(groep.dag) })
         );
       }
 
@@ -269,7 +269,7 @@ class CameraArchief extends HTMLElement {
         if (!this.beelden_.length) return;
         return this.opts_?.wis?.(
           this.beelden_.map((b) => b.id),
-          t("alle {n} beelden", { n: this.beelden_.length })
+          tn(this.beelden_.length, "{n} beeld", "alle {n} beelden")
         );
       }
 
@@ -304,7 +304,7 @@ class CameraArchief extends HTMLElement {
     const meerdere = this.opts_.meerdere;
 
     this.$(".stat").textContent = this.beelden_.length
-      ? t("{n} beelden · {grootte}", { n: this.beelden_.length, grootte: alsGrootte(bytes) })
+      ? tn(this.beelden_.length, "{n} beeld · {grootte}", "{n} beelden · {grootte}", { grootte: alsGrootte(bytes) })
       : "";
     this.$(".wis").disabled = !this.beelden_.length;
 

@@ -808,9 +808,9 @@ export class InfoschermBeheerCard extends DacCard {
       mededelingen: () => `${(w.mededelingen ?? []).length}`,
       verjaardagen: () => `${(w.verjaardagen ?? []).length}`,
       praktijk: () => "",
-      indeling: () => t("{n} blokken", { n: (w.indeling?.blokken ?? []).length }),
+      indeling: () => tn((w.indeling?.blokken ?? []).length, "{n} blok", "{n} blokken"),
       verlichting: () =>
-        `${t("{n} lampen", { n: (w.installatie?.verlichting ?? []).length })}${w.instellingen?.verlichting_tonen === false ? ` · ${t("uit")}` : ""}`,
+        `${tn((w.installatie?.verlichting ?? []).length, "{n} lamp", "{n} lampen")}${w.instellingen?.verlichting_tonen === false ? ` · ${t("uit")}` : ""}`,
       klimaat: () => {
         const n = (w.installatie?.klimaat ?? []).length;
         const uit = w.instellingen?.klimaat_tonen === false ? ` · ${t("uit")}` : w.instellingen?.klimaat_bedienen === false ? ` · ${t("alleen kijken")}` : "";
@@ -821,7 +821,7 @@ export class InfoschermBeheerCard extends DacCard {
         return `${tn(n, "{n} ruimte", "{n} ruimtes")}${n && !w.code ? ` · ${t("boeken op het scherm uit")}` : ""}`;
       },
       wifi: () => (w.installatie?.wifi ? netwerkNaam(this.hass, w.installatie.wifi, w.scherm?.wifi_naam) : t("geen QR-code gekozen")),
-      instellingen: () => t("{n} nieuwsbron(nen)", { n: (w.instellingen?.feeds ?? []).length }),
+      instellingen: () => tn((w.instellingen?.feeds ?? []).length, "{n} nieuwsbron", "{n} nieuwsbronnen"),
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
     const info = this.blokInfo_(blok);
@@ -1677,7 +1677,7 @@ export class InfoschermBeheerCard extends DacCard {
       try {
         const r = await ververFeeds(this.hass);
         this.feedFouten_ = r.feed_fouten ?? {};
-        this.meldingen_[blok] = { tekst: t("{n} bericht(en) opgehaald.", { n: (r.feeds ?? []).length }) };
+        this.meldingen_[blok] = { tekst: tn((r.feeds ?? []).length, "{n} bericht opgehaald.", "{n} berichten opgehaald.") };
       } catch (fout) {
         this.meldingen_[blok] = { tekst: fout?.message ?? t("Ophalen lukte niet."), fout: true };
       }

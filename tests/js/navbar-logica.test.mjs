@@ -338,3 +338,16 @@ describe("kant-en-klare subknoppen", () => {
     });
   });
 });
+
+// NIEUW GEDRAG (0.83.0): ook het voorbeeld in de kaartkiezer is een voorbeeld.
+// In HA 2026.8 zit het onder hui-card-picker, en daar zweefde de balk onderin
+// over de kiezer heen.
+it("isBewerkTag: editor, voorbeeld en kaartkiezer, en verder niets", async () => {
+  const { isBewerkTag } = await import("../../src/cards/navbar-logica.js");
+  for (const tag of ["hui-card-preview", "hui-dialog-edit-card", "hui-card-edit-mode", "hui-card-element-editor", "HUI-CARD-PICKER"]) {
+    assert.equal(isBewerkTag(tag), true, tag);
+  }
+  for (const tag of ["hui-card", "hui-grid-section", "hui-sections-view", "home-assistant", "div", "bubble-card"]) {
+    assert.equal(isBewerkTag(tag), false, tag);
+  }
+});
