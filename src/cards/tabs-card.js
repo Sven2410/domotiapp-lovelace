@@ -153,7 +153,12 @@ class TabsCard extends DacCard {
 
     /* --------------------------------------------------------- de inhoud */
 
-    .vakken { flex: 1 1 auto; min-height: 0; display: block; }
+    /* Niet groeien: de kaart meet zijn hoogte aan zijn kinderen, en een vak
+       dat de kaart vult meet dan de kaart zelf. Hij kon zo alleen groter
+       worden: na een wissel naar een korter tabblad bleef hij op de hoogte
+       van het langste staan (145 px leeg onder de knop Terug, gemeten bij een
+       klant op 21 oktober 2026). */
+    .vakken { flex: 0 1 auto; min-height: 0; display: block; }
     .vak { display: none; }
 
     /* De kaarten in een tab staan in HETZELFDE raster als in een sectie van
