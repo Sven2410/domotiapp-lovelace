@@ -39,6 +39,12 @@ test("tc kiest het Engels bij de context, en anders het gewone", () => {
   assert.equal(tc("stand", "Stil"), "Stil");
 });
 
+test("een ontbrekende waarde wordt leeg, niet undefined", () => {
+  assert.equal(t("Wekker {naam} bewerken", { naam: undefined }), "Wekker  bewerken");
+  assert.equal(t("Wekker {naam} bewerken", { naam: null }), "Wekker  bewerken");
+  assert.equal(t("{n} van {totaal}", { n: 0, totaal: 3 }), "0 van 3");
+});
+
 test("tn kiest enkelvoud of meervoud", () => {
   assert.equal(tn(1, "{n} lamp", "{n} lampen"), "1 lamp");
   assert.equal(tn(3, "{n} lamp", "{n} lampen"), "3 lampen");

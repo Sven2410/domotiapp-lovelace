@@ -111,8 +111,11 @@ export function volgTaal(fn) {
 /** De notatie van getallen en datums bij de taal. Engels als in Groot-Brittannië: 24 uur. */
 export const locale = () => (taal_ === "en" ? "en-GB" : "nl-NL");
 
+// Een waarde die er niet is (undefined of null) wordt leeg, niet "undefined":
+// de wekker zonder naam heette in een aria-label eerst "Wekker undefined
+// bewerken", waar de oude sjabloontekst "Wekker  bewerken" gaf.
 const vul = (zin, waarden) =>
-  waarden ? zin.replace(/\{(\w+)\}/g, (heel, naam) => (naam in waarden ? String(waarden[naam]) : heel)) : zin;
+  waarden ? zin.replace(/\{(\w+)\}/g, (heel, naam) => (naam in waarden ? String(waarden[naam] ?? "") : heel)) : zin;
 
 /** Een zin in de taal van nu, met de waarden tussen accolades ingevuld. */
 export function t(nl, waarden) {
