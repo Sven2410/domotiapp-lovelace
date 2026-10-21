@@ -40,6 +40,7 @@ import "./cards/airco-card.js";
 import "./cards/stofzuiger-card.js";
 import "./cards/boiler-card.js";
 import "./cards/vriezer-card.js";
+import "./cards/kantoorprinter-card.js";
 import "./cards/wifi-card.js";
 import "./cards/entities-card.js";
 import "./cards/media-card.js";
