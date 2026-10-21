@@ -133,16 +133,33 @@ Ontwikkeling van een klantinstallatie, met 0.82.0):
   ene verschil is de klok op de kopkaart (12:38 tegen 12:39).
 - **Geen telling van één** met een meervoud meer op de pagina.
 
+## Nagemeten na het bijwerken (21 oktober 2026)
+
+De eigenaar werkte de klant bij naar 0.83.0 en herstartte. Daarna, op
+Development (de dashboardnaam is inmiddels vertaald):
+- **Verse code:** de `?v=` is `1e70f5253d86`, gelijk aan de bundel van 0.83.0.
+- **De coach staat op English** (`taal: "en"` op alle drie de sensors), net
+  als het profiel. De kaarten tonen de tekst van de coach gewoon. Wat er
+  staat: "Washing machine · Off · last cycle today", "Tumble dryer ·
+  Programme finished", Miele met "Cottons" en "Anti-crease".
+- **Nog Nederlands:** alleen "Thuisbatterij". Dat is de apparaatnaam die de
+  coach zelf invult, en de eigenaar beslist daarover.
+- **De navbalk in de kaartkiezer** staat nu in zijn vak: `position: relative`,
+  de balk 281×62 binnen een vak van 281×186. Daarvoor was het `fixed`,
+  onderin over de kiezer. Kiezer gesloten zonder iets toe te voegen; het
+  dashboard is ongewijzigd (8 secties met elk 2 kaarten).
+- **Gezien, niet van ons:** de X50 toont na de herstart het grijze "geen
+  kaart"-plaatje. Dat is het beeld dat `camera.x50_ultra_complete_map` zelf
+  levert (527×387). De kamers staan wel in zijn attributen. De integratie van
+  Dreame heeft zijn plattegrond dan nog niet; de kaart toont wat hij krijgt.
+
 ## Wat niet lukte
 
-- **Twee dingen zijn alleen in de logica en de bron gemeten, niet in een
-  browser:**
-  - de navbalk in de kaartkiezer, want 0.83.0 staat nog niet bij de klant;
-  - het opslagscherm van de camera en het beheer, want die staan niet op de
-    werkbank en niet op Ontwikkeling.
-- **De kaarten met een Engelse coach zijn niet in een browser bekeken.** Ze zijn
-  alleen getoetst tegen de dump van 11:39, want 0.83.0 staat nog niet bij de
-  klant.
+- **Het opslagscherm van de camera en het beheer** zijn alleen in de logica en
+  de bron gemeten; ze staan niet op de werkbank en niet bij de klant. (De
+  navbalk is na het bijwerken alsnog gemeten, zie hierboven.)
+- **Een Nederlandse kaart naast een Engelse coach** is alleen getoetst tegen de
+  dump. Bij de klant zijn de kaart en de coach allebei Engels.
 
 ## Aannames
 
