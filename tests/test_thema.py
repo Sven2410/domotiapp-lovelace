@@ -23,6 +23,7 @@ from homeassistant.setup import async_setup_component
 from custom_components.domotiapp_lovelace.config_flow import CONF_BEVESTIGD, CONF_GROEP
 from custom_components.domotiapp_lovelace.const import (
     CARD_URL_PATH,
+    CONF_TAAL,
     CONF_THEMA,
     DOMAIN,
     LOADER_URL_PATH,
@@ -110,7 +111,7 @@ async def test_de_keuze_bij_het_toevoegen_belandt_in_de_options(
 
     assert resultaat["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    assert entry.options == {CONF_THEMA: keuze}
+    assert entry.options == {CONF_THEMA: keuze, CONF_TAAL: "auto"}
     assert entry.data == {}
 
 
@@ -152,7 +153,7 @@ async def test_uiterlijk_toont_de_huidige_keuze(hass: HomeAssistant, opgezet) ->
         resultaat["flow_id"], {CONF_THEMA: THEMA_LICHT}
     )
     await hass.async_block_till_done()
-    assert opgezet.options == {CONF_THEMA: THEMA_LICHT}
+    assert opgezet.options == {CONF_THEMA: THEMA_LICHT, CONF_TAAL: "auto"}
 
     menu = await hass.config_entries.options.async_init(opgezet.entry_id)
     resultaat = await hass.config_entries.options.async_configure(

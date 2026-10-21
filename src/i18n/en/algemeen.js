@@ -28,4 +28,9 @@ export const ALGEMEEN = {
   "Eigen afbeelding": "Own image",
   "Geen afbeelding": "No image",
   "Vermogen": "Power",
+
+  // productfoto.js: de keuzes voor Merk
+  "Automatisch": "Automatic",
+  "Ander merk (eigen afbeelding)": "Other brand (own image)",
+  "Geen afbeelding (icoon)": "No image (icon)",
 };

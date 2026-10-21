@@ -25,8 +25,14 @@
  *
  * Geen DOM en geen `hass` in de rekenfuncties: dit hoort in een gewone
  * Node-test. `apparaatRollen` leest alleen het register uit `hass`.
+ *
+ * De namen in de tabellen blijven Nederlands (`nt`); de kaart vertaalt ze waar
+ * ze getoond worden. De tegels en zinnen die hier gemaakt worden zijn al in de
+ * taal van nu (taal.js). Namen van programma's en fasen komen van Home
+ * Assistant (`formatEntityState`) en zijn dus al in zijn taal.
  */
 
+import { locale, nt, t } from "../taal.js";
 import { getalTekst } from "./laadpaal-logica.js";
 import { SOORT, statusDuiding } from "./vaatwasser-logica.js";
 
@@ -224,8 +230,9 @@ function klaarOmTekst(st, nu) {
   const dag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
   const dagen = Math.round((dag(d) - dag(nu)) / 86_400_000);
   if (dagen === 0) return KLOK(d);
-  if (dagen === 1) return `morgen ${KLOK(d)}`;
-  return `${d.getDate()}-${d.getMonth() + 1} ${KLOK(d)}`;
+  if (dagen === 1) return t("morgen {klok}", { klok: KLOK(d) });
+  // "16-10" in het Nederlands, "16/10" in het Engels.
+  return `${d.toLocaleDateString(locale(), { day: "numeric", month: "numeric" })} ${KLOK(d)}`;
 }
 
 /**
@@ -233,11 +240,11 @@ function klaarOmTekst(st, nu) {
  * verwachting van Miele ("Energieverbruik voorspelling" in Home Assistant).
  * Vóór de start is de verwachting het nieuws, daarna het verbruik.
  */
-function verbruikTegel(sleutel, naam, verbruikSt, verwachtSt, maak) {
+function verbruikTegel(sleutel, naam, naamVerwacht, verbruikSt, verwachtSt, maak) {
   const n = getal(verbruikSt);
   const p = getal(verwachtSt);
   if (n != null && n > 0) return { sleutel, label: naam, waarde: maak(n), id: verbruikSt.entity_id };
-  if (p != null) return { sleutel, label: `${naam} verwacht`, waarde: `${Math.round(p)}%`, id: verwachtSt.entity_id };
+  if (p != null) return { sleutel, label: naamVerwacht, waarde: `${Math.round(p)}%`, id: verwachtSt.entity_id };
   if (n != null) return { sleutel, label: naam, waarde: maak(n), id: verbruikSt.entity_id };
   return { sleutel, label: naam, waarde: STREEP, id: verbruikSt?.entity_id ?? verwachtSt?.entity_id ?? "" };
 }
@@ -251,40 +258,40 @@ function verbruikTegel(sleutel, naam, verbruikSt, verwachtSt, maak) {
  * @param {Record<string, string>} p.rollen uit `apparaatRollen()`
  * @param {(id: string) => object|null} p.st de state bij een entity_id
  * @param {(st: object) => string} [p.fmt] `hass.formatEntityState`
- * @param {string} [p.deurWoord] "Deur" of "Klep"
+ * @param {string} [p.deurWoord] "Deur" of "Klep", al in de taal van nu
  * @param {Date} [p.nu]
  * @returns {{sleutel: string, label: string, waarde: string, id: string}[]}
  */
-export function programmaTegels({ rollen = {}, st, fmt, deurWoord = "Deur", nu = new Date() }) {
+export function programmaTegels({ rollen = {}, st, fmt, deurWoord = t("Deur"), nu = new Date() }) {
   const uit = [];
   const lees = (rol) => (rollen[rol] ? st(rollen[rol]) ?? null : null);
   const leeg = (s) => !s || LEEG.has(String(s.state ?? ""));
 
   if (rollen.deur) {
     const s = lees("deur");
-    const waarde = leeg(s) ? STREEP : s.state === "on" ? "Open" : "Dicht";
+    const waarde = leeg(s) ? STREEP : s.state === "on" ? t("Open") : t("Dicht");
     uit.push({ sleutel: "deur", label: deurWoord, waarde, id: rollen.deur });
   }
   if (rollen.programma) {
     const s = lees("programma");
-    const waarde = leeg(s) ? STREEP : s.state === "no_program" ? "Geen" : woordVan(s, fmt);
-    uit.push({ sleutel: "programma", label: "Programma", waarde, id: rollen.programma });
+    const waarde = leeg(s) ? STREEP : s.state === "no_program" ? t("Geen") : woordVan(s, fmt);
+    uit.push({ sleutel: "programma", label: t("Programma"), waarde, id: rollen.programma });
   }
   if (rollen.fase) {
     const s = lees("fase");
     const waarde = leeg(s) || NIETS.has(String(s.state)) ? STREEP : woordVan(s, fmt);
-    uit.push({ sleutel: "fase", label: "Fase", waarde, id: rollen.fase });
+    uit.push({ sleutel: "fase", label: t("Fase"), waarde, id: rollen.fase });
   }
   if (rollen.eind) {
-    uit.push({ sleutel: "klaar", label: "Klaar om", waarde: klaarOmTekst(lees("eind"), nu), id: rollen.eind });
+    uit.push({ sleutel: "klaar", label: t("Klaar om"), waarde: klaarOmTekst(lees("eind"), nu), id: rollen.eind });
   }
   if (rollen.energie || rollen.energieVerwacht) {
     const kwh = (n) => `${getalTekst(Math.round(n * 10) / 10)} kWh`;
-    uit.push(verbruikTegel("energie", "Energie", lees("energie"), lees("energieVerwacht"), kwh));
+    uit.push(verbruikTegel("energie", t("Energie"), t("Energie verwacht"), lees("energie"), lees("energieVerwacht"), kwh));
   }
   if (rollen.water || rollen.waterVerwacht) {
     const liter = (n) => `${getalTekst(Math.round(n))} L`;
-    uit.push(verbruikTegel("water", "Water", lees("water"), lees("waterVerwacht"), liter));
+    uit.push(verbruikTegel("water", t("Water"), t("Water verwacht"), lees("water"), lees("waterVerwacht"), liter));
   }
   for (const [rol, label] of [
     ["twinDos1", "TwinDos 1"],
@@ -310,11 +317,11 @@ export function apparaatSoort(apparaat) {
   return "vaatwasser";
 }
 
-/** Per soort: de naam als er niets anders is, het icoon, en hoe de deur heet. */
+/** Per soort: de naam als er niets anders is, het icoon, en hoe de deur heet. Vertaald waar getoond: `t(soort.naam)`. */
 export const SOORTEN = {
-  vaatwasser: { naam: "Vaatwasser", icoon: "dishwasher", deur: "Klep" },
-  wasmachine: { naam: "Wasmachine", icoon: "washer", deur: "Deur" },
-  droger: { naam: "Droger", icoon: "washer", deur: "Deur" },
+  vaatwasser: { naam: nt("Vaatwasser"), icoon: "dishwasher", deur: nt("Klep") },
+  wasmachine: { naam: nt("Wasmachine"), icoon: "washer", deur: nt("Deur") },
+  droger: { naam: nt("Droger"), icoon: "washer", deur: nt("Deur") },
 };
 
 /**
@@ -329,8 +336,8 @@ export const PROGRAMMA_APPARATEN = {
     label: "Miele",
     fabrikant: "miele",
     modellen: {
-      wwi880: { label: "WWI880 (wasmachine)", pad: "wasmachines/miele-wwi880.webp", codes: ["WWI880"] },
-      twh780wp: { label: "TWH780WP (warmtepompdroger)", pad: "wasdrogers/miele-twh780wp.webp", codes: ["TWH780WP"] },
+      wwi880: { label: nt("WWI880 (wasmachine)"), pad: "wasmachines/miele-wwi880.webp", codes: ["WWI880"] },
+      twh780wp: { label: nt("TWH780WP (warmtepompdroger)"), pad: "wasdrogers/miele-twh780wp.webp", codes: ["TWH780WP"] },
     },
   },
 };
@@ -515,26 +522,28 @@ export function laatsteBeurt(reeksen, rollen, opties = null) {
   };
 }
 
-/** "21 min", "1 u 10 min", "2 uur". */
+/** "21 min", "1 u 10 min", "2 uur" (in het Engels "1 h 10 min", "2 h"). */
 export function duurTekst(minuten) {
   if (minuten == null) return STREEP;
   if (minuten < 60) return `${minuten} min`;
   const u = Math.floor(minuten / 60);
   const m = minuten % 60;
-  return m ? `${u} u ${m} min` : `${u} uur`;
+  return m ? t("{u} u {m} min", { u, m }) : t("{u} uur", { u });
 }
 
-const DAGEN_KORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
-const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-
-/** "vandaag 12:48 – 13:09", "gisteren ...", "di 14 okt ...". Op de kalender, niet in uren. */
+/**
+ * "vandaag 12:48 – 13:09", "gisteren ...", "di 14 okt ...". Op de kalender, niet
+ * in uren. De dag en de maand van de taal (`toLocaleDateString`); in het
+ * Nederlands is dat precies wat hier eerst met de hand stond.
+ */
 export function beurtWanneer(beurt, nu = new Date()) {
   const dag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
   const dagen = Math.round((dag(nu) - dag(beurt.start)) / 86_400_000);
   const d = beurt.start;
-  const welke =
-    dagen === 0 ? "vandaag" : dagen === 1 ? "gisteren" : `${DAGEN_KORT[d.getDay()]} ${d.getDate()} ${MAANDEN_KORT[d.getMonth()]}`;
-  return `${welke} ${KLOK(beurt.start)} – ${KLOK(beurt.eind)}`;
+  const klok = `${KLOK(beurt.start)} – ${KLOK(beurt.eind)}`;
+  if (dagen === 0) return t("vandaag {klok}", { klok });
+  if (dagen === 1) return t("gisteren {klok}", { klok });
+  return `${d.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" })} ${klok}`;
 }
 
 /**
@@ -548,34 +557,34 @@ export function beurtWanneer(beurt, nu = new Date()) {
  * @param {object} p zoals `programmaTegels`, plus
  * @param {object} p.beurt uit `laatsteBeurt()`
  */
-export function beurtTegels({ rollen = {}, beurt, st, fmt, deurWoord = "Deur" }) {
+export function beurtTegels({ rollen = {}, beurt, st, fmt, deurWoord = t("Deur") }) {
   const live = programmaTegels({ rollen, st, fmt, deurWoord });
-  const uit = live.filter((t) => t.sleutel === "deur");
+  const uit = live.filter((tegel) => tegel.sleutel === "deur");
   // Een waarde van toen in de woorden van Home Assistant: de state van nu met
   // de sleutel van toen, zodat de vertaling van de integratie geldt.
   const woord = (rol, sleutel) => woordVan({ ...(st(rollen[rol]) ?? {}), state: sleutel }, fmt);
 
   if (rollen.programma) {
     const w = beurt.programma ? woord("programma", beurt.programma) : STREEP;
-    uit.push({ sleutel: "programma", label: "Programma", waarde: w, id: rollen.programma });
+    uit.push({ sleutel: "programma", label: t("Programma"), waarde: w, id: rollen.programma });
   }
   if (rollen.temperatuur) {
     const w = beurt.temperatuur == null ? STREEP : `${getalTekst(Math.round(beurt.temperatuur))} °C`;
-    uit.push({ sleutel: "temperatuur", label: "Temperatuur", waarde: w, id: rollen.temperatuur });
+    uit.push({ sleutel: "temperatuur", label: t("Temperatuur"), waarde: w, id: rollen.temperatuur });
   }
   if (rollen.droogtegraad) {
     const w = beurt.droogtegraad ? woord("droogtegraad", beurt.droogtegraad) : STREEP;
-    uit.push({ sleutel: "droogtegraad", label: "Droogtegraad", waarde: w, id: rollen.droogtegraad });
+    uit.push({ sleutel: "droogtegraad", label: t("Droogtegraad"), waarde: w, id: rollen.droogtegraad });
   }
-  uit.push({ sleutel: "duur", label: "Duur", waarde: duurTekst(beurt.minuten), id: rollen.status ?? "" });
+  uit.push({ sleutel: "duur", label: t("Duur"), waarde: duurTekst(beurt.minuten), id: rollen.status ?? "" });
   if (rollen.energie) {
     const w = beurt.energie == null ? STREEP : `${getalTekst(Math.round(beurt.energie * 10) / 10)} kWh`;
-    uit.push({ sleutel: "energie", label: "Energie", waarde: w, id: rollen.energie });
+    uit.push({ sleutel: "energie", label: t("Energie"), waarde: w, id: rollen.energie });
   }
   if (rollen.water) {
     const w = beurt.water == null ? STREEP : `${getalTekst(Math.round(beurt.water))} L`;
-    uit.push({ sleutel: "water", label: "Water", waarde: w, id: rollen.water });
+    uit.push({ sleutel: "water", label: t("Water"), waarde: w, id: rollen.water });
   }
-  uit.push(...live.filter((t) => t.sleutel === "twinDos1" || t.sleutel === "twinDos2"));
+  uit.push(...live.filter((tegel) => tegel.sleutel === "twinDos1" || tegel.sleutel === "twinDos2"));
   return uit;
 }
