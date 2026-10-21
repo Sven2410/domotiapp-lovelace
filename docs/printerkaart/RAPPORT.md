@@ -92,10 +92,29 @@ is een test bij gekomen in `kantoorprinter.test.mjs`; tegen `main` faalt
 hij (`fail 1`). In Chrome, met bundel `cc2d907281fa6417` (gelijk aan schijf),
 geeft `getGridOptions()` `{"columns":12,"rows":"auto","min_columns":4,"min_rows":2}`.
 
+## 0.84.3: de productfoto van de HP
+
+De eigenaar gaf de productpagina van HP. Daarvan is de schuine foto van voren
+genomen (een PNG met een doorzichtige achtergrond, 800×600). Hij is
+bijgesneden op de doorzichtige rand en verkleind naar
+`afbeeldingen/printers/hp-officejet-pro-9730e.webp` (292×240, 10.632 bytes).
+Het origineel staat in `_ref/printers/`, buiten deze repo. Het fotorecht gaf
+de eigenaar als installateur (via de beheersessie, 21 oktober 2026).
+
+- **Automatisch** herkent de printer aan `model` "HP OfficeJet Pro 9730
+  Series". Een andere HP krijgt geen foto. Nieuwe test; tegen `main` geeft
+  hij `fail 1`.
+- **Het pad** staat in `VASTE_WEBP`. De Python-tests serveren het zonder
+  inloggen (903 groen).
+- **In Chrome** (bundel `367ca4ce283012bd`, gelijk aan schijf):
+  - Automatisch kiest `/domotiapp_lovelace/afbeeldingen/printers/hp-officejet-pro-9730e.webp`;
+  - met het bestand zelf staat de foto op 56×40 bij 440 breed en op 42×30 bij
+    175 breed (naturalWidth 292);
+  - de kaart blijft 120 hoog.
+
 ## Wat niet lukte
 
-- **Geen productfoto:** `_ref/printers/` is nog leeg. Die komt in een volgende
-  ronde.
+- **De productfoto** ontbrak in 0.84.0. Hij zit in 0.84.3 (zie hierboven).
 - **Niet in Home Assistant zelf gemeten:** de kaartkiezer en de editor zijn
   niet getest. Op de MacBook is geen testinstance, en bij de klant staat nog
   0.83.1.
