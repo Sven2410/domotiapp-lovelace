@@ -65,10 +65,19 @@ Main geeft dus precies wat bij de klant gemeten is. Een echte klik op "Heat"
 (`isTrusted=true`) stuurt `climate.set_hvac_mode` met `hvac_mode: "heat"`.
 De knop doet dus nog wat erop staat, ook nu de volgorde anders is.
 
+## Nagemeten bij de klant (21 oktober 2026)
+
+Na het bijwerken en herstarten (`installed_version` 0.83.1) heeft de
+beheersessie het blok Klimaat nagemeten in een eigen tabblad:
+- **Volgorde:** alle acht kaarten tonen Off, Heat, Cool, Auto, Dry, Fan only.
+- **Hoogte:** elke kaart is 184 hoog.
+- **Fouten:** geen in de console. Het log van na de herstart heeft niets van
+  deze integratie.
+
 ## Wat niet lukte
 
-- **Bij de klant zelf** is 0.83.1 niet gemeten. Dat kan pas als de eigenaar
-  heeft bijgewerkt en herstart.
+- **Bij de klant zelf** heb ik 0.83.1 niet gemeten. Dat deed de beheersessie
+  na het bijwerken (zie hierboven).
 - **In het Nederlands** lopen de knoppen in een vak van 420 breed over twee
   regels (standen 71 hoog). Dan blijft de kaart vier rijen, en dat is terecht:
   de inhoud is dan hoger. Dat was op 0.83.0 net zo.
