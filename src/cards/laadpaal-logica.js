@@ -24,6 +24,7 @@
  */
 
 import { locale, nt, t } from "../taal.js";
+import { spreektAnders } from "./coach-logica.js";
 
 /** Het model van een laadpaal bij de coach. */
 export const LAADPAAL_MODELLEN = ["Laadpaal"];
@@ -89,14 +90,17 @@ export function laadpaalStand(st) {
   const ruw = String(st.state ?? "").trim();
   // De tekst van de coach zoals hij is, met een hoofdletter vooraan. Zonder
   // tekst het woord van de stand.
-  const tekst = LEEG.has(ruw)
-    ? t(STANDEN[stand]?.label ?? "")
+  // Een coach in een andere taal (zie `spreektAnders`): het woord van de stand.
+  const anders = spreektAnders(st);
+  const eigen = t(STANDEN[stand]?.label ?? "");
+  const tekst = LEEG.has(ruw) || (anders && eigen)
+    ? eigen
     : ruw.charAt(0).toUpperCase() + ruw.slice(1);
   const sessie = a.sessie && typeof a.sessie === "object" ? a.sessie : null;
   return {
     stand,
     tekst,
-    reden: String(a.reason ?? ""),
+    reden: anders ? "" : String(a.reason ?? ""),
     // De accustand van de auto, groot op de kaart. Hij vroeg erom op
     // 11 oktober 2026: "in de laadpaal kaart moet ook de batterij % komen van
     // de auto". Zonder sensor in de auto telt de coach zelf door vanaf een

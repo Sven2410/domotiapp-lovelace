@@ -31,7 +31,9 @@ export const BEHEER = {
 
   // De tellers in de kop van een blok
   "{n} van {totaal} aanwezig": "{n} of {totaal} present",
+  "{n} blok": "{n} block",
   "{n} blokken": "{n} blocks",
+  "{n} lamp": "{n} light",
   "{n} lampen": "{n} lights",
   "uit": "off",
   "alleen kijken": "view only",
@@ -41,7 +43,8 @@ export const BEHEER = {
   "{n} ruimtes": "{n} rooms",
   "boeken op het scherm uit": "booking on the screen off",
   "geen QR-code gekozen": "no QR code chosen",
-  "{n} nieuwsbron(nen)": "{n} news source(s)",
+  "{n} nieuwsbron": "{n} news source",
+  "{n} nieuwsbronnen": "{n} news sources",
 
   // Medewerkers
   "Sleep om de volgorde te wijzigen": "Drag to change the order",
@@ -209,7 +212,8 @@ export const BEHEER = {
   "Geen bronnen.": "No sources.",
   "Bron toevoegen": "Add source",
   "Nu ophalen": "Fetch now",
-  "{n} bericht(en) opgehaald.": "{n} item(s) fetched.",
+  "{n} bericht opgehaald.": "{n} item fetched.",
+  "{n} berichten opgehaald.": "{n} items fetched.",
   "Ophalen lukte niet.": "Fetching failed.",
 
   // Verwijderen en uploaden

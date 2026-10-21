@@ -39,7 +39,7 @@ import { huidigeStand, standLabel, standOproep, standen, volgendDoel } from "./h
 import { formatteer } from "./hvac-logica.js";
 import { locale, nt, t, tc } from "../taal.js";
 // Voor de coach (helemaal onderaan).
-import { coachApparaten, coachRollen, contractVan } from "./coach-logica.js";
+import { coachApparaten, coachRollen, contractVan, spreektAnders } from "./coach-logica.js";
 
 /** `ClimateEntityFeature` van Home Assistant. */
 export const FUNCTIE = {
@@ -821,7 +821,8 @@ export function aircoCoachStand(st) {
     contract: contractVan(st),
     stand: typeof a.stand === "string" ? a.stand : "",
     modus: a.modus === "heat" || a.modus === "cool" ? a.modus : "",
-    reden: typeof a.reason === "string" ? a.reason.trim() : "",
+    // Een zin in een andere taal valt weg; `coachRegel` geeft dan het woord bij de stand.
+    reden: typeof a.reason === "string" && !spreektAnders(st) ? a.reason.trim() : "",
     // Alleen echt waar telt: zonder dit attribuut zijn er geen goedkope uren.
     dynamisch: a.dynamisch === true,
     // Waarop de coach hem aanzet (v0.119.1); "" bij een coach zonder.

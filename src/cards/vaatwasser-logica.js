@@ -25,6 +25,7 @@
  */
 
 import { locale, nt, t } from "../taal.js";
+import { spreektAnders } from "./coach-logica.js";
 
 /** Hoe de toestand van de machine heet, ongeacht wie hem meldt. */
 export const SOORT = {
@@ -521,7 +522,9 @@ export function coachStand(st) {
     stand: String(a.stand ?? ""),
     vrijgegeven: a.vrijgegeven === true,
     nu: a.nu === true,
-    later: "later" in a ? String(a.later ?? "") : undefined,
+    // In een andere taal telt het woord van de coach niet, en rekent de kaart
+    // het zelf uit `klaar_om` (zie `spreektAnders`).
+    later: "later" in a && !spreektAnders(st) ? String(a.later ?? "") : undefined,
     klaarOm: tijdstip(a.klaar_om),
     type: String(a.type ?? ""),
   };

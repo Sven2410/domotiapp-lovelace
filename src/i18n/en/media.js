@@ -23,6 +23,7 @@ export const MEDIA = {
   "Gedempt": "Muted",
   "Bron": "Source",
   "Bron kiezen, nu {naam}": "Choose source, now {naam}",
+  "Kies uit {n} bron": "Choose from {n} source",
   "Kies uit {n} bronnen": "Choose from {n} sources",
 
   // media-card.js: onvolledige config

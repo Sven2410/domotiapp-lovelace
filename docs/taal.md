@@ -95,6 +95,26 @@ Waar het paneel van de coach dezelfde zin heeft, hetzelfde Engels.
 | container (afval), Staat buiten | bin, Put out |
 | infoscherm | info screen |
 
+## Tekst van de coach in een andere taal (sinds 0.83.0)
+
+De coach schrijft zijn eigen tekst (de toestand, `reason`, `later`), in de taal
+van zijn installatie. Sinds coach v0.140.2 staat die taal als attribuut `taal`
+op elke sensor ("nl" of "en"; gezien in een echte dump op 21 oktober 2026,
+`tests/js/vaste-invoer/coach-0.140.2-taal.json`).
+
+- **De kaart houdt de taal van de gebruiker.** Automatisch volgt dus NIET de
+  coach. In een Engels huis met een Nederlandse coach zou dat een Nederlands
+  dashboard geven, en dat is het omgekeerde van wat Automatisch belooft.
+- **Spreekt de coach een andere taal** (`spreektAnders` in `coach-logica.js`),
+  dan valt zijn tekst weg en gebruikt de kaart zijn eigen woord:
+  - de toestand wordt het woord bij de `stand` (batterij, laadpaal);
+  - `reason` verdwijnt (batterij en laadpaal), en de airco valt terug op het
+    woord bij de stand;
+  - `later` telt niet, en de programmakaart rekent "tomorrow" of de dag zelf
+    uit `klaar_om`.
+- **Zonder het attribuut** (een coach van vóór v0.140.2) blijft alles zoals het
+  was.
+
 ## Wat er af is
 
 Per ronde bijgewerkt; `npm run check:taal` toont alleen wat in een `t()` staat,
@@ -104,6 +124,10 @@ dus deze lijst is wat er NAGELOPEN is.
   (vaatwasser, wasmachine, droger) en de meldingen van `coach-logica.js`.
 - **0.82.0:** alle andere kaarten en editors, de badges, de gedeelde kiezers,
   de wekker, het infoscherm en het beheer, en de serverkant.
+- **0.83.0:** tekst van een coach in een andere taal (zie hierboven), en een
+  enkelvoud bij één: "1 lamp", "1 blok", "gisteren" in plaats van "1 dagen
+  geleden". `check:taal` zag een `tn()` niet als het getal met een haakje
+  begon; dat doet hij nu wel.
 
 ## De serverkant (sinds 0.82.0)
 

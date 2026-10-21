@@ -1,0 +1,115 @@
+{
+ "_toelichting": "Coach v0.140.2 bij een klant, 21-10-2026 rond 11:12 UTC: de drie coach-sensors met het nieuwe attribuut taal (\"nl\"). Een batterij die de coach alleen uitleest (Growatt), en een wasmachine en droger (Miele, alleen uitlezen). Geanonimiseerd: serienummer van de omvormer (serienr); context en ids weggelaten.",
+ "states": [
+  {
+   "entity_id": "sensor.thuisbatterij_coach",
+   "state": "Alleen uitlezen",
+   "attributes": {
+    "contract": 1,
+    "taal": "nl",
+    "type": "thuisbatterij",
+    "stand": "stil",
+    "accu_fabrikant": "Growatt",
+    "accu_model": "",
+    "brand": "growatt",
+    "alleen_lezen": true,
+    "capaciteit": 15.3,
+    "zelf": false,
+    "soc": null,
+    "reason": "",
+    "temperatuur": null,
+    "plan": [],
+    "opgeleverd_vandaag": null,
+    "opgeleverd_maand": null,
+    "opgeleverd_totaal": null,
+    "opgeleverd_sinds": null,
+    "override": null,
+    "leeg_tot": null,
+    "vakantie": false,
+    "vakantie_max": 50.0,
+    "reserve": null,
+    "ondergrens": null,
+    "entiteiten": {
+     "soc": "sensor.serienr_state_of_charge",
+     "charge_power": "sensor.serienr_accu_wordt_geladen",
+     "discharge_power": "sensor.serienr_accu_ontlaadt_w",
+     "accu_in": "sensor.serienr_accu_geladen_levenslang",
+     "accu_out": "sensor.serienr_accu_ontladen_levenslang"
+    },
+    "icon": "mdi:home-battery",
+    "friendly_name": "Thuisbatterij Coach"
+   },
+   "last_changed": "2026-10-21T11:10:27.392770+00:00"
+  },
+  {
+   "entity_id": "sensor.wasmachine_start",
+   "state": "unknown",
+   "attributes": {
+    "start": null,
+    "reason": "Alleen uitlezen: de coach start hem niet.",
+    "plan": "",
+    "rule": "read-only",
+    "released": false,
+    "running": false,
+    "release_switch": null,
+    "contract": 1,
+    "taal": "nl",
+    "type": "wasmachine",
+    "stand": "niet_vrijgegeven",
+    "vrijgegeven": false,
+    "nu": false,
+    "klaar_om": null,
+    "later": null,
+    "entiteiten": {
+     "status": "sensor.wasmachine",
+     "program": "sensor.wasmachine_programma",
+     "remaining": "sensor.wasmachine_resterende_tijd",
+     "remote_start": "binary_sensor.wasmachine_start_op_afstand",
+     "door": "binary_sensor.wasmachine_deur",
+     "start": "button.wasmachine_starten",
+     "stop": "button.wasmachine_stoppen",
+     "energy": "sensor.wasmachine_energieverbruik"
+    },
+    "alleen_lezen": true,
+    "icon": "mdi:clock-start",
+    "friendly_name": "Wasmachine Start"
+   },
+   "last_changed": "2026-10-21T11:10:27.391993+00:00"
+  },
+  {
+   "entity_id": "sensor.droger_start",
+   "state": "unknown",
+   "attributes": {
+    "start": null,
+    "reason": "Hij draait, klaar rond 12:40.",
+    "plan": "De coach doet niets tot het programma af is.",
+    "rule": "running",
+    "released": false,
+    "running": true,
+    "release_switch": null,
+    "contract": 1,
+    "taal": "nl",
+    "type": "droger",
+    "stand": "draait",
+    "vrijgegeven": false,
+    "nu": false,
+    "klaar_om": null,
+    "later": null,
+    "entiteiten": {
+     "status": "sensor.wasdroger",
+     "program": "sensor.wasdroger_programma",
+     "remaining": "sensor.wasdroger_resterende_tijd",
+     "remote_start": "binary_sensor.wasdroger_start_op_afstand",
+     "door": "binary_sensor.wasdroger_deur",
+     "start": "button.wasdroger_starten",
+     "stop": "button.wasdroger_stoppen",
+     "energy": "sensor.wasdroger_energieverbruik"
+    },
+    "alleen_lezen": true,
+    "icon": "mdi:clock-start",
+    "friendly_name": "Droger Start"
+   },
+   "last_changed": "2026-10-21T11:10:27.392176+00:00"
+  }
+ ]
+}

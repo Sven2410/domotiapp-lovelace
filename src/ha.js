@@ -490,6 +490,7 @@ export function parseDate(value) {
 export function relativeDay(date, now = new Date()) {
   if (!date) return "";
   const d = daysBetween(now, date);
+  if (d === -1) return t("gisteren");
   if (d < 0) return t("{n} dagen geleden", { n: Math.abs(d) });
   if (d === 0) return t("vandaag");
   if (d === 1) return t("morgen");
