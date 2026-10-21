@@ -26,6 +26,7 @@ import { meldAan } from "./registratie.js";
 import { meldVraagAan } from "./ha.js";
 import { sheet, tokens, themaCss } from "./theme.js";
 import { volgThema } from "./thema.js";
+import { t } from "./taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -98,8 +99,8 @@ const css = /* css */ `
 
 let sheets = null;
 
-const veilig = (t) =>
-  String(t ?? "")
+const veilig = (tekst) =>
+  String(tekst ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
@@ -151,10 +152,10 @@ class Vraag extends HTMLElement {
     // bij elke opening opnieuw kijken of het dashboard licht of donker is.
     volgThema(this);
     if (!this.gebouwd_) this.bouw_();
-    this.$("h2").innerHTML = veilig(vraag.title ?? "Weet je het zeker?");
-    this.$("p").innerHTML = veilig(vraag.text ?? "Weet je zeker dat je dit wilt doen?");
-    this.$(".nee").textContent = vraag.dismissText ?? "Annuleren";
-    this.$(".ja").textContent = vraag.confirmText ?? "OK";
+    this.$("h2").innerHTML = veilig(vraag.title ?? t("Weet je het zeker?"));
+    this.$("p").innerHTML = veilig(vraag.text ?? t("Weet je zeker dat je dit wilt doen?"));
+    this.$(".nee").textContent = vraag.dismissText ?? t("Annuleren");
+    this.$(".ja").textContent = vraag.confirmText ?? t("OK");
     this.setAttribute("open", "");
     // De focus op ANNULEREN en niet op OK: wie op Enter ramt hoort niets
     // onomkeerbaars te doen.

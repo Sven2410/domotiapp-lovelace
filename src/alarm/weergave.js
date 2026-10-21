@@ -15,18 +15,30 @@
  * `alarms/get` levert de lijst al gesorteerd volgens SPEC 3.4.
  */
 
-/** Nederlandse dagafkortingen, ISO-volgorde: 1 = maandag. */
-const DAGEN_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+import { locale, nt, t } from "../taal.js";
 
-export const TEKST_GEEN_WEKKERS = "Geen wekkers ingesteld";
-export const TEKST_EENMALIG = "Eenmalig";
-export const TEKST_AFGELOPEN = "Eenmalig — afgelopen";
-export const TEKST_GEEN_WEKKER_ACTIEF = "Geen wekker actief";
-export const TEKST_STOPPEN = "Stoppen";
+/**
+ * De afkorting van een dag, ISO-volgorde: 1 = maandag. Uit de browser, in de
+ * taal van de kaarten: "ma" of "Mon". 1 januari 2024 was een maandag. Een
+ * oudere ICU zet een punt achter de afkorting; die gaat eraf, zodat het
+ * Nederlands blijft wat het was toen hier een eigen lijst stond.
+ */
+export function dagKort(dag) {
+  if (!Number.isInteger(dag) || dag < 1 || dag > 7) {
+    return "?";
+  }
+  return new Date(2024, 0, dag).toLocaleDateString(locale(), { weekday: "short" }).replace(/\.$/, "");
+}
+
+// Nederlands, gemerkt met `nt`: vertaald wordt waar ze getoond worden.
+export const TEKST_GEEN_WEKKERS = nt("Geen wekkers ingesteld");
+export const TEKST_EENMALIG = nt("Eenmalig");
+export const TEKST_AFGELOPEN = nt("Eenmalig — afgelopen");
+export const TEKST_GEEN_WEKKER_ACTIEF = nt("Geen wekker actief");
+export const TEKST_STOPPEN = nt("Stoppen");
 
 /** Als er wél een melding is maar geen leesbare tekst. Zie `meldingVan`. */
-export const TEKST_MELDING_ZONDER_TEKST =
-  "Er is een melding over deze wekker, maar de tekst ontbreekt.";
+export const TEKST_MELDING_ZONDER_TEKST = nt("Er is een melding over deze wekker, maar de tekst ontbreekt.");
 
 /**
  * `[1,2,3,4,5]` naar `"ma di wo do vr"`; leeg naar `"Eenmalig"` (SPEC 3.2).
@@ -38,10 +50,10 @@ export const TEKST_MELDING_ZONDER_TEKST =
  */
 export function dagenTekst(dagen) {
   if (!Array.isArray(dagen) || dagen.length === 0) {
-    return TEKST_EENMALIG;
+    return t(TEKST_EENMALIG);
   }
   const uniek = [...new Set(dagen)].sort((a, b) => a - b);
-  return uniek.map((d) => DAGEN_KORT[d - 1] ?? "?").join(" ");
+  return uniek.map((d) => dagKort(d)).join(" ");
 }
 
 /**
@@ -76,7 +88,7 @@ export function isAfgelopen(wekker, nuMs) {
  */
 export function subtitel(wekker, nuMs) {
   if (isAfgelopen(wekker, nuMs)) {
-    return TEKST_AFGELOPEN;
+    return t(TEKST_AFGELOPEN);
   }
   return dagenTekst(wekker?.days);
 }
@@ -107,7 +119,7 @@ export function meldingVan(wekker) {
   const tekst =
     typeof bericht.text === "string" && bericht.text.trim()
       ? bericht.text
-      : TEKST_MELDING_ZONDER_TEKST;
+      : t(TEKST_MELDING_ZONDER_TEKST);
   return {
     tekst,
     severity: bericht.severity === "error" ? "error" : "notice",
@@ -142,10 +154,11 @@ export function meldingVan(wekker) {
 export function kopTekst(toestand) {
   const wekkers = toestand?.alarms;
   if (!Array.isArray(wekkers) || wekkers.length === 0) {
-    return TEKST_GEEN_WEKKERS;
+    return t(TEKST_GEEN_WEKKERS);
   }
+  // De tekst van de server blijft zoals hij komt: die is van de integratie.
   const tekst = toestand?.next_fire?.text;
-  return typeof tekst === "string" && tekst.trim() ? tekst : TEKST_GEEN_WEKKER_ACTIEF;
+  return typeof tekst === "string" && tekst.trim() ? tekst : t(TEKST_GEEN_WEKKER_ACTIEF);
 }
 
 /**
@@ -174,9 +187,10 @@ export function stopToestand(alarms, ringing) {
   const namen = bekend.map((w) => w.name).filter(Boolean);
   const tijden = [...new Set(bekend.map((w) => w.time).filter(Boolean))];
 
+  const en = ` ${t("en")} `;
   return {
     ids,
-    naam: namen.length ? namen.join(" en ") : "Wekker",
-    tijd: tijden.join(" en "),
+    naam: namen.length ? namen.join(en) : t("Wekker"),
+    tijd: tijden.join(en),
   };
 }

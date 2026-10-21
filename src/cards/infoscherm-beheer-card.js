@@ -83,6 +83,7 @@ import { resolve } from "../icons.js";
 import { Herkansing, Verbindingswacht } from "../herkansing.js";
 import { volgRaster } from "../rasterhoogte.js";
 import { vraagBevestiging } from "../vraag.js";
+import { nt, t, tc, tn } from "../taal.js";
 import {
   Abonnement,
   AgendaAbonnement,
@@ -141,20 +142,20 @@ const ICOON = {
 const icoon = (naam) => ICOON[naam] ?? resolve(naam);
 
 const BLOKKEN = [
-  { key: "personen", titel: "Medewerkers", icoon: "people", secties: ["personen"] },
-  { key: "mededelingen", titel: "Mededelingen", icoon: "bell", secties: ["mededelingen", "scherm"] },
-  { key: "verjaardagen", titel: "Verjaardagen", icoon: "cake", secties: ["verjaardagen"] },
-  { key: "praktijk", titel: "Openingstijden", icoon: "clock", secties: ["praktijk"] },
-  { key: "indeling", titel: "Indeling van het scherm", icoon: "layout", secties: ["indeling"] },
-  { key: "verlichting", titel: "Verlichting", icoon: "bulb", secties: ["installatie", "instellingen"] },
+  { key: "personen", titel: nt("Medewerkers"), icoon: "people", secties: ["personen"] },
+  { key: "mededelingen", titel: nt("Mededelingen"), icoon: "bell", secties: ["mededelingen", "scherm"] },
+  { key: "verjaardagen", titel: nt("Verjaardagen"), icoon: "cake", secties: ["verjaardagen"] },
+  { key: "praktijk", titel: nt("Openingstijden"), icoon: "clock", secties: ["praktijk"] },
+  { key: "indeling", titel: nt("Indeling van het scherm"), icoon: "layout", secties: ["indeling"] },
+  { key: "verlichting", titel: nt("Verlichting"), icoon: "bulb", secties: ["installatie", "instellingen"] },
   // 13 oktober 2026: de airco's, net als de lampen.
-  { key: "klimaat", titel: "Klimaat", icoon: "airco", secties: ["installatie", "instellingen"] },
+  { key: "klimaat", titel: nt("Klimaat"), icoon: "airco", secties: ["installatie", "instellingen"] },
   // 16 oktober 2026: de ruimtes, met de code om op het scherm te boeken.
-  { key: "ruimtes", titel: "Ruimtes", icoon: "door", secties: ["installatie", "code"] },
+  { key: "ruimtes", titel: nt("Ruimtes"), icoon: "door", secties: ["installatie", "code"] },
   // 16 oktober 2026: de wifi voor gasten. De QR-code kiest de installateur;
   // naam en wachtwoord op het scherm staan in `scherm`.
-  { key: "wifi", titel: "Wifi voor gasten", icoon: "wifi", secties: ["scherm"] },
-  { key: "instellingen", titel: "Instellingen en logo", icoon: "cog", secties: ["scherm", "instellingen"] },
+  { key: "wifi", titel: nt("Wifi voor gasten"), icoon: "wifi", secties: ["scherm"] },
+  { key: "instellingen", titel: nt("Instellingen en logo"), icoon: "cog", secties: ["scherm", "instellingen"] },
 ];
 
 /* De installatie in de kaartconfig; leeg tot de installateur iets kiest. */
@@ -162,7 +163,7 @@ const INSTALLATIE_VELDEN = ["weather", "energy", "lights", "climates", "rooms", 
 const lijstVan = (x) => (Array.isArray(x) ? x.filter((v) => typeof v === "string" && v) : typeof x === "string" && x ? [x] : []);
 
 const STANDAARD = {
-  title: "Infoscherm",
+  title: nt("Infoscherm"),
   weather: "",
   energy: "",
   lights: [],
@@ -536,14 +537,14 @@ export class InfoschermBeheerCard extends DacCard {
         <div class="kop">
           <div>
             <div class="eyebrow">DomotiApp Infoscherm</div>
-            <h2>${at(c.title)}</h2>
+            <h2>${at(c.title === STANDAARD.title ? t(STANDAARD.title) : c.title)}</h2>
           </div>
           <div class="status"></div>
         </div>
         <div class="geen" hidden></div>
         ${BLOKKEN.map(
           (b) => `<section class="blok" data-blok="${b.key}" hidden>
-              <button class="bk" type="button">${icoon(b.icoon)}<b>${b.titel}</b><span class="bfout" hidden></span><span class="tel"></span>${resolve("chevronDown")}</button>
+              <button class="bk" type="button">${icoon(b.icoon)}<b>${t(b.titel)}</b><span class="bfout" hidden></span><span class="tel"></span>${resolve("chevronDown")}</button>
               <div class="inhoud"></div>
             </section>`
         ).join("")}
@@ -556,7 +557,7 @@ export class InfoschermBeheerCard extends DacCard {
     this.teardown_.push(volgRaster(card));
     this.teardown_.push(() => this.herkansing_.stop());
     this.teardown_.push(() => {
-      for (const t of Object.values(this.timers_)) clearTimeout(t);
+      for (const tijd of Object.values(this.timers_)) clearTimeout(tijd);
       this.timers_ = {};
     });
 
@@ -615,10 +616,10 @@ export class InfoschermBeheerCard extends DacCard {
     } catch (fout) {
       if (nogNietGereed(fout)) {
         this.herkansing_.plan();
-        this.status_("Home Assistant start nog op…", "bezig");
+        this.status_(t("Home Assistant start nog op…"), "bezig");
         return;
       }
-      this.fout_ = fout?.message ?? "Het beheer kon niet laden.";
+      this.fout_ = fout?.message ?? t("Het beheer kon niet laden.");
       this.paint();
     }
   }
@@ -704,7 +705,7 @@ export class InfoschermBeheerCard extends DacCard {
       const inp = item?.querySelector('input[data-veld="aanwezig"]');
       if (inp) inp.checked = p.aanwezig;
       const lbl = item?.querySelector(".vink .vl");
-      if (lbl) lbl.textContent = p.aanwezig ? "Aanwezig" : "Afwezig";
+      if (lbl) lbl.textContent = p.aanwezig ? t("Aanwezig") : t("Afwezig");
       item?.querySelector(".avatar")?.classList.toggle("aan", p.aanwezig);
     });
     this.tel_("personen");
@@ -731,7 +732,7 @@ export class InfoschermBeheerCard extends DacCard {
       geen.textContent = this.fout_;
     } else if (this.stand_ && this.rechten_.mag_beheren === false) {
       geen.hidden = false;
-      geen.textContent = "Dit account mag het infoscherm niet beheren. Log in als receptie of beheerder.";
+      geen.textContent = t("Dit account mag het infoscherm niet beheren. Log in als receptie of beheerder.");
     } else {
       geen.hidden = true;
     }
@@ -742,8 +743,8 @@ export class InfoschermBeheerCard extends DacCard {
       sec.classList.toggle("open", sec.dataset.blok === this.open_);
     }
     if (!magTonen) return;
-    if (this.hass?.connected === false) this.status_("Geen verbinding", "fout");
-    else if (!this.bezig_.size && !this.vuil_.size) this.status_(this.laatstOpgeslagen_ ? `Opgeslagen ${this.laatstOpgeslagen_}` : "", "ok");
+    if (this.hass?.connected === false) this.status_(t("Geen verbinding"), "fout");
+    else if (!this.bezig_.size && !this.vuil_.size) this.status_(this.laatstOpgeslagen_ ? t("Opgeslagen {tijd}", { tijd: this.laatstOpgeslagen_ }) : "", "ok");
   }
 
   status_(tekst, soort = "") {
@@ -802,30 +803,32 @@ export class InfoschermBeheerCard extends DacCard {
     if (!sec) return;
     const w = this.werk_;
     const tel = {
-      personen: () => `${(w.personen ?? []).filter((p) => p.aanwezig).length} van ${(w.personen ?? []).length} aanwezig`,
+      personen: () =>
+        t("{n} van {totaal} aanwezig", { n: (w.personen ?? []).filter((p) => p.aanwezig).length, totaal: (w.personen ?? []).length }),
       mededelingen: () => `${(w.mededelingen ?? []).length}`,
       verjaardagen: () => `${(w.verjaardagen ?? []).length}`,
       praktijk: () => "",
-      indeling: () => `${(w.indeling?.blokken ?? []).length} blokken`,
-      verlichting: () => `${(w.installatie?.verlichting ?? []).length} lampen${w.instellingen?.verlichting_tonen === false ? " · uit" : ""}`,
+      indeling: () => t("{n} blokken", { n: (w.indeling?.blokken ?? []).length }),
+      verlichting: () =>
+        `${t("{n} lampen", { n: (w.installatie?.verlichting ?? []).length })}${w.instellingen?.verlichting_tonen === false ? ` · ${t("uit")}` : ""}`,
       klimaat: () => {
         const n = (w.installatie?.klimaat ?? []).length;
-        const uit = w.instellingen?.klimaat_tonen === false ? " · uit" : w.instellingen?.klimaat_bedienen === false ? " · alleen kijken" : "";
-        return `${n === 1 ? "1 airco" : `${n} airco's`}${uit}`;
+        const uit = w.instellingen?.klimaat_tonen === false ? ` · ${t("uit")}` : w.instellingen?.klimaat_bedienen === false ? ` · ${t("alleen kijken")}` : "";
+        return `${tn(n, "{n} airco", "{n} airco's")}${uit}`;
       },
       ruimtes: () => {
         const n = (w.installatie?.ruimtes ?? []).length;
-        return `${n === 1 ? "1 ruimte" : `${n} ruimtes`}${n && !w.code ? " · boeken op het scherm uit" : ""}`;
+        return `${tn(n, "{n} ruimte", "{n} ruimtes")}${n && !w.code ? ` · ${t("boeken op het scherm uit")}` : ""}`;
       },
-      wifi: () => (w.installatie?.wifi ? netwerkNaam(this.hass, w.installatie.wifi, w.scherm?.wifi_naam) : "geen QR-code gekozen"),
-      instellingen: () => `${(w.instellingen?.feeds ?? []).length} nieuwsbron(nen)`,
+      wifi: () => (w.installatie?.wifi ? netwerkNaam(this.hass, w.installatie.wifi, w.scherm?.wifi_naam) : t("geen QR-code gekozen")),
+      instellingen: () => t("{n} nieuwsbron(nen)", { n: (w.instellingen?.feeds ?? []).length }),
     }[blok]();
     sec.querySelector(".tel").textContent = tel;
     const info = this.blokInfo_(blok);
     const fout = info.secties.map((s) => this.fouten_[s]).find(Boolean);
     const bf = sec.querySelector(".bfout");
     bf.hidden = !fout;
-    bf.textContent = fout ? "niet opgeslagen" : "";
+    bf.textContent = fout ? t("niet opgeslagen") : "";
   }
 
   htmlVoet_(blok) {
@@ -835,7 +838,7 @@ export class InfoschermBeheerCard extends DacCard {
     // onderaan het blok, onder de lijst van ruimtes, zag je hem niet.
     const m = blok === "ruimtes" ? null : this.meldingen_[blok];
     if (!fout && !m) return "";
-    return `<div class="voet"><span class="melding ${fout || m?.fout ? "fout" : ""}">${at(fout ? `Niet opgeslagen: ${fout}` : m?.tekst)}</span></div>`;
+    return `<div class="voet"><span class="melding ${fout || m?.fout ? "fout" : ""}">${at(fout ? t("Niet opgeslagen: {fout}", { fout }) : m?.tekst)}</span></div>`;
   }
 
   veld_(label, naam, waarde, { type = "text", i, extra = "", s } = {}) {
@@ -874,39 +877,39 @@ export class InfoschermBeheerCard extends DacCard {
     const rijen = lijst
       .map(
         (p, i) => `<div class="item persoon" data-i="${i}">
-          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
-          <div class="avatar ${p.aanwezig ? "aan" : ""}" data-actie="foto" data-i="${i}" data-bestand="${at(p.foto)}" title="Foto kiezen">${at(initialen(p.naam))}</div>
-          ${this.veld_("Naam", "naam", p.naam, { i })}
-          ${this.veld_("Functie", "functie", p.functie, { i })}
-          ${this.schakel_("aanwezig", p.aanwezig, { i, label: p.aanwezig ? "Aanwezig" : "Afwezig" })}
+          <div class="greep" title="${t("Sleep om de volgorde te wijzigen")}">${ICOON.grip}</div>
+          <div class="avatar ${p.aanwezig ? "aan" : ""}" data-actie="foto" data-i="${i}" data-bestand="${at(p.foto)}" title="${t("Foto kiezen")}">${at(initialen(p.naam))}</div>
+          ${this.veld_(t("Naam"), "naam", p.naam, { i })}
+          ${this.veld_(t("Functie"), "functie", p.functie, { i })}
+          ${this.schakel_("aanwezig", p.aanwezig, { i, label: p.aanwezig ? t("Aanwezig") : t("Afwezig") })}
           <div class="knoppen">
-            ${p.foto ? `<button class="knop ico" type="button" data-actie="fotoweg" data-i="${i}" title="Foto weghalen">${resolve("close")}</button>` : ""}
-            <button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button>
+            ${p.foto ? `<button class="knop ico" type="button" data-actie="fotoweg" data-i="${i}" title="${t("Foto weghalen")}">${resolve("close")}</button>` : ""}
+            <button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="${t("Verwijderen")}">${resolve("minus")}</button>
           </div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Tik op de cirkel om een foto te kiezen. Zonder foto staan de initialen op het scherm (eerste letter van de voornaam en van het laatste woord van de achternaam). Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. De schakelaar zet iemand aan- of afwezig, ook achteraf. Alles wordt vanzelf opgeslagen.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Nog geen medewerkers.</div>`}</div>
-      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Medewerker toevoegen</button></div>`;
+    return `<div class="hulp">${t("Tik op de cirkel om een foto te kiezen. Zonder foto staan de initialen op het scherm (eerste letter van de voornaam en van het laatste woord van de achternaam). Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. De schakelaar zet iemand aan- of afwezig, ook achteraf. Alles wordt vanzelf opgeslagen.")}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Nog geen medewerkers.")}</div>`}</div>
+      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} ${t("Medewerker toevoegen")}</button></div>`;
   }
 
   htmlMededelingen_(lijst = [], scherm = {}) {
     const rijen = lijst
       .map(
         (m, i) => `<div class="item mededeling" data-i="${i}">
-          <div class="veld"><label>Tekst op het scherm</label><textarea data-veld="tekst" data-i="${i}" rows="2">${at(m.tekst)}</textarea></div>
-          ${this.veld_("Vanaf", "van", m.van, { i, type: "datetime-local" })}
-          ${this.veld_("Tot en met", "tot", m.tot, { i, type: "datetime-local" })}
-          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
+          <div class="veld"><label>${t("Tekst op het scherm")}</label><textarea data-veld="tekst" data-i="${i}" rows="2">${at(m.tekst)}</textarea></div>
+          ${this.veld_(t("Vanaf"), "van", m.van, { i, type: "datetime-local" })}
+          ${this.veld_(t("Tot en met"), "tot", m.tot, { i, type: "datetime-local" })}
+          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="${t("Verwijderen")}">${resolve("minus")}</button></div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Wat er in het blok Mededelingen op het welkomscherm staat: "Vrijdag 20 september zijn wij vanaf 12:00 gesloten", een nieuwe collega, een verbouwing. Zonder datum en tijd staat een mededeling er altijd. Met meerdere schuiven ze vanzelf door; op de iPad kan er ook geveegd worden.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Geen mededeling.</div>`}</div>
+    return `<div class="hulp">${at(t("Wat er in het blok Mededelingen op het welkomscherm staat: \"Vrijdag 20 september zijn wij vanaf 12:00 gesloten\", een nieuwe collega, een verbouwing. Zonder datum en tijd staat een mededeling er altijd. Met meerdere schuiven ze vanzelf door; op de iPad kan er ook geveegd worden."))}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Geen mededeling.")}</div>`}</div>
       <div class="voet">
-        <button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Mededeling toevoegen</button>
-        ${this.veld_("Elke mededeling blijft staan (seconden)", "mededeling_interval", scherm.mededeling_interval ?? 10, { type: "number", s: "scherm", extra: 'min="3" max="600"' })}
+        <button class="knop" type="button" data-actie="nieuw">${resolve("plus")} ${t("Mededeling toevoegen")}</button>
+        ${this.veld_(t("Elke mededeling blijft staan (seconden)"), "mededeling_interval", scherm.mededeling_interval ?? 10, { type: "number", s: "scherm", extra: 'min="3" max="600"' })}
       </div>`;
   }
 
@@ -914,16 +917,16 @@ export class InfoschermBeheerCard extends DacCard {
     const rijen = lijst
       .map(
         (v, i) => `<div class="item verjaardag" data-i="${i}">
-          ${this.veld_("Naam", "naam", v.naam, { i })}
-          ${this.veld_("Geboortedatum", "datum", v.datum, { i, type: "date" })}
-          ${this.schakel_("jaar_tonen", v.jaar_tonen !== false, { i, label: "Leeftijd tonen" })}
-          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
+          ${this.veld_(t("Naam"), "naam", v.naam, { i })}
+          ${this.veld_(t("Geboortedatum"), "datum", v.datum, { i, type: "date" })}
+          ${this.schakel_("jaar_tonen", v.jaar_tonen !== false, { i, label: t("Leeftijd tonen") })}
+          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="verwijder" data-i="${i}" title="${t("Verwijderen")}">${resolve("minus")}</button></div>
         </div>`
       )
       .join("");
-    return `<div class="hulp">Iedereen die op het scherm gefeliciteerd mag worden: medewerkers, vrijwilligers, bewoners. Het blok Verjaardagen op het welkomscherm toont wie er vandaag en binnenkort jarig is; "Het hele jaar" in de kop geeft het hele jaar.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Nog geen verjaardagen.</div>`}</div>
-      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} Verjaardag toevoegen</button></div>`;
+    return `<div class="hulp">${at(t("Iedereen die op het scherm gefeliciteerd mag worden: medewerkers, vrijwilligers, bewoners. Het blok Verjaardagen op het welkomscherm toont wie er vandaag en binnenkort jarig is; \"Het hele jaar\" in de kop geeft het hele jaar."))}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Nog geen verjaardagen.")}</div>`}</div>
+      <div><button class="knop" type="button" data-actie="nieuw">${resolve("plus")} ${t("Verjaardag toevoegen")}</button></div>`;
   }
 
   htmlPraktijk_(p = {}) {
@@ -932,8 +935,8 @@ export class InfoschermBeheerCard extends DacCard {
       const vakken = ot[dag] ?? [];
       const dicht = vakken.length === 0;
       const v = (n, k) => vakken[n]?.[k] ?? "";
-      return `<span class="dag">${DAGNAMEN[dag]}</span>
-        ${this.schakel_("ot_open", !dicht, { i: dag, label: dicht ? "gesloten" : "open" })}
+      return `<span class="dag">${t(DAGNAMEN[dag])}</span>
+        ${this.schakel_("ot_open", !dicht, { i: dag, label: dicht ? t("gesloten") : tc("openingstijd", "open") })}
         <input type="time" data-veld="ot_0_0" data-i="${dag}" value="${v(0, 0)}" ${dicht ? "disabled" : ""}>
         <input type="time" data-veld="ot_0_1" data-i="${dag}" value="${v(0, 1)}" ${dicht ? "disabled" : ""}>
         <input type="time" class="vak2" data-veld="ot_1_0" data-i="${dag}" value="${v(1, 0)}" ${dicht ? "disabled" : ""}>
@@ -942,26 +945,26 @@ export class InfoschermBeheerCard extends DacCard {
     const uitz = (p.uitzonderingen ?? [])
       .map(
         (u, i) => `<div class="item uitz" data-i="${i}">
-          ${this.veld_("Datum", "u_datum", u.datum, { i, type: "date" })}
-          ${this.schakel_("u_open", (u.tijden ?? []).length > 0, { i, label: (u.tijden ?? []).length ? "open" : "gesloten" })}
-          ${this.veld_("Van", "u_van", u.tijden?.[0]?.[0] ?? "", { i, type: "time", extra: u.tijden?.length ? "" : "disabled" })}
-          ${this.veld_("Tot", "u_tot", u.tijden?.[0]?.[1] ?? "", { i, type: "time", extra: u.tijden?.length ? "" : "disabled" })}
-          ${this.veld_("Reden (op het scherm)", "u_reden", u.reden, { i })}
-          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="u_verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
+          ${this.veld_(t("Datum"), "u_datum", u.datum, { i, type: "date" })}
+          ${this.schakel_("u_open", (u.tijden ?? []).length > 0, { i, label: (u.tijden ?? []).length ? tc("openingstijd", "open") : t("gesloten") })}
+          ${this.veld_(t("Van"), "u_van", u.tijden?.[0]?.[0] ?? "", { i, type: "time", extra: u.tijden?.length ? "" : "disabled" })}
+          ${this.veld_(t("Tot"), "u_tot", u.tijden?.[0]?.[1] ?? "", { i, type: "time", extra: u.tijden?.length ? "" : "disabled" })}
+          ${this.veld_(t("Reden (op het scherm)"), "u_reden", u.reden, { i })}
+          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="u_verwijder" data-i="${i}" title="${t("Verwijderen")}">${resolve("minus")}</button></div>
         </div>`
       )
       .join("");
     return `
-      <div class="veld"><label>Openingstijden</label>
+      <div class="veld"><label>${t("Openingstijden")}</label>
         <div class="ot-tabel">
-          <span class="k"></span><span class="k"></span><span class="k">Open</span><span class="k">Dicht</span><span class="k vak2">Open</span><span class="k vak2">Dicht</span>
+          <span class="k"></span><span class="k"></span><span class="k">${t("Open")}</span><span class="k">${t("Dicht")}</span><span class="k vak2">${t("Open")}</span><span class="k vak2">${t("Dicht")}</span>
           ${rijenOt}
         </div>
-        <div class="hulp">Twee vakken per dag voor een middagpauze. Het welkomscherm zegt ermee "Vandaag geopend tot 17:00" of "Gesloten · morgen open om 08:00".</div>
+        <div class="hulp">${at(t("Twee vakken per dag voor een middagpauze. Het welkomscherm zegt ermee \"Vandaag geopend tot 17:00\" of \"Gesloten · morgen open om 08:00\"."))}</div>
       </div>
-      <div class="veld"><label>Afwijkende dagen (feestdagen, studiedagen)</label>
-        <div class="lijst">${uitz || `<div class="leeg">Geen afwijkende dagen.</div>`}</div>
-        <div style="margin-top:8px"><button class="knop" type="button" data-actie="u_nieuw">${resolve("plus")} Afwijkende dag toevoegen</button></div>
+      <div class="veld"><label>${t("Afwijkende dagen (feestdagen, studiedagen)")}</label>
+        <div class="lijst">${uitz || `<div class="leeg">${t("Geen afwijkende dagen.")}</div>`}</div>
+        <div style="margin-top:8px"><button class="knop" type="button" data-actie="u_nieuw">${resolve("plus")} ${t("Afwijkende dag toevoegen")}</button></div>
       </div>`;
   }
 
@@ -974,33 +977,33 @@ export class InfoschermBeheerCard extends DacCard {
         const info = BLOK_INFO[b.soort];
         if (!info) return "";
         const ontbreekt = blokOntbreekt(b.soort, this.stand_, [], vandaag);
-        return `<div class="ib ${ontbreekt ? "ontbreekt" : ""}" data-id="${at(b.id)}" style="${this.ibStijl_(b)}" title="${at(ontbreekt ? `${info.naam}: ${ontbreekt}` : `${info.naam} -- sleep om te verplaatsen, hoek rechtsonder om de maat te wijzigen`)}">
+        return `<div class="ib ${ontbreekt ? "ontbreekt" : ""}" data-id="${at(b.id)}" style="${this.ibStijl_(b)}" title="${at(ontbreekt ? `${t(info.naam)}: ${ontbreekt}` : t("{naam} -- sleep om te verplaatsen, hoek rechtsonder om de maat te wijzigen", { naam: t(info.naam) }))}">
           <div class="ib-in">
-            <div class="ib-kop">${resolve(info.icoon, "question")}<span>${info.naam}</span></div>
+            <div class="ib-kop">${resolve(info.icoon, "question")}<span>${at(t(info.naam))}</span></div>
             ${ontbreekt ? `<div class="ib-nb">${at(ontbreekt)}</div>` : ""}
             ${
               info.aantal
-                ? `<div class="ib-aantal"><span>Toon</span><button type="button" data-actie="aantal_min" data-id="${at(b.id)}" title="Minder">−</button><b>${
-                    b.aantal > 0 ? b.aantal : "alle"
-                  }</b><button type="button" data-actie="aantal_plus" data-id="${at(b.id)}" title="Meer">+</button></div>`
+                ? `<div class="ib-aantal"><span>${t("Toon")}</span><button type="button" data-actie="aantal_min" data-id="${at(b.id)}" title="${t("Minder")}">−</button><b>${
+                    b.aantal > 0 ? b.aantal : t("alle")
+                  }</b><button type="button" data-actie="aantal_plus" data-id="${at(b.id)}" title="${t("Meer")}">+</button></div>`
                 : ""
             }
-            <button class="ib-weg" type="button" data-actie="blok_weg" data-id="${at(b.id)}" title="Van het scherm halen">${resolve("close")}</button>
-            <div class="ib-greep" title="Maat wijzigen"></div>
+            <button class="ib-weg" type="button" data-actie="blok_weg" data-id="${at(b.id)}" title="${t("Van het scherm halen")}">${resolve("close")}</button>
+            <div class="ib-greep" title="${t("Maat wijzigen")}"></div>
           </div>
         </div>`;
       })
       .join("");
     const inGebruik = new Set(blokken.map((b) => b.soort));
     const opties = BLOK_SOORTEN.filter((s) => !inGebruik.has(s));
-    return `<div class="hulp">Zo staat het welkomscherm op de iPad. Sleep een blok om het te verplaatsen, trek aan de hoek rechtsonder om het groter of kleiner te maken, en zet met − en + hoeveel er in een blok staat ("alle" = zoveel als er is). Een gestippeld blok staat NIET op het scherm zolang er niets in te tonen valt; de reden staat erin. Elke wijziging gaat meteen naar het scherm.</div>
+    return `<div class="hulp">${at(t("Zo staat het welkomscherm op de iPad. Sleep een blok om het te verplaatsen, trek aan de hoek rechtsonder om het groter of kleiner te maken, en zet met − en + hoeveel er in een blok staat (\"alle\" = zoveel als er is). Een gestippeld blok staat NIET op het scherm zolang er niets in te tonen valt; de reden staat erin. Elke wijziging gaat meteen naar het scherm."))}</div>
       <div class="raster">${ibs}</div>
       <div class="knoppen" style="justify-content: flex-start">
         <select data-actie="blok_toevoegen" ${opties.length ? "" : "disabled"} style="width:auto">
-          <option value="">${opties.length ? "Blok toevoegen…" : "Alle blokken staan op het scherm"}</option>
-          ${opties.map((s) => `<option value="${s}">${BLOK_INFO[s].naam}</option>`).join("")}
+          <option value="">${opties.length ? t("Blok toevoegen…") : t("Alle blokken staan op het scherm")}</option>
+          ${opties.map((s) => `<option value="${s}">${at(t(BLOK_INFO[s].naam))}</option>`).join("")}
         </select>
-        <button class="knop" type="button" data-actie="indeling_standaard">Standaardindeling</button>
+        <button class="knop" type="button" data-actie="indeling_standaard">${t("Standaardindeling")}</button>
       </div>`;
   }
 
@@ -1014,16 +1017,16 @@ export class InfoschermBeheerCard extends DacCard {
       .map((l, i) => {
         const a = this.hass?.states?.[l.entity]?.attributes ?? {};
         return `<div class="item lamp" data-i="${i}" data-lijst="verlichting">
-          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
+          <div class="greep" title="${t("Sleep om de volgorde te wijzigen")}">${ICOON.grip}</div>
           <div class="ent"><b>${at(a.friendly_name ?? l.entity)}</b><span>${at(l.entity)}</span></div>
-          ${this.veld_("Naam op het scherm", "l_naam", l.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+          ${this.veld_(t("Naam op het scherm"), "l_naam", l.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
         </div>`;
       })
       .join("");
     return `
-      ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: "Verlichting op het scherm tonen", s: "instellingen" })}
-      <div class="hulp">De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart); een nieuwe lamp komt achteraan.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen lampen gekozen.</div>`}</div>`;
+      ${this.schakel_("verlichting_tonen", instellingen.verlichting_tonen !== false, { label: t("Verlichting op het scherm tonen"), s: "instellingen" })}
+      <div class="hulp">${t("De namen zoals ze op het scherm staan. Leeg = de naam uit Home Assistant. Sleep aan de greep links om de volgorde te wijzigen; dat is de volgorde op het scherm. Welke lampen erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart); een nieuwe lamp komt achteraan.")}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Er zijn nog geen lampen gekozen.")}</div>`}</div>`;
   }
 
   /**
@@ -1037,17 +1040,17 @@ export class InfoschermBeheerCard extends DacCard {
       .map((k, i) => {
         const a = this.hass?.states?.[k.entity]?.attributes ?? {};
         return `<div class="item airco" data-i="${i}" data-lijst="klimaat">
-          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
+          <div class="greep" title="${t("Sleep om de volgorde te wijzigen")}">${ICOON.grip}</div>
           <div class="ent"><b>${at(a.friendly_name ?? k.entity)}</b><span>${at(k.entity)}</span></div>
-          ${this.veld_("Naam op het scherm", "k_naam", k.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+          ${this.veld_(t("Naam op het scherm"), "k_naam", k.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
         </div>`;
       })
       .join("");
     return `
-      ${this.schakel_("klimaat_tonen", instellingen.klimaat_tonen !== false, { label: "Airco's op het scherm tonen", s: "instellingen" })}
-      ${this.schakel_("klimaat_bedienen", instellingen.klimaat_bedienen !== false, { label: "Op het scherm laten bedienen", s: "instellingen" })}
-      <div class="hulp">Op het welkomscherm staat per airco de temperatuur in de ruimte en wat er ingesteld is. Wie op het blok tikt, kan de airco's daar aan- en uitzetten en bijstellen; zet "laten bedienen" uit als bezoekers alleen mogen kijken. Het blok zelf zet je op het scherm met Indeling, Blok toevoegen. De namen hieronder zijn die op het scherm (leeg = de naam uit Home Assistant), en slepen aan de greep bepaalt de volgorde. Welke airco's erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen airco's gekozen.</div>`}</div>`;
+      ${this.schakel_("klimaat_tonen", instellingen.klimaat_tonen !== false, { label: t("Airco's op het scherm tonen"), s: "instellingen" })}
+      ${this.schakel_("klimaat_bedienen", instellingen.klimaat_bedienen !== false, { label: t("Op het scherm laten bedienen"), s: "instellingen" })}
+      <div class="hulp">${at(t("Op het welkomscherm staat per airco de temperatuur in de ruimte en wat er ingesteld is. Wie op het blok tikt, kan de airco's daar aan- en uitzetten en bijstellen; zet \"laten bedienen\" uit als bezoekers alleen mogen kijken. Het blok zelf zet je op het scherm met Indeling, Blok toevoegen. De namen hieronder zijn die op het scherm (leeg = de naam uit Home Assistant), en slepen aan de greep bepaalt de volgorde. Welke airco's erbij horen kiest de installateur in de kaartinstellingen van DEZE kaart."))}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Er zijn nog geen airco's gekozen.")}</div>`}</div>`;
   }
 
   /**
@@ -1061,24 +1064,24 @@ export class InfoschermBeheerCard extends DacCard {
       .map((r, i) => {
         const a = this.hass?.states?.[r.entity]?.attributes ?? {};
         const weg = r.gemaakt
-          ? `<button class="knop ico gevaar" type="button" data-actie="r_weg" data-ruimte="${at(r.entity)}" title="Ruimte weghalen">${resolve("minus")}</button>`
-          : `<span class="van" title="Deze agenda koos de installateur in de kaartinstellingen; daar gaat hij ook weer weg.">installateur</span>`;
+          ? `<button class="knop ico gevaar" type="button" data-actie="r_weg" data-ruimte="${at(r.entity)}" title="${t("Ruimte weghalen")}">${resolve("minus")}</button>`
+          : `<span class="van" title="${t("Deze agenda koos de installateur in de kaartinstellingen; daar gaat hij ook weer weg.")}">${t("installateur")}</span>`;
         return `<div class="item ruimte" data-i="${i}" data-lijst="ruimtes">
-          <div class="greep" title="Sleep om de volgorde te wijzigen">${ICOON.grip}</div>
+          <div class="greep" title="${t("Sleep om de volgorde te wijzigen")}">${ICOON.grip}</div>
           <div class="ent"><b>${at(a.friendly_name ?? r.entity)}</b><span>${at(r.entity)}</span></div>
-          ${this.veld_("Naam op het scherm", "r_naam", r.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
+          ${this.veld_(t("Naam op het scherm"), "r_naam", r.naam, { i, s: "installatie", extra: `placeholder="${at(a.friendly_name ?? "")}"` })}
           <div class="knoppen">${weg}</div>
         </div>`;
       })
       .join("");
     const m = this.ruimteMelding_;
     const namenEnVolgorde = `
-      <div class="sub">Ruimtes</div>
-      <div class="hulp">Elke ruimte heeft een eigen agenda in Home Assistant; daar staan de boekingen in. De namen hieronder zijn die op het scherm (leeg = de naam van de agenda), en slepen aan de greep bepaalt de volgorde. Weghalen haalt ook de agenda weg, met alle boekingen erin.</div>
-      <div class="lijst">${rijen || `<div class="leeg">Er zijn nog geen ruimtes.</div>`}</div>
+      <div class="sub">${t("Ruimtes")}</div>
+      <div class="hulp">${t("Elke ruimte heeft een eigen agenda in Home Assistant; daar staan de boekingen in. De namen hieronder zijn die op het scherm (leeg = de naam van de agenda), en slepen aan de greep bepaalt de volgorde. Weghalen haalt ook de agenda weg, met alle boekingen erin.")}</div>
+      <div class="lijst">${rijen || `<div class="leeg">${t("Er zijn nog geen ruimtes.")}</div>`}</div>
       <div class="rij toevoegen">
-        ${this.veld_("Nieuwe ruimte", "r_nieuw_naam", this.nieuweRuimte_ ?? "", { s: "ruimte_nieuw", extra: 'placeholder="Bijvoorbeeld: Spreekruimte" autocomplete="off"' })}
-        <button class="knop" type="button" data-actie="r_nieuw">${resolve("plus")}<span>Toevoegen</span></button>
+        ${this.veld_(t("Nieuwe ruimte"), "r_nieuw_naam", this.nieuweRuimte_ ?? "", { s: "ruimte_nieuw", extra: `placeholder="${at(t("Bijvoorbeeld: Spreekruimte"))}" autocomplete="off"` })}
+        <button class="knop" type="button" data-actie="r_nieuw">${resolve("plus")}<span>${t("Toevoegen")}</span></button>
       </div>
       ${m ? `<div class="voet"><span class="melding ${m.fout ? "fout" : "goed"}" role="status">${at(m.tekst)}</span></div>` : ""}`;
     // Nog geen ruimtes: eerst er een maken. Tot 0.76.0 kon dat alleen een
@@ -1086,7 +1089,7 @@ export class InfoschermBeheerCard extends DacCard {
     // 16 oktober 2026: "De receptioniste moet dat zelf kunnen maken."
     if (!ruimtes.length) {
       return `
-        <div class="hulp">Voeg hieronder een ruimte toe, bijvoorbeeld de spreekruimte of de kleine vergaderruimte. Daarna kun je hier boeken, en een code instellen om op de iPad te boeken. Op het scherm komt het blok met Indeling, Blok toevoegen, Ruimtes.</div>
+        <div class="hulp">${t("Voeg hieronder een ruimte toe, bijvoorbeeld de spreekruimte of de kleine vergaderruimte. Daarna kun je hier boeken, en een code instellen om op de iPad te boeken. Op het scherm komt het blok met Indeling, Blok toevoegen, Ruimtes.")}</div>
         ${namenEnVolgorde}`;
     }
 
@@ -1110,7 +1113,7 @@ export class InfoschermBeheerCard extends DacCard {
                   <span class="r-titel">${at(b.afspraak.titel)}</span>
                   <div class="knoppen">${
                     b.afspraak.uid
-                      ? `<button class="knop ico gevaar" type="button" data-actie="r_vrij" data-ruimte="${at(b.entity)}" data-uid="${at(b.afspraak.uid)}" data-rid="${at(b.afspraak.recurrence_id ?? "")}" title="Vrijgeven">${resolve("minus")}</button>`
+                      ? `<button class="knop ico gevaar" type="button" data-actie="r_vrij" data-ruimte="${at(b.entity)}" data-uid="${at(b.afspraak.uid)}" data-rid="${at(b.afspraak.recurrence_id ?? "")}" title="${t("Vrijgeven")}">${resolve("minus")}</button>`
                       : ""
                   }</div>
                 </div>`
@@ -1118,26 +1121,26 @@ export class InfoschermBeheerCard extends DacCard {
               .join("")}`
           )
           .join("")
-      : `<div class="leeg">${geladen ? "De komende twee weken is er niets geboekt." : "De agenda's worden gelezen…"}</div>`;
+      : `<div class="leeg">${geladen ? t("De komende twee weken is er niets geboekt.") : t("De agenda's worden gelezen…")}</div>`;
 
     return `
-      <div class="hulp">Wat hier geboekt wordt, staat in de agenda van die ruimte in Home Assistant. Op het scherm staat alleen of een ruimte vrij of bezet is en tot wanneer; de omschrijving komt er nooit op.</div>
-      <div class="sub">Nieuwe boeking</div>
-      ${this.keuze_("Ruimte", "ruimte", f.ruimte, ruimtes.map((r) => [r.entity, naam(r)]), { s: "boeken" })}
+      <div class="hulp">${t("Wat hier geboekt wordt, staat in de agenda van die ruimte in Home Assistant. Op het scherm staat alleen of een ruimte vrij of bezet is en tot wanneer; de omschrijving komt er nooit op.")}</div>
+      <div class="sub">${t("Nieuwe boeking")}</div>
+      ${this.keuze_(tc("boeken", "Ruimte"), "ruimte", f.ruimte, ruimtes.map((r) => [r.entity, naam(r)]), { s: "boeken" })}
       <div class="rij drie">
-        ${this.veld_("Datum", "datum", f.datum ?? "", { type: "date", s: "boeken" })}
-        ${this.veld_("Van", "van", f.van ?? "", { type: "time", s: "boeken" })}
-        ${this.veld_("Tot", "tot", f.tot ?? "", { type: "time", s: "boeken" })}
+        ${this.veld_(t("Datum"), "datum", f.datum ?? "", { type: "date", s: "boeken" })}
+        ${this.veld_(t("Van"), "van", f.van ?? "", { type: "time", s: "boeken" })}
+        ${this.veld_(t("Tot"), "tot", f.tot ?? "", { type: "time", s: "boeken" })}
       </div>
-      ${this.veld_("Omschrijving (niet op het scherm)", "omschrijving", f.omschrijving ?? "", { s: "boeken", extra: 'placeholder="Bijvoorbeeld: teamoverleg"' })}
-      <div class="voet"><button class="knop" type="button" data-actie="r_boek">${resolve("plus")}<span>Boeken</span></button>${
+      ${this.veld_(t("Omschrijving (niet op het scherm)"), "omschrijving", f.omschrijving ?? "", { s: "boeken", extra: `placeholder="${at(t("Bijvoorbeeld: teamoverleg"))}"` })}
+      <div class="voet"><button class="knop" type="button" data-actie="r_boek">${resolve("plus")}<span>${t("Boeken")}</span></button>${
         this.meldingen_.ruimtes ? `<span class="melding ${this.meldingen_.ruimtes.fout ? "fout" : "goed"}" role="status">${at(this.meldingen_.ruimtes.tekst)}</span>` : ""
       }</div>
-      <div class="sub">Geboekt, de komende twee weken</div>
+      <div class="sub">${t("Geboekt, de komende twee weken")}</div>
       <div class="lijst">${lijst}</div>
-      <div class="sub">Boeken op het scherm</div>
-      ${this.veld_("Code", "code", this.werk_.code ?? "", { s: "code", extra: 'inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Bijvoorbeeld 4821"' })}
-      <div class="hulp">Met deze code kunnen medewerkers op de iPad zelf een ruimte boeken: op het scherm op Ruimtes tikken, dan op Boeken. Vier tot acht cijfers. Leeg = boeken op het scherm staat uit. De code staat nooit op het scherm zelf.</div>
+      <div class="sub">${t("Boeken op het scherm")}</div>
+      ${this.veld_(t("Code"), "code", this.werk_.code ?? "", { s: "code", extra: `inputmode="numeric" autocomplete="off" maxlength="8" placeholder="${at(t("Bijvoorbeeld 4821"))}"` })}
+      <div class="hulp">${t("Met deze code kunnen medewerkers op de iPad zelf een ruimte boeken: op het scherm op Ruimtes tikken, dan op Boeken. Vier tot acht cijfers. Leeg = boeken op het scherm staat uit. De code staat nooit op het scherm zelf.")}</div>
       ${namenEnVolgorde}`;
   }
 
@@ -1148,81 +1151,81 @@ export class InfoschermBeheerCard extends DacCard {
   htmlWifi_(s = {}, inst = {}) {
     const id = inst?.wifi;
     if (!id) {
-      return `<div class="hulp">Er is nog geen QR-code gekozen. Dat doet de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart): bij UniFi Network de entiteit QR-code van het gastnetwerk.</div>`;
+      return `<div class="hulp">${t("Er is nog geen QR-code gekozen. Dat doet de installateur in de kaartinstellingen van DEZE kaart (bewerkmodus, potlood bij de kaart): bij UniFi Network de entiteit QR-code van het gastnetwerk.")}</div>`;
     }
     const adres = qrAdres(this.hass, id);
     const uitUnifi = netwerkNaam(this.hass, id, "");
     return `
       <div class="b-onder">
-        <div class="plaatje wifi">${adres ? `<img src="${at(adres)}" alt="QR-code van de wifi">` : "–"}</div>
-        <div class="hulp">Deze code staat op het scherm; wie hem scant met de camera van zijn telefoon, is meteen verbonden. Het blok zet je op het scherm met Indeling, Blok toevoegen.</div>
+        <div class="plaatje wifi">${adres ? `<img src="${at(adres)}" alt="${t("QR-code van de wifi")}">` : "–"}</div>
+        <div class="hulp">${t("Deze code staat op het scherm; wie hem scant met de camera van zijn telefoon, is meteen verbonden. Het blok zet je op het scherm met Indeling, Blok toevoegen.")}</div>
       </div>
       <div class="rij twee">
-        ${this.veld_("Netwerknaam op het scherm", "wifi_naam", s.wifi_naam ?? "", { s: "scherm", extra: `placeholder="${at(uitUnifi)}"` })}
-        ${this.veld_("Wachtwoord op het scherm", "wifi_wachtwoord", s.wifi_wachtwoord ?? "", { s: "scherm", extra: 'placeholder="Leeg = alleen de QR-code" autocomplete="off"' })}
+        ${this.veld_(t("Netwerknaam op het scherm"), "wifi_naam", s.wifi_naam ?? "", { s: "scherm", extra: `placeholder="${at(uitUnifi)}"` })}
+        ${this.veld_(t("Wachtwoord op het scherm"), "wifi_wachtwoord", s.wifi_wachtwoord ?? "", { s: "scherm", extra: `placeholder="${at(t("Leeg = alleen de QR-code"))}" autocomplete="off"` })}
       </div>
-      <div class="hulp">Leeg = de naam uit UniFi. Het wachtwoord geeft UniFi niet door aan Home Assistant; het zit alleen in de QR-code. Vul het in voor wie niet kan scannen. Wordt het in UniFi vernieuwd, dan past de QR-code zich vanzelf aan, deze tekst niet.</div>`;
+      <div class="hulp">${t("Leeg = de naam uit UniFi. Het wachtwoord geeft UniFi niet door aan Home Assistant; het zit alleen in de QR-code. Vul het in voor wie niet kan scannen. Wordt het in UniFi vernieuwd, dan past de QR-code zich vanzelf aan, deze tekst niet.")}</div>`;
   }
 
   htmlInstellingen_(s = {}, instellingen = {}) {
     const feeds = (instellingen.feeds ?? [])
       .map(
         (f, i) => `<div class="item feed" data-i="${i}">
-          ${this.veld_("Naam", "f_naam", f.naam, { i, s: "instellingen" })}
-          ${this.veld_("Adres van de RSS-feed", "f_url", f.url, { i, type: "url", s: "instellingen" })}
-          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="f_verwijder" data-i="${i}" title="Verwijderen">${resolve("minus")}</button></div>
-          ${this.feedFouten_[f.url] ? `<div class="feedfout" style="grid-column: 1 / -1">Niet opgehaald: ${at(this.feedFouten_[f.url])}</div>` : ""}
+          ${this.veld_(t("Naam"), "f_naam", f.naam, { i, s: "instellingen" })}
+          ${this.veld_(t("Adres van de RSS-feed"), "f_url", f.url, { i, type: "url", s: "instellingen" })}
+          <div class="knoppen"><button class="knop ico gevaar" type="button" data-actie="f_verwijder" data-i="${i}" title="${t("Verwijderen")}">${resolve("minus")}</button></div>
+          ${this.feedFouten_[f.url] ? `<div class="feedfout" style="grid-column: 1 / -1">${at(t("Niet opgehaald: {fout}", { fout: this.feedFouten_[f.url] }))}</div>` : ""}
         </div>`
       )
       .join("");
     return `
       <div class="rij twee">
-        <div class="veld"><label>Logo</label>
+        <div class="veld"><label>${t("Logo")}</label>
           <div class="b-onder">
             <div class="plaatje logo${s.logo ? ` op-${s.uiterlijk === "licht" ? "licht" : "donker"}` : ""}" data-bestand="${at(s.logo)}">${s.logo ? "" : resolve("camera")}</div>
-            <button class="knop klein" type="button" data-actie="logo">${resolve("camera")} ${s.logo ? "Ander logo" : "Logo kiezen"}</button>
-            ${s.logo ? `<button class="knop klein" type="button" data-actie="logoweg">${resolve("close")} Logo weg</button>` : ""}
+            <button class="knop klein" type="button" data-actie="logo">${resolve("camera")} ${s.logo ? t("Ander logo") : t("Logo kiezen")}</button>
+            ${s.logo ? `<button class="knop klein" type="button" data-actie="logoweg">${resolve("close")} ${t("Logo weg")}</button>` : ""}
           </div>
-          <div class="hulp">Het logo houdt zijn eigen verhouding: lang, breed of vierkant. Het voorbeeld staat op de ondergrond van het scherm (Uiterlijk hieronder). Een doorzichtige rand gaat er bij het uploaden af.</div>
+          <div class="hulp">${t("Het logo houdt zijn eigen verhouding: lang, breed of vierkant. Het voorbeeld staat op de ondergrond van het scherm (Uiterlijk hieronder). Een doorzichtige rand gaat er bij het uploaden af.")}</div>
           <div class="hulp logo-waarschuwing" hidden></div>
         </div>
-        <div class="veld"><label>Accentkleur op het scherm</label>
+        <div class="veld"><label>${t("Accentkleur op het scherm")}</label>
           <div class="b-onder">
             <input type="color" data-veld="accent_kleur" data-s="scherm" value="${at(s.accent || "#026fa1")}">
-            <input type="text" data-veld="accent" data-s="scherm" value="${at(s.accent)}" placeholder="leeg = standaard" style="max-width: 140px">
+            <input type="text" data-veld="accent" data-s="scherm" value="${at(s.accent)}" placeholder="${t("leeg = standaard")}" style="max-width: 140px">
           </div>
         </div>
       </div>
       <div class="rij drie">
-        ${this.keuze_("Uiterlijk", "uiterlijk", s.uiterlijk ?? "donker", [["donker", "Donker"], ["licht", "Licht"]], { s: "scherm" })}
-        ${this.keuze_("Vorm van de foto's", "foto_vorm", s.foto_vorm ?? "rond", [["rond", "Rond"], ["vierkant", "Afgerond vierkant"]], { s: "scherm" })}
-        ${this.keuze_("Pagina Aanwezig", "aanwezig_weergave", s.aanwezig_weergave ?? "gescheiden", [
-          ["gescheiden", "Aanwezig en afwezig naast elkaar"],
-          ["functie", "Per functie, naast elkaar"],
-          ["lijst", "Eén lijst"],
+        ${this.keuze_(t("Uiterlijk"), "uiterlijk", s.uiterlijk ?? "donker", [["donker", t("Donker")], ["licht", tc("uiterlijk", "Licht")]], { s: "scherm" })}
+        ${this.keuze_(t("Vorm van de foto's"), "foto_vorm", s.foto_vorm ?? "rond", [["rond", t("Rond")], ["vierkant", t("Afgerond vierkant")]], { s: "scherm" })}
+        ${this.keuze_(t("Pagina Aanwezig"), "aanwezig_weergave", s.aanwezig_weergave ?? "gescheiden", [
+          ["gescheiden", t("Aanwezig en afwezig naast elkaar")],
+          ["functie", t("Per functie, naast elkaar")],
+          ["lijst", t("Eén lijst")],
         ], { s: "scherm" })}
       </div>
       <div class="rij drie">
-        ${this.veld_("Terug naar Welkom na (seconden, 0 = nooit)", "terug_na", s.terug_na ?? 60, { type: "number", s: "scherm", extra: 'min="0" max="3600"' })}
-        ${this.veld_("Schaal (1 = iPad 11 inch)", "schaal", s.schaal ?? 1, { type: "number", s: "scherm", extra: 'min="0.5" max="2" step="0.05"' })}
+        ${this.veld_(t("Terug naar Welkom na (seconden, 0 = nooit)"), "terug_na", s.terug_na ?? 60, { type: "number", s: "scherm", extra: 'min="0" max="3600"' })}
+        ${this.veld_(t("Schaal (1 = iPad 11 inch)"), "schaal", s.schaal ?? 1, { type: "number", s: "scherm", extra: 'min="0.5" max="2" step="0.05"' })}
       </div>
-      ${this.schakel_("aanwezig_teller", s.aanwezig_teller !== false, { label: "Teller bij Aanwezig (x van y)", s: "scherm" })}
-      ${this.schakel_("weer_animatie", s.weer_animatie !== false, { label: "Bewegende weericonen", s: "scherm" })}
-      <div class="veld"><label>Het blok Welkom</label>
-        <div class="hulp">Wat er in het welkomblok op het scherm staat, naast de klok. Alleen het logo? Zet de tekst leeg. De openingstijden staan in hun eigen blok.</div>
+      ${this.schakel_("aanwezig_teller", s.aanwezig_teller !== false, { label: t("Teller bij Aanwezig (x van y)"), s: "scherm" })}
+      ${this.schakel_("weer_animatie", s.weer_animatie !== false, { label: t("Bewegende weericonen"), s: "scherm" })}
+      <div class="veld"><label>${t("Het blok Welkom")}</label>
+        <div class="hulp">${t("Wat er in het welkomblok op het scherm staat, naast de klok. Alleen het logo? Zet de tekst leeg. De openingstijden staan in hun eigen blok.")}</div>
         <div class="rij twee" style="margin-top: 6px">
-          ${this.veld_("Tekst (leeg = geen tekst)", "welkom_tekst", s.welkom_tekst ?? "Welkom", { s: "scherm" })}
+          ${this.veld_(t("Tekst (leeg = geen tekst)"), "welkom_tekst", s.welkom_tekst ?? "Welkom", { s: "scherm" })}
           <div class="veld" style="gap: 0">
-            ${this.schakel_("logo_verbergen", s.logo_verbergen === true, { label: "Logo op het scherm verbergen", s: "scherm" })}
+            ${this.schakel_("logo_verbergen", s.logo_verbergen === true, { label: t("Logo op het scherm verbergen"), s: "scherm" })}
           </div>
         </div>
       </div>
-      <div class="veld"><label>Nieuws (RSS)</label>
-        <div class="hulp">Bijvoorbeeld het NOS-nieuws: https://feeds.nos.nl/nosnieuwsalgemeen. Wordt elk kwartier opgehaald.</div>
-        <div class="lijst">${feeds || `<div class="leeg">Geen bronnen.</div>`}</div>
+      <div class="veld"><label>${t("Nieuws (RSS)")}</label>
+        <div class="hulp">${t("Bijvoorbeeld het NOS-nieuws: https://feeds.nos.nl/nosnieuwsalgemeen. Wordt elk kwartier opgehaald.")}</div>
+        <div class="lijst">${feeds || `<div class="leeg">${t("Geen bronnen.")}</div>`}</div>
         <div class="knoppen" style="justify-content: flex-start; margin-top: 8px">
-          <button class="knop" type="button" data-actie="f_nieuw">${resolve("plus")} Bron toevoegen</button>
-          <button class="knop" type="button" data-actie="f_ververs">Nu ophalen</button>
+          <button class="knop" type="button" data-actie="f_nieuw">${resolve("plus")} ${t("Bron toevoegen")}</button>
+          <button class="knop" type="button" data-actie="f_ververs">${t("Nu ophalen")}</button>
         </div>
       </div>`;
   }
@@ -1280,7 +1283,7 @@ export class InfoschermBeheerCard extends DacCard {
       this.meldingen_[blok] = null;
       this.tel_(blok);
     }
-    this.status_("Opslaan…", "bezig");
+    this.status_(t("Opslaan…"), "bezig");
     clearTimeout(this.timers_[sectie]);
     this.timers_[sectie] = setTimeout(() => this.bewaar_(sectie), ms);
   }
@@ -1327,7 +1330,7 @@ export class InfoschermBeheerCard extends DacCard {
         // andere blijven van de iPad (zie `bewaar_`).
         item._aanwezig = true;
         const lbl = el.closest(".vink")?.querySelector(".vl");
-        if (lbl) lbl.textContent = waarde ? "Aanwezig" : "Afwezig";
+        if (lbl) lbl.textContent = waarde ? t("Aanwezig") : t("Afwezig");
         el.closest(".item")?.querySelector(".avatar")?.classList.toggle("aan", waarde);
       }
     } else if (sectie === "praktijk") {
@@ -1335,8 +1338,8 @@ export class InfoschermBeheerCard extends DacCard {
     } else if (sectie === "scherm") {
       if (veld === "accent_kleur") {
         w.accent = waarde;
-        const t = el.closest(".b-onder")?.querySelector('[data-veld="accent"]');
-        if (t) t.value = waarde;
+        const tekstveld = el.closest(".b-onder")?.querySelector('[data-veld="accent"]');
+        if (tekstveld) tekstveld.value = waarde;
       } else if (veld === "accent") {
         w.accent = String(waarde).trim() || null;
       } else if (el.type === "number") {
@@ -1387,7 +1390,7 @@ export class InfoschermBeheerCard extends DacCard {
         inp.value = p.openingstijden[i][Number(n)]?.[Number(k)] ?? "";
       }
       const lbl = el.closest(".vink")?.querySelector(".vl");
-      if (lbl) lbl.textContent = waarde ? "open" : "gesloten";
+      if (lbl) lbl.textContent = waarde ? tc("openingstijd", "open") : t("gesloten");
     } else if (veld.startsWith("ot_")) {
       const [, n, k] = veld.split("_").map(Number);
       p.openingstijden ??= {};
@@ -1409,7 +1412,7 @@ export class InfoschermBeheerCard extends DacCard {
           inp.value = waarde ? (inp.dataset.veld === "u_van" ? "08:00" : "17:00") : "";
         }
         const lbl = el.closest(".vink")?.querySelector(".vl");
-        if (lbl) lbl.textContent = waarde ? "open" : "gesloten";
+        if (lbl) lbl.textContent = waarde ? tc("openingstijd", "open") : t("gesloten");
       } else if (naam === "van" || naam === "tot") {
         u.tijden = [[naam === "van" ? waarde : u.tijden?.[0]?.[0] ?? "", naam === "tot" ? waarde : u.tijden?.[0]?.[1] ?? ""]];
       } else {
@@ -1437,7 +1440,7 @@ export class InfoschermBeheerCard extends DacCard {
       plek = vrijePlek(w.blokken, bw, bh);
     }
     if (!plek) {
-      this.meldingen_.indeling = { tekst: "Er is geen plek meer. Maak eerst een ander blok kleiner of haal er een weg.", fout: true };
+      this.meldingen_.indeling = { tekst: t("Er is geen plek meer. Maak eerst een ander blok kleiner of haal er een weg."), fout: true };
       return this.teken_("indeling", true);
     }
     w.blokken.push({
@@ -1622,9 +1625,9 @@ export class InfoschermBeheerCard extends DacCard {
     }
     if (actie === "verwijder") {
       const item = w[i];
-      const naam = item?.naam || item?.titel || item?.tekst || "dit item";
+      const naam = item?.naam || item?.titel || item?.tekst || t("dit item");
       if (item && (item.id || item.naam || item.titel || item.tekst)) {
-        const ja = await vraagBevestiging({ title: "Verwijderen?", text: `"${naam}" verdwijnt meteen van het scherm.`, confirmText: "Verwijderen" });
+        const ja = await vraagBevestiging({ title: t("Verwijderen?"), text: t("\"{naam}\" verdwijnt meteen van het scherm.", { naam }), confirmText: t("Verwijderen") });
         if (!ja) return;
       }
       w.splice(i, 1);
@@ -1674,9 +1677,9 @@ export class InfoschermBeheerCard extends DacCard {
       try {
         const r = await ververFeeds(this.hass);
         this.feedFouten_ = r.feed_fouten ?? {};
-        this.meldingen_[blok] = { tekst: `${(r.feeds ?? []).length} bericht(en) opgehaald.` };
+        this.meldingen_[blok] = { tekst: t("{n} bericht(en) opgehaald.", { n: (r.feeds ?? []).length }) };
       } catch (fout) {
-        this.meldingen_[blok] = { tekst: fout?.message ?? "Ophalen lukte niet.", fout: true };
+        this.meldingen_[blok] = { tekst: fout?.message ?? t("Ophalen lukte niet."), fout: true };
       }
       return this.teken_(blok, true);
     }
@@ -1691,7 +1694,7 @@ export class InfoschermBeheerCard extends DacCard {
       return this.teken_("indeling", true);
     }
     if (actie === "indeling_standaard") {
-      const ja = await vraagBevestiging({ title: "Standaardindeling?", text: "De blokken gaan terug naar hun oorspronkelijke plek en maat.", confirmText: "Terugzetten" });
+      const ja = await vraagBevestiging({ title: t("Standaardindeling?"), text: t("De blokken gaan terug naar hun oorspronkelijke plek en maat."), confirmText: t("Terugzetten") });
       if (!ja) return;
       this.werk_.indeling = standaardIndeling();
       this.markeer_("indeling", "indeling");
@@ -1706,7 +1709,7 @@ export class InfoschermBeheerCard extends DacCard {
     this.doel_ = null;
     if (!bestand || !doel) return;
     const { sectie, blok, i, veld } = doel;
-    this.meldingen_[blok] = { tekst: "Bezig met uploaden…" };
+    this.meldingen_[blok] = { tekst: t("Bezig met uploaden…") };
     this.teken_(blok, true);
     try {
       // Een logo verliest eerst zijn doorzichtige rand (zie infoscherm-logo.js).
@@ -1722,9 +1725,9 @@ export class InfoschermBeheerCard extends DacCard {
       // Eerst markeren, dan de melding: markeer_ wist de melding van het blok,
       // en tot 0.61.0 stond het andersom, zodat "geüpload" nooit te zien was.
       this.markeer_(sectie, blok);
-      this.meldingen_[blok] = { tekst: `${meta.naam || "Bestand"} geüpload.${bijgesneden ? " De lege rand eromheen is weggesneden." : ""}` };
+      this.meldingen_[blok] = { tekst: `${t("{naam} geüpload.", { naam: meta.naam || t("Bestand") })}${bijgesneden ? ` ${t("De lege rand eromheen is weggesneden.")}` : ""}` };
     } catch (fout) {
-      this.meldingen_[blok] = { tekst: fout?.message ?? "Uploaden lukte niet.", fout: true };
+      this.meldingen_[blok] = { tekst: fout?.message ?? t("Uploaden lukte niet."), fout: true };
     }
     this.teken_(blok, true);
   }
@@ -1743,12 +1746,12 @@ export class InfoschermBeheerCard extends DacCard {
     try {
       await boekRuimte(this.hass, { ruimte: f.ruimte, start: nagekeken.start, eind: nagekeken.eind, omschrijving: (f.omschrijving ?? "").trim() });
     } catch (fout) {
-      return meld(fout?.message ?? "Boeken lukte niet.", true);
+      return meld(fout?.message ?? t("Boeken lukte niet."), true);
     }
     const r = (this.werk_.installatie?.ruimtes ?? []).find((x) => x.entity === f.ruimte);
     const naam = r?.naam || this.hass?.states?.[f.ruimte]?.attributes?.friendly_name || f.ruimte;
     this.boekForm_ = { ruimte: f.ruimte, datum: f.datum };
-    return meld(`${naam} is geboekt, ${f.van} tot ${f.tot}.`);
+    return meld(t("{naam} is geboekt, {van} tot {tot}.", { naam, van: f.van, tot: f.tot }));
   }
 
   /** Een ruimte maken: de server maakt er een Lokale agenda bij. */
@@ -1758,16 +1761,16 @@ export class InfoschermBeheerCard extends DacCard {
       this.ruimteMelding_ = { tekst, fout };
       this.teken_("ruimtes", true);
     };
-    if (!naam) return meld("Geef de ruimte een naam.", true);
+    if (!naam) return meld(t("Geef de ruimte een naam."), true);
     if (this.ruimteBezig_) return undefined;
     this.ruimteBezig_ = true;
-    meld(`${naam} wordt aangemaakt…`);
+    meld(t("{naam} wordt aangemaakt…", { naam }));
     try {
       const r = await nieuweRuimte(this.hass, naam);
       this.nieuweRuimte_ = "";
-      meld(r.gemaakt ? `${naam} staat erbij, met een eigen agenda.` : `Er was al een agenda ${naam}; die staat er nu bij.`);
+      meld(r.gemaakt ? t("{naam} staat erbij, met een eigen agenda.", { naam }) : t("Er was al een agenda {naam}; die staat er nu bij.", { naam }));
     } catch (fout) {
-      meld(fout?.message ?? "Dat lukte niet.", true);
+      meld(fout?.message ?? t("Dat lukte niet."), true);
     } finally {
       this.ruimteBezig_ = false;
     }
@@ -1780,16 +1783,16 @@ export class InfoschermBeheerCard extends DacCard {
     const r = (this.werk_.installatie?.ruimtes ?? []).find((x) => x.entity === entity);
     const naam = r?.naam || this.hass?.states?.[entity]?.attributes?.friendly_name || entity;
     const ja = await vraagBevestiging({
-      title: `${naam} weghalen?`,
-      text: "De ruimte verdwijnt van het scherm, en zijn agenda verdwijnt uit Home Assistant, met alle boekingen erin.",
-      confirmText: "Weghalen",
+      title: t("{naam} weghalen?", { naam }),
+      text: t("De ruimte verdwijnt van het scherm, en zijn agenda verdwijnt uit Home Assistant, met alle boekingen erin."),
+      confirmText: t("Weghalen"),
     });
     if (!ja) return;
     try {
       await ruimteWeg(this.hass, entity);
-      this.ruimteMelding_ = { tekst: `${naam} is weggehaald.`, fout: false };
+      this.ruimteMelding_ = { tekst: t("{naam} is weggehaald.", { naam }), fout: false };
     } catch (fout) {
-      this.ruimteMelding_ = { tekst: fout?.message ?? "Weghalen lukte niet.", fout: true };
+      this.ruimteMelding_ = { tekst: fout?.message ?? t("Weghalen lukte niet."), fout: true };
     }
     this.teken_("ruimtes", true);
   }
@@ -1798,13 +1801,13 @@ export class InfoschermBeheerCard extends DacCard {
     const { ruimte, uid, rid } = knop.dataset;
     const rij = knop.closest(".item");
     const wat = [...(rij?.querySelectorAll(".r-tijd, .r-ruimte") ?? [])].map((x) => x.textContent).join(", ");
-    const ja = await vraagBevestiging({ title: "Vrijgeven?", text: `De boeking ${wat} verdwijnt uit de agenda.`, confirmText: "Vrijgeven" });
+    const ja = await vraagBevestiging({ title: t("Vrijgeven?"), text: t("De boeking {wat} verdwijnt uit de agenda.", { wat }), confirmText: t("Vrijgeven") });
     if (!ja) return;
     try {
       await geefRuimteVrij(this.hass, { ruimte, uid, recurrence_id: rid || null });
-      this.meldingen_.ruimtes = { tekst: "Vrijgegeven.", fout: false };
+      this.meldingen_.ruimtes = { tekst: t("Vrijgegeven."), fout: false };
     } catch (fout) {
-      this.meldingen_.ruimtes = { tekst: fout?.message ?? "Vrijgeven lukte niet.", fout: true };
+      this.meldingen_.ruimtes = { tekst: fout?.message ?? t("Vrijgeven lukte niet."), fout: true };
     }
     this.teken_("ruimtes", true);
   }
@@ -1842,7 +1845,7 @@ export class InfoschermBeheerCard extends DacCard {
     }
     const versie = this.versie_[sectie] ?? 0;
     this.bezig_.add(sectie);
-    this.status_("Opslaan…", "bezig");
+    this.status_(t("Opslaan…"), "bezig");
     try {
       // De code heeft een eigen commando: hij staat niet in de stand.
       const r = sectie === "code" ? await zetRuimteCode(this.hass, this.werk_.code ?? "") : await bewaar(this.hass, sectie, this.payload_(sectie));
@@ -1862,7 +1865,7 @@ export class InfoschermBeheerCard extends DacCard {
       }
       this.oudeBestanden_ = [];
     } catch (fout) {
-      this.fouten_[sectie] = fout?.message ?? "Opslaan lukte niet.";
+      this.fouten_[sectie] = fout?.message ?? t("Opslaan lukte niet.");
     } finally {
       this.bezig_.delete(sectie);
     }
@@ -1879,10 +1882,10 @@ export class InfoschermBeheerCard extends DacCard {
       for (const b of BLOKKEN) if (b.secties.includes(sectie) && b.key !== this.bron_?.[sectie]) this.teken_(b.key);
     }
     if (this.fouten_[sectie]) {
-      this.status_(`Niet opgeslagen: ${this.fouten_[sectie]}`, "fout");
+      this.status_(t("Niet opgeslagen: {fout}", { fout: this.fouten_[sectie] }), "fout");
       for (const b of BLOKKEN) if (b.secties.includes(sectie)) this.teken_(b.key);
     } else if (!this.bezig_.size && !this.vuil_.size) {
-      this.status_(`Opgeslagen ${this.laatstOpgeslagen_}`, "ok");
+      this.status_(t("Opgeslagen {tijd}", { tijd: this.laatstOpgeslagen_ }), "ok");
     }
   }
 
@@ -1926,42 +1929,42 @@ export class InfoschermBeheerCard extends DacCard {
 /* ------------------------------------------------------------ editor */
 
 const LABELS = {
-  title: "Titel",
-  weather: "Weerentiteit",
-  energy: "Energiesensor (vermogen of tellerstand)",
-  lights: "Lampen en schakelaars op het scherm",
-  climates: "Airco's op het scherm",
-  rooms: "Ruimtes om te boeken (een agenda per ruimte)",
-  wifi: "Wifi voor gasten (de QR-code)",
-  calendars: "Agenda's (de afspraken van vandaag)",
-  kiosk_users: "Kioskaccounts",
-  show_personen: "Blok Medewerkers",
-  show_mededelingen: "Blok Mededelingen",
-  show_verjaardagen: "Blok Verjaardagen",
-  show_praktijk: "Blok Openingstijden",
-  show_indeling: "Blok Indeling",
-  show_verlichting: "Blok Verlichting",
-  show_klimaat: "Blok Klimaat",
-  show_ruimtes: "Blok Ruimtes",
-  show_wifi: "Blok Wifi voor gasten",
-  show_instellingen: "Blok Instellingen en logo",
+  title: nt("Titel"),
+  weather: nt("Weerentiteit"),
+  energy: nt("Energiesensor (vermogen of tellerstand)"),
+  lights: nt("Lampen en schakelaars op het scherm"),
+  climates: nt("Airco's op het scherm"),
+  rooms: nt("Ruimtes om te boeken (een agenda per ruimte)"),
+  wifi: nt("Wifi voor gasten (de QR-code)"),
+  calendars: nt("Agenda's (de afspraken van vandaag)"),
+  kiosk_users: nt("Kioskaccounts"),
+  show_personen: nt("Blok Medewerkers"),
+  show_mededelingen: nt("Blok Mededelingen"),
+  show_verjaardagen: nt("Blok Verjaardagen"),
+  show_praktijk: nt("Blok Openingstijden"),
+  show_indeling: nt("Blok Indeling"),
+  show_verlichting: nt("Blok Verlichting"),
+  show_klimaat: nt("Blok Klimaat"),
+  show_ruimtes: nt("Blok Ruimtes"),
+  show_wifi: nt("Blok Wifi voor gasten"),
+  show_instellingen: nt("Blok Instellingen en logo"),
 };
 
 const HELPERS = {
-  weather: "Leeg = geen weer op het scherm.",
+  weather: nt("Leeg = geen weer op het scherm."),
   energy:
-    "Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm.",
-  lights: "De namen en de volgorde op het scherm stelt de receptie in het blok Verlichting in; daar staat ook de schakelaar om ze te tonen. Een nieuwe lamp komt achteraan.",
+    nt("Het blok Energie: een vermogenssensor (W of kW) geeft een live lijn van de afgelopen 24 uur; een tellerstand (kWh) het verbruik per uur. Leeg = geen energie op het scherm."),
+  lights: nt("De namen en de volgorde op het scherm stelt de receptie in het blok Verlichting in; daar staat ook de schakelaar om ze te tonen. Een nieuwe lamp komt achteraan."),
   climates:
-    "Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in.",
+    nt("Elke climate-entiteit: een airco, maar ook een warmtepomp of een thermostaat. Op het scherm de temperatuur in de ruimte en wat er ingesteld is, en op de pagina erachter bedienen. Namen, volgorde, tonen en bedienen stelt de receptie in het blok Klimaat in."),
   rooms:
-    "Meestal hoeft hier niets: de receptie maakt de ruimtes zelf in het beheer (blok Ruimtes, Nieuwe ruimte), en dat maakt er een Lokale agenda bij. Kies hier alleen een agenda die er al is, bijvoorbeeld een van Outlook of Google die boekingen aanneemt. Op het scherm staat alleen vrij of bezet.",
+    nt("Meestal hoeft hier niets: de receptie maakt de ruimtes zelf in het beheer (blok Ruimtes, Nieuwe ruimte), en dat maakt er een Lokale agenda bij. Kies hier alleen een agenda die er al is, bijvoorbeeld een van Outlook of Google die boekingen aanneemt. Op het scherm staat alleen vrij of bezet."),
   wifi:
-    "Bij UniFi Network de entiteit QR-code van het GASTnetwerk. Die staat standaard uit (en is er alleen met een beheerdersaccount in UniFi): zet hem aan bij de entiteiten van het netwerk. Kies niet het gewone netwerk: wie de code scant, heeft het wachtwoord.",
+    nt("Bij UniFi Network de entiteit QR-code van het GASTnetwerk. Die staat standaard uit (en is er alleen met een beheerdersaccount in UniFi): zet hem aan bij de entiteiten van het netwerk. Kies niet het gewone netwerk: wie de code scant, heeft het wachtwoord."),
   kiosk_users:
-    "Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen en airco's bedienen, en niets beheren. Alleen een beheerder ziet deze lijst.",
+    nt("Het account waarmee de iPad is ingelogd. Zo'n account mag alleen aanwezigheid omzetten en lampen en airco's bedienen, en niets beheren. Alleen een beheerder ziet deze lijst."),
   show_instellingen:
-    "Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten.",
+    nt("Logo, accent, uiterlijk, het welkomblok en de nieuwsbronnen. Zet dit blok uit op een dashboard voor een receptie die daar niet aan hoeft te zitten."),
 };
 
 /**
@@ -1993,7 +1996,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       this.gebruikers_ = null;
       haalGebruikers(hass)
         .then((g) => {
-          this.gebruikers_ = (g.gebruikers ?? []).map((u) => ({ value: u.id, label: `${u.naam}${u.is_admin ? " (beheerder)" : ""}` }));
+          this.gebruikers_ = (g.gebruikers ?? []).map((u) => ({ value: u.id, label: `${u.naam}${u.is_admin ? ` ${t("(beheerder)")}` : ""}` }));
           this.sync_();
         })
         .catch(() => {
@@ -2057,20 +2060,21 @@ export class InfoschermBeheerEditor extends DacEditor {
   }
 
   label(item) {
-    return LABELS[item.name] ?? super.label(item);
+    return LABELS[item.name] ? t(LABELS[item.name]) : super.label(item);
   }
 
   helper(item) {
-    return HELPERS[item.name];
+    return HELPERS[item.name] ? t(HELPERS[item.name]) : undefined;
   }
 }
 
 registerCard(TAG, InfoschermBeheerCard, {
-  name: "DomotiApp Infoscherm Beheer",
-  description:
-    "Voor de receptie: medewerkers, mededelingen, verjaardagen, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm. De installateur kiest hier ook het weer, de energiesensor, de lampen, de agenda's en het kioskaccount.",
+  name: nt("DomotiApp Infoscherm Beheer"),
+  description: nt(
+    "Voor de receptie: medewerkers, mededelingen, verjaardagen, openingstijden, de indeling van het scherm en het logo. Alles wordt vanzelf opgeslagen en staat meteen op het scherm. De installateur kiest hier ook het weer, de energiesensor, de lampen, de agenda's en het kioskaccount."
+  ),
   preview: false,
 });
 registerEditor(`${TAG}-editor`, InfoschermBeheerEditor);
 InfoschermBeheerCard.getConfigElement = () => document.createElement(`${TAG}-editor`);
-InfoschermBeheerCard.getStubConfig = () => ({ title: "Infoscherm" });
+InfoschermBeheerCard.getStubConfig = () => ({ title: STANDAARD.title });

@@ -46,6 +46,8 @@
  * overgestapt heeft de oude in zijn opslag staan.
  */
 
+import { locale, t } from "../taal.js";
+
 /* --------------------------------------------------------------- periodes */
 
 /**
@@ -57,10 +59,12 @@
  * drie meter afstand bekijkt.
  */
 export const PERIODES = {
-  dag: { naam: "Dag", periode: "hour", stap: "dag" },
-  week: { naam: "Week", periode: "day", stap: "week" },
-  maand: { naam: "Maand", periode: "day", stap: "maand" },
-  jaar: { naam: "Jaar", periode: "month", stap: "jaar" },
+  // `naam` is een getter: dan is hij vertaald op het moment dat hij getoond
+  // wordt, en niet bij het laden van de module (docs/taal.md, regel 5).
+  dag: { get naam() { return t("Dag"); }, periode: "hour", stap: "dag" },
+  week: { get naam() { return t("Week"); }, periode: "day", stap: "week" },
+  maand: { get naam() { return t("Maand"); }, periode: "day", stap: "maand" },
+  jaar: { get naam() { return t("Jaar"); }, periode: "month", stap: "jaar" },
 };
 
 /** Middernacht in de tijdzone van het scherm, en niet in UTC (valkuil: zie demo). */
@@ -102,31 +106,35 @@ export function venster(soort, offset = 0, nu = new Date()) {
   return { van, tot, periode: "month" };
 }
 
-const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
-  "augustus", "september", "oktober", "november", "december"];
+/**
+ * De maand in de taal van de kaarten: "maart" of "March". Afgekort zijn het de
+ * eerste drie letters ("maa", "sep"), zoals toen hier een eigen lijst stond.
+ */
+const maand = (d) => d.toLocaleDateString(locale(), { month: "long" });
+const maandKort = (d) => maand(d).slice(0, 3);
 
 /** Hoe het venster heet op het scherm: "Vandaag", "Deze week", "maart 2026". */
 export function vensterNaam(soort, offset = 0, nu = new Date()) {
   const o = Math.round(offset) || 0;
   const v = venster(soort, o, nu).van;
   if (soort === "dag") {
-    if (o === 0) return "Vandaag";
-    if (o === -1) return "Gisteren";
-    return `${v.getDate()} ${MAANDEN[v.getMonth()]}`;
+    if (o === 0) return t("Vandaag");
+    if (o === -1) return t("Gisteren");
+    return `${v.getDate()} ${maand(v)}`;
   }
   if (soort === "week") {
-    if (o === 0) return "Deze week";
-    if (o === -1) return "Vorige week";
+    if (o === 0) return t("Deze week");
+    if (o === -1) return t("Vorige week");
     const tot = new Date(v);
     tot.setDate(tot.getDate() + 6);
-    return `${v.getDate()} ${MAANDEN[v.getMonth()].slice(0, 3)} – ${tot.getDate()} ${MAANDEN[tot.getMonth()].slice(0, 3)}`;
+    return `${v.getDate()} ${maandKort(v)} – ${tot.getDate()} ${maandKort(tot)}`;
   }
   if (soort === "maand") {
-    if (o === 0) return "Deze maand";
+    if (o === 0) return t("Deze maand");
     const jaar = v.getFullYear() === nu.getFullYear() ? "" : ` ${v.getFullYear()}`;
-    return `${MAANDEN[v.getMonth()]}${jaar}`;
+    return `${maand(v)}${jaar}`;
   }
-  return o === 0 ? "Dit jaar" : String(v.getFullYear());
+  return o === 0 ? t("Dit jaar") : String(v.getFullYear());
 }
 
 /* ----------------------------------------------------------------- bronnen */
@@ -139,14 +147,15 @@ export function vensterNaam(soort, offset = 0, nu = new Date()) {
  * kWh die door dezelfde meter lopen.
  */
 export const ROLLEN = {
-  verbruik: { naam: "Van het net", tone: "var(--dac-grid-in)", teken: 1 },
-  teruglevering: { naam: "Teruggeleverd", tone: "var(--dac-grid-out)", teken: -1 },
-  zon: { naam: "Zonnepanelen", tone: "var(--dac-solar)", teken: 1 },
-  accu_uit: { naam: "Uit de accu", tone: "var(--dac-device-2)", teken: 1 },
-  accu_in: { naam: "Naar de accu", tone: "var(--dac-device-2)", teken: -1 },
-  gas: { naam: "Gas", tone: "var(--dac-device-1)", teken: 1 },
-  water: { naam: "Water", tone: "var(--dac-grid-in)", teken: 1 },
-  apparaat: { naam: "Apparaat", tone: "var(--dac-house)", teken: 1 },
+  // `naam` is een getter, zodat hij in de taal van nu getoond wordt.
+  verbruik: { get naam() { return t("Van het net"); }, tone: "var(--dac-grid-in)", teken: 1 },
+  teruglevering: { get naam() { return t("Teruggeleverd"); }, tone: "var(--dac-grid-out)", teken: -1 },
+  zon: { get naam() { return t("Zonnepanelen"); }, tone: "var(--dac-solar)", teken: 1 },
+  accu_uit: { get naam() { return t("Uit de accu"); }, tone: "var(--dac-device-2)", teken: 1 },
+  accu_in: { get naam() { return t("Naar de accu"); }, tone: "var(--dac-device-2)", teken: -1 },
+  gas: { get naam() { return t("Gas"); }, tone: "var(--dac-device-1)", teken: 1 },
+  water: { get naam() { return t("Water"); }, tone: "var(--dac-grid-in)", teken: 1 },
+  apparaat: { get naam() { return t("Apparaat"); }, tone: "var(--dac-house)", teken: 1 },
 };
 
 const tekst = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -178,10 +187,10 @@ export function bronnenUit(prefs) {
       case "grid": {
         // De nieuwe vorm.
         zet("verbruik", bron.stat_energy_from, naam);
-        zet("teruglevering", bron.stat_energy_to, naam ? `${naam} terug` : null);
+        zet("teruglevering", bron.stat_energy_to, naam ? t("{naam} terug", { naam }) : null);
         // De oude vorm, voor een opslag die nog niet is omgezet.
         for (const f of bron.flow_from ?? []) zet("verbruik", f?.stat_energy_from, naam);
-        for (const f of bron.flow_to ?? []) zet("teruglevering", f?.stat_energy_to, naam ? `${naam} terug` : null);
+        for (const f of bron.flow_to ?? []) zet("teruglevering", f?.stat_energy_to, naam ? t("{naam} terug", { naam }) : null);
         break;
       }
       case "solar":
@@ -189,7 +198,7 @@ export function bronnenUit(prefs) {
         break;
       case "battery":
         zet("accu_uit", bron.stat_energy_from, naam);
-        zet("accu_in", bron.stat_energy_to, naam ? `${naam} laden` : null);
+        zet("accu_in", bron.stat_energy_to, naam ? t("{naam} laden", { naam }) : null);
         break;
       case "gas":
         zet("gas", bron.stat_energy_from, naam);
@@ -373,7 +382,7 @@ export function samenvatting(bronnen, stats) {
 export function toonWaarde(waarde, eenheid = "kWh") {
   const v = getal(waarde);
   const cijfers = Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2;
-  const getalTekst = v.toLocaleString("nl-NL", {
+  const getalTekst = v.toLocaleString(locale(), {
     minimumFractionDigits: cijfers,
     maximumFractionDigits: cijfers,
   });
@@ -382,17 +391,18 @@ export function toonWaarde(waarde, eenheid = "kWh") {
 
 /** Een bedrag in euro's. */
 export const toonGeld = (waarde) =>
-  getal(waarde).toLocaleString("nl-NL", { style: "currency", currency: "EUR" });
+  getal(waarde).toLocaleString(locale(), { style: "currency", currency: "EUR" });
 
-const DAGKORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+/** "do" of "Thu"; een oudere ICU zet er een punt achter, en die gaat eraf. */
+const dagKort = (d) => d.toLocaleDateString(locale(), { weekday: "short" }).replace(/\.$/, "");
 
 /** Wat er onder een staaf staat. */
 export function staafLabel(start, soort) {
   const d = new Date(start);
   if (soort === "dag") return String(d.getHours()).padStart(2, "0");
-  if (soort === "week") return DAGKORT[d.getDay()];
+  if (soort === "week") return dagKort(d);
   if (soort === "maand") return String(d.getDate());
-  return MAANDEN[d.getMonth()].slice(0, 3);
+  return maandKort(d);
 }
 
 /**

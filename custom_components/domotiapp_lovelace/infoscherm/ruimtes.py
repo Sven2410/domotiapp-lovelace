@@ -77,6 +77,7 @@ from .const import (
     MAX_MIDDEL,
 )
 from .store import InfoFout, InfoStore, _tekst
+from ..taal import NL, nt, t, taal_van, vertaal
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,8 +88,10 @@ LOKAAL_SLEUTEL = "storage_key"
 
 # Wat er in de agenda als titel komt als er niets ingevuld is. Op het scherm
 # staat het nooit.
-TITEL_BEHEER = "Gereserveerd"
-TITEL_SCHERM = "Geboekt op het infoscherm"
+# Sinds 0.81.0 in de taal van de installatie: wie de agenda in Home Assistant
+# opent, leest hem wel.
+TITEL_BEHEER = nt("Gereserveerd")
+TITEL_SCHERM = nt("Geboekt op het infoscherm")
 
 
 class RuimteFout(Exception):
@@ -119,19 +122,21 @@ def klok(t: datetime) -> str:
     return dt_util.as_local(t).strftime("%H:%M")
 
 
-def valideer_boeking(start_rauw: Any, eind_rauw: Any, titel_rauw: Any, nu: datetime) -> tuple[datetime, datetime, str]:
-    """Begin, eind en titel, of een InfoFout met uitleg."""
+def valideer_boeking(
+    start_rauw: Any, eind_rauw: Any, titel_rauw: Any, nu: datetime, taal: str = NL
+) -> tuple[datetime, datetime, str]:
+    """Begin, eind en titel, of een InfoFout met uitleg (in de taal van de installatie)."""
     start = moment(start_rauw, "start")
     eind = moment(eind_rauw, "eind")
     titel = _tekst(titel_rauw, "omschrijving", MAX_KORT)
     if eind <= start:
-        raise InfoFout("het eind moet na het begin liggen")
+        raise InfoFout(vertaal(taal, "het eind moet na het begin liggen"))
     if eind - start > timedelta(hours=MAX_BOEKING_UREN):
-        raise InfoFout(f"een boeking duurt hooguit {MAX_BOEKING_UREN} uur")
+        raise InfoFout(vertaal(taal, "een boeking duurt hooguit {uren} uur", uren=MAX_BOEKING_UREN))
     if eind <= nu:
-        raise InfoFout("deze tijd is al voorbij")
+        raise InfoFout(vertaal(taal, "deze tijd is al voorbij"))
     if start > nu + timedelta(days=MAX_BOEKING_VOORUIT_DAGEN):
-        raise InfoFout("zo ver vooruit kan er niet geboekt worden")
+        raise InfoFout(vertaal(taal, "zo ver vooruit kan er niet geboekt worden"))
     return start, eind, titel
 
 
@@ -144,18 +149,27 @@ class Ruimtes:
         self._slot = asyncio.Lock()
         self._fout: dict[str, list[datetime]] = {}
 
-    def _agenda(self, entity_id: str, kunnen: CalendarEntityFeature, wat: str):
+    def _agenda(self, entity_id: str, kunnen: CalendarEntityFeature):
         if not self._store.is_ruimte(entity_id):
-            raise RuimteFout("not_found", "Deze ruimte staat niet (meer) op het infoscherm")
+            raise RuimteFout("not_found", t(self._hass, "Deze ruimte staat niet (meer) op het infoscherm"))
         component = self._hass.data.get(DATA_COMPONENT)
         agenda = component.get_entity(entity_id) if component is not None else None
         if agenda is None:
-            raise RuimteFout("not_found", "De agenda van deze ruimte bestaat niet in Home Assistant")
-        if not (agenda.supported_features or 0) & kunnen:
             raise RuimteFout(
-                "not_supported",
-                f"De agenda van deze ruimte kan geen boekingen {wat}. Kies een Lokale agenda.",
+                "not_found", t(self._hass, "De agenda van deze ruimte bestaat niet in Home Assistant")
             )
+        if not (agenda.supported_features or 0) & kunnen:
+            if kunnen == CalendarEntityFeature.CREATE_EVENT:
+                tekst = t(
+                    self._hass,
+                    "De agenda van deze ruimte kan geen boekingen aannemen. Kies een Lokale agenda.",
+                )
+            else:
+                tekst = t(
+                    self._hass,
+                    "De agenda van deze ruimte kan geen boekingen verwijderen. Kies een Lokale agenda.",
+                )
+            raise RuimteFout("not_supported", tekst)
         return agenda
 
     def controleer_code(self, gebruiker: str, code: Any) -> None:
@@ -165,13 +179,18 @@ class Ruimtes:
         pogingen = [t for t in self._fout.get(gebruiker, []) if nu - t < CODE_WACHT]
         self._fout[gebruiker] = pogingen
         if len(pogingen) >= CODE_POGINGEN:
-            raise RuimteFout("te_vaak", "Te vaak een verkeerde code. Probeer het over een paar minuten opnieuw.")
+            raise RuimteFout(
+                "te_vaak", t(self._hass, "Te vaak een verkeerde code. Probeer het over een paar minuten opnieuw.")
+            )
         juist = self._store.ruimte_code
         if not juist:
-            raise RuimteFout("geen_code", "Boeken op het scherm staat uit: er is in het beheer geen code ingesteld.")
+            raise RuimteFout(
+                "geen_code",
+                t(self._hass, "Boeken op het scherm staat uit: er is in het beheer geen code ingesteld."),
+            )
         if not isinstance(code, str) or not hmac.compare_digest(code.encode(), juist.encode()):
             pogingen.append(nu)
-            raise RuimteFout("verkeerde_code", "De code klopt niet.")
+            raise RuimteFout("verkeerde_code", t(self._hass, "De code klopt niet."))
         self._fout.pop(gebruiker, None)
 
     async def async_boek(
@@ -185,27 +204,48 @@ class Ruimtes:
         door: str,
     ) -> dict[str, Any]:
         """Een boeking in de agenda van de ruimte. Bezet = RuimteFout `bezet`."""
-        agenda = self._agenda(ruimte, CalendarEntityFeature.CREATE_EVENT, "aannemen")
+        agenda = self._agenda(ruimte, CalendarEntityFeature.CREATE_EVENT)
         try:
-            begin, einde, tekst = valideer_boeking(start, eind, titel, dt_util.now())
+            begin, einde, tekst = valideer_boeking(start, eind, titel, dt_util.now(), taal_van(self._hass))
         except InfoFout as fout:
             raise RuimteFout("invalid_format", str(fout)) from None
-        titel_uit = tekst or (TITEL_SCHERM if op_scherm else TITEL_BEHEER)
+        titel_uit = tekst or t(self._hass, TITEL_SCHERM if op_scherm else TITEL_BEHEER)
         waar = "op het infoscherm" if op_scherm else "in het beheer van het infoscherm"
-        omschrijving = f"Geboekt {waar}" + (f" door {door}" if door else "") + "."
+        if op_scherm:
+            omschrijving = (
+                t(self._hass, "Geboekt op het infoscherm door {door}.", door=door)
+                if door
+                else t(self._hass, "Geboekt op het infoscherm.")
+            )
+        else:
+            omschrijving = (
+                t(self._hass, "Geboekt in het beheer van het infoscherm door {door}.", door=door)
+                if door
+                else t(self._hass, "Geboekt in het beheer van het infoscherm.")
+            )
         async with self._slot:
             try:
                 bestaand = await agenda.async_get_events(self._hass, begin, einde)
             except HomeAssistantError as fout:
-                raise RuimteFout("failed", f"De agenda kon niet gelezen worden: {fout}") from None
+                raise RuimteFout(
+                    "failed", t(self._hass, "De agenda kon niet gelezen worden: {fout}", fout=fout)
+                ) from None
             botst = sorted(
                 (ev for ev in bestaand if ev.start_datetime_local < einde and ev.end_datetime_local > begin),
                 key=lambda ev: ev.start_datetime_local,
             )
             if botst:
                 ev = botst[0]
-                wanneer = "de hele dag" if ev.all_day else f"van {klok(ev.start_datetime_local)} tot {klok(ev.end_datetime_local)}"
-                raise RuimteFout("bezet", f"Deze ruimte is dan al bezet, {wanneer}.")
+                if ev.all_day:
+                    tekst_bezet = t(self._hass, "Deze ruimte is dan al bezet, de hele dag.")
+                else:
+                    tekst_bezet = t(
+                        self._hass,
+                        "Deze ruimte is dan al bezet, van {van} tot {tot}.",
+                        van=klok(ev.start_datetime_local),
+                        tot=klok(ev.end_datetime_local),
+                    )
+                raise RuimteFout("bezet", tekst_bezet)
             try:
                 await agenda.async_create_event(
                     dtstart=begin,
@@ -216,7 +256,7 @@ class Ruimtes:
             except (HomeAssistantError, vol.Invalid, ValueError, OSError) as fout:
                 # OSError: de Lokale agenda schrijft een .ics-bestand weg, en een
                 # schijf die vol of alleen-lezen is gaf anders "Unknown error".
-                raise RuimteFout("failed", f"Boeken lukte niet: {fout}") from None
+                raise RuimteFout("failed", t(self._hass, "Boeken lukte niet: {fout}", fout=fout)) from None
         _LOGGER.info("Infoscherm: %s geboekt van %s tot %s (%s)", ruimte, begin, einde, waar)
         return {"ruimte": ruimte, "start": begin.isoformat(), "eind": einde.isoformat()}
 
@@ -243,11 +283,11 @@ class Ruimtes:
         try:
             tekst = _tekst(naam, "naam", MAX_KORT, verplicht=True)
         except InfoFout as fout:
-            raise RuimteFout("invalid_format", "Geef de ruimte een naam.") from fout
+            raise RuimteFout("invalid_format", t(self._hass, "Geef de ruimte een naam.")) from fout
         # `slugify` van Home Assistant maakt van "!!!" geen lege tekst maar
         # "unknown"; dus zelf kijken of er iets in staat.
         if not any(teken.isalnum() for teken in tekst):
-            raise RuimteFout("invalid_format", "Een naam met letters of cijfers, graag.")
+            raise RuimteFout("invalid_format", t(self._hass, "Een naam met letters of cijfers, graag."))
         sleutel = slugify(tekst)
         async with self._slot:
             entry = self._lokale_agenda(sleutel)
@@ -258,11 +298,24 @@ class Ruimtes:
                     flow["flow_id"], {LOKAAL_NAAM: tekst, "import": "create_empty"}
                 )
                 if uit.get("type") != FlowResultType.CREATE_ENTRY:
-                    raise RuimteFout("failed", f"De agenda kon niet gemaakt worden ({uit.get('reason') or uit.get('type')}).")
+                    raise RuimteFout(
+                        "failed",
+                        t(
+                            self._hass,
+                            "De agenda kon niet gemaakt worden ({reden}).",
+                            reden=uit.get("reason") or uit.get("type"),
+                        ),
+                    )
                 entry = uit["result"]
             entity_id = await self._agenda_van(entry)
             if entity_id is None:
-                raise RuimteFout("failed", "De agenda is er, maar Home Assistant heeft hem nog niet klaar. Probeer het zo opnieuw.")
+                raise RuimteFout(
+                    "failed",
+                    t(
+                        self._hass,
+                        "De agenda is er, maar Home Assistant heeft hem nog niet klaar. Probeer het zo opnieuw.",
+                    ),
+                )
             try:
                 item = await self._store.async_voeg_ruimte_toe(entity_id, gemaakt=gemaakt)
             except InfoFout as fout:
@@ -274,11 +327,14 @@ class Ruimtes:
         """Een ruimte die het beheer maakte weer weghalen, met zijn agenda."""
         item = self._store.ruimte(ruimte)
         if item is None:
-            raise RuimteFout("not_found", "Deze ruimte staat niet (meer) op het infoscherm")
+            raise RuimteFout("not_found", t(self._hass, "Deze ruimte staat niet (meer) op het infoscherm"))
         if not item.get("gemaakt"):
             raise RuimteFout(
                 "niet_van_beheer",
-                "Deze ruimte heeft de installateur gekozen; die haalt hem weg in de kaartinstellingen van het beheer.",
+                t(
+                    self._hass,
+                    "Deze ruimte heeft de installateur gekozen; die haalt hem weg in de kaartinstellingen van het beheer.",
+                ),
             )
         ent = er.async_get(self._hass).async_get(ruimte)
         entry = self._hass.config_entries.async_get_entry(ent.config_entry_id) if ent and ent.config_entry_id else None
@@ -291,8 +347,8 @@ class Ruimtes:
 
     async def async_vrijgeven(self, *, ruimte: str, uid: str, recurrence_id: str | None) -> None:
         """Eén boeking weg. Bij een herhalende alleen deze keer."""
-        agenda = self._agenda(ruimte, CalendarEntityFeature.DELETE_EVENT, "verwijderen")
+        agenda = self._agenda(ruimte, CalendarEntityFeature.DELETE_EVENT)
         try:
             await agenda.async_delete_event(uid, recurrence_id=recurrence_id or None)
         except (HomeAssistantError, ValueError, OSError) as fout:
-            raise RuimteFout("failed", f"Vrijgeven lukte niet: {fout}") from None
+            raise RuimteFout("failed", t(self._hass, "Vrijgeven lukte niet: {fout}", fout=fout)) from None

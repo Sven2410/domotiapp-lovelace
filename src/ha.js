@@ -8,6 +8,7 @@
  */
 
 import { lampkleurVoor } from "./thema-logica.js";
+import { locale, t } from "./taal.js";
 
 /**
  * De bevestigingsvraag, aangemeld door `vraag.js`.
@@ -414,14 +415,22 @@ export function localizeState(hass, st) {
 export function fmtNumber(hass, value, digits) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "--";
-  return n.toLocaleString(hass?.locale?.language ?? "nl", {
+  return n.toLocaleString(locale(), {
     minimumFractionDigits: digits ?? 0,
     maximumFractionDigits: digits ?? 0,
   });
 }
 
-const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
-const MONTHS = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+/**
+ * Dag- en maandnamen uit de browser, in de taal van de kaarten: "dinsdag",
+ * "di", "mrt" of "Tuesday", "Tue", "Mar". Een oudere ICU zet een punt achter
+ * een afkorting ("mrt."); die gaat eraf, zodat het Nederlands blijft wat het
+ * was toen hier nog een eigen lijst stond.
+ */
+const zonderPunt = (s) => s.replace(/\.$/, "");
+const dagnaam = (date) => date.toLocaleDateString(locale(), { weekday: "long" });
+const dagKort = (date) => zonderPunt(date.toLocaleDateString(locale(), { weekday: "short" }));
+const maandKort = (date) => zonderPunt(date.toLocaleDateString(locale(), { month: "short" }));
 
 /** Midnight today, so day arithmetic is not thrown off by the clock. */
 export const startOfDay = (d = new Date()) =>
@@ -481,16 +490,15 @@ export function parseDate(value) {
 export function relativeDay(date, now = new Date()) {
   if (!date) return "";
   const d = daysBetween(now, date);
-  if (d < 0) return `${Math.abs(d)} dagen geleden`;
-  if (d === 0) return "vandaag";
-  if (d === 1) return "morgen";
-  if (d === 2) return "overmorgen";
-  if (d <= 6) return DAYS[date.getDay()];
-  return `${DAYS[date.getDay()].slice(0, 2)} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+  if (d < 0) return t("{n} dagen geleden", { n: Math.abs(d) });
+  if (d === 0) return t("vandaag");
+  if (d === 1) return t("morgen");
+  if (d === 2) return t("overmorgen");
+  if (d <= 6) return dagnaam(date);
+  return `${dagKort(date)} ${date.getDate()} ${maandKort(date)}`;
 }
 
-export const shortDate = (date) =>
-  date ? `${date.getDate()} ${MONTHS[date.getMonth()]}` : "";
+export const shortDate = (date) => (date ? `${date.getDate()} ${maandKort(date)}` : "");
 
 /** "1 dag" / "3 dagen" -- the singular is not optional in Dutch. */
-export const dayCount = (n) => (Math.abs(n) === 1 ? "1 dag" : `${n} dagen`);
+export const dayCount = (n) => (Math.abs(n) === 1 ? t("1 dag") : t("{n} dagen", { n }));

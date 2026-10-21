@@ -14,7 +14,8 @@
  * `afsprakenUit` voor de vorm.
  */
 
-import { DAGNAMEN, dagSleutel, isoDatum, isoDatumTijd, klok } from "./infoscherm-logica.js";
+import { locale, t } from "../taal.js";
+import { isoDatum, isoDatumTijd, klok } from "./infoscherm-logica.js";
 
 /** De duren om uit te kiezen op het scherm, in minuten. */
 export const DUREN = [30, 60, 90, 120];
@@ -22,8 +23,6 @@ export const DUREN = [30, 60, 90, 120];
 export const STAP = 15;
 /** Zoveel dagen vooruit toont het beheer. */
 export const DAGEN_VOORUIT = 14;
-
-const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 export const dagBegin = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 export const plusDagen = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
@@ -104,8 +103,8 @@ export function ruimteStatus(afspraken, nu) {
 
 /** "Bezet tot 14:00", "Bezet, de rest van de dag", "Vrij tot 15:00" of "Vrij". */
 export function statusTekst(status) {
-  if (status.bezet) return status.restVanDeDag ? "Bezet, de rest van de dag" : `Bezet tot ${klok(status.tot)}`;
-  return status.tot ? `Vrij tot ${klok(status.tot)}` : "Vrij";
+  if (status.bezet) return status.restVanDeDag ? t("Bezet, de rest van de dag") : t("Bezet tot {tijd}", { tijd: klok(status.tot) });
+  return status.tot ? t("Vrij tot {tijd}", { tijd: klok(status.tot) }) : t("Vrij");
 }
 
 /** "2 van 3 vrij", voor de kop van het blok. */
@@ -113,7 +112,7 @@ export function vrijTeller(statussen) {
   const n = statussen.length;
   if (!n) return "";
   const vrij = statussen.filter((s) => !s.bezet).length;
-  return n === 1 ? (vrij ? "vrij" : "bezet") : `${vrij} van ${n} vrij`;
+  return n === 1 ? (vrij ? t("vrij") : t("bezet")) : t("{vrij} van {n} vrij", { vrij, n });
 }
 
 /* ------------------------------------------------------------ de tijdlijn */
@@ -163,7 +162,7 @@ export function balken(afspraken, dag, venster) {
       return {
         links: ((s - a0) / breed) * 100,
         breedte: ((e - s) / breed) * 100,
-        tekst: a.heleDag ? "hele dag" : `${klok(a.start)} – ${klok(a.eind)}`,
+        tekst: a.heleDag ? t("hele dag") : `${klok(a.start)} – ${klok(a.eind)}`,
         afspraak: a,
       };
     });
@@ -174,8 +173,8 @@ export function nuPositie(nu, dag, venster) {
   const begin = dagBegin(dag).getTime();
   const a0 = begin + venster.van * 3600000;
   const a1 = begin + venster.tot * 3600000;
-  const t = nu.getTime();
-  return t < a0 || t > a1 ? null : ((t - a0) / (a1 - a0)) * 100;
+  const ms = nu.getTime();
+  return ms < a0 || ms > a1 ? null : ((ms - a0) / (a1 - a0)) * 100;
 }
 
 /** De uren onder de tijdlijn: elk uur, of om de twee als het er veel zijn. */
@@ -224,7 +223,7 @@ export const isVrij = (afspraken, start, eind) => !(afspraken ?? []).some((a) =>
 export function duurLabel(minuten) {
   if (minuten < 60) return `${minuten} min`;
   const uren = minuten / 60;
-  return `${String(uren).replace(".", ",")} uur`;
+  return uren === 1 ? t("1 uur") : t("{n} uur", { n: uren.toLocaleString(locale()) });
 }
 
 /**
@@ -242,12 +241,12 @@ export function beginKeuzes(nu, dag = nu) {
     }
     return [...uit.values()];
   }
-  const uit = [{ waarde: "nu", tijd: new Date(Math.floor(nu.getTime() / 60000) * 60000), label: "Nu" }];
-  const t = new Date(nu);
-  t.setSeconds(0, 0);
-  t.setMinutes(t.getMinutes() - (t.getMinutes() % STAP) + STAP);
+  const uit = [{ waarde: "nu", tijd: new Date(Math.floor(nu.getTime() / 60000) * 60000), label: t("Nu") }];
+  const eerst = new Date(nu);
+  eerst.setSeconds(0, 0);
+  eerst.setMinutes(eerst.getMinutes() - (eerst.getMinutes() % STAP) + STAP);
   const middernacht = plusDagen(dagBegin(nu), 1);
-  for (let k = t; k < middernacht; k = plusMinuten(k, STAP)) {
+  for (let k = eerst; k < middernacht; k = plusMinuten(k, STAP)) {
     uit.push({ waarde: lokaal(k), tijd: k, label: klok(k) });
   }
   return uit;
@@ -315,7 +314,7 @@ export function keuzeOpDag(afspraken, keuzes, { vorige = null, minuten = null, v
 
 /** Een tijd van een afspraak binnen één dag: wat ervoor of erna valt, is 00:00 of 24:00. */
 function binnenDag(a, begin, eind) {
-  if (a.heleDag || (a.start <= begin && a.eind >= eind)) return "de hele dag";
+  if (a.heleDag || (a.start <= begin && a.eind >= eind)) return t("de hele dag");
   return `${a.start < begin ? "00:00" : klok(a.start)} – ${a.eind > eind ? "24:00" : klok(a.eind)}`;
 }
 
@@ -331,16 +330,18 @@ export function dagBezet(afspraken, dag, nu) {
   const eind = plusDagen(begin, 1);
   const op = (afspraken ?? []).filter((a) => a.start < eind && a.eind > begin);
   const label = metHoofdletter(dagLabel(dag, nu));
-  if (!op.length) return `${label} is nog niets geboekt.`;
-  return `${label} al geboekt: ${op.map((a) => binnenDag(a, begin, eind)).join(", ")}`;
+  if (!op.length) return t("{dag} is nog niets geboekt.", { dag: label });
+  return t("{dag} al geboekt: {tijden}", { dag: label, tijden: op.map((a) => binnenDag(a, begin, eind)).join(", ") });
 }
 
 /** "van 10:00 tot 11:00", of op een andere dag "morgen van ..." en "dinsdag 20 okt van ...". */
 export function geboektTekst(begin, eind, nu) {
-  const tijd = `van ${klok(begin)} tot ${klok(eind)}`;
-  if (isoDatum(begin) === isoDatum(nu)) return tijd;
-  const label = dagLabel(begin, nu);
-  return `${label.charAt(0).toLowerCase()}${label.slice(1)} ${tijd}`;
+  const tijden = { van: klok(begin), tot: klok(eind) };
+  if (isoDatum(begin) === isoDatum(nu)) return t("van {van} tot {tot}", tijden);
+  // "morgen" met een kleine letter; een dag met een datum blijft zoals hij is
+  // (in het Engels heeft een weekdag een hoofdletter).
+  const dag = isoDatum(begin) === isoDatum(plusDagen(nu, 1)) ? t("morgen") : datumMetDag(begin);
+  return t("{dag} van {van} tot {tot}", { dag, ...tijden });
 }
 
 /* ------------------------------------------------------------ het beheer */
@@ -348,10 +349,13 @@ export function geboektTekst(begin, eind, nu) {
 /** "Vandaag", "Morgen", "zaterdag 18 okt". */
 export function dagLabel(dag, nu) {
   const iso = isoDatum(dag);
-  if (iso === isoDatum(nu)) return "Vandaag";
-  if (iso === isoDatum(plusDagen(nu, 1))) return "Morgen";
-  return `${DAGNAMEN[dagSleutel(dag)]} ${dag.getDate()} ${MAANDEN_KORT[dag.getMonth()]}`;
+  if (iso === isoDatum(nu)) return t("Vandaag");
+  if (iso === isoDatum(plusDagen(nu, 1))) return t("Morgen");
+  return datumMetDag(dag);
 }
+
+/** "zaterdag 18 okt", of in het Engels "Saturday 18 Oct". */
+const datumMetDag = (dag) => dag.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short" });
 
 /**
  * De boekingen van alle ruimtes per dag, voor het beheer. `ruimtes` is
@@ -377,7 +381,7 @@ export function perDag(ruimtes, nu, dagen = DAGEN_VOORUIT) {
 }
 
 /** "09:00 – 10:30", of "hele dag". */
-export const tijdTekst = (a) => (a.heleDag ? "hele dag" : `${klok(a.start)} – ${klok(a.eind)}`);
+export const tijdTekst = (a) => (a.heleDag ? t("hele dag") : `${klok(a.start)} – ${klok(a.eind)}`);
 
 /**
  * Wat het beheer in het formulier heeft staan, nagekeken voordat het naar de
@@ -387,9 +391,9 @@ export const tijdTekst = (a) => (a.heleDag ? "hele dag" : `${klok(a.start)} – 
 export function controleerFormulier(form) {
   const { datum, van, tot } = form ?? {};
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datum ?? "") || !/^\d{2}:\d{2}$/.test(van ?? "") || !/^\d{2}:\d{2}$/.test(tot ?? "")) {
-    return { fout: "Vul een datum, een begintijd en een eindtijd in." };
+    return { fout: t("Vul een datum, een begintijd en een eindtijd in.") };
   }
-  if (tot <= van) return { fout: "De eindtijd moet na de begintijd liggen." };
+  if (tot <= van) return { fout: t("De eindtijd moet na de begintijd liggen.") };
   return { start: `${datum}T${van}`, eind: `${datum}T${tot}` };
 }
 

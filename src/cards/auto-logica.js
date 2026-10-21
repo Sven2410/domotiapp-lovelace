@@ -16,11 +16,13 @@
  * prima uit.
  */
 
+import { nt, t } from "../taal.js";
+
 /** De drie aandrijvingen. Ze bepalen welke balken er op de kaart staan. */
 export const AANDRIJVING = {
-  fuel: { label: "Brandstof", icoon: "petrol" },
-  hybrid: { label: "Hybride", icoon: "leaf" },
-  electric: { label: "Elektrisch", icoon: "bolt" },
+  fuel: { label: nt("Brandstof"), icoon: "petrol" },
+  hybrid: { label: nt("Hybride"), icoon: "leaf" },
+  electric: { label: nt("Elektrisch"), icoon: "bolt" },
 };
 
 /** Heeft deze auto een accu die je oplaadt? */
@@ -84,7 +86,7 @@ export function laadStand(st) {
  * wélk woord er ontbreekt, in plaats van dat de kaart leeg blijft.
  */
 export function laadTekst(stand, st) {
-  if (stand && stand !== "onbekend") return LAADWOORD[stand] ?? "";
+  if (stand && stand !== "onbekend") return LAADWOORD[stand] ? t(LAADWOORD[stand]) : "";
   const ruw = String(st?.state ?? "").trim();
   if (!ruw || ruw === "unavailable" || ruw === "unknown") return "";
   const woorden = ruw.replace(/[_-]+/g, " ").toLowerCase();
@@ -92,10 +94,10 @@ export function laadTekst(stand, st) {
 }
 
 export const LAADWOORD = {
-  charging: "Aan het laden",
-  complete: "Volgeladen",
-  connected: "Aan de lader",
-  idle: "Niet aan de lader",
+  charging: nt("Aan het laden"),
+  complete: nt("Volgeladen"),
+  connected: nt("Aan de lader"),
+  idle: nt("Niet aan de lader"),
 };
 
 /**
@@ -157,8 +159,8 @@ export function ladenTot(st, nu = Date.now()) {
   if (!ruw || ruw === "unavailable" || ruw === "unknown") return null;
 
   if (st?.attributes?.device_class === "timestamp" || /[T ]\d{2}:\d{2}/.test(ruw)) {
-    const t = Date.parse(ruw);
-    if (Number.isFinite(t)) return Math.max(0, Math.round((t - nu) / 60000));
+    const tijd = Date.parse(ruw);
+    if (Number.isFinite(tijd)) return Math.max(0, Math.round((tijd - nu) / 60000));
   }
   if (/^\d+:\d{2}(:\d{2})?$/.test(ruw)) {
     const d = ruw.split(":").map(Number);
@@ -178,7 +180,7 @@ export function alsDuur(minuten) {
   if (minuten === null || minuten === undefined) return "";
   const m = Math.max(0, Math.round(minuten));
   if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)} u ${String(m % 60).padStart(2, "0")}`;
+  return t("{uur} u {min}", { uur: Math.floor(m / 60), min: String(m % 60).padStart(2, "0") });
 }
 
 /**
@@ -193,18 +195,19 @@ export function alsDuur(minuten) {
  * @returns {{tekst: string, toon: string}}
  */
 export function statusregel({ open, slot, laden, laadMinuten, radius, aandrijving }) {
-  if (open) return { tekst: "Er staat iets open", toon: "warn" };
-  if (slot === "unlocked") return { tekst: "Niet op slot", toon: "warn" };
+  if (open) return { tekst: t("Er staat iets open"), toon: "warn" };
+  if (slot === "unlocked") return { tekst: t("Niet op slot"), toon: "warn" };
 
   if (laden === "charging") {
-    const bij = laadMinuten ? ` · nog ${alsDuur(laadMinuten)}` : "";
-    return { tekst: `${LAADWOORD.charging}${bij}`, toon: "accent" };
+    const bij = laadMinuten ? ` · ${t("nog {duur}", { duur: alsDuur(laadMinuten) })}` : "";
+    return { tekst: `${t(LAADWOORD.charging)}${bij}`, toon: "accent" };
   }
-  if (laden === "complete") return { tekst: LAADWOORD.complete, toon: "good" };
-  if (laden === "connected") return { tekst: LAADWOORD.connected, toon: "neutral" };
+  if (laden === "complete") return { tekst: t(LAADWOORD.complete), toon: "good" };
+  if (laden === "connected") return { tekst: t(LAADWOORD.connected), toon: "neutral" };
 
-  if (radius) return { tekst: `Nog ${radius.waarde} ${radius.eenheid}`, toon: "neutral" };
-  return { tekst: AANDRIJVING[aandrijving]?.label ?? "", toon: "neutral" };
+  if (radius) return { tekst: t("Nog {afstand}", { afstand: `${radius.waarde} ${radius.eenheid}` }), toon: "neutral" };
+  const soort = AANDRIJVING[aandrijving];
+  return { tekst: soort ? t(soort.label) : "", toon: "neutral" };
 }
 
 /* ------------------------------------------------------------------ locatie
@@ -295,8 +298,8 @@ export function locatie(st, hass, straal = THUIS_STRAAL_M) {
   // 1 en 2: een woord. Dit gaat vóór het coordinaat, want een tracker die
   // "home" zegt weet dat beter dan wij met een straal eromheen -- die kent de
   // zone zoals de gebruiker hem heeft ingesteld.
-  if (THUIS_WOORDEN.includes(klein)) return { thuis: true, tekst: "Thuis", meters: null };
-  if (WEG_WOORDEN.includes(klein)) return { thuis: false, tekst: "Afwezig", meters: null };
+  if (THUIS_WOORDEN.includes(klein)) return { thuis: true, tekst: t("Thuis"), meters: null };
+  if (WEG_WOORDEN.includes(klein)) return { thuis: false, tekst: t("Afwezig"), meters: null };
 
   // 3: een coordinaat.
   const punt = coordinaatVan(st);
@@ -307,7 +310,7 @@ export function locatie(st, hass, straal = THUIS_STRAAL_M) {
     const thuis = m <= straal;
     return {
       thuis,
-      tekst: thuis ? "Thuis" : "Afwezig",
+      tekst: thuis ? t("Thuis") : t("Afwezig"),
       meters: Math.round(m),
     };
   }

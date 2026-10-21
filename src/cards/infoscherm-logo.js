@@ -21,6 +21,7 @@
  *   anders is de tekening maar half zo hoog als het vak.
  */
 
+import { t } from "../taal.js";
 import { tokens } from "../theme.js";
 import { contrast, leesKleur, opOndergrond } from "../thema-logica.js";
 
@@ -158,6 +159,6 @@ export function logoWaarschuwing(analyse, uiterlijk) {
   const licht = uiterlijk === "licht";
   if ((analyse.wegvallend[licht ? "licht" : "donker"] ?? 0) < 0.5) return "";
   return licht
-    ? "Dit logo valt grotendeels weg op het lichte scherm: het is licht op een doorzichtige achtergrond. Gebruik een versie met donkere letters, of zet Uiterlijk op Donker."
-    : "Dit logo valt grotendeels weg op het donkere scherm: het is donker op een doorzichtige achtergrond. Gebruik een versie met lichte letters, of zet Uiterlijk op Licht.";
+    ? t("Dit logo valt grotendeels weg op het lichte scherm: het is licht op een doorzichtige achtergrond. Gebruik een versie met donkere letters, of zet Uiterlijk op Donker.")
+    : t("Dit logo valt grotendeels weg op het donkere scherm: het is donker op een doorzichtige achtergrond. Gebruik een versie met lichte letters, of zet Uiterlijk op Licht.");
 }

@@ -29,6 +29,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { attrsOf, bindActions, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import { nt, t } from "../taal.js";
 import {
   BIT_VOOR_DIENST,
   F,
@@ -126,7 +127,7 @@ class CoverCard extends DacCard {
 
   validate(config) {
     const list = config.covers ?? config.entities ?? (config.entity ? [config.entity] : []);
-    if (!list.length) return { ...config, [INCOMPLETE]: "Kies minstens één rolluik of zonnescherm." };
+    if (!list.length) return { ...config, [INCOMPLETE]: t("Kies minstens één rolluik of zonnescherm.") };
     return {
       ...config,
       covers: list.map((c) => (typeof c === "string" ? { entity: c } : c)),
@@ -145,7 +146,7 @@ class CoverCard extends DacCard {
     return `
       <div class="keys${poort ? " woorden" : ""}">
         ${knop("open", tekst.open, poort ? tekst.open : icons.arrowUp)}
-        ${withStop ? `<button type="button" data-act="stop" aria-label="Stop">${icons.stop}</button>` : ""}
+        ${withStop ? `<button type="button" data-act="stop" aria-label="${t("Stop")}">${icons.stop}</button>` : ""}
         ${knop("close", tekst.close, poort ? tekst.close : icons.arrowDown)}
       </div>`;
   }
@@ -158,7 +159,7 @@ class CoverCard extends DacCard {
       .map(
         (cv, i) => `
       <div class="cv" data-i="${i}" data-shown="closed" style="--tone:${toneValue(cv.tone ?? c.tone, "solar")}">
-        <button class="chip" type="button" aria-label="Meer info"></button>
+        <button class="chip" type="button" aria-label="${t("Meer info")}"></button>
         <div class="txt"><div class="nm"></div><div class="st"></div></div>
         ${this.keysHtml(c.show_stop !== false, isPoort(cv, c))}
         <div class="pos" hidden></div>
@@ -258,7 +259,7 @@ class CoverCard extends DacCard {
         if (!pos.dataset.built) {
           pos.dataset.built = "1";
           pos.innerHTML = sliderHtml("position");
-          pos.querySelector(".slider").setAttribute("aria-label", "Positie");
+          pos.querySelector(".slider").setAttribute("aria-label", t("Positie"));
         }
         if (!this.bound_.has(i)) {
           this.bound_.add(i);
@@ -266,7 +267,7 @@ class CoverCard extends DacCard {
           const set = (v) => {
             el0.style.setProperty("--v", `${v}%`);
             el0.setAttribute("aria-valuenow", String(v));
-            if (this.toonStatus_()) cvEl.querySelector(".st").textContent = `${v}% open`;
+            if (this.toonStatus_()) cvEl.querySelector(".st").textContent = t("{pct}% open", { pct: v });
           };
           this.teardown_.push(
             bindSlider(el0, {
@@ -334,8 +335,8 @@ class CoverEditor extends DacEditor {
 
   pickers() {
     return [
-      { key: "icon_open", kind: "icon", label: "Icoon als het open staat", fallback: "shutterOpen" },
-      { key: "icon_closed", kind: "icon", label: "Icoon als het dicht is", fallback: "shutter" },
+      { key: "icon_open", kind: "icon", label: t("Icoon als het open staat"), fallback: "shutterOpen" },
+      { key: "icon_closed", kind: "icon", label: t("Icoon als het dicht is"), fallback: "shutter" },
     ];
   }
 
@@ -416,34 +417,40 @@ class CoverEditor extends DacEditor {
   label(s) {
     // De naam van de entiteit staat in ELK van de drie labels, want met drie
     // rolluiken onder elkaar is "Poort" op zichzelf niet te plaatsen.
-    if (s.name.startsWith("naam:")) return `Naam voor ${this.naamVan_(s.name.slice(5))}`;
-    if (s.name.startsWith("poort:")) return `${this.naamVan_(s.name.slice(6))} is een poort`;
+    if (s.name.startsWith("naam:")) return t("Naam voor {naam}", { naam: this.naamVan_(s.name.slice(5)) });
+    if (s.name.startsWith("poort:")) return t("{naam} is een poort", { naam: this.naamVan_(s.name.slice(6)) });
     if (s.name.startsWith("invert:"))
-      return `${this.naamVan_(s.name.slice(7))} omgekeerd aangesloten`;
+      return t("{naam} omgekeerd aangesloten", { naam: this.naamVan_(s.name.slice(7)) });
     return (
       {
-        covers: "Rolluiken",
-        show_stop: "Stopknop tonen",
-        show_state: "Status tonen",
+        covers: t("Rolluiken"),
+        show_stop: t("Stopknop tonen"),
+        show_state: t("Status tonen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "covers")
-      return "Melden ze hun stand terug, dan komt er vanzelf een schuif bij. Zo niet, dan blijven het open, stop en dicht, en volgt het icoon de knop die je indrukt. Per rolluik kun je hieronder een eigen naam zetten.";
+      return t(
+        "Melden ze hun stand terug, dan komt er vanzelf een schuif bij. Zo niet, dan blijven het open, stop en dicht, en volgt het icoon de knop die je indrukt. Per rolluik kun je hieronder een eigen naam zetten."
+      );
     if (s.name.startsWith("poort:"))
-      return "Zet pijltjes om in Openen en Sluiten, en geeft een poorticoon. Een poort schuift opzij, dus omhoog en omlaag zeggen er niets over.";
+      return t(
+        "Zet pijltjes om in Openen en Sluiten, en geeft een poorticoon. Een poort schuift opzij, dus omhoog en omlaag zeggen er niets over."
+      );
     if (s.name.startsWith("invert:"))
-      return "Voor een motor die andersom is aangesloten: open wordt dicht en dicht wordt open. De knoppen, de status en de schuif draaien samen om.";
+      return t(
+        "Voor een motor die andersom is aangesloten: open wordt dicht en dicht wordt open. De knoppen, de status en de schuif draaien samen om."
+      );
     if (s.name === "show_state")
-      return "Haalt de regel Open, Dicht of het percentage onder de naam weg. Niet bereikbaar blijft altijd staan.";
+      return t("Haalt de regel Open, Dicht of het percentage onder de naam weg. Niet bereikbaar blijft altijd staan.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-cover-card-editor", CoverEditor);
 registerCard("domotiapp-cover-card", CoverCard, {
-  name: "DomotiApp Rolluiken",
-  description: "Open, stop en dicht, met een eigen icoon voor open en dicht.",
+  name: nt("DomotiApp Rolluiken"),
+  description: nt("Open, stop en dicht, met een eigen icoon voor open en dicht."),
 });

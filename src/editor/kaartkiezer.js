@@ -45,6 +45,8 @@
  * `stopPropagation()` op alles wat uit de binnenste editor komt.
  */
 
+import { locale, nt, tc } from "../taal.js";
+
 /**
  * De ingebouwde kaarttypes van Home Assistant, met hun Nederlandse naam.
  *
@@ -54,32 +56,32 @@
  * code-editor van `hui-card-element-editor`, en dat is één klik verder.
  */
 const KERN = [
-  ["tile", "Tegel"],
-  ["entities", "Entiteiten"],
-  ["button", "Knop"],
-  ["gauge", "Meter"],
-  ["history-graph", "Geschiedenis"],
-  ["statistic", "Statistiek"],
-  ["sensor", "Sensorgrafiek"],
-  ["light", "Lamp"],
-  ["thermostat", "Thermostaat"],
-  ["humidifier", "Luchtbevochtiger"],
-  ["media-control", "Mediaspeler"],
-  ["weather-forecast", "Weersverwachting"],
-  ["markdown", "Tekst (Markdown)"],
-  ["picture", "Afbeelding"],
-  ["picture-entity", "Afbeelding met entiteit"],
-  ["glance", "Overzicht"],
-  ["area", "Ruimte"],
-  ["alarm-panel", "Alarmpaneel"],
-  ["calendar", "Agenda"],
-  ["todo-list", "Takenlijst"],
-  ["map", "Kaart"],
-  ["iframe", "Webpagina"],
-  ["vertical-stack", "Stapel (onder elkaar)"],
-  ["horizontal-stack", "Stapel (naast elkaar)"],
-  ["grid", "Raster"],
-  ["conditional", "Voorwaardelijk"],
+  ["tile", nt("Tegel")],
+  ["entities", nt("Entiteiten")],
+  ["button", nt("Knop")],
+  ["gauge", nt("Meter")],
+  ["history-graph", nt("Geschiedenis")],
+  ["statistic", nt("Statistiek")],
+  ["sensor", nt("Sensorgrafiek")],
+  ["light", nt("Lamp")],
+  ["thermostat", nt("Thermostaat")],
+  ["humidifier", nt("Luchtbevochtiger")],
+  ["media-control", nt("Mediaspeler")],
+  ["weather-forecast", nt("Weersverwachting")],
+  ["markdown", nt("Tekst (Markdown)")],
+  ["picture", nt("Afbeelding")],
+  ["picture-entity", nt("Afbeelding met entiteit")],
+  ["glance", nt("Overzicht")],
+  ["area", nt("Ruimte")],
+  ["alarm-panel", nt("Alarmpaneel")],
+  ["calendar", nt("Agenda")],
+  ["todo-list", nt("Takenlijst")],
+  ["map", nt("Kaart")],
+  ["iframe", nt("Webpagina")],
+  ["vertical-stack", nt("Stapel (onder elkaar)")],
+  ["horizontal-stack", nt("Stapel (naast elkaar)")],
+  ["grid", nt("Raster")],
+  ["conditional", nt("Voorwaardelijk")],
 ];
 
 /** Alles waaruit gekozen kan worden, custom kaarten eerst. */
@@ -98,10 +100,10 @@ export function kaartsoorten() {
   custom.sort((a, b) => {
     const eigenA = a.type.startsWith("custom:domotiapp-") ? 0 : 1;
     const eigenB = b.type.startsWith("custom:domotiapp-") ? 0 : 1;
-    return eigenA - eigenB || a.naam.localeCompare(b.naam, "nl");
+    return eigenA - eigenB || a.naam.localeCompare(b.naam, locale());
   });
 
-  return [...custom, ...KERN.map(([type, naam]) => ({ type, naam, uitleg: "", eigen: false }))];
+  return [...custom, ...KERN.map(([type, naam]) => ({ type, naam: tc("kaartsoort", naam), uitleg: "", eigen: false }))];
 }
 
 /** Filtert op naam, type en omschrijving; leeg geeft alles. */

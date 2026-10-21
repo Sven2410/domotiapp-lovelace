@@ -53,28 +53,29 @@ import {
   voegToeAanLijst,
   zetFavoriet,
 } from "./bibliotheek.js";
+import { nt, t, taal } from "../taal.js";
 
 /** Hoe lang we wachten met zoeken nadat er een toets is losgelaten. */
 const TIK_PAUZE_MS = 350;
 
 /** Het Nederlandse woord bij een `media_type`, voor het label op een treffer. */
 const SOORT_WOORD = {
-  track: "Nummer",
-  album: "Album",
-  artist: "Artiest",
-  playlist: "Afspeellijst",
-  radio: "Radio",
-  podcast: "Podcast",
-  audiobook: "Luisterboek",
+  track: nt("Nummer"),
+  album: nt("Album"),
+  artist: nt("Artiest"),
+  playlist: nt("Afspeellijst"),
+  radio: nt("Radio"),
+  podcast: nt("Podcast"),
+  audiobook: nt("Luisterboek"),
 };
 
 /** Wat er onder de naam van een treffer staat. */
-function ondertitel(t) {
-  const artiesten = Array.isArray(t.artists)
-    ? t.artists.map((a) => (typeof a === "string" ? a : a?.name)).filter(Boolean).join(", ")
+function ondertitel(item) {
+  const artiesten = Array.isArray(item.artists)
+    ? item.artists.map((a) => (typeof a === "string" ? a : a?.name)).filter(Boolean).join(", ")
     : "";
-  const album = typeof t.album === "string" ? t.album : t.album?.name;
-  const woord = SOORT_WOORD[t.media_type] ?? "";
+  const album = typeof item.album === "string" ? item.album : item.album?.name;
+  const woord = SOORT_WOORD[item.media_type] ? t(SOORT_WOORD[item.media_type]) : "";
   return [artiesten, album].filter(Boolean).join(" · ") || woord;
 }
 
@@ -509,6 +510,9 @@ class MediaBrowser extends HTMLElement {
     this.naam_ = naam;
     this.radioModus_ = radioModus;
     this.speakerKeuze_ = Array.isArray(speakers) && speakers.length ? speakers : null;
+    // Een andere taal dan bij het opbouwen: opnieuw opbouwen. De vaste tekst
+    // (tabbladen, knoppen, het zoekveld) staat er sinds het eerste openen.
+    if (this.gebouwd_ && this.taal_ !== taal()) this.afbreken_();
     if (!this.gebouwd_) this.bouw_();
     this.setAttribute("open", "");
     // Escape hangt aan het document en niet aan dit element.
@@ -570,48 +574,60 @@ class MediaBrowser extends HTMLElement {
 
   /* ------------------------------------------------------------- opbouw */
 
+  /** De opbouw weggooien, met zijn luisteraars, zodat `bouw_` opnieuw kan. */
+  afbreken_() {
+    this.trefferBinding_?.();
+    this.trefferBinding_ = null;
+    this.schuiven_?.forEach((off) => off());
+    this.schuiven_ = null;
+    for (const fn of this.opruimen_) fn();
+    this.opruimen_ = [];
+    this.gebouwd_ = false;
+  }
+
   bouw_() {
     this.gebouwd_ = true;
+    this.taal_ = taal();
     this.shadowRoot.innerHTML = `
       <div class="laag">
         <header>
           <span class="wie"><b></b><span></span></span>
-          <button class="rond sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
+          <button class="rond sluit" type="button" aria-label="${t("Sluiten")}">${resolve("close")}</button>
         </header>
         <nav class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="zoeken" aria-selected="true">Zoeken</button>
-          <button type="button" role="tab" data-tab="favorieten" aria-selected="false">Favorieten</button>
-          <button type="button" role="tab" data-tab="lijsten" aria-selected="false">Afspeellijsten</button>
+          <button type="button" role="tab" data-tab="zoeken" aria-selected="true">${t("Zoeken")}</button>
+          <button type="button" role="tab" data-tab="favorieten" aria-selected="false">${t("Favorieten")}</button>
+          <button type="button" role="tab" data-tab="lijsten" aria-selected="false">${t("Afspeellijsten")}</button>
         </nav>
         <div class="lijstkop" hidden>
-          <button class="rond terug" type="button" aria-label="Terug">${resolve("chevronRight")}</button>
+          <button class="rond terug" type="button" aria-label="${t("Terug")}">${resolve("chevronRight")}</button>
           <b></b>
-          <button class="rond weglijst" type="button" aria-label="Deze afspeellijst verwijderen">${resolve("bin")}</button>
+          <button class="rond weglijst" type="button" aria-label="${t("Deze afspeellijst verwijderen")}">${resolve("bin")}</button>
         </div>
-        <button class="nieuwe" type="button" hidden>+  Nieuwe afspeellijst</button>
+        <button class="nieuwe" type="button" hidden>+  ${t("Nieuwe afspeellijst")}</button>
         <div class="nieuwrij" hidden>
-          <input type="text" placeholder="Naam van de afspeellijst" aria-label="Naam van de nieuwe afspeellijst" />
-          <button class="zoekknop" type="button" data-maak>Maken</button>
+          <input type="text" placeholder="${t("Naam van de afspeellijst")}" aria-label="${t("Naam van de nieuwe afspeellijst")}" />
+          <button class="zoekknop" type="button" data-maak>${t("Maken")}</button>
         </div>
         <div class="zoek">
           <label class="veld">
             ${resolve("search")}
-            <input type="search" placeholder="Zoeken naar een nummer, album, artiest of afspeellijst"
+            <input type="search" placeholder="${t("Zoeken naar een nummer, album, artiest of afspeellijst")}"
                    autocomplete="off" spellcheck="false" enterkeyhint="search"
-                   aria-label="Zoeken in Music Assistant" />
+                   aria-label="${t("Zoeken in Music Assistant")}" />
           </label>
-          <button class="zoekknop" type="button">Zoeken</button>
+          <button class="zoekknop" type="button">${t("Zoeken")}</button>
         </div>
         <nav class="soorten">
           ${SOORTEN.map(
             ([waarde, label]) =>
-              `<button type="button" data-soort="${waarde}" aria-pressed="${waarde === "" }">${label}</button>`
+              `<button type="button" data-soort="${waarde}" aria-pressed="${waarde === "" }">${t(label)}</button>`
           ).join("")}
         </nav>
         <div class="lijst"></div>
         <footer hidden>
           <button class="voetkop" type="button" aria-expanded="false">
-            <span class="kop">Speelt af op</span>
+            <span class="kop">${t("Speelt af op")}</span>
             <span class="waar"></span>
             <span class="pijl">${resolve("chevronDown")}</span>
           </button>
@@ -706,8 +722,8 @@ class MediaBrowser extends HTMLElement {
     });
 
     this.leegMelding_(
-      "Zoek in Music Assistant",
-      "Typ een naam en kies uit alles wat je bibliotheek en je providers kennen: nummers, albums, artiesten, afspeellijsten en radio."
+      t("Zoek in Music Assistant"),
+      t("Typ een naam en kies uit alles wat je bibliotheek en je providers kennen: nummers, albums, artiesten, afspeellijsten en radio.")
     );
   }
 
@@ -734,8 +750,8 @@ class MediaBrowser extends HTMLElement {
     if (!vraag) {
       this.treffers_ = this.zoekTreffers_ = [];
       this.leegMelding_(
-        "Zoek in Music Assistant",
-        "Typ een naam en kies uit alles wat je bibliotheek en je providers kennen."
+        t("Zoek in Music Assistant"),
+        t("Typ een naam en kies uit alles wat je bibliotheek en je providers kennen.")
       );
       return;
     }
@@ -744,7 +760,7 @@ class MediaBrowser extends HTMLElement {
     // wordt getekend: een trage provider mag geen oud resultaat over een nieuw
     // heen leggen.
     const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
-    this.leegMelding_("Zoeken…", vraag);
+    this.leegMelding_(t("Zoeken…"), this.veilig_(vraag));
 
     try {
       const antwoord = await this.hass.callWS({
@@ -766,15 +782,15 @@ class MediaBrowser extends HTMLElement {
       if (nogNietGereed(fout)) {
         this.zoekHerkansing_.plan();
         this.leegMelding_(
-          "Home Assistant start nog op",
-          "Zodra DomotiApp klaar is met opstarten, wordt er vanzelf gezocht."
+          t("Home Assistant start nog op"),
+          t("Zodra DomotiApp klaar is met opstarten, wordt er vanzelf gezocht.")
         );
         return;
       }
 
       this.leegMelding_(
-        "Zoeken lukte niet",
-        fout?.message ?? "Music Assistant gaf geen antwoord.",
+        t("Zoeken lukte niet"),
+        fout?.message ?? t("Music Assistant gaf geen antwoord."),
         true
       );
     }
@@ -812,8 +828,8 @@ class MediaBrowser extends HTMLElement {
       this.treffers_ = this.zoekTreffers_ ?? [];
       if (!this.treffers_.length) {
         this.leegMelding_(
-          "Zoek in Music Assistant",
-          "Typ een naam en kies uit alles wat je bibliotheek en je providers kennen."
+          t("Zoek in Music Assistant"),
+          t("Typ een naam en kies uit alles wat je bibliotheek en je providers kennen.")
         );
         return;
       }
@@ -833,7 +849,7 @@ class MediaBrowser extends HTMLElement {
     this.$(".soorten").innerHTML = soorten
       .map(
         ([waarde, label]) =>
-          `<button type="button" data-soort="${waarde}" aria-pressed="${waarde === gekozen}">${label}</button>`
+          `<button type="button" data-soort="${waarde}" aria-pressed="${waarde === gekozen}">${t(label)}</button>`
       )
       .join("");
   }
@@ -847,22 +863,22 @@ class MediaBrowser extends HTMLElement {
     this.bibSoort_ ??= "playlists";
     this.tekenSoorten_(BIB_SOORTEN, this.bibSoort_);
     const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
-    this.leegMelding_("Ophalen…", "Je favorieten uit Music Assistant.");
+    this.leegMelding_(t("Ophalen…"), t("Je favorieten uit Music Assistant."));
     try {
       const items = await haalBibliotheek(this.hass, this.bibSoort_, { favoriet: true });
       if (beurt !== this.beurt_) return;
       this.treffers_ = items;
       if (!items.length) {
         this.leegMelding_(
-          "Nog geen favorieten",
-          `Zoek iets op en tik op het hartje om het hier te zetten.`
+          t("Nog geen favorieten"),
+          t("Zoek iets op en tik op het hartje om het hier te zetten.")
         );
         return;
       }
       this.teken_();
     } catch (fout) {
       if (beurt !== this.beurt_) return;
-      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.leegMelding_(t("Ophalen lukte niet"), fout?.message ?? t("Music Assistant gaf geen antwoord."), true);
     }
   }
 
@@ -894,7 +910,7 @@ class MediaBrowser extends HTMLElement {
     } catch (fout) {
       item.favorite = !nieuw;
       knop?.setAttribute("aria-pressed", String(!nieuw));
-      this.leegMelding_("Dat lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.leegMelding_(t("Dat lukte niet"), fout?.message ?? t("Music Assistant gaf geen antwoord."), true);
     }
   }
 
@@ -902,19 +918,19 @@ class MediaBrowser extends HTMLElement {
 
   async haalLijsten_() {
     const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
-    this.leegMelding_("Ophalen…", "Je afspeellijsten uit Music Assistant.");
+    this.leegMelding_(t("Ophalen…"), t("Je afspeellijsten uit Music Assistant."));
     try {
       const items = await haalBibliotheek(this.hass, "playlists", {});
       if (beurt !== this.beurt_) return;
       this.treffers_ = items;
       if (!items.length) {
-        this.leegMelding_("Nog geen afspeellijsten", "Maak er een met de knop hierboven.");
+        this.leegMelding_(t("Nog geen afspeellijsten"), t("Maak er een met de knop hierboven."));
         return;
       }
       this.teken_();
     } catch (fout) {
       if (beurt !== this.beurt_) return;
-      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.leegMelding_(t("Ophalen lukte niet"), fout?.message ?? t("Music Assistant gaf geen antwoord."), true);
     }
   }
 
@@ -922,26 +938,26 @@ class MediaBrowser extends HTMLElement {
     this.lijst_ = lijst;
     this.modus_ = "lijsten";
     this.$(".lijstkop").hidden = false;
-    this.$(".lijstkop b").textContent = lijst.name ?? "Afspeellijst";
+    this.$(".lijstkop b").textContent = lijst.name ?? t("Afspeellijst");
     this.$(".nieuwe").hidden = true;
     // Een lijst van een provider die niet bewerkbaar is (Spotify bijvoorbeeld)
     // mag je wel zien maar niet weggooien. De knop verdwijnt dan.
     this.$(".weglijst").hidden = !lijst.is_editable;
 
     const beurt = (this.beurt_ = (this.beurt_ ?? 0) + 1);
-    this.leegMelding_("Ophalen…", lijst.name ?? "");
+    this.leegMelding_(t("Ophalen…"), this.veilig_(lijst.name ?? ""));
     try {
       const nummers = await haalLijstNummers(this.hass, lijst);
       if (beurt !== this.beurt_) return;
       this.treffers_ = nummers;
       if (!nummers.length) {
-        this.leegMelding_("Deze lijst is leeg", "Zoek iets op en kies 'Aan afspeellijst toevoegen'.");
+        this.leegMelding_(t("Deze lijst is leeg"), t("Zoek iets op en kies 'Aan afspeellijst toevoegen'."));
         return;
       }
       this.teken_();
     } catch (fout) {
       if (beurt !== this.beurt_) return;
-      this.leegMelding_("Ophalen lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.leegMelding_(t("Ophalen lukte niet"), fout?.message ?? t("Music Assistant gaf geen antwoord."), true);
     }
   }
 
@@ -954,7 +970,7 @@ class MediaBrowser extends HTMLElement {
       this.lijst_ = null;
       this.naarTab_("lijsten");
     } catch (fout) {
-      this.leegMelding_("Maken lukte niet", fout?.message ?? "Music Assistant gaf geen antwoord.", true);
+      this.leegMelding_(t("Maken lukte niet"), fout?.message ?? t("Music Assistant gaf geen antwoord."), true);
     }
   }
 
@@ -983,10 +999,10 @@ class MediaBrowser extends HTMLElement {
     if (!lijst) return;
 
     const ja = await vraagBevestiging({
-      title: "Afspeellijst verwijderen?",
-      text: `"${lijst.name}" wordt uit Music Assistant gehaald. De nummers zelf blijven gewoon in je bibliotheek staan.`,
-      confirmText: "Verwijderen",
-      dismissText: "Annuleren",
+      title: t("Afspeellijst verwijderen?"),
+      text: t("\"{naam}\" wordt uit Music Assistant gehaald. De nummers zelf blijven gewoon in je bibliotheek staan.", { naam: lijst.name }),
+      confirmText: t("Verwijderen"),
+      dismissText: t("Annuleren"),
     });
     if (!ja) return;
 
@@ -995,10 +1011,10 @@ class MediaBrowser extends HTMLElement {
       // Alleen terug naar het overzicht als DEZE lijst openstond. Verwijder je
       // er een vanuit de zoekresultaten, dan hoor je te blijven waar je bent.
       if (this.lijst_ && this.lijst_.uri === lijst.uri) this.lijst_ = null;
-      this.melding_(`"${lijst.name}" verwijderd`);
+      this.melding_(t("\"{naam}\" verwijderd", { naam: lijst.name }));
       this.naarTab_("lijsten");
     } catch (fout) {
-      this.melding_(fout?.message ?? "Verwijderen lukte niet", true);
+      this.melding_(fout?.message ?? t("Verwijderen lukte niet"), true);
     }
   }
 
@@ -1011,13 +1027,13 @@ class MediaBrowser extends HTMLElement {
     if (!lijst || item.position == null) return;
     try {
       await haalUitLijst(this.hass, lijst, [item.position]);
-      this.melding_(`"${item.name}" uit de lijst gehaald`);
+      this.melding_(t("\"{naam}\" uit de lijst gehaald", { naam: item.name }));
       // Music Assistant verwerkt dit niet meteen. Meteen terugkijken geeft de
       // oude lijst; gemeten op de installatie van de eigenaar duurde het een
       // paar seconden. Dus: even wachten, en dan pas opnieuw ophalen.
       await this.naVerwerking_(lijst);
     } catch (fout) {
-      this.melding_(fout?.message ?? "Verwijderen lukte niet", true);
+      this.melding_(fout?.message ?? t("Verwijderen lukte niet"), true);
     }
   }
 
@@ -1049,12 +1065,12 @@ class MediaBrowser extends HTMLElement {
     const bewerkbaar = lijsten.filter((l) => l.is_editable);
     const menu = this.$(".menu");
     menu.innerHTML =
-      `<span class="titel">Aan welke lijst?</span>` +
+      `<span class="titel">${t("Aan welke lijst?")}</span>` +
       (bewerkbaar.length
         ? bewerkbaar
             .map((l, i) => `<button type="button" data-lijst="${i}">${this.veilig_(l.name)}</button>`)
             .join("")
-        : `<span class="titel">Geen bewerkbare lijst. Maak er eerst een.</span>`);
+        : `<span class="titel">${t("Geen bewerkbare lijst. Maak er eerst een.")}</span>`);
     menu.hidden = false;
     // Opnieuw plaatsen: deze lijst is veel hoger dan het menu dat er stond.
     this.menuPlaats_(menu);
@@ -1069,9 +1085,9 @@ class MediaBrowser extends HTMLElement {
         // Music Assistant zet er een achtergrondtaak voor klaar en bevestigt
         // niets. Zonder dit bericht gebeurde er zichtbaar níéts, en dat leest
         // als "toevoegen werkt niet" -- precies wat er gemeld werd.
-        this.melding_(`"${treffer.name}" toegevoegd aan "${lijst.name}"`);
+        this.melding_(t("\"{naam}\" toegevoegd aan \"{lijst}\"", { naam: treffer.name, lijst: lijst.name }));
       } catch (fout) {
-        this.melding_(fout?.message ?? "Toevoegen lukte niet", true);
+        this.melding_(fout?.message ?? t("Toevoegen lukte niet"), true);
       }
     };
   }
@@ -1107,38 +1123,38 @@ class MediaBrowser extends HTMLElement {
   teken_() {
     const lijst = this.$(".lijst");
     if (!this.treffers_.length) {
-      this.leegMelding_("Niets gevonden", "Probeer een andere naam of een ander soort.");
+      this.leegMelding_(t("Niets gevonden"), t("Probeer een andere naam of een ander soort."));
       return;
     }
     const inLijst = this.modus_ === "lijsten" && this.lijst_;
     lijst.innerHTML = this.treffers_
-      .map((t, i) => {
-        const hoes = t.image
-          ? `<img src="${t.image}" alt="" loading="lazy" />`
-          : resolve(t.media_type === "radio" ? "radio" : "music");
+      .map((tr, i) => {
+        const hoes = tr.image
+          ? `<img src="${tr.image}" alt="" loading="lazy" />`
+          : resolve(tr.media_type === "radio" ? "radio" : "music");
         // Het hartje staat naast de regel en niet erin: een knop in een knop
         // bestaat niet in HTML, en een tik erop moet iets ánders doen dan een
         // tik op de regel.
         const hart =
-          kanFavoriet(t) && !inLijst
-            ? `<button class="hart" type="button" data-hart="${i}" aria-pressed="${Boolean(t.favorite)}"
-                 aria-label="Favoriet">${resolve("star")}</button>`
+          kanFavoriet(tr) && !inLijst
+            ? `<button class="hart" type="button" data-hart="${i}" aria-pressed="${Boolean(tr.favorite)}"
+                 aria-label="${t("Favoriet")}">${resolve("star")}</button>`
             : "";
         const weg = inLijst
           ? `<button class="weg" type="button" data-weg="${i}"
-               aria-label="Uit deze afspeellijst halen">${resolve("close")}</button>`
+               aria-label="${t("Uit deze afspeellijst halen")}">${resolve("close")}</button>`
           : "";
         // De drie puntjes openen hetzelfde menu als vasthouden.
         const meer = `<button class="meer" type="button" data-meer="${i}"
-               aria-label="Meer met ${this.veilig_(t.name)}">${resolve("dots")}</button>`;
+               aria-label="${t("Meer met {naam}", { naam: this.veilig_(tr.name) })}">${resolve("dots")}</button>`;
         const aantal = (hart || weg ? 1 : 0) + 1;
         return `
           <div class="rij" data-i="${i}" data-knoppen="${aantal}">
             <button class="tr" type="button">
               <span class="hoes">${hoes}</span>
               <span class="tekst">
-                <span class="nm">${this.veilig_(t.name)}</span>
-                <span class="ond">${this.veilig_(ondertitel(t))}</span>
+                <span class="nm">${this.veilig_(tr.name)}</span>
+                <span class="ond">${this.veilig_(ondertitel(tr))}</span>
               </span>
             </button><span class="knoppen">${hart}${weg}${meer}</span>
           </div>`;
@@ -1150,17 +1166,17 @@ class MediaBrowser extends HTMLElement {
     this.trefferBinding_?.();
     this.trefferBinding_ = bindActions(lijst, {
       onTap: () => {
-        const t = this.laatsteTreffer_;
-        if (!t) return;
+        const tr = this.laatsteTreffer_;
+        if (!tr) return;
         // In het afspeellijstenblad opent een tik de lijst in plaats van hem af
         // te spelen: je wilt zien wat erin zit. Afspelen doe je met vasthouden,
         // net als overal in dit scherm.
-        if (this.modus_ === "lijsten" && !this.lijst_) this.openLijst_(t);
-        else this.speel_(t, "replace", { radio: this.radioStandaard_(t) });
+        if (this.modus_ === "lijsten" && !this.lijst_) this.openLijst_(tr);
+        else this.speel_(tr, "replace", { radio: this.radioStandaard_(tr) });
       },
       onHold: () => {
-        const t = this.laatsteTreffer_;
-        if (t) this.menuOpen_(t);
+        const tr = this.laatsteTreffer_;
+        if (tr) this.menuOpen_(tr);
       },
     });
 
@@ -1276,19 +1292,19 @@ class MediaBrowser extends HTMLElement {
     const inLijst = this.modus_ === "lijsten" && this.lijst_;
     menu.innerHTML =
       `<span class="titel">${this.veilig_(treffer.name)}</span>` +
-      `<button type="button" data-w="replace">Nu afspelen</button>` +
+      `<button type="button" data-w="replace">${t("Nu afspelen")}</button>` +
       (this.kanRadio_(treffer)
-        ? `<button type="button" data-radio>Afspelen en doorgaan</button>`
+        ? `<button type="button" data-radio>${t("Afspelen en doorgaan")}</button>`
         : "") +
-      `<button type="button" data-w="next">Hierna afspelen</button>` +
-      `<button type="button" data-w="add">Achteraan in de wachtrij</button>` +
+      `<button type="button" data-w="next">${t("Hierna afspelen")}</button>` +
+      `<button type="button" data-w="add">${t("Achteraan in de wachtrij")}</button>` +
       (kanFavoriet(treffer)
-        ? `<button type="button" data-fav>${treffer.favorite ? "Uit favorieten" : "Favoriet maken"}</button>`
+        ? `<button type="button" data-fav>${treffer.favorite ? t("Uit favorieten") : t("Favoriet maken")}</button>`
         : "") +
       // Een afspeellijst in een afspeellijst stoppen kan niet, en een artiest
       // ook niet -- MA neemt losse nummers en albums aan.
       (treffer.uri && !inLijst && treffer.media_type !== "playlist"
-        ? `<button type="button" data-toe>Aan afspeellijst toevoegen</button>`
+        ? `<button type="button" data-toe>${t("Aan afspeellijst toevoegen")}</button>`
         : "") +
       // Gevraagd op 27 augustus 2026: *"Ook kan ik geen afspeellijst
       // verwijderen, ik klik op de drie puntjes en dan staat er geen
@@ -1300,7 +1316,7 @@ class MediaBrowser extends HTMLElement {
       // niet van jou; MA weigert dat, en een knop die altijd een foutmelding
       // geeft is erger dan geen knop.
       (treffer.media_type === "playlist" && treffer.is_editable
-        ? `<button type="button" class="kritiek" data-lijstweg>Afspeellijst verwijderen</button>`
+        ? `<button type="button" class="kritiek" data-lijstweg>${t("Afspeellijst verwijderen")}</button>`
         : "");
     menu.hidden = false;
 
@@ -1427,8 +1443,10 @@ class MediaBrowser extends HTMLElement {
       if (!voet.hidden) {
         this.$(".sprekers").innerHTML =
           `<span class="ond" style="color:var(--dac-ink-2);font-size:12.5px">` +
-          `Plak het label <b>${this.veilig_(lijst?.label_name ?? "Music Assistant Media")}</b> ` +
-          `op je speakers om ze hier samen te laten spelen.</span>`;
+          t("Plak het label <b>{label}</b> op je speakers om ze hier samen te laten spelen.", {
+            label: this.veilig_(lijst?.label_name ?? "Music Assistant Media"),
+          }) +
+          `</span>`;
       }
       return;
     }
@@ -1464,7 +1482,7 @@ class MediaBrowser extends HTMLElement {
             <div class="spreker" data-speaker="${s.entity_id}" data-zelf="${zelf}" data-mee="${mee}">
               <button class="mee" type="button" data-speaker="${s.entity_id}"
                       aria-pressed="${mee}" ${!zelf && !s.can_group ? "disabled" : ""}
-                      title="${zelf ? "Deze speler" : s.can_group ? "Laat deze speaker meespelen" : "Deze speaker laat zich niet koppelen"}">
+                      title="${zelf ? t("Deze speler") : s.can_group ? t("Laat deze speaker meespelen") : t("Deze speaker laat zich niet koppelen")}">
                 ${resolve(mee ? "volume" : "speaker")}<span>${this.veilig_(s.name)}</span>
               </button>
               ${
@@ -1474,7 +1492,7 @@ class MediaBrowser extends HTMLElement {
                   // pilvorm én komt hij mee uit `querySelectorAll(".spreker")`.
                   ? `${sliderHtml()}<span class="pct tnum"></span>`
                   : mee
-                    ? `<span class="stil">geen volumeregeling</span>`
+                    ? `<span class="stil">${t("geen volumeregeling")}</span>`
                     : ""
               }
             </div>`;
@@ -1486,7 +1504,7 @@ class MediaBrowser extends HTMLElement {
         const el = rij.querySelector(".slider");
         if (!el) continue;
         const id = rij.dataset.speaker;
-        el.setAttribute("aria-label", `Volume ${rij.querySelector("span")?.textContent ?? ""}`);
+        el.setAttribute("aria-label", t("Volume {naam}", { naam: rij.querySelector("span")?.textContent ?? "" }));
         const off = bindSlider(el, {
           value: () => volumePct(stateOf(this.hass, id)),
           onInput: (v) => this.zetSchuif_(el, v),
@@ -1517,7 +1535,7 @@ class MediaBrowser extends HTMLElement {
     el.style.setProperty("--v", `${pct}%`);
     el.setAttribute("aria-valuenow", String(pct));
     const label = el.parentElement.querySelector(".pct");
-    if (label) label.textContent = gedempt ? "gedempt" : `${pct}%`;
+    if (label) label.textContent = gedempt ? t("gedempt") : `${pct}%`;
   }
 
   wisselSpeaker_(entityId) {

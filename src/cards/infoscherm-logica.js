@@ -10,21 +10,27 @@
  * `standaardIndeling`: de server weigert wat hier al niet mag.
  */
 
+import { locale, nt, t, tc } from "../taal.js";
+
 export const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 
-export const DAGNAMEN = {
-  ma: "maandag",
-  di: "dinsdag",
-  wo: "woensdag",
-  do: "donderdag",
-  vr: "vrijdag",
-  za: "zaterdag",
-  zo: "zondag",
-};
+/**
+ * De naam van een dag ("ma".."zo") in de taal van nu: "maandag" of
+ * "Monday", met `vorm` "short" "ma" of "Mon". Sinds 0.84.0 uit de browser
+ * (`toLocaleDateString`) en niet meer uit een eigen lijst; 1 januari 2024
+ * was een maandag.
+ */
+export const dagNaam = (dag, vorm = "long") =>
+  new Date(2024, 0, 1 + DAGEN.indexOf(dag)).toLocaleDateString(locale(), { weekday: vorm });
 
-const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
-  "augustus", "september", "oktober", "november", "december"];
-const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+/**
+ * `DAGNAMEN.ma` is "maandag", of in het Engels "Monday". Een getter per dag,
+ * zodat wie de tabel leest (het beheer, de ruimtes) de taal van nu krijgt.
+ */
+export const DAGNAMEN = Object.defineProperties(
+  {},
+  Object.fromEntries(DAGEN.map((dag) => [dag, { get: () => dagNaam(dag), enumerable: true }]))
+);
 
 const twee = (n) => String(n).padStart(2, "0");
 
@@ -39,23 +45,22 @@ export const klok = (d) => `${twee(d.getHours())}:${twee(d.getMinutes())}`;
 /** Lokale datum én tijd als "JJJJ-MM-DDTUU:MM", voor mededelingen met een tijdstip. */
 export const isoDatumTijd = (d) => `${isoDatum(d)}T${klok(d)}`;
 
-export const datumLang = (d) =>
-  `${DAGNAMEN[dagSleutel(d)]} ${d.getDate()} ${MAANDEN[d.getMonth()]}`;
+export const datumLang = (d) => d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
 
 /** "2026-09-20" -> "20 september". Voor een datum uit de opslag. */
 export function datumKort(iso) {
   if (!iso) return "";
-  const [, m, dg] = iso.split("-").map(Number);
-  return `${dg} ${MAANDEN[m - 1]}`;
+  const [j, m, dg] = iso.split("-").map(Number);
+  return new Date(j, m - 1, dg).toLocaleDateString(locale(), { day: "numeric", month: "long" });
 }
 
 /** "ma", "di", ... voor een dagvoorspelling; "vandaag" en "morgen" met naam. */
 export function dagKort(d, nu) {
   const iso = isoDatum(d);
-  if (iso === isoDatum(nu)) return "vandaag";
+  if (iso === isoDatum(nu)) return t("vandaag");
   const morgen = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1);
-  if (iso === isoDatum(morgen)) return "morgen";
-  return DAGNAMEN[dagSleutel(d)];
+  if (iso === isoDatum(morgen)) return t("morgen");
+  return dagNaam(dagSleutel(d));
 }
 
 /**
@@ -106,9 +111,9 @@ export function datumTijdKort(iso) {
 export function mededelingPeriode(m) {
   const van = datumTijdKort(m?.van);
   const tot = datumTijdKort(m?.tot);
-  if (van && tot) return `${van} t/m ${tot}`;
-  if (van) return `vanaf ${van}`;
-  if (tot) return `tot en met ${tot}`;
+  if (van && tot) return t("{van} t/m {tot}", { van, tot });
+  if (van) return t("vanaf {van}", { van });
+  if (tot) return t("tot en met {tot}", { tot });
   return "";
 }
 
@@ -151,15 +156,20 @@ export function komendeVerjaardagen(lijst, nu) {
       ...v,
       dagen,
       leeftijd,
-      wanneer: dagen === 0 ? "vandaag" : dagen === 1 ? "morgen" : `${DAGEN[(volgende.getDay() + 6) % 7]} ${volgende.getDate()} ${MAANDEN_KORT[volgende.getMonth()]}`,
+      wanneer:
+        dagen === 0
+          ? t("vandaag")
+          : dagen === 1
+            ? t("morgen")
+            : volgende.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" }),
     });
   }
-  return uit.sort((a, b) => a.dagen - b.dagen || a.naam.localeCompare(b.naam, "nl"));
+  return uit.sort((a, b) => a.dagen - b.dagen || a.naam.localeCompare(b.naam, locale()));
 }
 
 /** "08:00 – 12:30, 13:30 – 17:00", of "gesloten". */
 export const formatteerTijdvakken = (tijden) =>
-  tijden?.length ? tijden.map(([a, b]) => `${a} – ${b}`).join(", ") : "gesloten";
+  tijden?.length ? tijden.map(([a, b]) => `${a} – ${b}`).join(", ") : t("gesloten");
 
 /** De tijdvakken van een dag, met een uitzondering op die datum erin verwerkt. */
 export function tijdenOp(praktijk, datum) {
@@ -199,12 +209,12 @@ export function openingVandaag(praktijk, nu) {
  */
 export function volgendeOpening(praktijk, nu) {
   const vandaag = openingVandaag(praktijk, nu);
-  if (vandaag.straks) return { dag: "vandaag", tijd: vandaag.straks };
+  if (vandaag.straks) return { dag: t("vandaag"), tijd: vandaag.straks };
   for (let i = 1; i <= 14; i += 1) {
     const d = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + i);
     const { tijden } = tijdenOp(praktijk, d);
     if (tijden.length) {
-      return { dag: i === 1 ? "morgen" : DAGNAMEN[dagSleutel(d)], tijd: tijden[0][0] };
+      return { dag: i === 1 ? t("morgen") : dagNaam(dagSleutel(d)), tijd: tijden[0][0] };
     }
   }
   return null;
@@ -218,7 +228,7 @@ export function openingsRegels(praktijk, nu) {
     const tijden = eigen ? eigen.tijden : praktijk?.openingstijden?.[dag] ?? [];
     return {
       dag,
-      naam: DAGNAMEN[dag],
+      naam: dagNaam(dag),
       tekst: formatteerTijdvakken(tijden),
       reden: eigen?.reden ?? "",
       vandaag: dag === vandaag,
@@ -250,10 +260,15 @@ export function openingsGroepen(regels) {
   return groepen.map(({ dagen, tekst, reden, vandaag }) => {
     const eerste = dagen[0];
     const laatste = dagen[dagen.length - 1];
-    const tussen = dagen.length === 2 ? " en " : " t/m ";
+    const kort = (r) => dagNaam(r.dag, "short");
     return {
-      naam: dagen.length === 1 ? eerste.naam : `${eerste.naam}${tussen}${laatste.naam}`,
-      kort: dagen.length === 1 ? eerste.dag : `${eerste.dag}${dagen.length === 2 ? ", " : "–"}${laatste.dag}`,
+      naam:
+        dagen.length === 1
+          ? eerste.naam
+          : dagen.length === 2
+            ? `${eerste.naam} ${t("en")} ${laatste.naam}`
+            : t("{van} t/m {tot}", { van: eerste.naam, tot: laatste.naam }),
+      kort: dagen.length === 1 ? kort(eerste) : `${kort(eerste)}${dagen.length === 2 ? ", " : "–"}${kort(laatste)}`,
       tekst,
       reden,
       vandaag,
@@ -283,11 +298,11 @@ export function kolomVolgorde(lijst) {
  */
 export function openingKop(praktijk, nu) {
   const opening = openingVandaag(praktijk, nu);
-  if (opening.open) return `Nu geopend, tot ${opening.tot}`;
-  if (opening.straks) return `Nu gesloten, om ${opening.straks} weer open`;
-  if (!opening.tijden.length) return "Vandaag gesloten";
+  if (opening.open) return t("Nu geopend, tot {tot}", { tot: opening.tot });
+  if (opening.straks) return t("Nu gesloten, om {tijd} weer open", { tijd: opening.straks });
+  if (!opening.tijden.length) return t("Vandaag gesloten");
   const volgende = volgendeOpening(praktijk, nu);
-  return volgende ? `Nu gesloten, ${volgende.dag} om ${volgende.tijd} weer open` : "Nu gesloten";
+  return volgende ? t("Nu gesloten, {dag} om {tijd} weer open", { dag: volgende.dag, tijd: volgende.tijd }) : t("Nu gesloten");
 }
 
 /** Heeft de praktijk überhaupt openingstijden ingevuld? Anders geen blok. */
@@ -401,15 +416,15 @@ export function aanwezigEerst(personen) {
 /** "zojuist", "12 min geleden", "vandaag 09:30", "gisteren", "8 sep". */
 export function relatieveTijd(iso, nu) {
   if (!iso) return "";
-  const t = new Date(iso);
-  if (Number.isNaN(t.getTime())) return "";
-  const min = Math.round((nu - t) / 60000);
-  if (min < 1) return "zojuist";
-  if (min < 60) return `${min} min geleden`;
-  if (isoDatum(t) === isoDatum(nu)) return `vandaag ${klok(t)}`;
+  const tijd = new Date(iso);
+  if (Number.isNaN(tijd.getTime())) return "";
+  const min = Math.round((nu - tijd) / 60000);
+  if (min < 1) return t("zojuist");
+  if (min < 60) return t("{min} min geleden", { min });
+  if (isoDatum(tijd) === isoDatum(nu)) return t("vandaag {klok}", { klok: klok(tijd) });
   const gisteren = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
-  if (isoDatum(t) === isoDatum(gisteren)) return `gisteren ${klok(t)}`;
-  return `${t.getDate()} ${MAANDEN_KORT[t.getMonth()]}`;
+  if (isoDatum(tijd) === isoDatum(gisteren)) return t("gisteren {klok}", { klok: klok(tijd) });
+  return tijd.toLocaleDateString(locale(), { day: "numeric", month: "short" });
 }
 
 /** Om de beurt een van de teksten; met één tekst altijd die ene. */
@@ -429,23 +444,24 @@ export const RIJEN = 6;
 /**
  * Wat een blok is: de naam op de kop, het icoon, of er een pagina achter zit
  * (dan is de kop een knop), of het een aantal heeft, en de maat waarmee het
- * wordt toegevoegd.
+ * wordt toegevoegd. De naam is een getter, zodat hij in de taal van nu
+ * getoond wordt (net als `ROLLEN` in energie-dashboard.js).
  */
 export const BLOK_INFO = {
-  welkom: { naam: "Welkom", icoon: "house", pagina: null, aantal: false, maat: [6, 1] },
-  weer: { naam: "Weer", icoon: "sun", pagina: "weer", aantal: false, maat: [2, 2] },
-  mededeling: { naam: "Mededelingen", icoon: "bell", pagina: "mededelingen", aantal: false, maat: [2, 1] },
-  openingstijden: { naam: "Openingstijden", icoon: "clock", pagina: null, aantal: false, maat: [2, 3] },
-  aanwezig: { naam: "Aanwezig", icoon: "people", pagina: "aanwezig", aantal: true, maat: [2, 3] },
-  nieuws: { naam: "Nieuws", icoon: "news", pagina: "nieuws", aantal: true, maat: [2, 4] },
-  verlichting: { naam: "Verlichting", icoon: "bulb", pagina: "verlichting", aantal: true, maat: [2, 1] },
-  agenda: { naam: "Agenda", icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
-  verjaardagen: { naam: "Verjaardagen", icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
-  energie: { naam: "Energie", icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
-  afval: { naam: "Afvalkalender", icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
-  klimaat: { naam: "Klimaat", icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
-  ruimtes: { naam: "Ruimtes", icoon: "door", pagina: "ruimtes", aantal: true, maat: [2, 2] },
-  wifi: { naam: "Wifi", icoon: "wifi", pagina: "wifi", aantal: false, maat: [2, 2] },
+  welkom: { get naam() { return t("Welkom"); }, icoon: "house", pagina: null, aantal: false, maat: [6, 1] },
+  weer: { get naam() { return t("Weer"); }, icoon: "sun", pagina: "weer", aantal: false, maat: [2, 2] },
+  mededeling: { get naam() { return t("Mededelingen"); }, icoon: "bell", pagina: "mededelingen", aantal: false, maat: [2, 1] },
+  openingstijden: { get naam() { return t("Openingstijden"); }, icoon: "clock", pagina: null, aantal: false, maat: [2, 3] },
+  aanwezig: { get naam() { return t("Aanwezig"); }, icoon: "people", pagina: "aanwezig", aantal: true, maat: [2, 3] },
+  nieuws: { get naam() { return t("Nieuws"); }, icoon: "news", pagina: "nieuws", aantal: true, maat: [2, 4] },
+  verlichting: { get naam() { return t("Verlichting"); }, icoon: "bulb", pagina: "verlichting", aantal: true, maat: [2, 1] },
+  agenda: { get naam() { return t("Agenda"); }, icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
+  verjaardagen: { get naam() { return t("Verjaardagen"); }, icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
+  energie: { get naam() { return t("Energie"); }, icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
+  afval: { get naam() { return t("Afvalkalender"); }, icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
+  klimaat: { get naam() { return t("Klimaat"); }, icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
+  ruimtes: { get naam() { return t("Ruimtes"); }, icoon: "door", pagina: "ruimtes", aantal: true, maat: [2, 2] },
+  wifi: { get naam() { return t("Wifi"); }, icoon: "wifi", pagina: "wifi", aantal: false, maat: [2, 2] },
 };
 
 /**
@@ -527,18 +543,18 @@ export const BLOK_SOORTEN = Object.keys(BLOK_INFO);
  * een teller naast; onder 250 pixels valt de tekst weg en blijft het pijltje.
  */
 export const MEER = {
-  weer: "Verwachting",
-  mededeling: "Alles lezen",
-  aanwezig: "Aan- en afmelden",
-  nieuws: "Meer nieuws",
-  verlichting: "Bedienen",
-  agenda: "Hele dag",
-  verjaardagen: "Het hele jaar",
-  energie: "Overzicht",
-  afval: "Kalender",
-  klimaat: "Bedienen",
-  ruimtes: "Planning",
-  wifi: "Groot tonen",
+  weer: nt("Verwachting"),
+  mededeling: nt("Alles lezen"),
+  aanwezig: nt("Aan- en afmelden"),
+  nieuws: nt("Meer nieuws"),
+  verlichting: nt("Bedienen"),
+  agenda: nt("Hele dag"),
+  verjaardagen: nt("Het hele jaar"),
+  energie: nt("Overzicht"),
+  afval: nt("Kalender"),
+  klimaat: nt("Bedienen"),
+  ruimtes: nt("Planning"),
+  wifi: nt("Groot tonen"),
 };
 
 /**
@@ -547,9 +563,10 @@ export const MEER = {
  * "Bedienen" alleen als dat op het scherm mag.
  */
 export function meerTekst(soort, stand) {
-  if (soort === "ruimtes" && stand?.boeken_op_scherm) return "Boeken";
-  if (soort === "klimaat" && !klimaatBedienbaar(stand)) return "Alle airco's";
-  return MEER[soort] ?? "Alles bekijken";
+  if (soort === "ruimtes" && stand?.boeken_op_scherm) return t("Boeken");
+  if (soort === "klimaat" && !klimaatBedienbaar(stand)) return t("Alle airco's");
+  // Met "blok" erbij: "Overzicht" is hier een overzicht, geen blik.
+  return MEER[soort] ? tc("blok", MEER[soort]) : t("Alles bekijken");
 }
 
 /**
@@ -618,7 +635,7 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
     case "welkom":
       return null;
     case "weer":
-      return s.installatie?.weer ? null : "Geen weerentiteit gekozen (kaartinstellingen van het infoscherm)";
+      return s.installatie?.weer ? null : t("Geen weerentiteit gekozen (kaartinstellingen van het infoscherm)");
     case "mededeling":
       // Altijd op het scherm, ook zonder mededeling: dan zegt het blok dat.
       // Tot 0.62.0 verdween het, en dan bleef er een gat in het raster. Zijn
@@ -626,34 +643,34 @@ export function blokOntbreekt(soort, stand, feeds, vandaag, extra = {}) {
       // dat zo zeggen nu is het vak dan helemaal leeg".
       return null;
     case "verjaardagen":
-      return (s.verjaardagen?.length ?? 0) > 0 ? null : "Nog geen verjaardagen";
+      return (s.verjaardagen?.length ?? 0) > 0 ? null : t("Nog geen verjaardagen");
     case "openingstijden":
-      return heeftOpeningstijden(s.praktijk) ? null : "Geen openingstijden ingevuld";
+      return heeftOpeningstijden(s.praktijk) ? null : t("Geen openingstijden ingevuld");
     case "aanwezig":
-      return (s.personen?.length ?? 0) > 0 ? null : "Nog geen medewerkers";
+      return (s.personen?.length ?? 0) > 0 ? null : t("Nog geen medewerkers");
     case "nieuws":
       return null;
     case "energie":
       if (s.installatie?.energie || extra.energieDashboard) return null;
-      return "Geen energiesensor gekozen, en geen energiedashboard in Home Assistant";
+      return t("Geen energiesensor gekozen, en geen energiedashboard in Home Assistant");
     case "verlichting":
-      if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return "Geen lampen gekozen (kaartinstellingen van het infoscherm)";
-      return verlichtingZichtbaar(s) ? null : "Verlichting staat uit in het beheer";
+      if (!((s.installatie?.verlichting?.length ?? 0) > 0)) return t("Geen lampen gekozen (kaartinstellingen van het infoscherm)");
+      return verlichtingZichtbaar(s) ? null : t("Verlichting staat uit in het beheer");
     case "klimaat":
-      if (!((s.installatie?.klimaat?.length ?? 0) > 0)) return "Geen airco's gekozen (kaartinstellingen van het beheer)";
-      return klimaatZichtbaar(s) ? null : "Klimaat staat uit in het beheer";
+      if (!((s.installatie?.klimaat?.length ?? 0) > 0)) return t("Geen airco's gekozen (kaartinstellingen van het beheer)");
+      return klimaatZichtbaar(s) ? null : t("Klimaat staat uit in het beheer");
     case "agenda":
-      return (s.installatie?.agendas?.length ?? 0) > 0 ? null : "Geen agenda gekozen (kaartinstellingen van het infoscherm)";
+      return (s.installatie?.agendas?.length ?? 0) > 0 ? null : t("Geen agenda gekozen (kaartinstellingen van het infoscherm)");
     case "ruimtes":
-      return ruimtesZichtbaar(s) ? null : "Geen ruimtes gekozen (kaartinstellingen van het beheer)";
+      return ruimtesZichtbaar(s) ? null : t("Geen ruimtes gekozen (kaartinstellingen van het beheer)");
     case "wifi":
-      return s.installatie?.wifi ? null : "Geen QR-code van de wifi gekozen (kaartinstellingen van het beheer)";
+      return s.installatie?.wifi ? null : t("Geen QR-code van de wifi gekozen (kaartinstellingen van het beheer)");
     case "afval":
       return (s.installatie?.afval?.length ?? 0) > 0
         ? null
-        : "Geen afvalsensoren gekozen (kaartinstellingen van het infoscherm)";
+        : t("Geen afvalsensoren gekozen (kaartinstellingen van het infoscherm)");
     default:
-      return "Onbekend blok";
+      return t("Onbekend blok");
   }
   // `feeds` doet hier niets: een nieuwsblok zonder nieuws zegt dat zelf.
 }
@@ -683,9 +700,9 @@ export function energiePunten(rijen) {
     const v = Number(r?.s ?? r?.state);
     if (!Number.isFinite(v)) continue;
     const lu = r?.lu ?? r?.last_updated;
-    const t = typeof lu === "number" ? lu * 1000 : Date.parse(lu);
-    if (!Number.isFinite(t)) continue;
-    uit.push({ t, v });
+    const ms = typeof lu === "number" ? lu * 1000 : Date.parse(lu);
+    if (!Number.isFinite(ms)) continue;
+    uit.push({ t: ms, v });
   }
   return uit.sort((a, b) => a.t - b.t);
 }
@@ -786,7 +803,7 @@ export function lijnPad(reeks, { w = 1000, h = 400, min: vastMin, max: vastMax }
   const min = Number.isFinite(vastMin) ? vastMin : Math.min(0, ...waarden);
   const top = Math.max(...waarden);
   const max = Number.isFinite(vastMax) && vastMax > min ? vastMax : top > min ? min + (top - min) / 0.95 : min + 1;
-  const x = (t) => (((t - reeks.van) / (reeks.tot - reeks.van)) * w).toFixed(1);
+  const x = (ms) => (((ms - reeks.van) / (reeks.tot - reeks.van)) * w).toFixed(1);
   const y = (v) => (h - ((v - min) / (max - min)) * h).toFixed(1);
   const lijn = p.map((q, i) => `${i ? "L" : "M"}${x(q.t)},${y(q.v)}`).join(" ");
   const nul = y(Math.max(min, 0));
@@ -807,7 +824,7 @@ export function formatEnergie(waarde, eenheid = "W", decimalen = null) {
     e = `k${e}`;
   }
   const d = decimalen ?? (Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2);
-  const tekst = v.toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const tekst = v.toLocaleString(locale(), { minimumFractionDigits: d, maximumFractionDigits: d });
   return e ? `${tekst} ${e}` : tekst;
 }
 

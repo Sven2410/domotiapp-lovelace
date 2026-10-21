@@ -17,6 +17,8 @@
  * doet alsof dat niet zo is.
  */
 
+import { t, tc } from "../taal.js";
+
 /** De bits van `supported_features` op een cover-entiteit. */
 export const F = { OPEN: 1, CLOSE: 2, SET_POSITION: 4, STOP: 8 };
 
@@ -66,7 +68,7 @@ export function standaardIconen(attrs = {}, poort = false) {
 
 /** Wat er op de twee knoppen staat. Een poort schuift opzij; een pijl omhoog liegt daarover. */
 export const knopTekst = (poort) =>
-  poort ? { open: "Openen", close: "Sluiten" } : { open: "Open", close: "Dicht" };
+  poort ? { open: t("Openen"), close: t("Sluiten") } : { open: t("Open"), close: tc("knop", "Dicht") };
 
 /** De toestand zoals Home Assistant hem meldt, omgedraaid als het moet. */
 const OMGEKEERD = { open: "closed", closed: "open", opening: "closing", closing: "opening" };
@@ -111,13 +113,13 @@ export function getoondeStand({ state, positie, aanname }) {
  * bekend is, is nog steeds een zin die de rij hoger maakt.
  */
 export function statusTekst({ dood, state, positie, toon = true }) {
-  if (dood) return "Niet bereikbaar";
+  if (dood) return t("Niet bereikbaar");
   if (!toon) return "";
-  if (state === "opening") return "Gaat open";
-  if (state === "closing") return "Gaat dicht";
-  if (positie != null) return `${positie}% open`;
-  if (state === "open") return "Open";
-  if (state === "closed") return "Dicht";
+  if (state === "opening") return t("Gaat open");
+  if (state === "closing") return t("Gaat dicht");
+  if (positie != null) return t("{pct}% open", { pct: positie });
+  if (state === "open") return t("Open");
+  if (state === "closed") return t("Dicht");
   return "";
 }
 

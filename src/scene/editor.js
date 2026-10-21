@@ -9,6 +9,7 @@
 import { LitElement, css, html, nothing } from "lit";
 
 import { MetThema, vormtaal } from "./vormtaal.js";
+import { t } from "../taal.js";
 
 const ATTR_LEDEN = "entity_id";
 
@@ -137,20 +138,20 @@ export class DomotiappSceneCardEditor extends MetThema(LitElement, { alleenMeten
 
   _label = (schema) => {
     if (schema.name === "entity") {
-      return "Lichtgroep";
+      return t("Lichtgroep");
     }
     if (schema.name === "bare") {
-      return "Achtergrond weglaten";
+      return t("Achtergrond weglaten");
     }
     return this._friendlyName(schema.name);
   };
 
   _helper = (schema) => {
     if (schema.name === "entity") {
-      return "De lichtgroep waarvan deze kaart de scenes beheert.";
+      return t("De lichtgroep waarvan deze kaart de scenes beheert.");
     }
     if (schema.name === "bare") {
-      return "Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan.";
+      return t("Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan.");
     }
     return schema.name;
   };
@@ -229,9 +230,9 @@ export class DomotiappSceneCardEditor extends MetThema(LitElement, { alleenMeten
       ${leden.length
         ? html`
             <div class="namen">
-              <div class="kop">Namen van de lampen</div>
+              <div class="kop">${t("Namen van de lampen")}</div>
               <div class="uitleg">
-                Laat een veld leeg om de naam uit Home Assistant te gebruiken.
+                ${t("Laat een veld leeg om de naam uit Home Assistant te gebruiken.")}
               </div>
               <ha-form
                 .hass=${this.hass}

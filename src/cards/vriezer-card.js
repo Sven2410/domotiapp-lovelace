@@ -37,6 +37,7 @@ import {
   vriezerMelding,
   vriezerStand,
 } from "./vriezer-logica.js";
+import { nt, t } from "../taal.js";
 
 class VriezerCard extends DacCard {
   static css = /* css */ `
@@ -124,7 +125,7 @@ class VriezerCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig: zonder entiteit een uitlegkaart.
     const c = { name: "", merk: "auto", ...config };
-    if (!c.entity) c[INCOMPLETE] = "Kies de climate van de koelkast of de vriezer.";
+    if (!c.entity) c[INCOMPLETE] = t("Kies de climate van de koelkast of de vriezer.");
     return c;
   }
 
@@ -195,11 +196,11 @@ class VriezerCard extends DacCard {
           <span class="temp"></span>
         </div>
         <div class="instellen" hidden>
-          <span class="kopje">Instellen op</span>
-          <div class="set" aria-label="Instellen op">
-            <button type="button" data-d="-1" aria-label="Kouder">${resolve("minus")}</button>
+          <span class="kopje">${t("Instellen op")}</span>
+          <div class="set" aria-label="${t("Instellen op")}">
+            <button type="button" data-d="-1" aria-label="${t("Kouder")}">${resolve("minus")}</button>
             <span class="waarde"></span>
-            <button type="button" data-d="1" aria-label="Minder koud">${resolve("plus")}</button>
+            <button type="button" data-d="1" aria-label="${t("Minder koud")}">${resolve("plus")}</button>
           </div>
         </div>
       </div>`;
@@ -244,7 +245,7 @@ class VriezerCard extends DacCard {
 
     const apparaat = this.apparaat_();
     const naam =
-      c.name || apparaat?.name_by_user || apparaat?.name || stateOf(this.hass, c.entity)?.attributes?.friendly_name || SOORTNAAM[this.soort_()];
+      c.name || apparaat?.name_by_user || apparaat?.name || stateOf(this.hass, c.entity)?.attributes?.friendly_name || t(SOORTNAAM[this.soort_()]);
     this.text(".nm", naam);
 
     // Foto of chip; met een foto draagt het icoontje in de statusregel de kleur.
@@ -279,7 +280,7 @@ class VriezerCard extends DacCard {
       this.text(el, gradenTekst(v, s.eenheid));
       this.$('.set [data-d="-1"]').disabled = volgendDoel(s, v, -1) == null;
       this.$('.set [data-d="1"]').disabled = volgendDoel(s, v, 1) == null;
-      this.$(".set").setAttribute("aria-label", `Instellen op ${gradenTekst(v, s.eenheid)}`);
+      this.$(".set").setAttribute("aria-label", t("Instellen op {graden}", { graden: gradenTekst(v, s.eenheid) }));
     }
 
     meetRaster(this.$(".card"));
@@ -335,8 +336,8 @@ class VriezerEditor extends DacEditor {
 
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "koelkast", auto: false },
-      ...(this.config_?.merk === "eigen" ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "koelkast" }] : []),
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: "koelkast", auto: false },
+      ...(this.config_?.merk === "eigen" ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "koelkast" }] : []),
     ];
   }
 
@@ -350,7 +351,7 @@ class VriezerEditor extends DacEditor {
     return [
       { name: "entity", required: true, selector: sel.entity(["climate"]) },
       { name: "name", selector: sel.text() },
-      { name: "merk", selector: sel.select(merkKeuzes(VRIEZERS)) },
+      { name: "merk", selector: sel.select(merkKeuzes(KOELEN_EN_VRIEZEN)) },
       ...(types.length ? [{ name: "model", selector: sel.select(types) }] : []),
     ];
   }
@@ -360,24 +361,25 @@ class VriezerEditor extends DacEditor {
   }
 
   label(s) {
-    return { entity: "Koelkast of vriezer", name: "Naam", merk: "Merk", model: "Type" }[s.name] ?? super.label(s);
+    return { entity: t("Koelkast of vriezer"), name: t("Naam"), merk: t("Merk"), model: t("Type") }[s.name] ?? super.label(s);
   }
 
   helper(s) {
     return {
-      entity:
+      entity: t(
         "De climate van de koelkast of de vriezer. Kies het vak met een temperatuur: Miele maakt er ook twee zonder (zone 2 en 3), en die hebben geen vak. Deur, storing en melding van hetzelfde apparaat zoekt de kaart zelf.",
-      name: "Leeg laten: de naam van het apparaat in Home Assistant.",
-      merk: "Automatisch toont de productfoto als het type bekend is, en anders het icoon.",
-      model: "Het type bepaalt de productfoto.",
+      ),
+      name: t("Leeg laten: de naam van het apparaat in Home Assistant."),
+      merk: t("Automatisch toont de productfoto als het type bekend is, en anders het icoon."),
+      model: t("Het type bepaalt de productfoto."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-vriezer-card-editor", VriezerEditor);
 registerCard("domotiapp-vriezer-card", VriezerCard, {
-  name: "DomotiApp Koelkast en vriezer",
-  description: "De koelkast of de vriezer: de temperatuur, waar hij op staat, en of de deur open staat of er een melding is. Met een productfoto per merk en type.",
+  name: nt("DomotiApp Koelkast en vriezer"),
+  description: nt("De koelkast of de vriezer: de temperatuur, waar hij op staat, en of de deur open staat of er een melding is. Met een productfoto per merk en type."),
 });
 
 export { VriezerCard };

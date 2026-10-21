@@ -22,11 +22,18 @@
  * licht wilde aandoen. Dezelfde reden waarom de chip dat doet.
  */
 
+import { t } from "./taal.js";
+
 /** De afstand die de greep aflegt. Moet kloppen met `toggleCss` hieronder. */
 const REIS = 22;
 
-/** @param {{label?: string, cls?: string}} opts */
-export const toggleHtml = ({ label = "Aan of uit", cls = "" } = {}) =>
+/**
+ * Het label komt vertaald binnen; alleen de standaard vertalen we hier, bij
+ * het aanroepen en dus niet bij het laden van de module.
+ *
+ * @param {{label?: string, cls?: string}} opts
+ */
+export const toggleHtml = ({ label = t("Aan of uit"), cls = "" } = {}) =>
   `<button class="toggle ${cls}" type="button" role="switch" aria-checked="false"` +
   ` aria-label="${label}"><span class="knob"></span></button>`;
 

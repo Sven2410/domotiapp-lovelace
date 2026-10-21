@@ -32,6 +32,7 @@ import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { keurBestand, serveerUrl } from "./foto-logica.js";
+import { t } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -140,10 +141,10 @@ class FotoPicker extends HTMLElement {
       <div class="vak">
         <span class="voorbeeld"></span>
         <span class="rechts">
-          <input type="text" placeholder="/local/afbeelding.png" aria-label="Pad naar de afbeelding" />
+          <input type="text" placeholder="${t("/local/afbeelding.png")}" aria-label="${t("Pad naar de afbeelding")}" />
           <span class="knoppen">
-            <button class="doe kies" type="button">${resolve("plus")}<span>Kies een bestand</span></button>
-            <button class="weg leeg" type="button">Wissen</button>
+            <button class="doe kies" type="button">${resolve("plus")}<span>${t("Kies een bestand")}</span></button>
+            <button class="weg leeg" type="button">${t("Wissen")}</button>
           </span>
           <span class="melding" hidden></span>
         </span>
@@ -171,7 +172,7 @@ class FotoPicker extends HTMLElement {
   }
 
   teken_() {
-    this.$(".kop").textContent = this.label_ ?? "Afbeelding";
+    this.$(".kop").textContent = t(this.label_ ?? "Afbeelding");
     const tekst = this.$('input[type="text"]');
 
     // NIET `document.activeElement`. Die geeft nooit dit element terug: bij
@@ -234,7 +235,7 @@ class FotoPicker extends HTMLElement {
     const klacht = keurBestand(bestand);
     if (klacht) return this.melding_(klacht, true);
 
-    this.melding_("Bezig met uploaden…");
+    this.melding_(t("Bezig met uploaden…"));
     this.$(".kies").disabled = true;
     try {
       const body = new FormData();
@@ -245,14 +246,16 @@ class FotoPicker extends HTMLElement {
         body,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!antwoord.ok) throw new Error(`Home Assistant antwoordde met ${antwoord.status}`);
+      if (!antwoord.ok) throw new Error(t("Home Assistant antwoordde met {status}", { status: antwoord.status }));
       const gegevens = await antwoord.json();
-      if (!gegevens?.id) throw new Error("Home Assistant gaf geen id terug.");
+      if (!gegevens?.id) throw new Error(t("Home Assistant gaf geen id terug."));
       this.zet_(serveerUrl(gegevens.id));
-      this.melding_("Geüpload.");
+      this.melding_(t("Geüpload."));
     } catch (fout) {
       this.melding_(
-        `${fout?.message ?? "Uploaden lukte niet"}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/afbeelding.png.`,
+        t("{fout}. Je kunt het pad ook zelf intypen, bijvoorbeeld /local/afbeelding.png.", {
+          fout: fout?.message ?? t("Uploaden lukte niet"),
+        }),
         true
       );
     } finally {

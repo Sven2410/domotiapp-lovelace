@@ -72,6 +72,7 @@ import { vraagBevestiging } from "../vraag.js";
 import { openArchief, ververArchief } from "./camera-archief.js";
 import { zetScrollSlot } from "../scrollslot.js";
 import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.js";
+import { locale, nt, t, tc } from "../taal.js";
 
 /**
  * De beeldverhoudingen waar je uit kunt kiezen.
@@ -81,11 +82,11 @@ import { MIN_ZOOM, alsTransform, klemPositie, zoomRondom } from "./zoom-logica.j
  * hoog horen te zijn.
  */
 const VERHOUDINGEN = [
-  { sleutel: "auto", label: "Volgt de camera", css: null },
-  { sleutel: "16:9", label: "16:9 (breed)", css: "16 / 9" },
+  { sleutel: "auto", label: nt("Volgt de camera"), css: null },
+  { sleutel: "16:9", label: nt("16:9 (breed)"), css: "16 / 9" },
   { sleutel: "4:3", label: "4:3", css: "4 / 3" },
   { sleutel: "3:2", label: "3:2", css: "3 / 2" },
-  { sleutel: "1:1", label: "Vierkant", css: "1 / 1" },
+  { sleutel: "1:1", label: nt("Vierkant"), css: "1 / 1" },
 ];
 
 /**
@@ -99,10 +100,10 @@ const BEWAARDAGEN = 7;
 
 /** De vier richtingen, met de service-aanroep die erbij hoort. */
 const RICHTINGEN = [
-  { k: "up", icoon: "arrowUp", label: "Omhoog" },
-  { k: "left", icoon: "chevronRight", label: "Links", draai: 180 },
-  { k: "right", icoon: "chevronRight", label: "Rechts" },
-  { k: "down", icoon: "arrowDown", label: "Omlaag" },
+  { k: "up", icoon: "arrowUp", label: nt("Omhoog") },
+  { k: "left", icoon: "chevronRight", label: nt("Links"), draai: 180 },
+  { k: "right", icoon: "chevronRight", label: nt("Rechts") },
+  { k: "down", icoon: "arrowDown", label: nt("Omlaag") },
 ];
 
 /**
@@ -511,7 +512,7 @@ class CameraCard extends DacCard {
   validate(config) {
     const c = { name: "", ...config };
     if (!c.camera && !(Array.isArray(c.cameras) && c.cameras.length)) {
-      c[INCOMPLETE] = "Kies een camera. Presets, richtingsknoppen en een bewegingsmelder mogen daarna.";
+      c[INCOMPLETE] = t("Kies een camera. Presets, richtingsknoppen en een bewegingsmelder mogen daarna.");
     }
     // Het vinkje "Presets en draaien" is er pas sinds 0.30.0. Een kaart die zijn
     // presets al had, houdt ze.
@@ -552,7 +553,9 @@ class CameraCard extends DacCard {
     const meldingenAan = isOn(st) === !!this.config.snapshot_stil_omgekeerd;
     knop.hidden = false;
     knop.setAttribute("aria-pressed", String(meldingenAan));
-    const tekst = meldingenAan ? "Meldingen staan aan; tik om ze uit te zetten" : "Meldingen staan uit; tik om ze weer aan te zetten";
+    const tekst = meldingenAan
+      ? t("Meldingen staan aan; tik om ze uit te zetten")
+      : t("Meldingen staan uit; tik om ze weer aan te zetten");
     knop.setAttribute("aria-label", tekst);
     knop.title = tekst;
     const wens = meldingenAan ? "bell" : "bellOff";
@@ -586,7 +589,7 @@ class CameraCard extends DacCard {
     ].filter((x) => typeof x === "string");
 
     return [...new Set(ids)].map((entity) => {
-      const naam = c[`melder:${entity}`] || nameOf(this.hass, entity) || "Beweging";
+      const naam = c[`melder:${entity}`] || nameOf(this.hass, entity) || t("Beweging");
       return {
         entity,
         // De naam uit de editor; anders die van Home Assistant zelf.
@@ -636,7 +639,7 @@ class CameraCard extends DacCard {
           <div class="ptz" hidden>
             ${RICHTINGEN.map(
               (r) =>
-                `<button type="button" data-r="${r.k}" aria-label="${r.label}"` +
+                `<button type="button" data-r="${r.k}" aria-label="${tc("draaien", r.label)}"` +
                 `${r.draai ? ` style="transform: rotate(${r.draai}deg)"` : ""}>` +
                 `${resolve(r.icoon)}</button>`
             ).join("")}
@@ -646,18 +649,18 @@ class CameraCard extends DacCard {
         <div class="cams" hidden></div>
         <div class="filters" hidden>
           <div class="rij dagrij">
-            <button type="button" class="pijl" data-dag="-1" aria-label="Dag terug">
+            <button type="button" class="pijl" data-dag="-1" aria-label="${t("Dag terug")}">
               ${resolve("chevronRight")}
             </button>
-            <button type="button" class="datum">Vandaag</button>
-            <button type="button" class="pijl" data-dag="1" aria-label="Dag verder">
+            <button type="button" class="datum">${t("Vandaag")}</button>
+            <button type="button" class="pijl" data-dag="1" aria-label="${t("Dag verder")}">
               ${resolve("chevronRight")}
             </button>
             <span class="rek"></span>
-            <button type="button" class="stil" aria-pressed="false" aria-label="Meldingen uit" title="Meldingen uit" hidden>
+            <button type="button" class="stil" aria-pressed="false" aria-label="${t("Meldingen uit")}" title="${t("Meldingen uit")}" hidden>
               ${resolve("bell")}
             </button>
-            <button type="button" class="opslag" aria-label="Alle snapshots">
+            <button type="button" class="opslag" aria-label="${t("Alle snapshots")}">
               ${resolve("storage")}
             </button>
           </div>
@@ -960,7 +963,7 @@ class CameraCard extends DacCard {
         const aantal = tellen[s.sleutel] ?? 0;
         return (
           `<button type="button" data-soort-filter="${s.sleutel}"` +
-          ` aria-pressed="${gekozen.has(s.sleutel)}" aria-label="${s.label}"` +
+          ` aria-pressed="${gekozen.has(s.sleutel)}" aria-label="${t(s.label)}"` +
           `${aantal ? "" : " data-leeg"}>${resolve(s.icoon)}` +
           `<span>${aantal}</span></button>`
         );
@@ -1004,7 +1007,7 @@ class CameraCard extends DacCard {
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML =
-      `<button type="button" data-camfilter="" aria-pressed="${!this.camFilter_}">Alle</button>` +
+      `<button type="button" data-camfilter="" aria-pressed="${!this.camFilter_}">${t("Alle")}</button>` +
       lijst
         .map(
           (id, i) =>
@@ -1163,7 +1166,10 @@ class CameraCard extends DacCard {
     const dood = !st || st.state === "unavailable";
     this.toggleAttribute("dead", Boolean(dood));
 
-    this.text(".nm", c.name || nameOf(this.hass, cam, "Camera"));
+    // De naam van de camera in Home Assistant; "Camera" alleen als die er niet is.
+    // Tot 0.82.0 stond "Camera" als derde argument, en dat is in nameOf geen
+    // terugval maar een vaste naam: elke kaart zonder naam heette "Camera".
+    this.text(".nm", c.name || nameOf(this.hass, cam) || t("Camera"));
     this.paintStil_();
 
     // Zolang de stream omgevallen is: stilstaand beeld. Zie bewaakStream_.
@@ -1190,7 +1196,7 @@ class CameraCard extends DacCard {
       if (!this.$(".vak .leeg")) {
         const leeg = document.createElement("span");
         leeg.className = "leeg";
-        leeg.textContent = "Deze camera is niet bereikbaar";
+        leeg.textContent = t("Deze camera is niet bereikbaar");
         this.$(".vak").appendChild(leeg);
       }
     } else {
@@ -1821,7 +1827,7 @@ class CameraCard extends DacCard {
       // er is nog nooit iets gemaakt, of je hebt weggefilterd wat er is.
       const gefilterd = (this.beelden_ ?? []).length > 0;
       strook.innerHTML = `<span class="leeg">${
-        gefilterd ? "Niets binnen dit filter." : "Nog geen beelden."
+        gefilterd ? t("Niets binnen dit filter.") : t("Nog geen beelden.")
       }</span>`;
       return;
     }
@@ -1838,7 +1844,7 @@ class CameraCard extends DacCard {
         const camRegel = meerdere ? `<span class="cam">${cam}</span>` : "";
         return (
           `<button type="button" class="mini" data-beeld="${escape_(beeld.id)}" ` +
-          `aria-label="${meerdere ? cam + ", " : ""}${naam} om ${klok}">` +
+          `aria-label="${meerdere ? cam + ", " : ""}${t("{naam} om {klok}", { naam, klok })}">` +
           `<img src="${escape_(beeld.url)}" alt="" loading="lazy">` +
           `<span class="bij">${camRegel}<span><b>${naam}</b> · ${klok}</span></span>` +
           `</button>`
@@ -1890,10 +1896,10 @@ class CameraCard extends DacCard {
   async wis_(ids, wat) {
     if (!ids?.length) return;
     const ja = await vraagBevestiging({
-      title: "Snapshots verwijderen",
-      text: `Weet je zeker dat je ${wat} wilt verwijderen? Weg is weg.`,
-      confirmText: "Verwijderen",
-      dismissText: "Annuleren",
+      title: t("Snapshots verwijderen"),
+      text: t("Weet je zeker dat je {wat} wilt verwijderen? Weg is weg.", { wat }),
+      confirmText: t("Verwijderen"),
+      dismissText: t("Annuleren"),
     });
     if (!ja) return;
     try {
@@ -1937,7 +1943,8 @@ function tijdVan(hass, iso, volledig = false) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const taal = hass?.locale?.language ?? "nl";
+  // De taal van de kaart (sinds 0.81.0; daarvoor die van Home Assistant).
+  const taal = locale();
   const klok = d.toLocaleTimeString(taal, { hour: "2-digit", minute: "2-digit" });
   const vandaag = new Date();
   const zelfdeDag =
@@ -2024,7 +2031,7 @@ class CameraEditor extends DacEditor {
         {
           name: `meldersoort:${id}`,
           selector: sel.select(
-            ALLE_SOORTEN.map((soort) => ({ value: soort.sleutel, label: soort.label }))
+            ALLE_SOORTEN.map((soort) => ({ value: soort.sleutel, label: t(soort.label) }))
           ),
         },
       ];
@@ -2032,7 +2039,7 @@ class CameraEditor extends DacEditor {
         velden.push({
           name: `melderbij:${id}`,
           selector: sel.select([
-            { value: "", label: "Bij alle camera's" },
+            { value: "", label: t("Bij alle camera's") },
             ...alleCams.map((cam) => ({
               value: cam,
               label: this.hass?.states?.[cam]?.attributes?.friendly_name ?? cam,
@@ -2068,7 +2075,7 @@ class CameraEditor extends DacEditor {
       { name: "live_view", selector: sel.bool() },
       {
         name: "verhouding",
-        selector: sel.select(VERHOUDINGEN.map((v) => ({ value: v.sleutel, label: v.label }))),
+        selector: sel.select(VERHOUDINGEN.map((v) => ({ value: v.sleutel, label: t(v.label) }))),
       },
       { name: "cameras", selector: { entity: { domain: "camera", multiple: true } } },
       ...extraCams,
@@ -2085,7 +2092,7 @@ class CameraEditor extends DacEditor {
       { name: "presets_aan", selector: sel.bool() },
       ...(c.presets_aan
         ? [
-            section("Presets en draaien", "mdi:arrow-all", [
+            section(nt("Presets en draaien"), "mdi:arrow-all", [
               { name: "presets", selector: sel.entity(["select", "input_select"]) },
               {
                 name: "preset_buttons",
@@ -2112,7 +2119,7 @@ class CameraEditor extends DacEditor {
       // in het formulier. Nu zitten ze in een blok, net als de presets.
       { name: "snapshots", selector: sel.bool() },
       ...(snapshotVelden.length
-        ? [section("Snapshots en meldingen", "mdi:camera-burst", snapshotVelden)]
+        ? [section(nt("Snapshots en meldingen"), "mdi:camera-burst", snapshotVelden)]
         : []),
     ];
   }
@@ -2121,98 +2128,98 @@ class CameraEditor extends DacEditor {
     // De naamvelden dragen het entity_id in hun naam; het label is de naam van
     // die entiteit, zodat de editor leesbaar blijft.
     if (s.name.startsWith("cam:")) {
-      return `Naam voor ${nameOf(this.hass, s.name.slice(4)) || s.name.slice(4)}`;
+      return t("Naam voor {naam}", { naam: nameOf(this.hass, s.name.slice(4)) || s.name.slice(4) });
     }
     if (s.name.startsWith("melder:")) {
-      return `Naam voor ${nameOf(this.hass, s.name.slice(7)) || s.name.slice(7)}`;
+      return t("Naam voor {naam}", { naam: nameOf(this.hass, s.name.slice(7)) || s.name.slice(7) });
     }
     if (s.name.startsWith("melderbij:")) {
-      return `↳ hoort bij welke camera`;
+      return t("↳ hoort bij welke camera");
     }
     if (s.name.startsWith("meldersoort:")) {
-      return `↳ wat ziet hij`;
+      return t("↳ wat ziet hij");
     }
-    return (
-      {
-        camera: "Camera",
-        name: "Naam",
-        live_view: "Altijd live",
-        verhouding: "Beeldverhouding",
-        presets: "Presets (keuzelijst)",
-        preset_buttons: "Presets als losse knoppen",
-        motion: "Bewegingsmelder",
-        motion_sensors: "Bewegingsmelders",
-        ptz_up: "Draaien: omhoog",
-        ptz_down: "Draaien: omlaag",
-        ptz_left: "Draaien: links",
-        ptz_right: "Draaien: rechts",
-        cameras: "Nog meer camera's op deze kaart",
-        snapshots: "Snapshots en timeline",
-        snapshot_rustperiode: "Rustperiode per melder (seconden)",
-        snapshot_wachttijd: "Wachten voor het beeld (seconden)",
-        snapshot_ontvangers: "Wie krijgt een melding",
-        snapshot_alleen_afwezig: "Alleen melden als er niemand thuis is",
-        snapshot_stil: "Schakelaar: meldingen uit",
-        snapshot_stil_omgekeerd: "Schakelaar omgekeerd: aan = meldingen aan",
-        presets_aan: "Presets en draaien",
-      }[s.name] ?? super.label(s)
-    );
+    const label = {
+      camera: nt("Camera"),
+      name: nt("Naam"),
+      live_view: nt("Altijd live"),
+      verhouding: nt("Beeldverhouding"),
+      presets: nt("Presets (keuzelijst)"),
+      preset_buttons: nt("Presets als losse knoppen"),
+      motion: nt("Bewegingsmelder"),
+      motion_sensors: nt("Bewegingsmelders"),
+      ptz_up: nt("Draaien: omhoog"),
+      ptz_down: nt("Draaien: omlaag"),
+      ptz_left: nt("Draaien: links"),
+      ptz_right: nt("Draaien: rechts"),
+      cameras: nt("Nog meer camera's op deze kaart"),
+      snapshots: nt("Snapshots en timeline"),
+      snapshot_rustperiode: nt("Rustperiode per melder (seconden)"),
+      snapshot_wachttijd: nt("Wachten voor het beeld (seconden)"),
+      snapshot_ontvangers: nt("Wie krijgt een melding"),
+      snapshot_alleen_afwezig: nt("Alleen melden als er niemand thuis is"),
+      snapshot_stil: nt("Schakelaar: meldingen uit"),
+      snapshot_stil_omgekeerd: nt("Schakelaar omgekeerd: aan = meldingen aan"),
+      presets_aan: nt("Presets en draaien"),
+    }[s.name];
+    return label ? t(label) : super.label(s);
   }
 
   helper(s) {
     if (s.name.startsWith("meldersoort:")) {
-      return "Bepaalt onder welke filterknop zijn beelden in de timeline vallen, en welk icoon er op het beeld staat als hij afgaat. Hij wordt geraden uit de naam — een Reolink klopt vanzelf.";
+      return t("Bepaalt onder welke filterknop zijn beelden in de timeline vallen, en welk icoon er op het beeld staat als hij afgaat. Hij wordt geraden uit de naam — een Reolink klopt vanzelf.");
     }
     if (s.name.startsWith("melderbij:")) {
-      return "Laat dit op 'alle camera's' staan als je het niet weet. De kaart koppelt een melder vanzelf aan de camera waar hij op hetzelfde apparaat zit — bij een Reolink hoeft je dus niets in te vullen.";
+      return t("Laat dit op 'alle camera's' staan als je het niet weet. De kaart koppelt een melder vanzelf aan de camera waar hij op hetzelfde apparaat zit — bij een Reolink hoeft je dus niets in te vullen.");
     }
     const uitleg = {
       camera:
-        "Op de kaart staat een beeld dat zichzelf ververst. Inzoomen doe je met twee vingers, met het scrollwiel of met een dubbeltik; een gewone tik opent hem groot. Er staan geen knoppen op het beeld.",
+        nt("Op de kaart staat een beeld dat zichzelf ververst. Inzoomen doe je met twee vingers, met het scrollwiel of met een dubbeltik; een gewone tik opent hem groot. Er staan geen knoppen op het beeld."),
       name:
-        "De naam van de camera zelf. Hij staat linksboven op het beeld, en ook in de rij eronder als je meer camera's op deze kaart hebt staan.",
+        nt("De naam van de camera zelf. Hij staat linksboven op het beeld, en ook in de rij eronder als je meer camera's op deze kaart hebt staan."),
       live_view:
-        "De stream staat dan altijd open. Mooier, maar op een dashboard met zes camera's zijn dat zes streams die de hele dag doorlopen.",
+        nt("De stream staat dan altijd open. Mooier, maar op een dashboard met zes camera's zijn dat zes streams die de hele dag doorlopen."),
       presets:
-        "De `select` van je camera-integratie — Reolink en ONVIF leveren die. De kaart maakt van elke optie een knop, onderin het beeld, dus een preset die je in de camera-app toevoegt verschijnt er vanzelf bij.",
+        nt("De `select` van je camera-integratie — Reolink en ONVIF leveren die. De kaart maakt van elke optie een knop, onderin het beeld, dus een preset die je in de camera-app toevoegt verschijnt er vanzelf bij."),
       preset_buttons:
-        "Voor integraties die geen keuzelijst maar losse knoppen leveren, zoals Amcrest en Dahua. Ze mogen naast de keuzelijst staan.",
+        nt("Voor integraties die geen keuzelijst maar losse knoppen leveren, zoals Amcrest en Dahua. Ze mogen naast de keuzelijst staan."),
       motion:
-        "Het oude enkele veld. Gebruik liever Bewegingsmelders hierboven; deze blijft werken voor kaarten die hem al hebben.",
+        nt("Het oude enkele veld. Gebruik liever Bewegingsmelders hierboven; deze blijft werken voor kaarten die hem al hebben."),
       motion_sensors:
-        "Zolang er een aanstaat komt er een merkje op het beeld. Kies er gerust meerdere: een Reolink meldt persoon, voertuig en huisdier los van elkaar, en dan zie je wélke het is. Een deurbel (`event`) en een slot (`lock`) mogen er ook bij. Per melder kun je hieronder een naam en een soort invullen — die soort bepaalt onder welke filterknop hij in de timeline valt.",
+        nt("Zolang er een aanstaat komt er een merkje op het beeld. Kies er gerust meerdere: een Reolink meldt persoon, voertuig en huisdier los van elkaar, en dan zie je wélke het is. Een deurbel (`event`) en een slot (`lock`) mogen er ook bij. Per melder kun je hieronder een naam en een soort invullen — die soort bepaalt onder welke filterknop hij in de timeline valt."),
       ptz_up:
-        "De vier richtingsknoppen van je integratie. Vul je er geen in, dan komt het draaikruis er niet.",
+        nt("De vier richtingsknoppen van je integratie. Vul je er geen in, dan komt het draaikruis er niet."),
       cameras:
-        "Onder het beeld komt dan een rij met namen om tussen te wisselen; de camera waar je naar kijkt licht op. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin. Per camera kun je hieronder een eigen naam invullen.",
+        nt("Onder het beeld komt dan een rij met namen om tussen te wisselen; de camera waar je naar kijkt licht op. Handig voor de camera's die bij elkaar horen — voordeur, oprit, achtertuin. Per camera kun je hieronder een eigen naam invullen."),
       snapshots:
-        "Bij elke detectie legt Home Assistant een beeld vast en zet dat onder de kaart in een strook, met filters erboven op dag, soort en camera — ook als er nergens een scherm aanstaat. Beelden blijven een week staan; daarboven wijkt vanzelf de oudste. Staat dit uit, dan wordt er niets vastgelegd en niets bewaard.",
+        nt("Bij elke detectie legt Home Assistant een beeld vast en zet dat onder de kaart in een strook, met filters erboven op dag, soort en camera — ook als er nergens een scherm aanstaat. Beelden blijven een week staan; daarboven wijkt vanzelf de oudste. Staat dit uit, dan wordt er niets vastgelegd en niets bewaard."),
       snapshot_rustperiode:
-        "Hoe lang dezelfde melder daarna met rust wordt gelaten. Dit is het antwoord op tien meldingen achter elkaar. De klok loopt PER MELDER: meldt je camera persoon, voertuig en huisdier apart, dan houden die elkaar niet tegen — een auto die de oprit op rijdt en de bestuurder die uitstapt leveren allebei een beeld op. Nul betekent: alles vastleggen.",
+        nt("Hoe lang dezelfde melder daarna met rust wordt gelaten. Dit is het antwoord op tien meldingen achter elkaar. De klok loopt PER MELDER: meldt je camera persoon, voertuig en huisdier apart, dan houden die elkaar niet tegen — een auto die de oprit op rijdt en de bestuurder die uitstapt leveren allebei een beeld op. Nul betekent: alles vastleggen."),
       snapshot_wachttijd:
-        "Wacht zoveel seconden na de detectie voordat het beeld genomen wordt. Op nul krijg je het moment zelf; op een of twee seconden staat degene meestal beter in beeld dan met zijn rug ernaartoe. Deze wachttijd verandert niets aan de rustperiode.",
+        nt("Wacht zoveel seconden na de detectie voordat het beeld genomen wordt. Op nul krijg je het moment zelf; op een of twee seconden staat degene meestal beter in beeld dan met zijn rug ernaartoe. Deze wachttijd verandert niets aan de rustperiode."),
       snapshot_ontvangers:
-        "De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje.",
+        nt("De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje."),
       snapshot_alleen_afwezig:
-        "Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode.",
+        nt("Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode."),
       snapshot_stil:
-        "Een helper (input_boolean) of schakelaar. Staat hij aan, dan gaat er geen melding naar de telefoon; het beeld komt wél in de timeline. De kaart krijgt er een belknop bij in de rij boven de timeline om hem om te zetten, en hij is ook in een automatisering te gebruiken (bijvoorbeeld: aan als de poetsploeg er is).",
+        nt("Een helper (input_boolean) of schakelaar. Staat hij aan, dan gaat er geen melding naar de telefoon; het beeld komt wél in de timeline. De kaart krijgt er een belknop bij in de rij boven de timeline om hem om te zetten, en hij is ook in een automatisering te gebruiken (bijvoorbeeld: aan als de poetsploeg er is)."),
       snapshot_stil_omgekeerd:
-        "Voor een helper die al andersom in gebruik is: aan betekent dan dat de meldingen AAN staan, en uit houdt de telefoon stil. De belknop op de kaart draait mee.",
+        nt("Voor een helper die al andersom in gebruik is: aan betekent dan dat de meldingen AAN staan, en uit houdt de telefoon stil. De belknop op de kaart draait mee."),
       verhouding:
-        "Standaard volgt de kaart zijn camera, zodat er geen beeld af gaat. Staan er meerdere camerakaarten naast elkaar in een stack, kies dan overal dezelfde verhouding — dan zijn ze even hoog. Er wordt dan wel bijgesneden.",
+        nt("Standaard volgt de kaart zijn camera, zodat er geen beeld af gaat. Staan er meerdere camerakaarten naast elkaar in een stack, kies dan overal dezelfde verhouding — dan zijn ze even hoog. Er wordt dan wel bijgesneden."),
       presets_aan:
-        "Eén vinkje voor de hele bediening: de presetknoppen in het beeld en het draaikruis linksonder. Zet je het uit, dan blijft alles wat je gekozen hebt gewoon staan — het is alleen weg van het beeld.",
+        nt("Eén vinkje voor de hele bediening: de presetknoppen in het beeld en het draaikruis linksonder. Zet je het uit, dan blijft alles wat je gekozen hebt gewoon staan — het is alleen weg van het beeld."),
     };
-    return uitleg[s.name];
+    return uitleg[s.name] ? t(uitleg[s.name]) : undefined;
   }
 }
 
 registerEditor("domotiapp-camera-card-editor", CameraEditor);
 registerCard("domotiapp-camera-card", CameraCard, {
-  name: "DomotiApp Camera",
-  description:
-    "Live beeld met inzoomen en schuiven, de presets van je camera als knoppen, een draaikruis en een merkje zodra er beweging is.",
+  name: nt("DomotiApp Camera"),
+  description: nt(
+    "Live beeld met inzoomen en schuiven, de presets van je camera als knoppen, een draaikruis en een merkje zodra er beweging is."
+  ),
 });
 
 export { CameraCard };

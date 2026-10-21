@@ -62,6 +62,7 @@ import {
   typeKeuzes as types,
 } from "./productfoto.js";
 import { isVertaald, keuzeNaam } from "./programmanaam.js";
+import { locale, nt, t, tc, tn } from "../taal.js";
 
 const domeinVan = (id) => String(id ?? "").split(".")[0];
 
@@ -76,13 +77,12 @@ function getal(x) {
   return Number.isFinite(n) ? n : null;
 }
 
-const NL = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 });
-const getalTekst = (n) => (n == null ? "" : NL.format(n));
+const getalTekst = (n) => (n == null ? "" : new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(n));
 
 /** Een sleutel als woorden: `not_installed_or_full` -> "Not installed or full". */
 function opgeschoond(sleutel) {
-  const t = String(sleutel ?? "").replace(/[_-]+/g, " ").trim();
-  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+  const los = String(sleutel ?? "").replace(/[_-]+/g, " ").trim();
+  return los ? los.charAt(0).toUpperCase() + los.slice(1) : "";
 }
 
 /** De vertaling van Home Assistant als die er echt is, anders "". */
@@ -228,46 +228,46 @@ export function naamVan(hass, id, ingevuld) {
  * Assistant en dan op de sleutel zelf.
  */
 export const TOESTAND_WOORDEN = {
-  sweeping: "Zuigt",
-  mopping: "Dweilt",
-  sweeping_and_mopping: "Zuigt en dweilt",
-  paused: "Gepauzeerd",
-  error: "Storing",
-  returning: "Terug naar het station",
-  charging: "Laadt op",
-  smart_charging: "Laadt slim op",
-  charging_completed: "Opgeladen",
-  drying: "Droogt de dweilpads",
-  washing: "Wast de dweilpads",
-  washing_paused: "Wassen gepauzeerd",
-  returning_washing: "Terug om de pads te wassen",
-  returning_install_mop: "Terug om de pads te plaatsen",
-  returning_remove_mop: "Terug om de pads af te doen",
-  returning_auto_empty: "Terug om te legen",
-  auto_emptying: "Leegt de stofbak",
-  clean_add_water: "Vult water bij",
-  water_check: "Controleert het water",
-  building: "Maakt een plattegrond",
-  upgrading: "Wordt bijgewerkt",
-  station_reset: "Station wordt hersteld",
-  remote_control: "Op afstand bestuurd",
-  second_cleaning: "Tweede ronde",
-  spot_cleaning: "Maakt een plek schoon",
-  clean_summon: "Komt eraan",
-  human_following: "Volgt iemand",
-  shortcut: "Snelkoppeling",
-  monitoring: "Bewaakt",
-  monitoring_paused: "Bewaken gepauzeerd",
+  sweeping: nt("Zuigt"),
+  mopping: nt("Dweilt"),
+  sweeping_and_mopping: nt("Zuigt en dweilt"),
+  paused: nt("Gepauzeerd"),
+  error: nt("Storing"),
+  returning: nt("Terug naar het station"),
+  charging: nt("Laadt op"),
+  smart_charging: nt("Laadt slim op"),
+  charging_completed: nt("Opgeladen"),
+  drying: nt("Droogt de dweilpads"),
+  washing: nt("Wast de dweilpads"),
+  washing_paused: nt("Wassen gepauzeerd"),
+  returning_washing: nt("Terug om de pads te wassen"),
+  returning_install_mop: nt("Terug om de pads te plaatsen"),
+  returning_remove_mop: nt("Terug om de pads af te doen"),
+  returning_auto_empty: nt("Terug om te legen"),
+  auto_emptying: nt("Leegt de stofbak"),
+  clean_add_water: nt("Vult water bij"),
+  water_check: nt("Controleert het water"),
+  building: nt("Maakt een plattegrond"),
+  upgrading: nt("Wordt bijgewerkt"),
+  station_reset: nt("Station wordt hersteld"),
+  remote_control: nt("Op afstand bestuurd"),
+  second_cleaning: nt("Tweede ronde"),
+  spot_cleaning: nt("Maakt een plek schoon"),
+  clean_summon: nt("Komt eraan"),
+  human_following: nt("Volgt iemand"),
+  shortcut: nt("Snelkoppeling"),
+  monitoring: nt("Bewaakt"),
+  monitoring_paused: nt("Bewaken gepauzeerd"),
 };
 
 /** De toestand van de stofzuiger zelf, als er geen fijnere is. */
 export const ACTIVITEIT_WOORDEN = {
-  cleaning: "Maakt schoon",
-  docked: "In het station",
-  idle: "Staat stil",
-  paused: "Gepauzeerd",
-  returning: "Terug naar het station",
-  error: "Storing",
+  cleaning: nt("Maakt schoon"),
+  docked: nt("In het station"),
+  idle: nt("Staat stil"),
+  paused: nt("Gepauzeerd"),
+  returning: nt("Terug naar het station"),
+  error: nt("Storing"),
 };
 
 /** Wat geen fout is, in de sensor `error`. */
@@ -281,7 +281,7 @@ export function duurTekst(minuten) {
   if (r < 60) return `${r} min`;
   const u = Math.floor(r / 60);
   const rest = r % 60;
-  return rest ? `${u} uur ${rest} min` : `${u} uur`;
+  return rest ? t("{u} uur {m} min", { u, m: rest }) : t("{u} uur", { u });
 }
 
 /**
@@ -310,12 +310,16 @@ export function stofzuigerStand(hass, id, delen = {}, vertaal) {
   const laadt = laden ? laden.state === "on" : a.charging === true;
 
   // De tekst: eerst wat er echt gebeurt.
-  const t = s("toestand");
-  const fijn = heeftWaarde(t) ? String(t.state) : "";
+  const toestand = s("toestand");
+  const fijn = heeftWaarde(toestand) ? String(toestand.state) : "";
   let tekst = "";
-  if (fijn && fijn !== "idle") tekst = TOESTAND_WOORDEN[fijn] || haWoord(vertaal, t, fijn);
-  if (!tekst) tekst = ACTIVITEIT_WOORDEN[activiteit] || haWoord(vertaal, st, activiteit) || opgeschoond(fijn || activiteit);
-  if (!beschikbaar) tekst = "Niet bereikbaar";
+  if (fijn && fijn !== "idle") tekst = TOESTAND_WOORDEN[fijn] ? t(TOESTAND_WOORDEN[fijn]) : haWoord(vertaal, toestand, fijn);
+  if (!tekst) {
+    tekst = ACTIVITEIT_WOORDEN[activiteit]
+      ? t(ACTIVITEIT_WOORDEN[activiteit])
+      : haWoord(vertaal, st, activiteit) || opgeschoond(fijn || activiteit);
+  }
+  if (!beschikbaar) tekst = t("Niet bereikbaar");
 
   // Wat erachter komt: de kamer en de voortgang als hij bezig is, de
   // droogtijd als het station droogt. Is er niets te melden, dan niets.
@@ -331,7 +335,7 @@ export function stofzuigerStand(hass, id, delen = {}, vertaal) {
     const v = getal(s("drogenVoortgang")?.state);
     if (v != null) delenDetail.push(`${getalTekst(v)} %`);
     const rest = duurTekst(s("drogenRest")?.state);
-    if (rest) delenDetail.push(`nog ${rest}`);
+    if (rest) delenDetail.push(t("nog {duur}", { duur: rest }));
   }
 
   // Een storing blijft altijd staan.
@@ -341,7 +345,7 @@ export function stofzuigerStand(hass, id, delen = {}, vertaal) {
     const beschrijving = String(f.attributes?.description ?? "").trim();
     fout = beschrijving || haWoord(vertaal, f, f.state) || opgeschoond(f.state);
   } else if (activiteit === "error") {
-    fout = "Storing";
+    fout = t("Storing");
   }
 
   let soort = "stil";
@@ -400,25 +404,25 @@ export function bedieningKnoppen(st, { kamers = [], segmentDienst = false } = {}
   const uit = [];
 
   if (st.state === "cleaning" || st.state === "returning") {
-    if (kan(st, KAN.PAUZE)) uit.push({ rol: "pauze", label: "Pauzeren", icoon: "pause", oproep: roep("pause") });
-    else if (kan(st, KAN.STOP)) uit.push({ rol: "stop", label: "Stoppen", icoon: "stop", oproep: roep("stop") });
+    if (kan(st, KAN.PAUZE)) uit.push({ rol: "pauze", label: t("Pauzeren"), icoon: "pause", oproep: roep("pause") });
+    else if (kan(st, KAN.STOP)) uit.push({ rol: "stop", label: t("Stoppen"), icoon: "stop", oproep: roep("stop") });
   } else if (st.state === "paused") {
-    if (kan(st, KAN.START)) uit.push({ rol: "hervat", label: "Hervatten", icoon: "play", oproep: roep("start") });
+    if (kan(st, KAN.START)) uit.push({ rol: "hervat", label: t("Hervatten"), icoon: "play", oproep: roep("start") });
   } else if (kamers.length && segmentDienst) {
     uit.push({
       rol: "kamers",
-      label: kamers.length === 1 ? "Start 1 kamer" : `Start ${kamers.length} kamers`,
+      label: tn(kamers.length, "Start {n} kamer", "Start {n} kamers"),
       icoon: "play",
       oproep: ["dreame_vacuum", "vacuum_clean_segment", { entity_id: id, segments: [...kamers] }],
     });
   } else if (kan(st, KAN.START)) {
-    uit.push({ rol: "start", label: "Starten", icoon: "play", oproep: roep("start") });
+    uit.push({ rol: "start", label: t("Starten"), icoon: "play", oproep: roep("start") });
   }
 
   if (kan(st, KAN.TERUG)) {
     uit.push({
       rol: "station",
-      label: "Naar station",
+      label: t("Naar station"),
       icoon: "house",
       oproep: roep("return_to_base"),
       uit: st.state === "docked" || st.state === "returning",
@@ -475,35 +479,41 @@ export function actieveKamers(st) {
 export const KEUZES = {
   cleangenius: {
     naam: "CleanGenius",
-    woorden: { off: "Uit", routine_cleaning: "Routine", deep_cleaning: "Grondig" },
+    woorden: { off: nt("Uit"), routine_cleaning: nt("Routine"), deep_cleaning: nt("Grondig") },
   },
   // De stand terwijl CleanGenius aan staat: alleen deze twee.
   cgModus: {
-    naam: "Stand",
-    woorden: { vacuum_and_mop: "Zuigen en dweilen", mop_after_vacuum: "Dweilen na zuigen" },
-    kort: { vacuum_and_mop: "Allebei", mop_after_vacuum: "Na zuigen" },
+    naam: nt("Stand"),
+    woorden: { vacuum_and_mop: nt("Zuigen en dweilen"), mop_after_vacuum: nt("Dweilen na zuigen") },
+    kort: { vacuum_and_mop: nt("Allebei"), mop_after_vacuum: nt("Na zuigen") },
   },
   modus: {
-    naam: "Stand",
+    naam: nt("Stand"),
     woorden: {
-      sweeping: "Zuigen",
-      mopping: "Dweilen",
-      sweeping_and_mopping: "Zuigen en dweilen",
-      mopping_after_sweeping: "Dweilen na zuigen",
+      sweeping: nt("Zuigen"),
+      mopping: nt("Dweilen"),
+      sweeping_and_mopping: nt("Zuigen en dweilen"),
+      mopping_after_sweeping: nt("Dweilen na zuigen"),
     },
-    kort: { sweeping_and_mopping: "Allebei", mopping_after_sweeping: "Na zuigen" },
+    kort: { sweeping_and_mopping: nt("Allebei"), mopping_after_sweeping: nt("Na zuigen") },
   },
   zuigkracht: {
-    naam: "Zuigkracht",
-    woorden: { quiet: "Stil", silent: "Stil", standard: "Standaard", strong: "Sterk", turbo: "Turbo", max: "Max" },
+    naam: nt("Zuigkracht"),
+    woorden: { quiet: nt("Stil"), silent: nt("Stil"), standard: nt("Standaard"), strong: nt("Sterk"), turbo: nt("Turbo"), max: nt("Max") },
   },
   vochtigheid: {
-    naam: "Dweilen",
-    woorden: { slightly_dry: "Iets droog", moist: "Vochtig", wet: "Nat" },
+    naam: nt("Dweilen"),
+    woorden: { slightly_dry: nt("Iets droog"), moist: nt("Vochtig"), wet: nt("Nat") },
   },
 };
 
 /** In welke volgorde de rijen op de kaart staan. */
+/**
+ * Een woord uit `KEUZES` in de taal van nu. Met het context-Engels van een
+ * stand (`tc`): "Stil" is hier "Quiet", zoals Dreame het zegt, en niet "Idle".
+ */
+const keuzeWoord = (nl) => tc("stand", nl);
+
 export const KEUZE_VOLGORDE = ["cleangenius", "cgModus", "modus", "zuigkracht", "vochtigheid"];
 
 /**
@@ -523,11 +533,11 @@ export function keuzeRij(st, soort, vertaal) {
   return {
     id: st.entity_id,
     soort,
-    naam: def.naam,
+    naam: t(def.naam),
     gekozen: String(st.state),
     opties: opties.map((o) => {
-      const voluit = def.woorden[o] || keuzeNaam(o, haWoord(vertaal, st, o));
-      return { waarde: o, label: def.kort?.[o] || voluit, voluit };
+      const voluit = def.woorden[o] ? keuzeWoord(def.woorden[o]) : keuzeNaam(o, haWoord(vertaal, st, o));
+      return { waarde: o, label: def.kort?.[o] ? t(def.kort[o]) : voluit, voluit };
     }),
     oproep: (waarde) => ["select", "select_option", { entity_id: st.entity_id, option: waarde }],
   };
@@ -544,10 +554,10 @@ export function zuigkrachtVanStofzuiger(st) {
   return {
     id: st.entity_id,
     soort: "zuigkracht",
-    naam: KEUZES.zuigkracht.naam,
+    naam: t(KEUZES.zuigkracht.naam),
     gekozen: String(st.attributes.fan_speed ?? ""),
     opties: lijst.map(String).map((o) => {
-      const voluit = woorden[o.toLowerCase()] || keuzeNaam(o);
+      const voluit = woorden[o.toLowerCase()] ? keuzeWoord(woorden[o.toLowerCase()]) : keuzeNaam(o);
       return { waarde: o, label: voluit, voluit };
     }),
     oproep: (waarde) => ["vacuum", "set_fan_speed", { entity_id: st.entity_id, fan_speed: waarde }],
@@ -596,18 +606,18 @@ export const cleanGeniusAan = (rijen) => rijen.some((r) => r.soort === "cleangen
  * zelf "geplaatst" zegt.
  */
 const TANKS = [
-  ["schoonwater", "Schoon water", { not_installed: "Niet geplaatst", low_water: "Bijna leeg" }],
-  ["vuilwater", "Vuil water", { not_installed_or_full: "Vol of weg", not_installed: "Niet geplaatst", full: "Vol" }],
-  ["stofzak", "Stofzak", { not_installed: "Niet geplaatst", check: "Controleren", full: "Vol" }],
+  ["schoonwater", nt("Schoon water"), { not_installed: nt("Niet geplaatst"), low_water: nt("Bijna leeg") }],
+  ["vuilwater", nt("Vuil water"), { not_installed_or_full: nt("Vol of weg"), not_installed: nt("Niet geplaatst"), full: nt("Vol") }],
+  ["stofzak", nt("Stofzak"), { not_installed: nt("Niet geplaatst"), check: nt("Controleren"), full: nt("Vol") }],
 ];
 
 const WATER = {
-  no_water_left: "Op",
-  no_water_left_dismiss: "Op",
-  no_water_left_after_clean: "Op",
-  no_water_for_clean: "Te weinig",
-  low_water: "Bijna leeg",
-  tank_not_installed: "Niet geplaatst",
+  no_water_left: nt("Op"),
+  no_water_left_dismiss: nt("Op"),
+  no_water_left_after_clean: nt("Op"),
+  no_water_for_clean: nt("Te weinig"),
+  low_water: nt("Bijna leeg"),
+  tank_not_installed: nt("Niet geplaatst"),
 };
 
 /** Wat in orde is, voor elke sensor van het station. */
@@ -618,9 +628,9 @@ const IN_ORDE = new Set(["installed", "active", "enabled", "no_warning", "idle",
  * zelfreiniging, drogen en leegzuigen. `actief` als het station dat nu doet.
  */
 const STATION_KNOPPEN = [
-  ["wassenKnop", "Reinigen", "drop", (h) => h.basis === "washing"],
-  ["drogenKnop", "Drogen", "wind", (h) => h.basis === "drying" || h.drogen],
-  ["legenKnop", "Leegzuigen", "bin", (h) => h.legen === "active"],
+  ["wassenKnop", nt("Reinigen"), "drop", (h) => h.basis === "washing"],
+  ["drogenKnop", nt("Drogen"), "wind", (h) => h.basis === "drying" || h.drogen],
+  ["legenKnop", nt("Leegzuigen"), "bin", (h) => h.legen === "active"],
 ];
 
 /**
@@ -637,13 +647,13 @@ export function stationStand(hass, id, delen = {}, vertaal) {
     const st = s(rol);
     if (!heeftWaarde(st)) continue;
     const v = String(st.state).toLowerCase();
-    let tekst = IN_ORDE.has(v) ? "" : woorden[v] || haWoord(vertaal, st, st.state) || opgeschoond(v);
+    let tekst = IN_ORDE.has(v) ? "" : woorden[v] ? t(woorden[v]) : haWoord(vertaal, st, st.state) || opgeschoond(v);
     if (rol === "schoonwater" && !tekst) {
       const w = s("water");
       const wv = heeftWaarde(w) ? String(w.state).toLowerCase() : "";
-      if (wv && !IN_ORDE.has(wv)) tekst = WATER[wv] || haWoord(vertaal, w, w.state) || opgeschoond(wv);
+      if (wv && !IN_ORDE.has(wv)) tekst = WATER[wv] ? t(WATER[wv]) : haWoord(vertaal, w, w.state) || opgeschoond(wv);
     }
-    tanks.push({ id: st.entity_id, naam, tekst: tekst || "In orde", ok: !tekst });
+    tanks.push({ id: st.entity_id, naam: t(naam), tekst: tekst || t("In orde"), ok: !tekst });
   }
   const hier = {
     basis: s("basis")?.state,
@@ -654,7 +664,7 @@ export function stationStand(hass, id, delen = {}, vertaal) {
   for (const [rol, label, icoon, actief] of STATION_KNOPPEN) {
     const st = s(rol);
     if (!st || st.state === "unavailable") continue;
-    knoppen.push({ rol, id: st.entity_id, label, icoon, actief: Boolean(actief(hier)) });
+    knoppen.push({ rol, id: st.entity_id, label: t(label), icoon, actief: Boolean(actief(hier)) });
   }
   return { tanks, knoppen };
 }
@@ -667,10 +677,10 @@ export function stationStand(hass, id, delen = {}, vertaal) {
  * de X50 staan dus niet op de kaart, al meet hij ze wel.
  */
 export const ONDERHOUD_NAMEN = {
-  main_brush_left: "Hoofdborstel",
-  side_brush_left: "Zijborstel",
-  filter_left: "Filter",
-  sensor_dirty_left: "Sensoren",
+  main_brush_left: nt("Hoofdborstel"),
+  side_brush_left: nt("Zijborstel"),
+  filter_left: nt("Filter"),
+  sensor_dirty_left: nt("Sensoren"),
 };
 
 const VOLGORDE = Object.keys(ONDERHOUD_NAMEN);
@@ -687,8 +697,8 @@ function restTekst(st) {
   const n = getal(st?.state);
   if (n == null || n < 0) return "";
   const eenheid = String(st.attributes?.unit_of_measurement ?? "").toLowerCase();
-  if (eenheid === "d") return n === 1 ? "1 dag" : `${Math.round(n)} dagen`;
-  if (eenheid === "h") return n >= 48 ? `${Math.round(n / 24)} dagen` : `${Math.round(n)} uur`;
+  if (eenheid === "d") return n === 1 ? t("{n} dag", { n: 1 }) : t("{n} dagen", { n: Math.round(n) });
+  if (eenheid === "h") return n >= 48 ? t("{n} dagen", { n: Math.round(n / 24) }) : t("{u} uur", { u: Math.round(n) });
   if (eenheid === "min") return duurTekst(n);
   return "";
 }
@@ -712,7 +722,7 @@ export function onderhoudLijst(hass, delen = {}) {
     if (procent == null) continue;
     const rest = restTekst(hass?.states?.[delen.restTijd?.[tk]]);
     const toon = procent <= 0 ? "bad" : procent <= ONDERHOUD_GRENS ? "warn" : null;
-    uit.push({ id, naam, procent: Math.max(0, Math.min(100, procent)), rest, toon });
+    uit.push({ id, naam: t(naam), procent: Math.max(0, Math.min(100, procent)), rest, toon });
   }
   return uit;
 }
@@ -784,11 +794,11 @@ export const typeKeuzes = (merk, lijst = STOFZUIGERS) => types(merk, lijst);
 
 /** De blokken onder de bediening, in volgorde, met hun naam in de editor. */
 export const BLOKKEN = [
-  { value: "kaart", label: "Kaart van het huis" },
-  { value: "kamers", label: "Kamers" },
-  { value: "modus", label: "Stand, zuigkracht, dweilen en CleanGenius" },
-  { value: "station", label: "Station" },
-  { value: "onderhoud", label: "Onderhoud" },
+  { value: "kaart", label: nt("Kaart van het huis") },
+  { value: "kamers", label: nt("Kamers") },
+  { value: "modus", label: nt("Stand, zuigkracht, dweilen en CleanGenius") },
+  { value: "station", label: nt("Station") },
+  { value: "onderhoud", label: nt("Onderhoud") },
 ];
 
 /** Staat dit blok aan? `verberg` is een lijst; wat er niet in staat, staat aan. */

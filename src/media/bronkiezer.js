@@ -30,6 +30,7 @@ import { sheet, tokens, themaCss, baseCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { stateOf } from "../ha.js";
+import { t, taal, tn } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -140,16 +141,17 @@ class BronKiezer extends HTMLElement {
   }
 
   bouw_() {
+    this.taal_ = taal();
     this.shadowRoot.innerHTML = `
       <div class="laag">
         <header>
           <span class="wie"><b class="naam"></b><span class="sub"></span></span>
-          <button class="rond sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
+          <button class="rond sluit" type="button" aria-label="${t("Sluiten")}">${resolve("close")}</button>
         </header>
         <div class="zoek">
           <label class="veld">
             ${resolve("search")}
-            <input type="search" placeholder="Zoek een zender of app" aria-label="Zoeken" />
+            <input type="search" placeholder="${t("Zoek een zender of app")}" aria-label="${t("Zoeken")}" />
           </label>
         </div>
         <div class="tel"></div>
@@ -198,6 +200,8 @@ class BronKiezer extends HTMLElement {
     this.entity_ = entityId;
     this.naam_ = naam;
     this.filter_ = "";
+    // Een andere taal dan bij het opbouwen: de vaste tekst opnieuw opbouwen.
+    if (this.gebouwd_ && this.taal_ !== taal()) this.disconnectedCallback();
     if (!this.gebouwd_) this.bouw_();
     this.$("input").value = "";
     this.setAttribute("open", "");
@@ -230,15 +234,15 @@ class BronKiezer extends HTMLElement {
 
   teken_() {
     const { lijst, nu, totaal } = this.bronnen_();
-    this.$(".naam").textContent = this.naam_ ?? "Bron kiezen";
-    this.$(".sub").textContent = nu ? `Nu: ${nu}` : "";
+    this.$(".naam").textContent = this.naam_ ?? t("Bron kiezen");
+    this.$(".sub").textContent = nu ? t("Nu: {naam}", { naam: nu }) : "";
     this.$(".tel").textContent = this.filter_
-      ? `${lijst.length} van ${totaal}`
-      : `${totaal} bronnen`;
+      ? t("{n} van {totaal}", { n: lijst.length, totaal })
+      : tn(totaal, "{n} bron", "{n} bronnen");
 
     const lijstEl = this.$(".lijst");
     if (!lijst.length) {
-      lijstEl.innerHTML = `<div class="leeg">Niets gevonden.</div>`;
+      lijstEl.innerHTML = `<div class="leeg">${t("Niets gevonden.")}</div>`;
       return;
     }
     lijstEl.innerHTML = lijst
@@ -249,7 +253,7 @@ class BronKiezer extends HTMLElement {
         const huidig = b === nu;
         return `<button class="bron" type="button" role="option" data-bron="${veilig}"
                   aria-current="${huidig}" aria-selected="${huidig}">
-                  <b>${veilig}</b>${huidig ? `<span class="nu">NU</span>` : ""}
+                  <b>${veilig}</b>${huidig ? `<span class="nu">${t("NU")}</span>` : ""}
                 </button>`;
       })
       .join("");

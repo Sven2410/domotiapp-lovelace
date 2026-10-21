@@ -13,8 +13,10 @@
  * kaart hoort hetzelfde te zeggen.
  *
  * Gedeeld door de afvalkaart en het infoscherm, want die hadden dezelfde fout.
- * Geen imports, zodat het in een gewone Node-test past.
+ * Alleen taal.js als import (zonder DOM), zodat het in een gewone Node-test past.
  */
+
+import { t, tn } from "../taal.js";
 
 /**
  * De bakken van de eerste ophaaldag, in de volgorde waarin ze binnenkwamen.
@@ -47,11 +49,11 @@ export function eersteOphaaldag(komend, dag) {
  * @returns {{n: string, u: string, bij: string}}
  */
 export function heroWoorden(dagen) {
-  if (dagen === 0) return { n: "nu", u: "aan de weg", bij: "nu aan de weg" };
+  if (dagen === 0) return { n: t("nu"), u: t("aan de weg"), bij: t("nu aan de weg") };
   return {
     n: String(dagen),
-    u: dagen === 1 ? "dag" : "dagen",
-    bij: dagen >= 3 ? `over ${dagen} dagen` : "",
+    u: tn(dagen, "dag", "dagen"),
+    bij: dagen >= 3 ? t("over {n} dagen", { n: dagen }) : "",
   };
 }
 
@@ -75,5 +77,5 @@ export function buitenTekst(buiten, ophaaldag, naamVan = () => "") {
   const dag = `${ophaaldag.getFullYear()}-${twee(ophaaldag.getMonth() + 1)}-${twee(ophaaldag.getDate())}`;
   if (buiten.datum !== dag) return null;
   const naam = buiten.door ? String(naamVan(buiten.door) ?? "").trim().split(/\s+/)[0] : "";
-  return naam ? `Staat buiten · ${naam}` : "Staat buiten";
+  return naam ? t("Staat buiten · {naam}", { naam }) : t("Staat buiten");
 }

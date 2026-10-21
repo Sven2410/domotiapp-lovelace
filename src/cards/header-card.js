@@ -26,27 +26,24 @@ import { DacCard, registerCard, registerEditor, toneValue } from "../base.js";
 import { DacEditor, sel, row, section } from "../editor/base.js";
 import { icons, resolve, weatherIcon } from "../icons.js";
 import { attrsOf, fmtNumber, localizeState, nameOf, stateOf } from "../ha.js";
+import { locale, nt, t } from "../taal.js";
 
 function greeting(d = new Date()) {
   const h = d.getHours();
-  if (h < 6) return "Goedenacht";
-  if (h < 12) return "Goedemorgen";
-  if (h < 18) return "Goedemiddag";
-  return "Goedenavond";
+  if (h < 6) return t("Goedenacht");
+  if (h < 12) return t("Goedemorgen");
+  if (h < 18) return t("Goedemiddag");
+  return t("Goedenavond");
 }
 
-const WEEKDAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
-const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
-  "augustus", "september", "oktober", "november", "december"];
-
 const CHIPS = {
-  humidity: { icon: "drop", tone: "water", label: "Luchtvochtigheid" },
-  wind: { icon: "wind", tone: "neutral", label: "Wind" },
-  uv: { icon: "uv", tone: "solar", label: "UV-index" },
-  precipitation: { icon: "rain", tone: "water", label: "Neerslag" },
-  pressure: { icon: "gaugeArrow", tone: "neutral", label: "Luchtdruk" },
-  sunrise: { icon: "sunrise", tone: "warn", label: "Zonsopkomst" },
-  sunset: { icon: "sunset", tone: "warn", label: "Zonsondergang" },
+  humidity: { icon: "drop", tone: "water", label: nt("Luchtvochtigheid") },
+  wind: { icon: "wind", tone: "neutral", label: nt("Wind") },
+  uv: { icon: "uv", tone: "solar", label: nt("UV-index") },
+  precipitation: { icon: "rain", tone: "water", label: nt("Neerslag") },
+  pressure: { icon: "gaugeArrow", tone: "neutral", label: nt("Luchtdruk") },
+  sunrise: { icon: "sunrise", tone: "warn", label: nt("Zonsopkomst") },
+  sunset: { icon: "sunset", tone: "warn", label: nt("Zonsondergang") },
 };
 
 /**
@@ -58,9 +55,12 @@ const CHIPS = {
  */
 const CHIP_ORDER = ["humidity", "wind", "uv", "precipitation", "sunset"];
 
+/** De windstreken, Nederlands; vertaald waar ze getoond worden. */
+const WINDSTREKEN = [nt("N"), nt("NO"), nt("O"), nt("ZO"), nt("Z"), nt("ZW"), nt("W"), nt("NW")];
+
 const bearing = (deg) => {
   if (deg == null || Number.isNaN(+deg)) return "";
-  return ["N", "NO", "O", "ZO", "Z", "ZW", "W", "NW"][Math.round(+deg / 45) % 8];
+  return t(WINDSTREKEN[Math.round(+deg / 45) % 8]);
 };
 
 class HeaderCard extends DacCard {
@@ -218,13 +218,14 @@ class HeaderCard extends DacCard {
     const hello = greeting(now);
     this.$(".hello").innerHTML = name ? `${hello}, <b>${name}</b>` : hello;
 
-    this.text(".date", `${WEEKDAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`);
+    // "zondag 4 oktober" of "Sunday 4 October": dag- en maandnamen van de taal.
+    this.text(".date", now.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" }));
 
     const clock = this.$(".clock");
     if (clock) {
       this.text(
         clock,
-        now.toLocaleTimeString(this.hass?.locale?.language ?? "nl", {
+        now.toLocaleTimeString(locale(), {
           hour: "2-digit",
           minute: "2-digit",
         })
@@ -269,7 +270,7 @@ class HeaderCard extends DacCard {
     chips.innerHTML = wanted
       .map(
         (x) =>
-          `<span class="chip2" style="--tone:${toneValue(CHIPS[x.key].tone)}" title="${CHIPS[x.key].label}">
+          `<span class="chip2" style="--tone:${toneValue(CHIPS[x.key].tone)}" title="${t(CHIPS[x.key].label)}">
              ${icons[CHIPS[x.key].icon] ?? ""}${x.value}
            </span>`
       )
@@ -337,7 +338,7 @@ class HeaderCard extends DacCard {
         if (Number.isNaN(+d)) return null;
         return {
           key,
-          value: d.toLocaleTimeString(this.hass?.locale?.language ?? "nl", {
+          value: d.toLocaleTimeString(locale(), {
             hour: "2-digit",
             minute: "2-digit",
           }),
@@ -396,32 +397,32 @@ class HeaderEditor extends DacEditor {
   label(s) {
     return (
       {
-        weather: "Weer (temperatuur, wind)",
-        weather_uv: "Tweede weerbron (UV-index)",
-        precipitation_entity: "Neerslagsensor",
+        weather: t("Weer (temperatuur, wind)"),
+        weather_uv: t("Tweede weerbron (UV-index)"),
+        precipitation_entity: t("Neerslagsensor"),
 
-        show_rule: "Accentlijn tonen",
-        hide_below: "Verbergen onder breedte (px)",
-        name: "Naam",
+        show_rule: t("Accentlijn tonen"),
+        hide_below: t("Verbergen onder breedte (px)"),
+        name: t("Naam"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "weather_uv")
-      return "Alleen voor de UV-index. Handig als je hoofdbron die niet meelevert.";
+      return t("Alleen voor de UV-index. Handig als je hoofdbron die niet meelevert.");
     if (s.name === "precipitation_entity")
-      return "Een sensor in mm of mm/h, bijvoorbeeld neerslagintensiteit of regen laatste uur.";
+      return t("Een sensor in mm of mm/h, bijvoorbeeld neerslagintensiteit of regen laatste uur.");
     if (s.name === "hide_below")
-      return "768 verbergt de header op telefoons en houdt hem op tablets en desktops. 0 zet het uit.";
+      return t("768 verbergt de header op telefoons en houdt hem op tablets en desktops. 0 zet het uit.");
     if (s.name === "name")
-      return "Leeg laten voor de naam van de ingelogde gebruiker.";
+      return t("Leeg laten voor de naam van de ingelogde gebruiker.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-header-card-editor", HeaderEditor);
 registerCard("domotiapp-header-card", HeaderCard, {
-  name: "DomotiApp Header",
-  description: "Smalle strip met begroeting, weer en klok. Verbergt zichzelf op telefoons.",
+  name: nt("DomotiApp Header"),
+  description: nt("Smalle strip met begroeting, weer en klok. Verbergt zichzelf op telefoons."),
 });

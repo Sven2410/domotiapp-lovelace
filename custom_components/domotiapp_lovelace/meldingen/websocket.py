@@ -23,6 +23,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 
+from ..taal import t
 from ..bewaking import meldingen as telefoons
 from ..const import DOMAIN
 from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN
@@ -93,7 +94,7 @@ def async_meld_aan_abonnees(hass: HomeAssistant, ident: str | None) -> None:
 def ws_subscribe(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     data = hass.data.setdefault(DOMAIN, {})
     if DATA_OPSLAG not in data:
-        connection.send_error(msg["id"], "not_allowed", "De meldingen zijn nog niet geladen")
+        connection.send_error(msg["id"], "not_allowed", t(hass, "De meldingen zijn nog niet geladen"))
         return
     abonnees = data.setdefault(DATA_ABONNEES, [])
     inschrijving = (connection, msg["id"], msg["melding"])
@@ -123,7 +124,7 @@ def ws_subscribe(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
 def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     opslag = hass.data.get(DOMAIN, {}).get(DATA_OPSLAG)
     if opslag is None:
-        connection.send_error(msg["id"], "not_allowed", "De meldingen zijn nog niet geladen")
+        connection.send_error(msg["id"], "not_allowed", t(hass, "De meldingen zijn nog niet geladen"))
         return
     opslag.zet_aan(msg["melding"], msg["persoon"], msg["aan"])
     async_meld_aan_abonnees(hass, msg["melding"])
@@ -144,7 +145,7 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
 async def ws_proef(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     motor = hass.data.get(DOMAIN, {}).get(DATA_MOTOR)
     if motor is None:
-        connection.send_error(msg["id"], "not_allowed", "De meldingen zijn nog niet geladen")
+        connection.send_error(msg["id"], "not_allowed", t(hass, "De meldingen zijn nog niet geladen"))
         return
     # Vers lezen: de proef hoort bij de kaart zoals hij NU is opgeslagen.
     await motor.async_herlees()

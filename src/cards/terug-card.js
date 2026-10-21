@@ -50,6 +50,7 @@ import { resolve } from "../icons.js";
 import { bindActions, runAction } from "../ha.js";
 import { terugDoel } from "../badges/badge-logica.js";
 import { terugTitel, uitlijning, uitlijningen } from "./terug-logica.js";
+import { nt, t } from "../taal.js";
 
 const CARD_TYPE = "domotiapp-terug-card";
 const EDITOR_TYPE = "domotiapp-terug-card-editor";
@@ -194,11 +195,14 @@ class DomotiappTerugCard extends DacCard {
    * plek wil, vult die in.
    */
   static getStubConfig() {
-    return { icon: "arrowLeft", label: "Terug", align: "links" };
+    return { icon: "arrowLeft", label: t("Terug"), align: "links" };
   }
 }
 
 /* ================================== editor ================================ */
+
+/** De namen van de uitlijningen in de keuzelijst. */
+const UITLIJNING_NAMEN = { links: nt("Links"), midden: nt("Midden"), rechts: nt("Rechts") };
 
 class DomotiappTerugCardEditor extends DacEditor {
   defaults() {
@@ -206,7 +210,7 @@ class DomotiappTerugCardEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "arrowLeft", auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "arrowLeft", auto: false }];
   }
 
   schema() {
@@ -216,9 +220,10 @@ class DomotiappTerugCardEditor extends DacEditor {
       {
         name: "align",
         // Uit de logica, zodat de keuzelijst en wat de kaart kan niet uit
-        // elkaar kunnen lopen. De hoofdletter is alleen voor het oog.
+        // elkaar kunnen lopen. De waarde blijft Nederlands (hij staat in de
+        // YAML); wat je leest is de naam in de taal van nu.
         selector: sel.select(
-          uitlijningen().map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) })),
+          uitlijningen().map((v) => ({ value: v, label: t(UITLIJNING_NAMEN[v] ?? v) })),
         ),
       },
     ];
@@ -227,28 +232,29 @@ class DomotiappTerugCardEditor extends DacEditor {
   label(s) {
     return (
       {
-        path: "Waar gaat hij heen",
-        label: "Tekst ernaast (optioneel)",
-        align: "Uitlijning",
+        path: t("Waar gaat hij heen"),
+        label: t("Tekst ernaast (optioneel)"),
+        align: t("Uitlijning"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      path: "Het pad waar je altijd op uitkomt, bijvoorbeeld /dashboard/thuis. Begint het met een # dan opent hij een pop-up op de huidige view. Laat je het leeg, dan gaat hij één stap terug in de geschiedenis — net als de terugknop van je browser.",
-      label: "Laat leeg voor alleen het pijltje. Dat is meestal genoeg en het scheelt breedte.",
-      align: "Waar de knop binnen de kaart staat. De kaart zelf is doorzichtig.",
-      bare: "Haalt de pil helemaal weg: geen vulling, geen rand en geen binnenmarge. Dan staat er alleen nog een pijltje met tekst.",
+      path: t("Het pad waar je altijd op uitkomt, bijvoorbeeld /dashboard/thuis. Begint het met een # dan opent hij een pop-up op de huidige view. Laat je het leeg, dan gaat hij één stap terug in de geschiedenis — net als de terugknop van je browser."),
+      label: t("Laat leeg voor alleen het pijltje. Dat is meestal genoeg en het scheelt breedte."),
+      align: t("Waar de knop binnen de kaart staat. De kaart zelf is doorzichtig."),
+      bare: t("Haalt de pil helemaal weg: geen vulling, geen rand en geen binnenmarge. Dan staat er alleen nog een pijltje met tekst."),
     }[s.name];
   }
 }
 
 registerEditor(EDITOR_TYPE, DomotiappTerugCardEditor);
 registerCard(CARD_TYPE, DomotiappTerugCard, {
-  name: "DomotiApp Terug",
-  description:
-    "Een terugknop die je overal kunt neerzetten, ook in een pop-up: naar een vaste plek die je zelf opgeeft, of één stap terug als je niets invult.",
+  name: nt("DomotiApp Terug"),
+  description: nt(
+    "Een terugknop die je overal kunt neerzetten, ook in een pop-up: naar een vaste plek die je zelf opgeeft, of één stap terug als je niets invult."
+  ),
 });
 
 export { DomotiappTerugCard };

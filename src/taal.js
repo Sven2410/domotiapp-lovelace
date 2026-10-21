@@ -120,6 +120,17 @@ export function t(nl, waarden) {
 }
 
 /**
+ * Een woord dat in het Nederlands op twee plekken hetzelfde is en in het
+ * Engels niet: "Stil" is bij een batterij "Idle" en bij een ventilator
+ * "Quiet". Het Engels staat onder de sleutel `"Stil|stand"`; zonder die
+ * sleutel geldt de gewone vertaling van "Stil".
+ */
+export function tc(context, nl, waarden) {
+  if (taal_ !== "en") return vul(nl, waarden);
+  return vul(EN[`${nl}|${context}`] ?? EN[nl] ?? nl, waarden);
+}
+
+/**
  * Een naam in een tabel die bij het laden van de module al vastligt: `nt`
  * laat hem Nederlands en merkt hem voor `check:taal`. Vertaald wordt hij waar
  * hij getoond wordt, met `t(item.naam)`.

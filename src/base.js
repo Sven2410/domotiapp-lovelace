@@ -24,7 +24,7 @@
 
 import { baseCss, sheet, themaCss, tokens } from "./theme.js";
 import { isLicht, meetOpnieuw, volgThema } from "./thema.js";
-import { t, volgTaal, zieHass } from "./taal.js";
+import { nt, t, volgTaal, zieHass } from "./taal.js";
 import { entitiesChanged } from "./ha.js";
 import { opgegevenRijen, volgRaster } from "./rasterhoogte.js";
 import { meldAan, meldBadgeInKiezer, meldInKiezer } from "./registratie.js";
@@ -65,18 +65,18 @@ export const TONES = {
 };
 
 export const TONE_LABELS = {
-  accent: "Accent",
-  solar: "Oranje",
-  house: "Blauw",
-  water: "Lichtblauw",
-  magenta: "Magenta",
-  pink: "Roze",
-  teal: "Groenblauw",
-  lit: "Lampgeel",
-  good: "Goed",
-  warn: "Let op",
-  bad: "Kritiek",
-  neutral: "Neutraal",
+  accent: nt("Accent"),
+  solar: nt("Oranje"),
+  house: nt("Blauw"),
+  water: nt("Lichtblauw"),
+  magenta: nt("Magenta"),
+  pink: nt("Roze"),
+  teal: nt("Groenblauw"),
+  lit: nt("Lampgeel"),
+  good: nt("Goed"),
+  warn: nt("Let op"),
+  bad: nt("Kritiek"),
+  neutral: nt("Neutraal"),
 };
 
 /**
@@ -113,7 +113,7 @@ const placeholder = (message) => `
       <circle cx="12" cy="12" r="8.6"/>
       <path d="M9.6 9.6a2.4 2.4 0 1 1 3.2 2.3c-.5.2-.8.7-.8 1.2v.6M12 16.6v.1"/>
     </svg></span>
-    <span><b>${t("Nog niets gekozen")}</b><span>${message}</span></span>
+    <span><b>${t("Nog niets gekozen")}</b><span>${t(message)}</span></span>
   </div>`;
 
 /**

@@ -39,7 +39,8 @@ import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
-import { alsGrootte, dagLabel, perDag } from "./camera-filters.js";
+import { alsGrootte, dagInZin, dagLabel, perDag } from "./camera-filters.js";
+import { t, taal } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -149,8 +150,8 @@ const css = /* css */ `
 `;
 
 function veilig(waarde) {
-  return String(waarde ?? "").replace(/[&<>"']/g, (t) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[t]
+  return String(waarde ?? "").replace(/[&<>"']/g, (teken) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[teken]
   );
 }
 
@@ -179,7 +180,10 @@ class CameraArchief extends HTMLElement {
     volgThema(this);
     this.opts_ = opts;
     this.beelden_ = opts.beelden ?? [];
-    if (!this.gebouwd_) this.bouw_();
+    // Eén scherm per pagina, dus het onthoudt in welke taal het gebouwd is.
+    // Is de taal sindsdien gewisseld, dan bouwt het zich opnieuw op.
+    if (!this.luistert_) this.luister_();
+    if (this.taal_ !== taal()) this.bouw_();
     this.setAttribute("open", "");
     this.alleenBeeld_ = Boolean(opts.beeld);
     this.$(".scherm").hidden = this.alleenBeeld_;
@@ -204,24 +208,28 @@ class CameraArchief extends HTMLElement {
   }
 
   bouw_() {
-    this.gebouwd_ = true;
+    this.taal_ = taal();
     this.shadowRoot.innerHTML = `
       <div class="scherm">
         <div class="kop">
-          <button type="button" class="terug">${resolve("chevronRight")}<span>Terug</span></button>
-          <span class="titel">Snapshots</span>
+          <button type="button" class="terug">${resolve("chevronRight")}<span>${t("Terug")}</span></button>
+          <span class="titel">${t("Snapshots")}</span>
           <span class="stat"></span>
           <span class="rek"></span>
-          <button type="button" class="wis">Alles wissen</button>
+          <button type="button" class="wis">${t("Alles wissen")}</button>
         </div>
         <div class="lijst"></div>
-        <div class="voet">Snapshots blijven een week staan en verdwijnen daarna vanzelf, oudste eerst. Per camera worden er hoogstens 500 bewaard.</div>
+        <div class="voet">${t("Snapshots blijven een week staan en verdwijnen daarna vanzelf, oudste eerst. Per camera worden er hoogstens 500 bewaard.")}</div>
       </div>
       <div class="groot" hidden>
-        <button type="button" class="terug">${resolve("chevronRight")}<span>Terug</span></button>
+        <button type="button" class="terug">${resolve("chevronRight")}<span>${t("Terug")}</span></button>
         <img alt=""><div class="onder"></div>
       </div>`;
+  }
 
+  /** De luisteraars hangen aan de shadow root en het element, dus één keer. */
+  luister_() {
+    this.luistert_ = true;
     this.shadowRoot.addEventListener("click", (e) => {
       e.stopPropagation();
       const groot = this.$(".groot");
@@ -243,7 +251,7 @@ class CameraArchief extends HTMLElement {
         const beeld = this.beelden_.find((b) => b.id === weg.dataset.weg);
         return this.opts_?.wis?.(
           [weg.dataset.weg],
-          beeld ? `dit beeld van ${beeld.naam ?? "de camera"}` : "dit beeld"
+          beeld ? t("dit beeld van {naam}", { naam: beeld.naam ?? t("de camera") }) : t("dit beeld")
         );
       }
 
@@ -253,7 +261,7 @@ class CameraArchief extends HTMLElement {
         if (!groep) return;
         return this.opts_?.wis?.(
           groep.beelden.map((b) => b.id),
-          `${groep.beelden.length} beelden van ${dagLabel(groep.dag).toLowerCase()}`
+          t("{n} beelden van {dag}", { n: groep.beelden.length, dag: dagInZin(groep.dag) })
         );
       }
 
@@ -261,7 +269,7 @@ class CameraArchief extends HTMLElement {
         if (!this.beelden_.length) return;
         return this.opts_?.wis?.(
           this.beelden_.map((b) => b.id),
-          `alle ${this.beelden_.length} beelden`
+          t("alle {n} beelden", { n: this.beelden_.length })
         );
       }
 
@@ -296,18 +304,18 @@ class CameraArchief extends HTMLElement {
     const meerdere = this.opts_.meerdere;
 
     this.$(".stat").textContent = this.beelden_.length
-      ? `${this.beelden_.length} beelden · ${alsGrootte(bytes)}`
+      ? t("{n} beelden · {grootte}", { n: this.beelden_.length, grootte: alsGrootte(bytes) })
       : "";
     this.$(".wis").disabled = !this.beelden_.length;
 
     this.$(".lijst").innerHTML = groepen.length
       ? groepen
           .map((groep) => {
-            const kop = groep.dag === null ? "Zonder datum" : dagLabel(groep.dag);
+            const kop = groep.dag === null ? t("Zonder datum") : dagLabel(groep.dag);
             return (
               `<div class="dagkop"><span>${veilig(kop)}</span>` +
               `<span class="bij">${groep.beelden.length} · ${alsGrootte(groep.bytes)}</span>` +
-              `<button type="button" data-wisdag="${groep.dag}">Wis deze dag</button></div>` +
+              `<button type="button" data-wisdag="${groep.dag}">${t("Wis deze dag")}</button></div>` +
               `<div class="raster">` +
               groep.beelden
                 .map((beeld) => {
@@ -318,7 +326,7 @@ class CameraArchief extends HTMLElement {
                     `<span class="bij">${cam}${veilig(beeld.naam ?? "")} · ` +
                     `${veilig(this.opts_.klok(beeld.tijd))}</span>` +
                     `<span class="weg" role="button" data-weg="${veilig(beeld.id)}"` +
-                    ` aria-label="Verwijder">${resolve("close")}</span></button>`
+                    ` aria-label="${t("Verwijder")}">${resolve("close")}</span></button>`
                   );
                 })
                 .join("") +
@@ -326,7 +334,7 @@ class CameraArchief extends HTMLElement {
             );
           })
           .join("")
-      : `<div class="leeg">Er liggen geen snapshots.</div>`;
+      : `<div class="leeg">${t("Er liggen geen snapshots.")}</div>`;
 
     // Staat het grote beeld open op iets dat net gewist is? Dan hoort het dicht.
     const groot = this.$(".groot");

@@ -48,6 +48,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 
+from ..taal import t
 from ..const import DOMAIN
 from . import bestanden
 from .const import (
@@ -133,7 +134,7 @@ def _stuur(hass: HomeAssistant, bericht: dict[str, Any]) -> None:
 def _store(hass: HomeAssistant, connection, msg):
     store = hass.data.get(DOMAIN, {}).get(DATA_STORE)
     if store is None:
-        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
     return store
 
 
@@ -149,7 +150,7 @@ def _beheer(hass: HomeAssistant, connection, msg):
         return None
     if not _mag_beheren(store, connection):
         connection.send_error(
-            msg["id"], websocket_api.ERR_UNAUTHORIZED, "Dit account mag het infoscherm niet beheren"
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, t(hass, "Dit account mag het infoscherm niet beheren")
         )
         return None
     return store
@@ -229,7 +230,7 @@ async def ws_aanwezig(hass: HomeAssistant, connection, msg: dict[str, Any]) -> N
         return
     persoon = await store.async_zet_aanwezig(msg["persoon"], msg["aanwezig"])
     if persoon is None:
-        connection.send_error(msg["id"], "not_found", "Deze persoon staat niet (meer) in de lijst")
+        connection.send_error(msg["id"], "not_found", t(hass, "Deze persoon staat niet (meer) in de lijst"))
         return
     async_meld_stand(hass)
     connection.send_result(msg["id"], {"persoon": persoon})
@@ -380,7 +381,7 @@ async def ws_bestand_verwijder(hass: HomeAssistant, connection, msg: dict[str, A
         return
     bestand_id = msg["bestand"]
     if not bestanden.is_geldig_id(bestand_id):
-        connection.send_error(msg["id"], "invalid_format", "Dat is geen bestands-ID")
+        connection.send_error(msg["id"], "invalid_format", t(hass, "Dat is geen bestands-ID"))
         return
     meta = await store.async_vergeet_bestand(bestand_id)
     if meta is not None:

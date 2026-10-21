@@ -14,6 +14,7 @@
  */
 
 import { lampkleurVoor } from "../thema-logica.js";
+import { locale, nt } from "../taal.js";
 
 /**
  * De kleurnamen in het Nederlands, want dat is wat er in het veld getypt wordt.
@@ -109,13 +110,13 @@ const TOON_CSS = {
  * STATUS -- een verbruik dat te hoog is, een alarm dat aanstaat.
  */
 export const KLEUREN = [
-  ["blauw", "Blauw"],
-  ["groen", "Groen"],
-  ["geel", "Geel"],
-  ["oranje", "Oranje"],
-  ["rood", "Rood"],
-  ["lamp", "Lampkleur"],
-  ["grijs", "Grijs"],
+  ["blauw", nt("Blauw")],
+  ["groen", nt("Groen")],
+  ["geel", nt("Geel")],
+  ["oranje", nt("Oranje")],
+  ["rood", nt("Rood")],
+  ["lamp", nt("Lampkleur")],
+  ["grijs", nt("Grijs")],
 ];
 
 /**
@@ -314,9 +315,9 @@ export function badgeSoort(config) {
  * zelf leest dezelfde waarden als terugval, voor wie het in YAML schrijft.
  */
 export const SOORT_STANDAARD = {
-  lights: { label: "Lampen aan", icon: "bulb" },
+  lights: { label: nt("Lampen aan"), icon: "bulb" },
   energy: {
-    label: "Verbruik",
+    label: nt("Verbruik"),
     icon: "bolt",
     energy_green_max: 1000,
     energy_orange_max: 5000,
@@ -325,7 +326,7 @@ export const SOORT_STANDAARD = {
     energy_color_high: "rood",
   },
   alarm: {
-    label: "Alarm",
+    label: nt("Alarm"),
     alarm_disarmed: "disarmed",
     alarm_partial: "armed_home, armed_night",
     alarm_armed: "armed_away, armed_vacation",
@@ -337,9 +338,9 @@ export const SOORT_STANDAARD = {
 
 const standaard = (config, sleutel) => config?.[sleutel] ?? SOORT_STANDAARD[badgeSoort(config)]?.[sleutel];
 
-/** "1.234,5" of "-411" -- een getal zoals een Nederlander het leest. */
+/** "1.234,5" of "-411" -- een getal in de notatie van de taal van de kaarten. */
 const nl = (getal, decimalen) =>
-  getal.toLocaleString("nl-NL", { minimumFractionDigits: decimalen, maximumFractionDigits: decimalen });
+  getal.toLocaleString(locale(), { minimumFractionDigits: decimalen, maximumFractionDigits: decimalen });
 
 /**
  * Het vermogen van een sensor in watt, en hoe het op de badge staat.
@@ -391,9 +392,9 @@ const lijst = (tekst) =>
 
 /** De standen van een alarm, in de volgorde waarin ze getoetst worden. */
 export const ALARM_STANDEN = [
-  { stand: "disarmed", waarden: "alarm_disarmed", kleur: "alarm_disarmed_color", tekst: "Uitgeschakeld", icoon: "alarmOff" },
-  { stand: "partial", waarden: "alarm_partial", kleur: "alarm_partial_color", tekst: "Deels ingeschakeld", icoon: "alarmPartial" },
-  { stand: "armed", waarden: "alarm_armed", kleur: "alarm_armed_color", tekst: "Ingeschakeld", icoon: "alarmOn" },
+  { stand: "disarmed", waarden: "alarm_disarmed", kleur: "alarm_disarmed_color", tekst: nt("Uitgeschakeld"), icoon: "alarmOff" },
+  { stand: "partial", waarden: "alarm_partial", kleur: "alarm_partial_color", tekst: nt("Deels ingeschakeld"), icoon: "alarmPartial" },
+  { stand: "armed", waarden: "alarm_armed", kleur: "alarm_armed_color", tekst: nt("Ingeschakeld"), icoon: "alarmOn" },
 ];
 
 /**

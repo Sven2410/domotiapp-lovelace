@@ -31,6 +31,7 @@ import { DomotiappSceneCardEditor } from "./editor.js";
 import { DomotiappSceneEditor } from "./scene-editor.js";
 import { meldAan, meldInKiezer } from "../registratie.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
+import { nt, t } from "../taal.js";
 
 const VERSION = __CARD_VERSION__;
 
@@ -238,7 +239,7 @@ class DomotiappSceneCard extends MetThema(LitElement) {
 
   setConfig(config) {
     if (!config?.entity) {
-      throw new Error("Kies een lichtgroep bij 'entity'.");
+      throw new Error(t("Kies een lichtgroep bij 'entity'."));
     }
 
     const onbekend = Object.keys(config).filter(
@@ -414,8 +415,8 @@ class DomotiappSceneCard extends MetThema(LitElement) {
     const namen = entityIds.map((entityId) => this._naam(entityId)).join(", ");
     const bericht =
       entityIds.length === 1
-        ? `${namen} reageerde niet.`
-        : `Deze lampen reageerden niet: ${namen}.`;
+        ? t("{naam} reageerde niet.", { naam: namen })
+        : t("Deze lampen reageerden niet: {namen}.", { namen });
 
     this.dispatchEvent(
       new CustomEvent("hass-notification", {
@@ -464,11 +465,11 @@ class DomotiappSceneCard extends MetThema(LitElement) {
     switch (this._toestand) {
       case GEEN_GROEP:
         return this._renderFout(
-          `Lichtgroep ${this._config.entity} bestaat niet (meer). Pas de kaart aan.`,
+          t("Lichtgroep {entity} bestaat niet (meer). Pas de kaart aan.", { entity: this._config.entity }),
         );
       case OPSLAGFOUT:
         return this._renderFout(
-          "De opgeslagen scenes van deze kamer zijn onleesbaar.",
+          t("De opgeslagen scenes van deze kamer zijn onleesbaar."),
           this._melding,
         );
       case FOUT:
@@ -476,7 +477,7 @@ class DomotiappSceneCard extends MetThema(LitElement) {
         // Assistant er langer over deed dan twee minuten -- hoort er iets te
         // zijn waar je op kunt drukken in plaats van de kaart weg te gooien.
         return this._renderFout(
-          "De scenes konden niet geladen worden.",
+          t("De scenes konden niet geladen worden."),
           this._melding,
           true,
         );
@@ -502,7 +503,7 @@ class DomotiappSceneCard extends MetThema(LitElement) {
           ${detail ? html`<span class="detail">${detail}</span>` : nothing}
           ${metKnop
             ? html`<button type="button" class="opnieuw" @click=${this._opnieuw}>
-                Opnieuw proberen
+                ${t("Opnieuw proberen")}
               </button>`
             : nothing}
         </span>
@@ -545,8 +546,8 @@ class DomotiappSceneCard extends MetThema(LitElement) {
                   type="button"
                   class="chip"
                   ?disabled=${leeg || laden || this._bezig}
-                  aria-label=${`Scene ${index + 1}`}
-                  title=${`Scene ${index + 1}`}
+                  aria-label=${t("Scene {n}", { n: index + 1 })}
+                  title=${t("Scene {n}", { n: index + 1 })}
                   @click=${() => this._pasSceneToe(index)}
                 >
                   ${this._icoon(icoon)}
@@ -559,15 +560,15 @@ class DomotiappSceneCard extends MetThema(LitElement) {
             type="button"
             class="chip potlood"
             ?disabled=${leeg || laden}
-            aria-label="Scenes bewerken"
-            title="Scenes bewerken"
+            aria-label=${t("Scenes bewerken")}
+            title=${t("Scenes bewerken")}
             @click=${this._bewerk}
           >
             ${this._icoon(PENCIL_ICON)}
           </button>
         </div>
         ${leeg
-          ? html`<div class="mededeling">Deze lichtgroep bevat geen lampen.</div>`
+          ? html`<div class="mededeling">${t("Deze lichtgroep bevat geen lampen.")}</div>`
           : this._renderNieuweLampen()}
       </div>
       ${this._editorOpen ? this._renderEditor() : nothing}
@@ -631,6 +632,8 @@ meldAan(SCENE_EDITOR_TYPE, DomotiappSceneEditor);
 meldInKiezer({
   type: CARD_TYPE,
   name: "DomotiApp Scene",
-  description: `Drie lichtscenes per kamer, vastgelegd bij de lichtgroep (v${VERSION}).`,
+  // Zonder versienummer sinds 0.82.0: de kaartkiezer vertaalt de beschrijving
+  // met een vaste sleutel, en een versie erin maakt elke uitgave een andere zin.
+  description: nt("Drie lichtscenes per kamer, vastgelegd bij de lichtgroep."),
   preview: false,
 });

@@ -7,6 +7,8 @@
  * VAL bevatten die je in een browser niet ziet gebeuren -- zie hieronder.
  */
 
+import { t } from "../taal.js";
+
 /**
  * Waar de knop binnen de kaart staat.
  *
@@ -46,5 +48,5 @@ export function terugTitel(config) {
   const label = String(config?.label ?? "").trim();
   if (label) return label;
   const pad = String(config?.path ?? "").trim();
-  return pad ? `Naar ${pad}` : "Terug";
+  return pad ? t("Naar {pad}", { pad }) : t("Terug");
 }

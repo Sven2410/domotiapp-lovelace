@@ -32,21 +32,26 @@ import { DacCard, registerCard, registerEditor, rowsFor, INCOMPLETE } from "../b
 import { DacEditor, sel } from "../editor/base.js";
 import { icons } from "../icons.js";
 import { bindActions, moreInfo, nameOf, stateOf } from "../ha.js";
+import { nt, t } from "../taal.js";
 
-/** De eigen woorden van de tracker voor waar iemand is. */
+/**
+ * De eigen woorden van de tracker voor waar iemand is. `label` is Nederlands
+ * (vertaald waar hij getoond wordt), behalve bij een zone: die heet zoals de
+ * bewoner hem noemde, en dan staat `zone` aan.
+ */
 function place(st) {
-  if (!st) return { label: "Onbekend", home: null };
+  if (!st) return { label: nt("Onbekend"), home: null };
   switch (st.state) {
     case "home":
-      return { label: "Thuis", home: true };
+      return { label: nt("Thuis"), home: true };
     case "not_home":
-      return { label: "Afwezig", home: false };
+      return { label: nt("Afwezig"), home: false };
     case "unknown":
     case "unavailable":
-      return { label: "Onbekend", home: null };
+      return { label: nt("Onbekend"), home: null };
     default:
       // Een zone met een naam: "Werk", "School". Veel bruikbaarder dan "afwezig".
-      return { label: st.state, home: false };
+      return { label: st.state, home: false, zone: true };
   }
 }
 
@@ -116,7 +121,7 @@ class PersonCard extends DacCard {
 
   validate(config) {
     const raw = config.persons ?? config.entities ?? (config.entity ? [config.entity] : []);
-    if (!raw.length) return { ...config, [INCOMPLETE]: "Kies minstens één persoon." };
+    if (!raw.length) return { ...config, [INCOMPLETE]: t("Kies minstens één persoon.") };
     return {
       ...config,
       persons: raw.map((p) => (typeof p === "string" ? { entity: p } : p)),
@@ -183,7 +188,7 @@ class PersonCard extends DacCard {
             : icons.person;
       }
 
-      el.setAttribute("aria-label", `${name}, ${where.label}`);
+      el.setAttribute("aria-label", `${name}, ${where.zone ? where.label : t(where.label)}`);
     });
   }
 
@@ -258,23 +263,23 @@ class PersonEditor extends DacEditor {
   }
 
   label(s) {
-    if (s.name === "persons") return "Personen";
+    if (s.name === "persons") return t("Personen");
     if (s.name.startsWith("naam:")) {
       const id = s.name.slice(5);
-      return `Naam voor ${this.hass?.states?.[id]?.attributes?.friendly_name ?? id}`;
+      return t("Naam voor {naam}", { naam: this.hass?.states?.[id]?.attributes?.friendly_name ?? id });
     }
     return super.label(s);
   }
 
   helper(s) {
     if (s.name === "persons")
-      return "Thuis is groen, weg is rood, geen melding is oranje. Per persoon kun je hieronder een eigen naam zetten.";
+      return t("Thuis is groen, weg is rood, geen melding is oranje. Per persoon kun je hieronder een eigen naam zetten.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-person-card-editor", PersonEditor);
 registerCard("domotiapp-person-card", PersonCard, {
-  name: "DomotiApp Personen",
-  description: "Wie er thuis is, compact. Het hele huishouden in één kaart.",
+  name: nt("DomotiApp Personen"),
+  description: nt("Wie er thuis is, compact. Het hele huishouden in één kaart."),
 });

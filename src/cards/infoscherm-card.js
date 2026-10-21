@@ -89,6 +89,7 @@ import {
   blokOntbreekt,
   blokSchaal,
   dagKort,
+  dagNaam,
   datumLang,
   energiePunten,
   dagVenster,
@@ -145,6 +146,7 @@ import {
   vrijTeller,
 } from "./ruimtes-logica.js";
 import { geenQrReden, netwerkNaam, qrAdres } from "./wifi-logica.js";
+import { nt, t } from "../taal.js";
 import { SCHERM } from "./infoscherm-logo.js";
 import {
   SOORT_ICOON,
@@ -184,18 +186,26 @@ const ICOON = {
 const icoon = (naam) => ICOON[naam] ?? resolve(naam);
 
 const PAGINA_KOP = {
-  aanwezig: { eyebrow: "Wie is er vandaag", titel: "Aanwezig", onder: "Tik op uw naam om u aan of af te melden." },
-  nieuws: { eyebrow: "Nieuws", titel: "Wat er speelt", onder: "" },
-  weer: { eyebrow: "Weer", titel: "Vandaag en de komende dagen", onder: "" },
-  verlichting: { eyebrow: "Verlichting", titel: "Lampen", onder: "Tik op een lamp om hem aan of uit te zetten." },
-  klimaat: { eyebrow: "Klimaat", titel: "Airco's", onder: "Kies een stand, of tik op – en + voor de temperatuur." },
-  ruimtes: { eyebrow: "Ruimtes", titel: "Vandaag", onder: "" },
-  wifi: { eyebrow: "Wifi", titel: "Wifi voor gasten", onder: "" },
-  agenda: { eyebrow: "Agenda", titel: "Vandaag", onder: "" },
-  verjaardagen: { eyebrow: "Verjaardagen", titel: "Wie is er binnenkort jarig", onder: "" },
-  energie: { eyebrow: "Energie", titel: "Verbruik", onder: "" },
-  mededelingen: { eyebrow: "Mededelingen", titel: "Wat er speelt", onder: "" },
-  afval: { eyebrow: "Afval", titel: "Wanneer moet wat aan straat", onder: "" },
+  aanwezig: { eyebrow: nt("Wie is er vandaag"), titel: nt("Aanwezig"), onder: nt("Tik op uw naam om u aan of af te melden.") },
+  nieuws: { eyebrow: nt("Nieuws"), titel: nt("Wat er speelt"), onder: "" },
+  weer: { eyebrow: nt("Weer"), titel: nt("Vandaag en de komende dagen"), onder: "" },
+  verlichting: { eyebrow: nt("Verlichting"), titel: nt("Lampen"), onder: nt("Tik op een lamp om hem aan of uit te zetten.") },
+  klimaat: { eyebrow: nt("Klimaat"), titel: nt("Airco's"), onder: nt("Kies een stand, of tik op – en + voor de temperatuur.") },
+  ruimtes: { eyebrow: nt("Ruimtes"), titel: nt("Vandaag"), onder: "" },
+  wifi: { eyebrow: nt("Wifi"), titel: nt("Wifi voor gasten"), onder: "" },
+  agenda: { eyebrow: nt("Agenda"), titel: nt("Vandaag"), onder: "" },
+  verjaardagen: { eyebrow: nt("Verjaardagen"), titel: nt("Wie is er binnenkort jarig"), onder: "" },
+  energie: { eyebrow: nt("Energie"), titel: nt("Verbruik"), onder: "" },
+  mededelingen: { eyebrow: nt("Mededelingen"), titel: nt("Wat er speelt"), onder: "" },
+  afval: { eyebrow: nt("Afval"), titel: nt("Wanneer moet wat aan straat"), onder: "" },
+};
+
+/* Waarom een bak niet in de lijst staat. De sleutel komt uit afvalLijst
+   (infoscherm-afval.js); hier staat wat het scherm zegt. */
+const AFVAL_REDEN = {
+  "bestaat niet": nt("bestaat niet"),
+  "geen datum": nt("geen datum"),
+  voorbij: nt("voorbij"),
 };
 
 /* Zoveel uur aan metingen houdt de kaart vast: vandaag, plus de meting van
@@ -1189,9 +1199,9 @@ export class InfoschermCard extends DacCard {
     const pagina = (p) => `
       <section class="pagina" data-p="${p}">
         <div class="paginakop">
-          <button class="terug" type="button">${ICOON.back}<span>Terug</span></button>
-          <div class="pk-tekst"><div class="eyebrow">${PAGINA_KOP[p].eyebrow}</div><div class="titel pk-titel">${PAGINA_KOP[p].titel}</div></div>
-          <div class="onder">${PAGINA_KOP[p].onder}</div>
+          <button class="terug" type="button">${ICOON.back}<span>${t("Terug")}</span></button>
+          <div class="pk-tekst"><div class="eyebrow">${t(PAGINA_KOP[p].eyebrow)}</div><div class="titel pk-titel">${t(PAGINA_KOP[p].titel)}</div></div>
+          <div class="onder">${PAGINA_KOP[p].onder ? t(PAGINA_KOP[p].onder) : ""}</div>
         </div>
         <div class="p-inhoud" data-p="${p}"></div>
       </section>`;
@@ -1201,7 +1211,7 @@ export class InfoschermCard extends DacCard {
         ${Object.keys(PAGINA_KOP).map(pagina).join("")}
 
         <div class="laag detail">
-          <button class="sluit" type="button">${ICOON.back}<span>Terug</span></button>
+          <button class="sluit" type="button">${ICOON.back}<span>${t("Terug")}</span></button>
           <div class="d-bron"></div>
           <div class="d-titel"></div>
           <div class="d-datum"></div>
@@ -1210,7 +1220,7 @@ export class InfoschermCard extends DacCard {
 
         <div class="laag boek"></div>
 
-        <div class="merkje">${ICOON.offline}<span>Geen verbinding</span></div>
+        <div class="merkje">${ICOON.offline}<span>${t("Geen verbinding")}</span></div>
       </div>`;
   }
 
@@ -1349,7 +1359,7 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => this.zegRuimtesOp_());
     this.teardown_.push(() => clearTimeout(this.boekTimer_));
     this.teardown_.push(() => {
-      for (const t of this.kTimers_.values()) clearTimeout(t);
+      for (const timer of this.kTimers_.values()) clearTimeout(timer);
       this.kTimers_.clear();
     });
 
@@ -1406,7 +1416,7 @@ export class InfoschermCard extends DacCard {
         this.herkansing_.plan();
         return;
       }
-      this.fout_ = fout?.message ?? "Het infoscherm kon niet laden.";
+      this.fout_ = fout?.message ?? t("Het infoscherm kon niet laden.");
       this.paint();
     }
   }
@@ -1620,7 +1630,7 @@ export class InfoschermCard extends DacCard {
         this.dashHerkansing_.plan();
         return;
       }
-      this.dash_.fout = "Het energiedashboard is niet te lezen.";
+      this.dash_.fout = t("Het energiedashboard is niet te lezen.");
       this.paintPagina_("energie");
     }
   }
@@ -1650,7 +1660,7 @@ export class InfoschermCard extends DacCard {
       if (nogNietGereed(e)) throw e;
       this.dash_.prefs = {};
       this.dash_.bronnen = [];
-      this.dash_.fout = e?.code === "not_found" ? null : "Het energiedashboard is niet te lezen.";
+      this.dash_.fout = e?.code === "not_found" ? null : t("Het energiedashboard is niet te lezen.");
     }
   }
 
@@ -1692,7 +1702,7 @@ export class InfoschermCard extends DacCard {
       d.fout = null;
     } catch (e) {
       if (nogNietGereed(e)) throw e;
-      d.fout = "De geschiedenis is niet op te halen.";
+      d.fout = t("De geschiedenis is niet op te halen.");
     } finally {
       d.bezig = false;
     }
@@ -1764,7 +1774,7 @@ export class InfoschermCard extends DacCard {
           }).join("")}
         </div>
         <div class="ed-as">${rijen.map((r) => `<span>${escapeHtml(staafLabel(r.start, d.periode))}</span>`).join("")}</div>`
-      : `<div class="ed-leeg">${escapeHtml(d.fout ?? (d.bezig ? "Bezig met ophalen…" : "Geen gegevens in deze periode."))}</div>`;
+      : `<div class="ed-leeg">${escapeHtml(d.fout ?? (d.bezig ? t("Bezig met ophalen…") : t("Geen gegevens in deze periode.")))}</div>`;
 
     const tegel = (label, waarde, rol, bij) =>
       `<div class="ed-tegel" style="--rol:${ROLLEN[rol]?.tone ?? "var(--dac-ink-3)"}">
@@ -1774,17 +1784,17 @@ export class InfoschermCard extends DacCard {
       </div>`;
 
     const tegels = [
-      tegel("Van het net", toonWaarde(sam.netIn), "verbruik",
-        sam.zelfvoorzienend !== null ? `${100 - sam.zelfvoorzienend}% van het verbruik` : ""),
-      sam.zon > 0 ? tegel("Opgewekt", toonWaarde(sam.zon), "zon",
-        sam.eigen > 0 ? `${toonWaarde(sam.eigen)} zelf gebruikt` : "") : "",
-      sam.netUit > 0 ? tegel("Teruggeleverd", toonWaarde(sam.netUit), "teruglevering", "") : "",
+      tegel(t("Van het net"), toonWaarde(sam.netIn), "verbruik",
+        sam.zelfvoorzienend !== null ? t("{pct}% van het verbruik", { pct: 100 - sam.zelfvoorzienend }) : ""),
+      sam.zon > 0 ? tegel(t("Opgewekt"), toonWaarde(sam.zon), "zon",
+        sam.eigen > 0 ? t("{waarde} zelf gebruikt", { waarde: toonWaarde(sam.eigen) }) : "") : "",
+      sam.netUit > 0 ? tegel(t("Teruggeleverd"), toonWaarde(sam.netUit), "teruglevering", "") : "",
       sam.accuUit > 0 || sam.accuIn > 0
-        ? tegel("Uit de accu", toonWaarde(sam.accuUit), "accu_uit", `${toonWaarde(sam.accuIn)} geladen`) : "",
-      sam.gas > 0 ? tegel("Gas", toonWaarde(sam.gas, "m³"), "gas", "") : "",
-      sam.water > 0 ? tegel("Water", toonWaarde(sam.water, "m³"), "water", "") : "",
+        ? tegel(t("Uit de accu"), toonWaarde(sam.accuUit), "accu_uit", t("{waarde} geladen", { waarde: toonWaarde(sam.accuIn) })) : "",
+      sam.gas > 0 ? tegel(t("Gas"), toonWaarde(sam.gas, "m³"), "gas", "") : "",
+      sam.water > 0 ? tegel(t("Water"), toonWaarde(sam.water, "m³"), "water", "") : "",
       geld.bedrag > 0
-        ? tegel("Kosten", toonGeld(geld.bedrag), "apparaat", geld.compleet ? "bij de ingestelde prijs" : "schatting, niet alles heeft een prijs")
+        ? tegel(t("Kosten"), toonGeld(geld.bedrag), "apparaat", geld.compleet ? t("bij de ingestelde prijs") : t("schatting, niet alles heeft een prijs"))
         : "",
     ].filter(Boolean).join("");
 
@@ -1805,12 +1815,12 @@ export class InfoschermCard extends DacCard {
     return `<div class="ed">
       <div class="ed-balk">
         <div class="ed-per">
-          ${knop("dag", "Dag")}${knop("week", "Week")}${knop("maand", "Maand")}${knop("jaar", "Jaar")}
+          ${knop("dag", t("Dag"))}${knop("week", t("Week"))}${knop("maand", t("Maand"))}${knop("jaar", t("Jaar"))}
         </div>
         <div class="ed-stap">
-          <button type="button" data-stap="-1" aria-label="Vorige periode">${resolve("chevronLeft")}</button>
+          <button type="button" data-stap="-1" aria-label="${t("Vorige periode")}">${resolve("chevronLeft")}</button>
           <span class="ed-wanneer">${escapeHtml(vensterNaam(d.periode, d.offset))}</span>
-          <button type="button" data-stap="1" aria-label="Volgende periode"${d.offset >= 0 ? " disabled" : ""}>${resolve("chevronRight")}</button>
+          <button type="button" data-stap="1" aria-label="${t("Volgende periode")}"${d.offset >= 0 ? " disabled" : ""}>${resolve("chevronRight")}</button>
         </div>
       </div>
 
@@ -1818,7 +1828,7 @@ export class InfoschermCard extends DacCard {
 
       <div class="ed-vak">
         <div class="ed-kop">
-          <span class="ed-titel">Verbruik per ${{ dag: "uur", week: "dag", maand: "dag", jaar: "maand" }[d.periode]}</span>
+          <span class="ed-titel">${{ dag: t("Verbruik per uur"), week: t("Verbruik per dag"), maand: t("Verbruik per dag"), jaar: t("Verbruik per maand") }[d.periode]}</span>
           <span class="ed-legenda">
             ${rollenInBeeld.map((rol) => `<span><i style="--rol:${ROLLEN[rol].tone}"></i>${escapeHtml(ROLLEN[rol].naam)}</span>`).join("")}
           </span>
@@ -1833,7 +1843,7 @@ export class InfoschermCard extends DacCard {
         </div>`).join("")}
       </div>` : ""}
 
-      <div class="ed-voet">Uit het energiedashboard van Home Assistant.</div>
+      <div class="ed-voet">${t("Uit het energiedashboard van Home Assistant.")}</div>
     </div>`;
   }
 
@@ -1857,9 +1867,9 @@ export class InfoschermCard extends DacCard {
       `<span class="ed-v">${escapeHtml(waarde)}</span></div>`;
     return `<div class="e-nu"><span class="e-waarde">${escapeHtml(toonWaarde(sam.verbruikt))}</span></div>
       <div class="ed-bronnen">
-        ${regel("Van het net", toonWaarde(sam.netIn), "verbruik")}
-        ${sam.zon > 0 ? regel("Opgewekt", toonWaarde(sam.zon), "zon") : ""}
-        ${sam.gas > 0 ? regel("Gas", toonWaarde(sam.gas, "m³"), "gas") : ""}
+        ${regel(t("Van het net"), toonWaarde(sam.netIn), "verbruik")}
+        ${sam.zon > 0 ? regel(t("Opgewekt"), toonWaarde(sam.zon), "zon") : ""}
+        ${sam.gas > 0 ? regel(t("Gas"), toonWaarde(sam.gas, "m³"), "gas") : ""}
       </div>`;
   }
 
@@ -1870,10 +1880,10 @@ export class InfoschermCard extends DacCard {
     const st = stateOf(this.hass, e.entiteit);
     const v = Number(st?.state);
     if (!st || !Number.isFinite(v)) return;
-    const t = Date.parse(st.last_updated) || Date.now();
+    const ms = Date.parse(st.last_updated) || Date.now();
     const laatste = e.punten[e.punten.length - 1];
-    if (laatste && laatste.t >= t) return;
-    e.punten.push({ t, v });
+    if (laatste && laatste.t >= ms) return;
+    e.punten.push({ t: ms, v });
     const grens = Date.now() - (ENERGIE_VENSTER + 2) * 3600000;
     if (e.punten.length > 2000 || (e.punten[0] && e.punten[0].t < grens)) {
       e.punten = e.punten.filter((p) => p.t >= grens);
@@ -1930,44 +1940,44 @@ export class InfoschermCard extends DacCard {
           <span class="e-piek">${escapeHtml(fmt(sam.piek))}</span>
           ${stipTop !== null ? `<span class="e-stip" style="top:${stipTop.toFixed(1)}%;left:${stipLinks.toFixed(2)}%"></span>` : ""}
         </div>`
-      : `<div class="e-grafiek"><div class="e-leeg">${dood ? "Sensor niet bereikbaar." : "Nog geen geschiedenis."}</div></div>`;
+      : `<div class="e-grafiek"><div class="e-leeg">${dood ? t("Sensor niet bereikbaar.") : t("Nog geen geschiedenis.")}</div></div>`;
     if (groot) {
       const tegel = (l, w) => `<div class="e-tegel"><span class="e-l">${l}</span><span class="e-w">${escapeHtml(w)}</span></div>`;
       return `<div class="e-pagina">
         <div class="e-tegels">
-          ${tegel(teller ? "Afgelopen uur" : "Nu", dood ? "--" : fmt(huidig))}
-          ${tegel("Gemiddeld", fmt(sam.gemiddeld))}
-          ${tegel("Piek", fmt(sam.piek))}
-          ${teller ? tegel("Vandaag", fmt(sam.totaal)) : ""}
+          ${tegel(teller ? t("Afgelopen uur") : t("Nu"), dood ? "--" : fmt(huidig))}
+          ${tegel(t("Gemiddeld"), fmt(sam.gemiddeld))}
+          ${tegel(t("Piek"), fmt(sam.piek))}
+          ${teller ? tegel(t("Vandaag"), fmt(sam.totaal)) : ""}
         </div>
         <div class="e-vak">
-          <div class="e-titel">${teller ? "Verbruik per uur, vandaag" : "Vermogen vandaag"} · ${escapeHtml(a.friendly_name ?? entiteit)}</div>
+          <div class="e-titel">${teller ? t("Verbruik per uur, vandaag") : t("Vermogen vandaag")} · ${escapeHtml(a.friendly_name ?? entiteit)}</div>
           ${grafiek}
-          <div class="e-as">${ticks(5).map((t) => `<span>${t}</span>`).join("")}</div>
+          <div class="e-as">${ticks(5).map((tik) => `<span>${tik}</span>`).join("")}</div>
         </div>
       </div>`;
     }
     return `<div class="e-nu"><span class="e-waarde">${dood ? "--" : escapeHtml(fmt(huidig))}</span></div>
       ${grafiek}
-      ${klein ? "" : `<div class="e-as">${ticks(3).map((t) => `<span>${t}</span>`).join("")}</div>`}`;
+      ${klein ? "" : `<div class="e-as">${ticks(3).map((tik) => `<span>${tik}</span>`).join("")}</div>`}`;
   }
 
   /* ------------------------------------------------------------ gedrag */
 
   terugNa_() {
-    const t = Number(this.stand_?.scherm?.terug_na);
-    return Number.isFinite(t) ? t : 60;
+    const na = Number(this.stand_?.scherm?.terug_na);
+    return Number.isFinite(na) ? na : 60;
   }
 
   leeft_() {
     clearTimeout(this.terugTimer_);
-    const t = this.terugNa_();
-    if (t > 0) {
+    const na = this.terugNa_();
+    if (na > 0) {
       this.terugTimer_ = setTimeout(() => {
         this.sluitBericht_();
         this.sluitBoek_();
         this.gaNaar_("welkom");
-      }, t * 1000);
+      }, na * 1000);
     }
   }
 
@@ -2083,7 +2093,7 @@ export class InfoschermCard extends DacCard {
     const n = baan.children.length;
     const i = Math.min(n - 1, this.mIndex_(baan));
     const sub = blok?.querySelector(".bk-sub");
-    if (sub) this.text(sub, n > 1 ? `${i + 1} van ${n}` : "");
+    if (sub) this.text(sub, n > 1 ? t("{n} van {totaal}", { n: i + 1, totaal: n }) : "");
     blok?.querySelectorAll(".m-stippen span").forEach((el, k) => el.classList.toggle("nu", k === i));
   }
 
@@ -2542,7 +2552,7 @@ export class InfoschermCard extends DacCard {
     const sub = el.querySelector(".bk-sub");
     if (!sub) return;
     const basis = sub.dataset.basis ?? "";
-    this.text(sub, meer > 0 ? `${basis ? `${basis} · ` : ""}nog ${meer}` : basis);
+    this.text(sub, meer > 0 ? `${basis ? `${basis} · ` : ""}${t("nog {n}", { n: meer })}` : basis);
   }
 
   /**
@@ -2604,7 +2614,7 @@ export class InfoschermCard extends DacCard {
         // "in het welkoms blok niet de openeingstijd laten zien dat moet puur
         // in openingstijden blok".
         const s = this.stand_?.scherm ?? {};
-        const tekst = s.welkom_tekst ?? "Welkom";
+        const tekst = s.welkom_tekst ?? t("Welkom");
         const logo = s.logo_verbergen !== true && s.logo ? `<div class="logo" data-logo="${escapeHtml(s.logo)}"></div>` : "";
         const regels = tekst ? `<div class="welkomtekst">${escapeHtml(tekst)}</div>` : "";
         // De tijd zelf staat NIET in deze html: die schrijft paintKlok_ elke
@@ -2631,7 +2641,7 @@ export class InfoschermCard extends DacCard {
         const lijst = actieveMededelingen(this.stand_?.mededelingen, isoDatumTijd(new Date()));
         if (!lijst.length) {
           clearInterval(this.mTimer_);
-          zet(`<div class="leeg">Er zijn op dit moment geen mededelingen.</div>`, "");
+          zet(`<div class="leeg">${t("Er zijn op dit moment geen mededelingen.")}</div>`, "");
           break;
         }
         const slides = lijst.map((m) => `<div class="m-slide"><div class="m-tekst">${escapeHtml(m.tekst)}</div></div>`).join("");
@@ -2663,9 +2673,9 @@ export class InfoschermCard extends DacCard {
         // kleiner, en wat niet past valt onderaan weg.
         const twee = blok.w >= 3;
         // In twee kolommen is er geen plek voor spaties rond de streepjes.
-        const compact = (t) => (twee ? t.replace(/ – /g, "–").replace(/, /g, " · ") : t);
+        const compact = (tekst) => (twee ? tekst.replace(/ – /g, "–").replace(/, /g, " · ") : tekst);
         const regel = (r, naam) =>
-          `<div class="${r.vandaag ? "vandaag" : ""} ${r.tekst === "gesloten" ? "dicht" : ""}"><span>${escapeHtml(naam)}${
+          `<div class="${r.vandaag ? "vandaag" : ""} ${r.tekst === t("gesloten") ? "dicht" : ""}"><span>${escapeHtml(naam)}${
             r.reden ? ` · ${escapeHtml(r.reden)}` : ""
           }</span><span class="num">${escapeHtml(compact(r.tekst))}</span></div>`;
         const lijst = (rijen, naam, klasse) =>
@@ -2677,7 +2687,7 @@ export class InfoschermCard extends DacCard {
         // groepen. Zo staat elke dag erop, ook in een blok van één rij.
         const groepen = openingsGroepen(regels);
         const kort = groepen.length < regels.length ? lijst(groepen, (g) => (twee ? g.kort : g.naam), "kort") : "";
-        zet(lijst(regels, (r) => (twee ? r.dag : r.naam), "lang") + kort, openingKop(p, nu));
+        zet(lijst(regels, (r) => (twee ? dagNaam(r.dag, "short") : r.naam), "lang") + kort, openingKop(p, nu));
         break;
       }
       case "verjaardagen": {
@@ -2686,8 +2696,8 @@ export class InfoschermCard extends DacCard {
         el.dataset.meer = String(lijst.length - tonen.length);
         const jarig = lijst.filter((v) => v.dagen === 0).length;
         zet(
-          tonen.length ? `<div class="vj-lijst">${tonen.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">Geen verjaardagen.</div>`,
-          jarig ? `${jarig} vandaag jarig` : ""
+          tonen.length ? `<div class="vj-lijst">${tonen.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">${t("Geen verjaardagen.")}</div>`,
+          jarig ? t("{n} vandaag jarig", { n: jarig }) : ""
         );
         break;
       }
@@ -2697,7 +2707,10 @@ export class InfoschermCard extends DacCard {
         const tonen = aantal > 0 ? gesorteerd.slice(0, aantal) : gesorteerd;
         const rest = gesorteerd.length - tonen.length;
         const html = `<div class="tegels ${kolommen(blok.w)}">${tonen.map((p) => this.htmlPersoon_(p)).join("")}</div>`;
-        const teller = this.stand_?.scherm?.aanwezig_teller !== false ? `${personen.filter((p) => p.aanwezig).length} van ${personen.length}` : "";
+        const teller =
+          this.stand_?.scherm?.aanwezig_teller !== false
+            ? t("{n} van {totaal}", { n: personen.filter((p) => p.aanwezig).length, totaal: personen.length })
+            : "";
         el.dataset.meer = String(rest);
         zet(html, teller);
         break;
@@ -2707,7 +2720,7 @@ export class InfoschermCard extends DacCard {
         const tonen = aantal > 0 ? lijst.slice(0, aantal) : lijst;
         const html = tonen.length
           ? `<div class="n-lijst">${tonen.map((n) => this.htmlBericht_(n)).join("")}</div>`
-          : `<div class="leeg">Er is op dit moment geen nieuws.</div>`;
+          : `<div class="leeg">${t("Er is op dit moment geen nieuws.")}</div>`;
         el.dataset.meer = String(lijst.length - tonen.length);
         zet(html, "");
         break;
@@ -2751,8 +2764,8 @@ export class InfoschermCard extends DacCard {
         const tonen = aantal > 0 ? lijst.slice(0, aantal) : lijst;
         el.dataset.meer = String(lijst.length - tonen.length);
         zet(
-          tonen.length ? `<div class="afspraken">${tonen.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">Geen afspraken vandaag.</div>`,
-          lijst.length ? `${lijst.length} vandaag` : ""
+          tonen.length ? `<div class="afspraken">${tonen.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">${t("Geen afspraken vandaag.")}</div>`,
+          lijst.length ? t("{n} vandaag", { n: lijst.length }) : ""
         );
         break;
       }
@@ -2760,7 +2773,7 @@ export class InfoschermCard extends DacCard {
         const lijst = this.afvalLijst_();
         const komend = afvalKomend(lijst);
         if (!komend.length) {
-          zet(`<div class="leeg">Geen ophaaldata gevonden.</div>`, "");
+          zet(`<div class="leeg">${t("Geen ophaaldata gevonden.")}</div>`, "");
           break;
         }
         // De eerstvolgende krijgt het vlak; de rest is een rij. Dat is dezelfde
@@ -2832,8 +2845,8 @@ export class InfoschermCard extends DacCard {
     const rij = rijen?.[0];
     if (!rij) return "";
     const dagen = rij.dagen ?? 0;
-    const groot = dagen === 0 ? "vandaag" : dagen === 1 ? "morgen" : String(dagen);
-    const onder = dagen > 1 ? "dagen" : "";
+    const groot = dagen === 0 ? t("vandaag") : dagen === 1 ? t("morgen") : String(dagen);
+    const onder = dagen > 1 ? t("dagen") : "";
     // Rechts staat "morgen"; links hoort dan de DATUM te staan en niet nog een
     // keer hetzelfde woord. Bij een bak die verder weg is zegt relativeDay al
     // een dag met een datum, en dan is dat precies goed.
@@ -2858,7 +2871,7 @@ export class InfoschermCard extends DacCard {
     return `<div class="af-rij" data-stil="${ver}" style="--bak:${this.afvalKleur_(rij.naam)}">
       <i></i>
       <span class="af-n">${escapeHtml(rij.naam)}</span>
-      <span class="af-w">${escapeHtml(afvalWanneer(rij))}${voluit && rij.dagen > 1 ? ` · over ${rij.dagen} dagen` : ""}</span>
+      <span class="af-w">${escapeHtml(afvalWanneer(rij))}${voluit && rij.dagen > 1 ? ` · ${t("over {n} dagen", { n: rij.dagen })}` : ""}</span>
     </div>`;
   }
 
@@ -2869,7 +2882,14 @@ export class InfoschermCard extends DacCard {
   }
 
   htmlVerjaardag_(v) {
-    const sub = v.dagen === 0 ? (v.leeftijd ? `Vandaag jarig · wordt ${v.leeftijd}` : "Vandaag jarig") : v.leeftijd ? `wordt ${v.leeftijd}` : "";
+    const sub =
+      v.dagen === 0
+        ? v.leeftijd
+          ? t("Vandaag jarig · wordt {n}", { n: v.leeftijd })
+          : t("Vandaag jarig")
+        : v.leeftijd
+          ? t("wordt {n}", { n: v.leeftijd })
+          : "";
     return `<div class="vj ${v.dagen === 0 ? "vandaag" : ""}">
       <div class="vj-ico">${ICOON.cake}</div>
       <div class="vj-tekst"><div class="vj-naam">${escapeHtml(v.naam)}</div>${sub ? `<div class="vj-sub">${escapeHtml(sub)}</div>` : ""}</div>
@@ -2883,9 +2903,9 @@ export class InfoschermCard extends DacCard {
     const a = attrsOf(this.hass, entiteit);
     const temp = a.temperature;
     const delen = [];
-    if (st) delen.push(WEER_NAAM[st.state] ?? localizeState(this.hass, st));
-    if (typeof a.humidity === "number") delen.push(`${Math.round(a.humidity)}% vochtig`);
-    if (typeof a.wind_speed === "number") delen.push(`wind ${fmtNumber(this.hass, a.wind_speed, 0)} ${a.wind_speed_unit ?? "km/h"}`);
+    if (st) delen.push(WEER_NAAM[st.state] ? t(WEER_NAAM[st.state]) : localizeState(this.hass, st));
+    if (typeof a.humidity === "number") delen.push(t("{pct}% vochtig", { pct: Math.round(a.humidity) }));
+    if (typeof a.wind_speed === "number") delen.push(`${t("wind")} ${fmtNumber(this.hass, a.wind_speed, 0)} ${a.wind_speed_unit ?? "km/h"}`);
     return `<div class="w-nu"><div class="w-icoon">${weerAnimatie(st?.state, this.nacht_())}</div><div><div class="temp">${
       typeof temp === "number" ? `${fmtNumber(this.hass, temp, 0)}°` : "--°"
     }</div><div class="w-tekst">${escapeHtml(delen.join(" · "))}</div></div></div>`;
@@ -2897,8 +2917,8 @@ export class InfoschermCard extends DacCard {
     if (!komende.length) return "";
     return `<div class="uren" style="grid-template-columns: repeat(${komende.length}, minmax(0, 1fr))">${komende
       .map((f) => {
-        const t = new Date(f.datetime);
-        return `<div class="uur"><span class="u">${klok(t)}</span>${weerAnimatie(f.condition, t.getHours() < 7 || t.getHours() >= 21)}<span class="t">${
+        const tijd = new Date(f.datetime);
+        return `<div class="uur"><span class="u">${klok(tijd)}</span>${weerAnimatie(f.condition, tijd.getHours() < 7 || tijd.getHours() >= 21)}<span class="t">${
           typeof f.temperature === "number" ? `${Math.round(f.temperature)}°` : "--"
         }</span></div>`;
       })
@@ -2925,7 +2945,7 @@ export class InfoschermCard extends DacCard {
       <div class="p-tekst">
         <div class="p-naam">${escapeHtml(p.naam)}</div>
         ${p.functie ? `<div class="p-functie">${escapeHtml(p.functie)}</div>` : ""}
-        <div class="p-status">${p.aanwezig ? "Aanwezig" : "Afwezig"}</div>
+        <div class="p-status">${p.aanwezig ? t("Aanwezig") : t("Afwezig")}</div>
       </div>
     </div>`;
   }
@@ -2950,7 +2970,13 @@ export class InfoschermCard extends DacCard {
     const dood = !st || st.state === "unavailable";
     const rgb = a.rgb_color;
     const kleur = aan && Array.isArray(rgb) && !(rgb[0] > 240 && rgb[1] > 240 && rgb[2] > 240) ? `rgb(${rgb.join(",")})` : "";
-    const status = dood ? "Niet bereikbaar" : aan ? (typeof a.brightness === "number" ? `Aan · ${Math.round((a.brightness / 255) * 100)}%` : "Aan") : "Uit";
+    const status = dood
+      ? t("Niet bereikbaar")
+      : aan
+        ? typeof a.brightness === "number"
+          ? t("Aan · {pct}%", { pct: Math.round((a.brightness / 255) * 100) })
+          : t("Aan")
+        : t("Uit");
     // De naam uit het beheer gaat voor; de receptie mag hem daar wijzigen.
     const naam = lamp.naam || a.friendly_name || id;
     return `<div class="lamp ${aan ? "aan" : ""} ${dood ? "dood" : ""}" role="button" tabindex="0" data-id="${escapeHtml(id)}" style="${kleur ? `--lampkleur:${kleur}` : ""}">
@@ -2968,12 +2994,11 @@ export class InfoschermCard extends DacCard {
     const id = item.entity;
     const st = this.aircoSt_(id);
     const s = aircoStand(st);
-    const taal = this.hass?.locale?.language ?? "nl";
-    const doel = doelTekst(s, (n) => graden(n, taal));
-    const status = !s.beschikbaar ? "Niet bereikbaar" : !s.aan ? "Uit" : doel ? `Ingesteld ${doel}` : statusTekst(s);
+    const doel = doelTekst(s, (n) => graden(n));
+    const status = !s.beschikbaar ? t("Niet bereikbaar") : !s.aan ? t("Uit") : doel ? t("Ingesteld {doel}", { doel }) : statusTekst(s);
     const naam = item.naam || st?.attributes?.friendly_name || id;
     const nu = s.huidig == null ? "" : `${fmtNumber(this.hass, s.huidig, 1)}°`;
-    return `<div class="airco" data-soort="${s.soort}" role="button" tabindex="0" data-airco="${escapeHtml(id)}" aria-label="${escapeHtml(`${naam}: ${nu || "geen meting"}, ${status}`)}">
+    return `<div class="airco" data-soort="${s.soort}" role="button" tabindex="0" data-airco="${escapeHtml(id)}" aria-label="${escapeHtml(`${naam}: ${nu || t("geen meting")}, ${status}`)}">
       <div class="chip">${resolve(SOORT_ICOON[s.soort] ?? "airco")}</div>
       <div class="k-tekst"><div class="k-naam">${escapeHtml(naam)}</div><div class="k-status">${escapeHtml(status)}</div></div>
       <div class="k-nu">${nu}</div>
@@ -2989,20 +3014,19 @@ export class InfoschermCard extends DacCard {
     const echt = this.aircoSt_(id);
     const { st, w } = this.aircoStraks_(id, echt);
     const s = aircoStand(st);
-    const taal = this.hass?.locale?.language ?? "nl";
-    const fmt = (n) => graden(n, taal);
+    const fmt = (n) => graden(n);
     const naam = item.naam || st?.attributes?.friendly_name || id;
     const dood = !s.beschikbaar;
     const onderweg = Object.keys(w).some((k) => k !== "tot");
 
     let status = statusTekst(s);
-    if (w.aan === true && !("stand" in w) && echt?.state === "off") status = "Wordt aangezet…";
-    else if (w.aan === false) status = "Wordt uitgezet…";
+    if (w.aan === true && !("stand" in w) && echt?.state === "off") status = t("Wordt aangezet…");
+    else if (w.aan === false) status = t("Wordt uitgezet…");
 
     const aanKnop =
       bedienen && !dood
         ? `<button type="button" class="k-aan" data-actie="aanuit" aria-pressed="${s.aan || w.aan === true}">${resolve("power")}<span>${
-            s.aan || w.aan === true ? "Aan" : "Uit"
+            s.aan || w.aan === true ? t("Aan") : t("Uit")
           }</span></button>`
         : "";
 
@@ -3013,7 +3037,7 @@ export class InfoschermCard extends DacCard {
     const stel = (welk, label) => {
       const waarde = inst[welk];
       const knop = (actie, icoon, grens) =>
-        bedienen ? `<button type="button" data-actie="${actie}" aria-label="${actie === "plus" ? "Warmer" : "Kouder"}"${grens ? " disabled" : ""}>${resolve(icoon)}</button>` : "";
+        bedienen ? `<button type="button" data-actie="${actie}" aria-label="${actie === "plus" ? t("Warmer") : t("Kouder")}"${grens ? " disabled" : ""}>${resolve(icoon)}</button>` : "";
       return `<div class="k-stel ${s.aan || metCoach ? "" : "rust"}" data-welk="${welk}">
         ${knop("min", "minus", dood || waarde <= inst.min)}
         <div class="k-doel ${welk in w ? "wacht" : ""}"><span class="k-getal">${fmt(waarde)}°</span><span class="k-lbl">${label}</span></div>
@@ -3023,8 +3047,8 @@ export class InfoschermCard extends DacCard {
     const stellen = !inst
       ? ""
       : inst.soort === "bereik"
-        ? stel("laag", "Van") + stel("hoog", "Tot")
-        : stel("doel", "Ingesteld");
+        ? stel("laag", t("Van")) + stel("hoog", t("Tot"))
+        : stel("doel", t("Ingesteld"));
     const twee = inst?.soort === "bereik" ? " twee" : "";
 
     const ICOON_STAND = { heat: "flame", cool: "snowflake", auto: "airco", heat_cool: "airco", dry: "drop", fan_only: "fan" };
@@ -3047,7 +3071,7 @@ export class InfoschermCard extends DacCard {
     const ventNu = keuzeNu(st, "ventilator");
     const ventilator =
       bedienen && s.aan && vent.length > 1
-        ? `<div class="k-rij"><span class="k-lbl">Ventilator</span><div class="k-standen">${vent
+        ? `<div class="k-rij"><span class="k-lbl">${t("Ventilator")}</span><div class="k-standen">${vent
             .map(
               (o) =>
                 `<button type="button" class="k-seg" data-actie="ventilator" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="${o.waarde === ventNu}">${escapeHtml(o.label)}</button>`
@@ -3055,7 +3079,10 @@ export class InfoschermCard extends DacCard {
             .join("")}</div></div>`
         : "";
     // Zonder bediening wel zeggen hoe de ventilator staat.
-    const feit = !bedienen && s.aan && ventNu ? `<div class="k-feit">Ventilator ${escapeHtml(vent.find((o) => o.waarde === ventNu)?.label ?? ventNu)}</div>` : "";
+    const feit =
+      !bedienen && s.aan && ventNu
+        ? `<div class="k-feit">${escapeHtml(t("Ventilator {stand}", { stand: vent.find((o) => o.waarde === ventNu)?.label ?? ventNu }))}</div>`
+        : "";
 
     return `<div class="k-paneel" data-soort="${s.soort}" data-airco="${escapeHtml(id)}"${onderweg ? " data-onderweg" : ""}>
       <div class="k-kop">
@@ -3064,7 +3091,7 @@ export class InfoschermCard extends DacCard {
         ${aanKnop}
       </div>
       <div class="k-midden">
-        <div class="k-meting"><span class="k-getal">${s.huidig == null ? "–" : `${fmtNumber(this.hass, s.huidig, 1)}°`}</span><span class="k-lbl">Nu in de ruimte</span></div>
+        <div class="k-meting"><span class="k-getal">${s.huidig == null ? "–" : `${fmtNumber(this.hass, s.huidig, 1)}°`}</span><span class="k-lbl">${t("Nu in de ruimte")}</span></div>
         <div class="k-stellen${twee}">${stellen}</div>
       </div>
       ${standen}${ventilator}${feit}
@@ -3073,7 +3100,7 @@ export class InfoschermCard extends DacCard {
 
   htmlAfspraak_(ev) {
     const heleDag = !String(ev.start).includes("T");
-    const tijd = heleDag ? "hele dag" : `${klok(new Date(ev.start))}${ev.end ? ` – ${klok(new Date(ev.end))}` : ""}`;
+    const tijd = heleDag ? t("hele dag") : `${klok(new Date(ev.start))}${ev.end ? ` – ${klok(new Date(ev.end))}` : ""}`;
     const naam = attrsOf(this.hass, ev.kalender).friendly_name ?? ev.kalender;
     const meerdere = this.installatie_().agendas.length > 1;
     return `<div class="afspraak"><span class="a-tijd">${escapeHtml(tijd)}</span><span class="a-tekst">${escapeHtml(ev.summary ?? "")}</span>${
@@ -3093,16 +3120,16 @@ export class InfoschermCard extends DacCard {
     const naam = netwerkNaam(this.hass, id, s.wifi_naam);
     const ww = s.wifi_wachtwoord ?? "";
     const qr = adres
-      ? `<img class="wf-qr" alt="QR-code van de wifi" src="${escapeHtml(adres)}">`
+      ? `<img class="wf-qr" alt="${t("QR-code van de wifi")}" src="${escapeHtml(adres)}">`
       : `<div class="wf-qr leeg">${escapeHtml(geenQrReden(this.hass, id) ?? "")}</div>`;
     const hint = groot
-      ? "Open de camera van uw telefoon en richt hem op de code. Tik dan op de melding die verschijnt, en u bent verbonden."
-      : "Scan de code met de camera van uw telefoon.";
+      ? t("Open de camera van uw telefoon en richt hem op de code. Tik dan op de melding die verschijnt, en u bent verbonden.")
+      : t("Scan de code met de camera van uw telefoon.");
     return `<div class="wf${groot ? " groot" : ""}">
       ${qr}
       <div class="wf-tekst">
         <div class="wf-naam">${escapeHtml(naam)}</div>
-        ${ww ? `<div class="wf-ww">Wachtwoord <b>${escapeHtml(ww)}</b></div>` : ""}
+        ${ww ? `<div class="wf-ww">${t("Wachtwoord")} <b>${escapeHtml(ww)}</b></div>` : ""}
         <div class="wf-hint">${escapeHtml(hint)}</div>
       </div>
     </div>`;
@@ -3111,9 +3138,9 @@ export class InfoschermCard extends DacCard {
   /** Naam, toestand en tekst van een ruimte op dit moment. */
   ruimteNu_(r, nu) {
     const naam = r.naam || attrsOf(this.hass, r.entity).friendly_name || r.entity;
-    if (stateOf(this.hass, r.entity) === "unavailable") return { naam, toestand: "dood", tekst: "Niet bereikbaar", status: null };
+    if (stateOf(this.hass, r.entity) === "unavailable") return { naam, toestand: "dood", tekst: t("Niet bereikbaar"), status: null };
     const afspraken = this.ruimteAfspraken_.get(r.entity);
-    if (!afspraken) return { naam, toestand: "onbekend", tekst: "Laden…", status: null };
+    if (!afspraken) return { naam, toestand: "onbekend", tekst: t("Laden…"), status: null };
     const status = ruimteStatus(afspraken, nu);
     return { naam, toestand: status.bezet ? "bezet" : "vrij", tekst: ruimteTekst(status), status };
   }
@@ -3148,15 +3175,15 @@ export class InfoschermCard extends DacCard {
     const vandaag = afspraken.filter((a) => a.eind > dagBegin(nu) && a.start < plusDagen(dagBegin(nu), 1));
     const tijden = vandaag.length
       ? vandaag
-          .map((a) => `<span class="${a.eind <= nu ? "voorbij" : ""}">${escapeHtml(a.heleDag ? "de hele dag" : `${klok(a.start)} – ${klok(a.eind)}`)}</span>`)
+          .map((a) => `<span class="${a.eind <= nu ? "voorbij" : ""}">${escapeHtml(a.heleDag ? t("de hele dag") : `${klok(a.start)} – ${klok(a.eind)}`)}</span>`)
           .join("")
-      : `<span class="voorbij">Vandaag nog niets geboekt.</span>`;
+      : `<span class="voorbij">${t("Vandaag nog niets geboekt.")}</span>`;
     const uren = uurStrepen(venster)
       .map((u) => `<span style="left:${u.links.toFixed(2)}%">${u.uur}</span>`)
       .join("");
     const knop =
       boeken && toestand !== "dood"
-        ? `<button type="button" class="r-boek" data-ruimte="${escapeHtml(r.entity)}">${resolve("plus")}<span>Boeken</span></button>`
+        ? `<button type="button" class="r-boek" data-ruimte="${escapeHtml(r.entity)}">${resolve("plus")}<span>${t("Boeken")}</span></button>`
         : "";
     return `<div class="r-paneel" data-toestand="${toestand}" data-ruimte="${escapeHtml(r.entity)}">
       <div class="r-kop">
@@ -3284,7 +3311,7 @@ export class InfoschermCard extends DacCard {
     } catch (fout) {
       if (this.boek_ !== b) return;
       b.bezig = false;
-      b.fout = fout?.message ?? "Boeken lukte niet.";
+      b.fout = fout?.message ?? t("Boeken lukte niet.");
       // Een verkeerde code gaat weg; bij elke andere fout blijft hij staan.
       if (fout?.code === "verkeerde_code" || fout?.code === "te_vaak") b.code = "";
       this.paintBoek_();
@@ -3298,11 +3325,11 @@ export class InfoschermCard extends DacCard {
     const r = this.installatie_().ruimtes.find((x) => x.entity === b.ruimte) ?? { entity: b.ruimte, naam: "" };
     const nu = new Date();
     const { naam, tekst } = this.ruimteNu_(r, nu);
-    const sluit = `<button class="sluit" type="button" data-b="sluit">${ICOON.back}<span>${b.klaar ? "Klaar" : "Annuleren"}</span></button>`;
+    const sluit = `<button class="sluit" type="button" data-b="sluit">${ICOON.back}<span>${b.klaar ? t("Klaar") : t("Annuleren")}</span></button>`;
     if (b.klaar) {
       laag.innerHTML = `${sluit}<div class="rb-klaar">
         <div class="chip">${resolve("check")}</div>
-        <div class="rb-titel">${escapeHtml(naam)} is geboekt</div>
+        <div class="rb-titel">${escapeHtml(t("{naam} is geboekt", { naam }))}</div>
         <div class="rb-status">${escapeHtml(b.klaar)}</div>
       </div>`;
       return;
@@ -3316,32 +3343,32 @@ export class InfoschermCard extends DacCard {
     const duren = duurKeuzes(afspraken, begin);
     const gekozen = duren.find((d) => d.minuten === b.minuten && d.kan);
     const samen = gekozen
-      ? `Van ${klok(begin)} tot ${klok(gekozen.eind)}`
+      ? t("Van {van} tot {tot}", { van: klok(begin), tot: klok(gekozen.eind) })
       : duren.some((d) => d.kan)
-        ? "Kies hoe lang."
-        : "Op deze tijd is de ruimte bezet. Kies een andere tijd of een andere dag.";
+        ? t("Kies hoe lang.")
+        : t("Op deze tijd is de ruimte bezet. Kies een andere tijd of een andere dag.");
     const stippen = Array.from({ length: Math.max(4, b.code.length) }, (_, k) => `<span class="${k < b.code.length ? "vol" : ""}"></span>`).join("");
     const toets = (c) => `<button type="button" data-b="cijfer" data-cijfer="${c}" aria-label="${c}">${c}</button>`;
     const kan = Boolean(gekozen) && b.code.length >= 4 && !b.bezig;
     laag.innerHTML = `${sluit}
       <div class="rb-inhoud">
         <div class="rb-links">
-          <div class="eyebrow">Ruimte boeken</div>
+          <div class="eyebrow">${t("Ruimte boeken")}</div>
           <div class="rb-titel">${escapeHtml(naam)}</div>
           <div class="rb-status">${escapeHtml(status)}</div>
-          <div class="eyebrow">Dag</div>
+          <div class="eyebrow">${t("Dag")}</div>
           <div class="rb-stel">
-            <button type="button" data-b="dag-eerder" aria-label="Dag eerder"${d === 0 ? " disabled" : ""}>${resolve("chevronLeft")}</button>
+            <button type="button" data-b="dag-eerder" aria-label="${t("Dag eerder")}"${d === 0 ? " disabled" : ""}>${resolve("chevronLeft")}</button>
             <div class="rb-waarde rb-dag">${escapeHtml(dagen[d].label)}</div>
-            <button type="button" data-b="dag-later" aria-label="Dag later"${d >= dagen.length - 1 ? " disabled" : ""}>${resolve("chevronRight")}</button>
+            <button type="button" data-b="dag-later" aria-label="${t("Dag later")}"${d >= dagen.length - 1 ? " disabled" : ""}>${resolve("chevronRight")}</button>
           </div>
-          <div class="eyebrow">Vanaf</div>
+          <div class="eyebrow">${t("Vanaf")}</div>
           <div class="rb-stel">
-            <button type="button" data-b="eerder" aria-label="Eerder"${i === 0 ? " disabled" : ""}>${resolve("minus")}</button>
+            <button type="button" data-b="eerder" aria-label="${t("Eerder")}"${i === 0 ? " disabled" : ""}>${resolve("minus")}</button>
             <div class="rb-waarde">${escapeHtml(keuzes[i].label)}</div>
-            <button type="button" data-b="later" aria-label="Later"${i >= keuzes.length - 1 ? " disabled" : ""}>${resolve("plus")}</button>
+            <button type="button" data-b="later" aria-label="${t("Later")}"${i >= keuzes.length - 1 ? " disabled" : ""}>${resolve("plus")}</button>
           </div>
-          <div class="eyebrow">Hoe lang</div>
+          <div class="eyebrow">${t("Hoe lang")}</div>
           <div class="rb-duren">${duren
             .map(
               (d) =>
@@ -3351,15 +3378,15 @@ export class InfoschermCard extends DacCard {
           <div class="rb-samen">${escapeHtml(samen)}</div>
         </div>
         <div class="rb-rechts">
-          <div class="eyebrow">Code</div>
-          <div class="rb-stippen" aria-label="${b.code.length} cijfers">${stippen}</div>
+          <div class="eyebrow">${t("Code")}</div>
+          <div class="rb-stippen" aria-label="${t("{n} cijfers", { n: b.code.length })}">${stippen}</div>
           <div class="rb-toetsen">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(toets).join("")}
-            <button type="button" data-b="wis" aria-label="Wissen"${b.code ? "" : " disabled"}>${ICOON.back}</button>
+            <button type="button" data-b="wis" aria-label="${t("Wissen")}"${b.code ? "" : " disabled"}>${ICOON.back}</button>
             ${toets(0)}
             <span></span>
           </div>
-          <button type="button" class="rb-bevestig" data-b="boek"${kan ? "" : " disabled"}>${b.bezig ? "Bezig…" : "Boeken"}</button>
+          <button type="button" class="rb-bevestig" data-b="boek"${kan ? "" : " disabled"}>${b.bezig ? t("Bezig…") : t("Boeken")}</button>
           <div class="rb-fout" role="alert">${escapeHtml(b.fout)}</div>
         </div>
       </div>`;
@@ -3388,25 +3415,25 @@ export class InfoschermCard extends DacCard {
         if (weergave === "functie") {
           const groepen = groepeerOpFunctie(personen);
           html = `<div class="kolommen ${groepen.length >= 3 ? "drie" : "twee"}">${groepen
-            .map((g) => `<div class="kolom"><div class="eyebrow">${escapeHtml(g.functie || "Overig")} · ${g.personen.length}</div>${tegels(g.personen)}</div>`)
+            .map((g) => `<div class="kolom"><div class="eyebrow">${escapeHtml(g.functie || t("Overig"))} · ${g.personen.length}</div>${tegels(g.personen)}</div>`)
             .join("")}</div>`;
         } else if (weergave === "lijst") {
           html = `<div class="tegels kol-3">${personen.map((p) => this.htmlPersoon_(p)).join("")}</div>`;
         } else {
           const { aanwezig, afwezig } = splitsAanwezig(personen);
           html = `<div class="kolommen twee">
-            <div class="kolom"><div class="eyebrow">Aanwezig · ${aanwezig.length}</div>${aanwezig.length ? tegels(aanwezig) : `<div class="leeg">Niemand aangemeld.</div>`}</div>
-            <div class="kolom"><div class="eyebrow">Afwezig · ${afwezig.length}</div>${afwezig.length ? tegels(afwezig) : `<div class="leeg">Iedereen is er.</div>`}</div>
+            <div class="kolom"><div class="eyebrow">${t("Aanwezig")} · ${aanwezig.length}</div>${aanwezig.length ? tegels(aanwezig) : `<div class="leeg">${t("Niemand aangemeld.")}</div>`}</div>
+            <div class="kolom"><div class="eyebrow">${t("Afwezig")} · ${afwezig.length}</div>${afwezig.length ? tegels(afwezig) : `<div class="leeg">${t("Iedereen is er.")}</div>`}</div>
           </div>`;
         }
         this.vul_(vak, html);
         const aantal = personen.filter((p) => p.aanwezig).length;
-        this.text(".pagina[data-p='aanwezig'] .pk-titel", s.aanwezig_teller !== false && personen.length ? `${aantal} van ${personen.length} aanwezig` : "Aanwezig");
+        this.text(".pagina[data-p='aanwezig'] .pk-titel", s.aanwezig_teller !== false && personen.length ? t("{n} van {totaal} aanwezig", { n: aantal, totaal: personen.length }) : t("Aanwezig"));
         break;
       }
       case "nieuws": {
         const lijst = this.nieuws_();
-        this.vul_(vak, lijst.length ? `<div class="nieuws-raster">${lijst.map((n) => this.htmlBericht_(n, true)).join("")}</div>` : `<div class="leeg">Er is op dit moment geen nieuws.</div>`);
+        this.vul_(vak, lijst.length ? `<div class="nieuws-raster">${lijst.map((n) => this.htmlBericht_(n, true)).join("")}</div>` : `<div class="leeg">${t("Er is op dit moment geen nieuws.")}</div>`);
         break;
       }
       case "weer": {
@@ -3429,13 +3456,13 @@ export class InfoschermCard extends DacCard {
       case "klimaat": {
         const aircos = this.installatie_().klimaat;
         const bedienen = klimaatBedienbaar(this.stand_);
-        this.text(".pagina[data-p='klimaat'] .onder", bedienen ? PAGINA_KOP.klimaat.onder : "");
+        this.text(".pagina[data-p='klimaat'] .onder", bedienen ? t(PAGINA_KOP.klimaat.onder) : "");
         this.vul_(vak, `<div class="k-raster">${aircos.map((a) => this.htmlAircoPaneel_(a, bedienen)).join("")}</div>`, false);
         break;
       }
       case "verjaardagen": {
         const lijst = komendeVerjaardagen(this.stand_?.verjaardagen, new Date());
-        this.vul_(vak, lijst.length ? `<div class="vj-raster">${lijst.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">Geen verjaardagen.</div>`, false);
+        this.vul_(vak, lijst.length ? `<div class="vj-raster">${lijst.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">${t("Geen verjaardagen.")}</div>`, false);
         break;
       }
       case "mededelingen": {
@@ -3452,8 +3479,8 @@ export class InfoschermCard extends DacCard {
         this.vul_(
           vak,
           `<div class="m-pagina">
-            <div class="m-lijst">${actief.length ? actief.map(item).join("") : `<div class="leeg">Geen mededelingen.</div>`}</div>
-            ${komend.length ? `<div class="eyebrow m-kop">Binnenkort</div><div class="m-lijst">${komend.map(item).join("")}</div>` : ""}
+            <div class="m-lijst">${actief.length ? actief.map(item).join("") : `<div class="leeg">${t("Geen mededelingen.")}</div>`}</div>
+            ${komend.length ? `<div class="eyebrow m-kop">${t("Binnenkort")}</div><div class="m-lijst">${komend.map(item).join("")}</div>` : ""}
           </div>`,
           false
         );
@@ -3467,7 +3494,7 @@ export class InfoschermCard extends DacCard {
         const boeken = Boolean(this.stand_?.boeken_op_scherm);
         this.text(
           ".pagina[data-p='ruimtes'] .onder",
-          boeken ? "Tik op Boeken om een ruimte vast te leggen. Daarvoor is de code van de receptie nodig." : ""
+          boeken ? t("Tik op Boeken om een ruimte vast te leggen. Daarvoor is de code van de receptie nodig.") : ""
         );
         const ruimtes = this.installatie_().ruimtes;
         const alle = ruimtes.flatMap((r) => this.ruimteAfspraken_.get(r.entity) ?? []);
@@ -3477,7 +3504,7 @@ export class InfoschermCard extends DacCard {
       }
       case "agenda": {
         const lijst = this.afspraken_;
-        this.vul_(vak, lijst.length ? `<div class="afspraken">${lijst.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">Geen afspraken vandaag.</div>`, false);
+        this.vul_(vak, lijst.length ? `<div class="afspraken">${lijst.map((ev) => this.htmlAfspraak_(ev)).join("")}</div>` : `<div class="leeg">${t("Geen afspraken vandaag.")}</div>`, false);
         break;
       }
       case "afval": {
@@ -3490,9 +3517,9 @@ export class InfoschermCard extends DacCard {
           ? `<div class="af-pagina">
               ${this.htmlAfvalEerst_(eerst)}
               ${later.length ? `<div class="af-lijst">${later.map((r) => this.htmlAfvalRij_(r, true)).join("")}</div>` : ""}
-              ${rest.length ? `<div class="af-uitleg">${rest.map((r) => `${escapeHtml(r.naam)}: ${escapeHtml(r.reden)}`).join(" · ")}</div>` : ""}
+              ${rest.length ? `<div class="af-uitleg">${rest.map((r) => `${escapeHtml(r.naam)}: ${escapeHtml(AFVAL_REDEN[r.reden] ? t(AFVAL_REDEN[r.reden]) : r.reden)}`).join(" · ")}</div>` : ""}
             </div>`
-          : `<div class="leeg">Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>`;
+          : `<div class="leeg">${t("Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.")}</div>`;
         this.vul_(vak, html, false);
         break;
       }
@@ -3505,7 +3532,7 @@ export class InfoschermCard extends DacCard {
     if (!merkje) return;
     const weg = this.hass?.connected === false;
     merkje.classList.toggle("open", weg || Boolean(this.fout_));
-    this.text(".merkje span", weg ? "Geen verbinding" : this.fout_ ?? "");
+    this.text(".merkje span", weg ? t("Geen verbinding") : this.fout_ ?? "");
   }
 }
 
@@ -3513,9 +3540,10 @@ export class InfoschermCard extends DacCard {
    kaarteditor van DomotiApp Infoscherm Beheer. */
 
 registerCard(TAG, InfoschermCard, {
-  name: "DomotiApp Infoscherm",
-  description:
-    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, energie, wie er is, mededelingen, nieuws, verjaardagen en verlichting. Toevoegen en klaar; alles komt uit DomotiApp Infoscherm Beheer.",
+  name: nt("DomotiApp Infoscherm"),
+  description: nt(
+    "Beeldvullend scherm voor een wachtkamer: logo, klok, weer, energie, wie er is, mededelingen, nieuws, verjaardagen en verlichting. Toevoegen en klaar; alles komt uit DomotiApp Infoscherm Beheer."
+  ),
   preview: false,
 });
 InfoschermCard.getStubConfig = () => ({});

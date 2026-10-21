@@ -12,6 +12,8 @@
  * editor aan te vinken dat zijn speaker een volumeknop heeft.
  */
 
+import { locale, t } from "../taal.js";
+
 /**
  * `MediaPlayerEntityFeature` uit Home Assistant.
  * Vaste waarden; ze mogen daar nooit meer veranderen, want elke integratie
@@ -262,9 +264,9 @@ export function rijenVoor(config, st, gst = st) {
  */
 export function watSpeeltEr(st, vertaal = (s) => s?.state ?? "") {
   if (!st) return "";
-  if (st.state === "unavailable") return "Niet bereikbaar";
-  if (st.state === "off") return "Uit";
-  if (st.state === "standby") return "Stand-by";
+  if (st.state === "unavailable") return t("Niet bereikbaar");
+  if (st.state === "off") return t("Uit");
+  if (st.state === "standby") return t("Stand-by");
 
   const a = st.attributes ?? {};
   const titel = a.media_title || a.media_channel || "";
@@ -335,7 +337,7 @@ export function spelersVan(config, hass) {
       ]
     : automatisch(alle(), hass);
 
-  return lijst.sort((a, b) => String(naam(a)).localeCompare(String(naam(b)), "nl"));
+  return lijst.sort((a, b) => String(naam(a)).localeCompare(String(naam(b)), locale()));
 }
 
 /**

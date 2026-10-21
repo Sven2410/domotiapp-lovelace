@@ -41,10 +41,9 @@ import { DacCard, INCOMPLETE, escapeHtml, registerCard, toneValue } from "../bas
 import "../editor/navbar-editor.js";
 import { icons, resolve } from "../icons.js";
 import { runAction } from "../ha.js";
+import { nt, t } from "../taal.js";
 import {
   actieVoor,
-  BALK_MAX,
-  BALK_MIN,
   heeftSub,
   itemsVan,
   klemBalk,
@@ -334,7 +333,7 @@ class NavbarCard extends DacCard {
       max: klemBalk(config?.max),
     };
     if (!items.filter((i) => i.name || i.icon || i.path).length) {
-      c[INCOMPLETE] = "Voeg knoppen toe in de editor: een naam, een icoon en waar hij heen gaat.";
+      c[INCOMPLETE] = t("Voeg knoppen toe in de editor: een naam, een icoon en waar hij heen gaat.");
     }
     return c;
   }
@@ -415,7 +414,7 @@ class NavbarCard extends DacCard {
           heeftMeer
             ? `<button type="button" class="knop meer" data-menu="meer" aria-expanded="false" aria-haspopup="true">
                  <span class="ico">${icons.dots}</span>
-                 <span class="naam">Meer</span>
+                 <span class="naam">${t("Meer")}</span>
                </button>`
             : ""
         }
@@ -683,10 +682,10 @@ class NavbarCard extends DacCard {
   static getStubConfig() {
     return {
       items: [
-        { name: "Thuis", icon: "house", path: "" },
-        { name: "Licht", icon: "bulb", path: "" },
-        { name: "Media", icon: "music", path: "" },
-        { name: "Instellingen", icon: "cog", path: "" },
+        { name: t("Thuis"), icon: "house", path: "" },
+        { name: t("Licht"), icon: "bulb", path: "" },
+        { name: t("Media"), icon: "music", path: "" },
+        { name: t("Instellingen"), icon: "cog", path: "" },
       ],
       max: 4,
       labels: true,
@@ -694,9 +693,14 @@ class NavbarCard extends DacCard {
   }
 }
 
+// De beschrijving is een vaste zin, zodat hij vertaald kan worden: "2 tot 6"
+// zijn BALK_MIN en BALK_MAX uit navbar-logica.js. Verandert daar iets, dan
+// hier ook.
 registerCard("domotiapp-navbar-card", NavbarCard, {
-  name: "DomotiApp Navbalk",
-  description: `Vaste navigatiebalk onderaan het scherm, met een meer-menu voor wat er in de breedte niet bij past. ${BALK_MIN} tot ${BALK_MAX} knoppen in de balk.`,
+  name: nt("DomotiApp Navbalk"),
+  description: nt(
+    "Vaste navigatiebalk onderaan het scherm, met een meer-menu voor wat er in de breedte niet bij past. 2 tot 6 knoppen in de balk."
+  ),
 });
 
 export { NavbarCard };

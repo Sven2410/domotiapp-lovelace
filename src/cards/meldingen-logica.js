@@ -10,6 +10,8 @@
  * Geen DOM en geen `hass`, zodat het in een gewone Node-test past.
  */
 
+import { nt, t } from "../taal.js";
+
 /** Wat een ophaalsensor zegt als er niets is. Zie `GEEN` in afval.py. */
 const GEEN = new Set([
   "", "geen", "none", "unknown", "unavailable", "-", "nee", "niets", "no",
@@ -45,7 +47,7 @@ export function afvalSoorten(toestand) {
 export function opsomming(namen) {
   if (!namen?.length) return "";
   if (namen.length === 1) return namen[0];
-  return `${namen.slice(0, -1).join(", ")} en ${namen[namen.length - 1]}`;
+  return `${namen.slice(0, -1).join(", ")} ${t("en")} ${namen[namen.length - 1]}`;
 }
 
 /** "19:30:00" of "7:30" als "19:30" / "07:30", of "". */
@@ -79,19 +81,20 @@ export function kopRegel({ vandaag, morgen, tijdMorgen, buiten, door, verstuurd 
   const m = afvalSoorten(morgen);
   const morgenDag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1);
   const staatBuiten = (dag) =>
-    buiten?.datum === isoDag(dag) ? ` · staat buiten${door ? ` (${door})` : ""}` : "";
+    buiten?.datum === isoDag(dag) ? ` · ${door ? t("staat buiten ({door})", { door }) : t("staat buiten")}` : "";
 
-  if (v.length) return `Vandaag ${opsomming(v)}${staatBuiten(nu)}`;
+  if (v.length) return `${t("Vandaag {wat}", { wat: opsomming(v) })}${staatBuiten(nu)}`;
   if (m.length) {
     const gezet = staatBuiten(morgenDag);
-    if (gezet) return `Morgen ${opsomming(m)}${gezet}`;
+    const morgenWat = t("Morgen {wat}", { wat: opsomming(m) });
+    if (gezet) return `${morgenWat}${gezet}`;
     // Al verstuurd: dan is "melding om 22:00" niet waar, want er komt vanavond
     // geen tweede (zie de kop van meldingen/motor.py). Gemeld op 6 oktober
     // 2026: hij zette de tijd op 22:00 en wachtte op een melding die niet kon
     // komen, terwijl hier "melding om 22:00" stond.
-    if (verstuurd) return `Morgen ${opsomming(m)} · melding verstuurd`;
+    if (verstuurd) return `${morgenWat} · ${t("melding verstuurd")}`;
     const tijd = tijdKort(tijdMorgen);
-    return `Morgen ${opsomming(m)}${tijd ? ` · melding om ${tijd}` : ""}`;
+    return `${morgenWat}${tijd ? ` · ${t("melding om {tijd}", { tijd })}` : ""}`;
   }
   return "";
 }
@@ -124,7 +127,7 @@ export function personenUit(config) {
  * toekomst moeten er meerdere dingen bij komen."* Een nieuwe soort is een regel
  * hier, een schakelaar in de editor, en de serverkant die hem verstuurt.
  */
-export const SOORTEN = [{ id: "afval", naam: "Afvalmeldingen", icoon: "bin" }];
+export const SOORTEN = [{ id: "afval", naam: nt("Afvalmeldingen"), icoon: "bin" }];
 
 /**
  * Staat deze soort aan op deze kaart?
@@ -178,8 +181,8 @@ export function krijgtIets(standen, soorten, persoon) {
  * het eerste wat je wilt weten.
  */
 export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date() } = {}) {
-  if (stand && !stand.bekend) return "Actief zodra het dashboard is opgeslagen";
-  if (!config?.afval_vandaag && !config?.afval_morgen) return "Nog geen afvalsensor gekozen";
+  if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
+  if (!config?.afval_vandaag && !config?.afval_morgen) return t("Nog geen afvalsensor gekozen");
   // De tijden die de SERVER gebruikt gaan voor die van deze kaart. Staat
   // dezelfde kaart op twee dashboards met andere tijden, dan geldt er één, en
   // de andere kaart hoort niet te beweren dat zijn tijd geldt.
@@ -189,10 +192,10 @@ export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date
   const wat = kopRegel({ vandaag, morgen, tijdMorgen, buiten: stand?.buiten, door, verstuurd, nu });
   if (wat) return wat;
   const momenten = [
-    config.afval_morgen ? `de avond ervoor om ${tijdMorgen}` : "",
-    config.afval_vandaag ? `de ochtend zelf om ${tijdVandaag}` : "",
+    config.afval_morgen ? t("de avond ervoor om {tijd}", { tijd: tijdMorgen }) : "",
+    config.afval_vandaag ? t("de ochtend zelf om {tijd}", { tijd: tijdVandaag }) : "",
   ].filter(Boolean);
-  const zin = momenten.join(" en ");
+  const zin = momenten.join(` ${t("en")} `);
   return zin[0].toUpperCase() + zin.slice(1);
 }
 
@@ -211,10 +214,10 @@ export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date
 export function proefUitkomst(uitkomst, naam) {
   if (uitkomst?.reden) return { tekst: uitkomst.reden, fout: true };
   if (uitkomst?.verstuurd?.length) {
-    return { tekst: `Verstuurd naar ${naam}: “${uitkomst.titel}”. Kijk op de telefoon.`, fout: false };
+    return { tekst: t("Verstuurd naar {naam}: “{titel}”. Kijk op de telefoon.", { naam, titel: uitkomst.titel }), fout: false };
   }
   if (uitkomst?.zonder_telefoon?.length) {
-    return { tekst: `Niet verstuurd: geen werkende telefoon gevonden voor ${naam}.`, fout: true };
+    return { tekst: t("Niet verstuurd: geen werkende telefoon gevonden voor {naam}.", { naam }), fout: true };
   }
-  return { tekst: "Niet verstuurd.", fout: true };
+  return { tekst: t("Niet verstuurd."), fout: true };
 }

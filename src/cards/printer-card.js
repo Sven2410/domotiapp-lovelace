@@ -53,6 +53,7 @@ import {
   tray,
   voortgangPct,
 } from "./printer-logica.js";
+import { nt, t, taal } from "../taal.js";
 
 /** De vier trays van een AMS. Meer dan vier is een tweede AMS, en dus een tweede kaart. */
 const TRAYS = [1, 2, 3, 4];
@@ -268,8 +269,9 @@ class PrinterCard extends DacCard {
     const iets =
       c.status || c.progress || c.camera || c.image || c.nozzle_temp || c.bed_temp || c.power;
     if (!iets) {
-      c[INCOMPLETE] =
-        "Kies minstens een printstatus. Camera, voortgang, temperaturen, de deur en de trays van de AMS mogen daarna.";
+      c[INCOMPLETE] = t(
+        "Kies minstens een printstatus. Camera, voortgang, temperaturen, de deur en de trays van de AMS mogen daarna.",
+      );
     }
     return c;
   }
@@ -308,13 +310,13 @@ class PrinterCard extends DacCard {
     return `
       <div class="card surface" style="--tone:${TONES.accent}">
         <div class="kop">
-          <button class="ico" type="button" aria-label="Meer info"></button>
+          <button class="ico" type="button" aria-label="${t("Meer info")}"></button>
           <span class="tekst">
             <span class="nm"></span>
             <span class="st"></span>
           </span>
           <button class="aanuit" type="button" aria-pressed="false"
-                  aria-label="Printer aan of uit" hidden>${resolve("power")}</button>
+                  aria-label="${t("Printer aan of uit")}" hidden>${resolve("power")}</button>
         </div>
 
         <div class="beeldvak" hidden>
@@ -385,12 +387,14 @@ class PrinterCard extends DacCard {
       const pct = voortgangPct(stateOf(this.hass, this.config.progress));
       const bezig = draait(stateOf(this.hass, this.config.status));
       const ja = await vraagBevestiging({
-        title: "Printer uitzetten?",
+        title: t("Printer uitzetten?"),
         text: bezig
-          ? `Er loopt een print${pct === null ? "" : ` (${pct}% klaar)`}. Uitzetten breekt hem af, en dat is niet terug te draaien.`
-          : "Weet je zeker dat je de printer wilt uitzetten?",
-        confirmText: "Uitzetten",
-        dismissText: "Aan laten",
+          ? pct === null
+            ? t("Er loopt een print. Uitzetten breekt hem af, en dat is niet terug te draaien.")
+            : t("Er loopt een print ({pct}% klaar). Uitzetten breekt hem af, en dat is niet terug te draaien.", { pct })
+          : t("Weet je zeker dat je de printer wilt uitzetten?"),
+        confirmText: t("Uitzetten"),
+        dismissText: t("Aan laten"),
       });
       if (!ja) return;
     }
@@ -411,13 +415,13 @@ class PrinterCard extends DacCard {
     this.$(".card").style.setProperty("--tone", TOON[info.toon] ?? TONES.accent);
 
     this.$(".ico").innerHTML = resolve(c.icon || "printer3d");
-    this.text(".nm", c.name || nameOf(this.hass, c.status || c.power || c.camera, "3D-printer"));
+    this.text(".nm", c.name || nameOf(this.hass, c.status || c.power || c.camera, t("3D-printer")));
 
     // Het woord van de kaart, en als de sensor iets anders zegt dan wat wij
     // ervan maken, staat het zijne erachter. Anders lijkt de kaart te liegen.
     const eigen = String(status?.state ?? "").trim();
     const anders = soort === "unknown" && eigen && eigen.toLowerCase() !== "unknown";
-    const regel = `<b>${this.veilig_(anders ? eigen : info.woord)}</b>${this.bijzin_()}`;
+    const regel = `<b>${this.veilig_(anders ? eigen : t(info.woord))}</b>${this.bijzin_()}`;
     const st_ = this.$(".st");
     if (st_.innerHTML !== regel) st_.innerHTML = regel;
 
@@ -434,7 +438,7 @@ class PrinterCard extends DacCard {
   bijzin_() {
     const rest = restMinuten(stateOf(this.hass, this.config.remaining));
     if (rest === null || rest <= 0) return "";
-    return ` · nog ${this.veilig_(alsDuur(rest))}, klaar om ${this.veilig_(klaarOm(rest))}`;
+    return ` · ${this.veilig_(t("nog {duur}, klaar om {klok}", { duur: alsDuur(rest), klok: klaarOm(rest) }))}`;
   }
 
   paintAanUit_() {
@@ -444,7 +448,7 @@ class PrinterCard extends DacCard {
     if (!id) return;
     const aan = isOn(stateOf(this.hass, id));
     knop.setAttribute("aria-pressed", String(aan));
-    knop.setAttribute("aria-label", aan ? "Printer uitzetten" : "Printer aanzetten");
+    knop.setAttribute("aria-label", aan ? t("Printer uitzetten") : t("Printer aanzetten"));
   }
 
   paintBeeld_(loopt) {
@@ -458,9 +462,9 @@ class PrinterCard extends DacCard {
     const wissel = this.$(".wissel");
     wissel.hidden = !(c.camera && c.image);
     if (!wissel.hidden) {
-      const naar = soort === "camera" ? "Voorbeeld" : "Camera";
+      const naar = soort === "camera" ? t("Voorbeeld") : t("Camera");
       wissel.innerHTML = `${resolve(soort === "camera" ? "grid" : "camera")}<span>${naar}</span>`;
-      wissel.setAttribute("aria-label", `Toon ${naar.toLowerCase()}`);
+      wissel.setAttribute("aria-label", soort === "camera" ? t("Toon voorbeeld") : t("Toon camera"));
     }
 
     if (soort === "camera") {
@@ -482,7 +486,7 @@ class PrinterCard extends DacCard {
       if (!img) {
         img = document.createElement("img");
         img.className = "beeld";
-        img.alt = "Wat de printer aan het maken is";
+        img.alt = t("Wat de printer aan het maken is");
         vak.appendChild(img);
       }
       if (img.dataset.bron !== bron) {
@@ -495,7 +499,7 @@ class PrinterCard extends DacCard {
       if (!vak.querySelector(".leeg")) {
         const leeg = document.createElement("span");
         leeg.className = "leeg";
-        leeg.textContent = "Nog geen voorbeeld";
+        leeg.textContent = t("Nog geen voorbeeld");
         vak.appendChild(leeg);
       }
     }
@@ -514,10 +518,10 @@ class PrinterCard extends DacCard {
     const balk = this.$(".balk");
     balk.dataset.onbekend = String(pct === null);
     balk.querySelector("i").style.setProperty("--pct", `${pct ?? 0}%`);
-    this.text(".pct", pct === null ? "Bezig" : `${pct}%`);
+    this.text(".pct", pct === null ? t("Bezig") : `${pct}%`);
     this.text(
       ".rest",
-      rest === null || rest <= 0 ? "" : `nog ${alsDuur(rest)} · klaar om ${klaarOm(rest)}`
+      rest === null || rest <= 0 ? "" : t("nog {duur} · klaar om {klok}", { duur: alsDuur(rest), klok: klaarOm(rest) })
     );
   }
 
@@ -527,29 +531,29 @@ class PrinterCard extends DacCard {
     const uit = [];
 
     const nozzle = temperatuur(stateOf(this.hass, c.nozzle_temp));
-    if (nozzle) uit.push({ w: `${nozzle.waarde}${nozzle.eenheid}`, l: "Nozzle" });
+    if (nozzle) uit.push({ w: `${nozzle.waarde}${nozzle.eenheid}`, l: t("Nozzle") });
 
     const bed = temperatuur(stateOf(this.hass, c.bed_temp));
-    if (bed) uit.push({ w: `${bed.waarde}${bed.eenheid}`, l: "Bed" });
+    if (bed) uit.push({ w: `${bed.waarde}${bed.eenheid}`, l: t("Bed") });
 
     const deur = stateOf(this.hass, c.door);
     if (deur) {
       const open = isOn(deur);
-      uit.push({ w: open ? "Open" : "Dicht", l: "Deur", let: open });
+      uit.push({ w: open ? t("Open") : t("Dicht"), l: t("Deur"), let: open });
     }
 
     vak.hidden = !uit.length;
     if (!uit.length) return;
     vak.style.setProperty("--kolommen", String(uit.length));
-    const sig = uit.map((t) => `${t.w}|${t.l}|${t.let ?? ""}`).join(",");
+    const sig = uit.map((tg) => `${tg.w}|${tg.l}|${tg.let ?? ""}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = uit
       .map(
-        (t) =>
-          `<div class="tegel" data-let="${Boolean(t.let)}">` +
-          `<span class="w">${this.veilig_(t.w)}</span>` +
-          `<span class="l">${this.veilig_(t.l)}</span></div>`
+        (tg) =>
+          `<div class="tegel" data-let="${Boolean(tg.let)}">` +
+          `<span class="w">${this.veilig_(tg.w)}</span>` +
+          `<span class="l">${this.veilig_(tg.l)}</span></div>`
       )
       .join("");
   }
@@ -574,29 +578,31 @@ class PrinterCard extends DacCard {
     );
 
     const sig = gegevens
-      .map((t) => `${t.kleur}|${t.soort}|${t.leeg}|${t.actief}|${t.rest}`)
+      .map((tr) => `${tr.kleur}|${tr.soort}|${tr.leeg}|${tr.actief}|${tr.rest}`)
       .join(",");
     if (rij.dataset.sig === sig) return;
     rij.dataset.sig = sig;
     rij.innerHTML = gegevens
-      .map((t, i) => {
+      .map((tr, i) => {
         // De VOLLEDIGE naam in de tooltip. Op de kaart staat het materiaal --
         // kort en het past altijd -- maar wie wil weten welke rol erin zit,
         // leest hier "Bambu PLA Matte".
         const vol = gegevens_naam[i];
+        const nr = t("Tray {n}", { n: i + 1 });
         const titel =
-          `Tray ${i + 1}` +
-          (t.leeg ? ": leeg" : vol || t.soort ? `: ${vol || t.soort}` : "") +
-          (t.rest === null ? "" : ` — nog ${t.rest}%`) +
-          (t.actief ? " (in gebruik)" : "");
+          nr +
+          (tr.leeg ? `: ${t("leeg")}` : vol || tr.soort ? `: ${vol || tr.soort}` : "") +
+          // Geen gedachtestreepje in het Engels (docs/taal.md).
+          (tr.rest === null ? "" : `${taal() === "en" ? ", " : " — "}${t("nog {pct}%", { pct: tr.rest })}`) +
+          (tr.actief ? ` ${t("(in gebruik)")}` : "");
         return (
-          `<div class="tray" data-leeg="${t.leeg}" data-actief="${t.actief}"` +
-          ` style="--kleur:${t.kleur ?? "transparent"}" title="${this.veilig_(titel)}">` +
+          `<div class="tray" data-leeg="${tr.leeg}" data-actief="${tr.actief}"` +
+          ` style="--kleur:${tr.kleur ?? "transparent"}" title="${this.veilig_(titel)}">` +
           `<span class="vlak">${
-            t.rest === null ? "" : `<i style="--rest:${t.rest}%"></i>`
+            tr.rest === null ? "" : `<i style="--rest:${tr.rest}%"></i>`
           }</span>` +
-          `<span class="txt"><span class="nr">Tray ${i + 1}</span>` +
-          `<span class="so">${this.veilig_(t.leeg ? "leeg" : t.soort || "gevuld")}</span></span>` +
+          `<span class="txt"><span class="nr">${this.veilig_(nr)}</span>` +
+          `<span class="so">${this.veilig_(tr.leeg ? t("leeg") : tr.soort || t("gevuld"))}</span></span>` +
           `</div>`
         );
       })
@@ -644,7 +650,7 @@ class PrinterEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "printer3d", auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "printer3d", auto: false }];
   }
 
   schema() {
@@ -673,23 +679,23 @@ class PrinterEditor extends DacEditor {
   label(s) {
     const trayLabels = {};
     for (const n of TRAYS) {
-      trayLabels[`tray_${n}`] = `Tray ${n}`;
-      trayLabels[`tray_${n}_color`] = `Tray ${n}: kleur met de hand`;
-      trayLabels[`tray_${n}_label`] = `Tray ${n}: naam met de hand`;
+      trayLabels[`tray_${n}`] = t("Tray {n}", { n });
+      trayLabels[`tray_${n}_color`] = t("Tray {n}: kleur met de hand", { n });
+      trayLabels[`tray_${n}_label`] = t("Tray {n}: naam met de hand", { n });
     }
     return (
       {
-        name: "Naam",
-        status: "Printstatus",
-        power: "Aan/uit-schakelaar",
-        progress: "Printvoortgang (0-100%)",
-        remaining: "Eindtijd of resterende tijd",
-        nozzle_temp: "Nozzletemperatuur",
-        bed_temp: "Bedtemperatuur",
-        door: "Deur van de printer",
-        camera: "Camera",
-        live_view: "Altijd live beeld",
-        image: "Voorbeeld van de print",
+        name: t("Naam"),
+        status: t("Printstatus"),
+        power: t("Aan/uit-schakelaar"),
+        progress: t("Printvoortgang (0-100%)"),
+        remaining: t("Eindtijd of resterende tijd"),
+        nozzle_temp: t("Nozzletemperatuur"),
+        bed_temp: t("Bedtemperatuur"),
+        door: t("Deur van de printer"),
+        camera: t("Camera"),
+        live_view: t("Altijd live beeld"),
+        image: t("Voorbeeld van de print"),
         ...trayLabels,
       }[s.name] ?? super.label(s)
     );
@@ -697,30 +703,31 @@ class PrinterEditor extends DacEditor {
 
   helper(s) {
     if (s.name === "status")
-      return "De sensor die meldt wat hij doet. RUNNING, IDLE, FINISH, PAUSE en FAILED worden herkend, en die van Octoprint en Klipper ook.";
+      return t("De sensor die meldt wat hij doet. RUNNING, IDLE, FINISH, PAUSE en FAILED worden herkend, en die van Octoprint en Klipper ook.");
     if (s.name === "power")
-      return "Zetten en uitzetten. Bij UITzetten vraagt de kaart eerst of je het zeker weet — en loopt er een print, dan staat erbij hoe ver hij was.";
+      return t("Zetten en uitzetten. Bij UITzetten vraagt de kaart eerst of je het zeker weet — en loopt er een print, dan staat erbij hoe ver hij was.");
     if (s.name === "remaining")
-      return "Een aantal minuten, een klok als 1:24:00 of het tijdstip waarop hij klaar is: alle drie worden gelezen. De kaart toont beide — hoe lang nog én hoe laat.";
+      return t("Een aantal minuten, een klok als 1:24:00 of het tijdstip waarop hij klaar is: alle drie worden gelezen. De kaart toont beide — hoe lang nog én hoe laat.");
     if (s.name === "camera")
-      return "Het live beeld van de printer. Staat er ook een voorbeeld ingesteld, dan komt er een knop om te wisselen.";
+      return t("Het live beeld van de printer. Staat er ook een voorbeeld ingesteld, dan komt er een knop om te wisselen.");
     if (s.name === "live_view")
-      return "Normaal ververst het beeld een paar keer per minuut en gaat hij alleen echt live zolang er een print loopt. Met deze knop staat de stream altijd aan — mooier, maar het kost een verbinding die de hele dag openstaat.";
+      return t("Normaal ververst het beeld een paar keer per minuut en gaat hij alleen echt live zolang er een print loopt. Met deze knop staat de stream altijd aan — mooier, maar het kost een verbinding die de hele dag openstaat.");
     if (s.name === "image")
-      return "De `image`-entiteit met de plaat van wat hij aan het maken is.";
+      return t("De `image`-entiteit met de plaat van wat hij aan het maken is.");
     if (s.name === "tray_1")
-      return "De vier trays van de AMS. De kaart haalt de kleur en het soort filament uit de attributen van de entiteit; Bambu levert die als hexwaarde. Lukt dat niet, vul dan hieronder zelf een kleur in.";
+      return t("De vier trays van de AMS. De kaart haalt de kleur en het soort filament uit de attributen van de entiteit; Bambu levert die als hexwaarde. Lukt dat niet, vul dan hieronder zelf een kleur in.");
     if (/^tray_\d_color$/.test(s.name))
-      return "Alleen nodig als de entiteit zijn kleur niet meelevert. Een hexwaarde (#FF6B00) of een kleurnaam.";
+      return t("Alleen nodig als de entiteit zijn kleur niet meelevert. Een hexwaarde (#FF6B00) of een kleurnaam.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-printer-card-editor", PrinterEditor);
 registerCard("domotiapp-printer-card", PrinterCard, {
-  name: "DomotiApp 3D-printer",
-  description:
+  name: nt("DomotiApp 3D-printer"),
+  description: nt(
     "Live camerabeeld of het voorbeeld, voortgang met eindtijd, temperaturen, de deur en de vier trays van de AMS met hun echte kleur.",
+  ),
 });
 
 export { PrinterCard };

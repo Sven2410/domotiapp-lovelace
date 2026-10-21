@@ -77,6 +77,7 @@ import {
   toneValue,
 } from "../base.js";
 import { resolve, defaultIcon } from "../icons.js";
+import { nt, t } from "../taal.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { kanTijdZetten, tijdSoort, veldWaarde, zetOproep } from "./tijdveld.js";
 import { huidigeKeuze, kanKiezen, keuzes, kiesOproep } from "./keuzeveld.js";
@@ -379,7 +380,7 @@ class EntitiesCard extends DacCard {
   validate(config) {
     const rows = toRows(config);
     if (!rows.some((r) => r.items.some(gevuld))) {
-      return { ...config, [INCOMPLETE]: "Voeg een rij toe en kies daar entiteiten in." };
+      return { ...config, [INCOMPLETE]: t("Voeg een rij toe en kies daar entiteiten in.") };
     }
     return { show_state: true, state_position: "below", ...config, rows };
   }
@@ -460,7 +461,7 @@ class EntitiesCard extends DacCard {
             ${item.show_icon === false ? "" : `<span class="chip" role="button" tabindex="0"></span>`}
             <span class="txt">${item.show_name === false ? "" : `<span class="nm"></span>`}${rechts ? "" : st}</span>
             ${rechts ? st : ""}
-            ${this.metSchakelaar_(item) ? toggleHtml({ label: "Aan of uit" }) : ""}
+            ${this.metSchakelaar_(item) ? toggleHtml({ label: t("Aan of uit") }) : ""}
             ${this.metTijd_(item) ? `<span class="tijdslot" style="display:contents"></span>` : ""}
             ${this.metKeuze_(item) ? `<span class="keuzeslot" style="display:contents"></span>` : ""}
           </div>`
@@ -666,7 +667,7 @@ class EntitiesCard extends DacCard {
         }
         // Een afbeelding heeft de kleur van zichzelf; alleen een icoon kleurt mee.
         chip.style.setProperty("--tone", pic ? "var(--dac-ink-3)" : on ? tone : "var(--dac-ink-3)");
-        chip.setAttribute("aria-label", item.entity ? `${name} schakelen` : "Icoon");
+        chip.setAttribute("aria-label", item.entity ? t("{naam} schakelen", { naam: name }) : t("Icoon"));
       }
 
       const nmEl = el.querySelector(".nm");
@@ -676,7 +677,7 @@ class EntitiesCard extends DacCard {
       if (schakelaar) {
         setToggle(schakelaar, on);
         schakelaar.style.setProperty("--tone", tone);
-        schakelaar.setAttribute("aria-label", `${name} aan of uit`);
+        schakelaar.setAttribute("aria-label", t("{naam} aan of uit", { naam: name }));
       }
 
       // Het veld wordt pas gebouwd als bekend is wat erin moet: een klok, een
@@ -695,7 +696,7 @@ class EntitiesCard extends DacCard {
         tijdveld = tijdslot.querySelector(".tijd");
       }
       if (tijdveld) {
-        tijdveld.setAttribute("aria-label", `${name} instellen`);
+        tijdveld.setAttribute("aria-label", t("{naam} instellen", { naam: name }));
         // Niet schrijven terwijl iemand in het veld staat: dan springt de
         // cursor weg bij elke toestandswijziging in huis.
         if (this.shadowRoot.activeElement !== tijdveld) {
@@ -730,7 +731,7 @@ class EntitiesCard extends DacCard {
         keuzelijst = keuzeslot.querySelector(".keuze");
       }
       if (keuzelijst) {
-        keuzelijst.setAttribute("aria-label", `${name} kiezen`);
+        keuzelijst.setAttribute("aria-label", t("{naam} kiezen", { naam: name }));
         // Niet schrijven terwijl iemand in de lijst staat: dan springt een
         // uitgeklapte lijst terug bij elke toestandswijziging in huis.
         if (this.shadowRoot.activeElement !== keuzelijst) {
@@ -748,7 +749,7 @@ class EntitiesCard extends DacCard {
       } else if (toon === false) {
         stEl.textContent = "";
       } else if (dead) {
-        stEl.textContent = "Niet bereikbaar";
+        stEl.textContent = t("Niet bereikbaar");
       } else if (!st || isStateless(st.entity_id)) {
         stEl.textContent = "";
       } else if (domainOf(st.entity_id) === "light" && on && st.attributes.brightness != null) {
@@ -788,7 +789,8 @@ class EntitiesCard extends DacCard {
 }
 
 registerCard("domotiapp-entities-card", EntitiesCard, {
-  name: "DomotiApp Entiteiten",
-  description:
-    "Entiteiten in rijen, elk met een eigen kolomindeling en vorm: regel, tegel of compacte pil. Ook voor een losse knop.",
+  name: nt("DomotiApp Entiteiten"),
+  description: nt(
+    "Entiteiten in rijen, elk met een eigen kolomindeling en vorm: regel, tegel of compacte pil. Ook voor een losse knop."
+  ),
 });

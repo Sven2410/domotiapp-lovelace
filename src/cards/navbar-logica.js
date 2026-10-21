@@ -19,6 +19,8 @@
  * niets doet.
  */
 
+import { nt, t } from "../taal.js";
+
 /** Hoeveel knoppen er in de balk mogen staan, de meer-knop meegerekend. */
 export const BALK_MIN = 2;
 export const BALK_MAX = 6;
@@ -136,7 +138,7 @@ export const VOORAF = [
   {
     id: "domotitech",
     label: "DomotiTech",
-    uitleg: "Opent domotitech.nl in een nieuw tabblad, met het logo erop.",
+    uitleg: nt("Opent domotitech.nl in een nieuw tabblad, met het logo erop."),
     bovenaan: true,
     maak: () => ({
       name: "DomotiTech",
@@ -148,11 +150,13 @@ export const VOORAF = [
   },
   {
     id: "herstart",
-    label: "Herstart Home Assistant",
-    uitleg: "Roept homeassistant.restart aan, met een bevestiging ervoor.",
+    label: nt("Herstart Home Assistant"),
+    uitleg: nt("Roept homeassistant.restart aan, met een bevestiging ervoor."),
     bovenaan: true,
+    // Wat `maak` geeft belandt in de config van de klant, en blijft daarna
+    // zoals het is. Het wordt gemaakt in de taal van het moment van toevoegen.
     maak: () => ({
-      name: "Herstart",
+      name: t("Herstart"),
       icon: "power",
       path: "",
       action: {
@@ -161,8 +165,8 @@ export const VOORAF = [
         // De vraag komt van Home Assistant zelf, met zijn eigen dialoog. Een
         // herstart zonder vraag is een herstart die je per ongeluk doet.
         confirmation: {
-          title: "Weet je het zeker?",
-          text: "Weet je het zeker dat je Home Assistant wilt herstarten?",
+          title: t("Weet je het zeker?"),
+          text: t("Weet je het zeker dat je Home Assistant wilt herstarten?"),
         },
       },
       items: [],

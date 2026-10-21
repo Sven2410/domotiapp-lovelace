@@ -29,6 +29,7 @@ import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } 
 import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { moreInfo, stateOf } from "../ha.js";
+import { nt, t } from "../taal.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   BOILERS,
@@ -235,7 +236,7 @@ class BoilerCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig (zie CLAUDE.md): zonder boiler een uitlegkaart.
     const c = { merk: "auto", grafiek: true, ...config };
-    if (!c.entity || domeinVan(c.entity) !== "water_heater") c[INCOMPLETE] = "Kies een boiler (water_heater-entiteit).";
+    if (!c.entity || domeinVan(c.entity) !== "water_heater") c[INCOMPLETE] = t("Kies een boiler (water_heater-entiteit).");
     return c;
   }
 
@@ -289,22 +290,22 @@ class BoilerCard extends DacCard {
             <span class="nm"></span>
             <span class="st"><span class="stip" hidden></span><span class="woord"></span></span>
           </span>
-          <span class="water" hidden><span class="graden"></span><span class="onder">water</span></span>
+          <span class="water" hidden><span class="graden"></span><span class="onder">${t("water")}</span></span>
         </div>
 
         <div class="set" hidden>
-          <button type="button" data-d="-1" aria-label="Temperatuur lager">${icons.minus}</button>
+          <button type="button" data-d="-1" aria-label="${t("Temperatuur lager")}">${icons.minus}</button>
           <span class="target"></span>
-          <button type="button" data-d="1" aria-label="Temperatuur hoger">${icons.plus}</button>
+          <button type="button" data-d="1" aria-label="${t("Temperatuur hoger")}">${icons.plus}</button>
         </div>
 
         <div class="blok standen" hidden>
-          <div class="segs" role="group" aria-label="Stand"></div>
+          <div class="segs" role="group" aria-label="${t("Stand")}"></div>
           <div class="uitleg" hidden></div>
         </div>
 
         <div class="blok grafiek" hidden>
-          <div class="kopregel"><span class="kopje">Afgelopen 24 uur</span><span class="bereik"></span></div>
+          <div class="kopregel"><span class="kopje">${t("Afgelopen 24 uur")}</span><span class="bereik"></span></div>
           <div class="vlak" role="img">
             <div class="plot">
               <svg viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true">
@@ -314,7 +315,7 @@ class BoilerCard extends DacCard {
               </svg>
               <i class="eind" hidden></i>
               <div class="kruis" hidden><i class="draad"></i><i class="punt"></i><span class="tip"></span></div>
-              <span class="leeg" hidden>Nog geen metingen</span>
+              <span class="leeg" hidden>${t("Nog geen metingen")}</span>
             </div>
             <div class="ylabels" aria-hidden="true"></div>
           </div>
@@ -418,7 +419,10 @@ class BoilerCard extends DacCard {
     this.text(".woord", s.tekst);
     this.$(".water").hidden = s.water == null;
     if (s.water != null) this.text(".graden", `${graden(s.water)}°`);
-    this.$(".kop").setAttribute("aria-label", `${naam}, ${s.tekst}${s.water != null ? `, water ${graden(s.water)} graden` : ""}`);
+    this.$(".kop").setAttribute(
+      "aria-label",
+      `${naam}, ${s.tekst}${s.water != null ? `, ${t("water {graden} graden", { graden: graden(s.water) })}` : ""}`,
+    );
 
     // Foto of chip. Met een foto draagt een icoontje in de statusregel de stand.
     const icoon = c.icon || "boiler";
@@ -476,14 +480,14 @@ class BoilerCard extends DacCard {
     const v = this.pending_ ?? inst.doel;
     const el = vak.querySelector(".target");
     el.classList.toggle("pending", this.pending_ != null);
-    const html = `${escapeHtml(graden(v))}°<small>doel</small>`;
+    const html = `${escapeHtml(graden(v))}°<small>${escapeHtml(t("doel"))}</small>`;
     if (el.dataset.html !== html) {
       el.dataset.html = html;
       el.innerHTML = html;
     }
     vak.querySelector('[data-d="-1"]').disabled = volgendDoel(inst, v, -1) === v;
     vak.querySelector('[data-d="1"]').disabled = volgendDoel(inst, v, 1) === v;
-    vak.setAttribute("aria-label", `Doeltemperatuur ${graden(v)} graden`);
+    vak.setAttribute("aria-label", t("{naam} {graden} graden", { naam: t("Doeltemperatuur"), graden: graden(v) }));
   }
 
   /** De standen, en onder de knoppen wat de gekozen stand doet. */
@@ -564,11 +568,11 @@ class BoilerCard extends DacCard {
     if (this.reeks_.sensor !== sensor) return [];
     const rijen = this.reeks_.rijen;
     const st = stateOf(this.hass_, sensor);
-    const t = Date.parse(st?.last_updated ?? "");
-    if (!st || !Number.isFinite(t)) return rijen;
+    const tijd = Date.parse(st?.last_updated ?? "");
+    if (!st || !Number.isFinite(tijd)) return rijen;
     const laatste = rijen[rijen.length - 1];
     const tLaatste = laatste ? (typeof laatste.lu === "number" ? laatste.lu * 1000 : Date.parse(laatste.last_updated)) : 0;
-    if (t > tLaatste) rijen.push({ s: st.state, lu: t / 1000 });
+    if (tijd > tLaatste) rijen.push({ s: st.state, lu: tijd / 1000 });
     return rijen;
   }
 
@@ -629,12 +633,16 @@ class BoilerCard extends DacCard {
     }
 
     const u = uitersten(reeks);
-    this.text(".bereik", u && genoeg ? (u.min === u.max ? `${graden(u.min)}°` : `${graden(u.min)}° tot ${graden(u.max)}°`) : "");
+    this.text(".bereik", u && genoeg ? (u.min === u.max ? `${graden(u.min)}°` : t("{min}° tot {max}°", { min: graden(u.min), max: graden(u.max) })) : "");
     this.$(".vlak").setAttribute(
       "aria-label",
       u && genoeg
-        ? `Watertemperatuur van de afgelopen 24 uur: laagste ${graden(u.min)} graden, hoogste ${graden(u.max)} graden, nu ${graden(laatste.v)} graden`
-        : "Watertemperatuur van de afgelopen 24 uur: nog geen metingen",
+        ? t("Watertemperatuur van de afgelopen 24 uur: laagste {min} graden, hoogste {max} graden, nu {nu} graden", {
+            min: graden(u.min),
+            max: graden(u.max),
+            nu: graden(laatste.v),
+          })
+        : t("Watertemperatuur van de afgelopen 24 uur: nog geen metingen"),
     );
   }
 
@@ -647,8 +655,8 @@ class BoilerCard extends DacCard {
     const r = this.$(".plot").getBoundingClientRect();
     if (!r.width) return;
     const fractie = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-    const t = reeks.van + fractie * (reeks.tot - reeks.van);
-    const p = waardeOp(reeks, t);
+    const tijd = reeks.van + fractie * (reeks.tot - reeks.van);
+    const p = waardeOp(reeks, tijd);
     if (!p) return;
     const x = `${(fractie * 100).toFixed(2)}%`;
     kruis.querySelector(".draad").style.left = x;
@@ -657,7 +665,7 @@ class BoilerCard extends DacCard {
     punt.style.top = `${((1 - hoogteVan(p.v, bereik)) * 100).toFixed(2)}%`;
     const tip = kruis.querySelector(".tip");
     // De tijd van de plek waar je wijst, de waarde die toen gold.
-    tip.textContent = `${klokTijd(t)} · ${graden(p.v)}°`;
+    tip.textContent = `${klokTijd(tijd)} · ${graden(p.v)}°`;
     // Binnen de kaart houden: aan de randen schuift het label mee naar binnen.
     tip.style.left = `${Math.min(88, Math.max(12, fractie * 100)).toFixed(2)}%`;
     kruis.hidden = false;
@@ -695,9 +703,9 @@ class BoilerEditor extends DacEditor {
   /** De fotokiezer alleen bij een ander merk: anders is het een veld dat niets doet. */
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "boiler" },
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: "boiler" },
       ...(this.config_?.merk === "eigen"
-        ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "boiler" }]
+        ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "boiler" }]
         : []),
     ];
   }
@@ -722,33 +730,33 @@ class BoilerEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Boiler",
-        name: "Naam",
-        merk: "Merk",
-        model: "Type",
-        temperatuur: "Watertemperatuur",
-        grafiek: "Grafiek van de afgelopen 24 uur",
+        entity: t("Boiler"),
+        name: t("Naam"),
+        merk: t("Merk"),
+        model: t("Type"),
+        temperatuur: t("Watertemperatuur"),
+        grafiek: t("Grafiek van de afgelopen 24 uur"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      entity:
-        "De water_heater van de warmtepompboiler. De temperatuursensor van hetzelfde apparaat zoekt de kaart zelf.",
-      name: "Leeg laten: de naam van het apparaat. Heet dat alleen \"Water Heater\", dan staat er Boiler.",
-      merk: "Automatisch toont de productfoto als het type bekend is, en anders het icoon.",
-      model: "Het type bepaalt de productfoto.",
-      temperatuur: "Leeg laten: de temperatuursensor van de boiler zelf. Die staat ook in de grafiek.",
+      entity: t("De water_heater van de warmtepompboiler. De temperatuursensor van hetzelfde apparaat zoekt de kaart zelf."),
+      name: t("Leeg laten: de naam van het apparaat. Heet dat alleen \"Water Heater\", dan staat er Boiler."),
+      merk: t("Automatisch toont de productfoto als het type bekend is, en anders het icoon."),
+      model: t("Het type bepaalt de productfoto."),
+      temperatuur: t("Leeg laten: de temperatuursensor van de boiler zelf. Die staat ook in de grafiek."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-boiler-card-editor", BoilerEditor);
 registerCard("domotiapp-boiler-card", BoilerCard, {
-  name: "DomotiApp Warmtepompboiler",
-  description:
-    "De warmtepompboiler voor het tapwater: de watertemperatuur, het doel, de stand (Warmtepomp, Auto, Turbo, Vakantie) en een grafiek van de afgelopen 24 uur.",
+  name: nt("DomotiApp Warmtepompboiler"),
+  description: nt(
+    "De warmtepompboiler voor het tapwater: de watertemperatuur, het doel, de stand (Warmtepomp, Auto, Turbo, Vakantie) en een grafiek van de afgelopen 24 uur."
+  ),
 });
 
 export { BoilerCard };

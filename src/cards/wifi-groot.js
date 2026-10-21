@@ -13,6 +13,7 @@
 import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
+import { t, taal } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -53,23 +54,33 @@ class WifiGroot extends HTMLElement {
     this.attachShadow({ mode: "open" });
     sheets = sheets ?? [sheet(css)];
     this.shadowRoot.adoptedStyleSheets = sheets;
-    this.shadowRoot.innerHTML = `
-      <div class="laag" role="dialog" aria-modal="true" aria-label="QR-code van de wifi">
-        <div class="vak">
-          <img alt="QR-code van de wifi" />
-          <div class="eyebrow"></div>
-          <div class="naam"></div>
-          <div class="ww" hidden>Wachtwoord <b></b></div>
-          <div class="hint">Richt de camera van je telefoon op de code. Tik om te sluiten.</div>
-        </div>
-      </div>`;
-    this.shadowRoot.querySelector(".laag").addEventListener("click", () => this.sluit());
+    this.bouw_();
     this.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this.sluit();
     });
   }
 
+  /**
+   * De tekst in de taal van nu. Dit scherm is er één voor de hele pagina en
+   * blijft hangen; wisselt de taal, dan bouwt `open()` hem opnieuw op.
+   */
+  bouw_() {
+    this.taal_ = taal();
+    this.shadowRoot.innerHTML = `
+      <div class="laag" role="dialog" aria-modal="true" aria-label="${t("QR-code van de wifi")}">
+        <div class="vak">
+          <img alt="${t("QR-code van de wifi")}" />
+          <div class="eyebrow"></div>
+          <div class="naam"></div>
+          <div class="ww" hidden>${t("Wachtwoord")} <b></b></div>
+          <div class="hint">${t("Richt de camera van je telefoon op de code. Tik om te sluiten.")}</div>
+        </div>
+      </div>`;
+    this.shadowRoot.querySelector(".laag").addEventListener("click", () => this.sluit());
+  }
+
   open({ adres, titel, naam, wachtwoord }) {
+    if (this.taal_ !== taal()) this.bouw_();
     volgThema(this);
     const $ = (s) => this.shadowRoot.querySelector(s);
     $("img").src = adres ?? "";

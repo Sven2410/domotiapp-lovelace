@@ -47,6 +47,7 @@ import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
+import { t } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -191,8 +192,8 @@ const css = /* css */ `
 
 let sheets = null;
 
-const veilig = (t) =>
-  String(t ?? "")
+const veilig = (tekst) =>
+  String(tekst ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -218,13 +219,13 @@ class MeldingenScherm extends HTMLElement {
         <div class="vak" role="dialog" aria-modal="true" aria-labelledby="wie" tabindex="-1">
           <header>
             <span class="foto"></span>
-            <span class="wie"><b id="wie"></b><span>Meldingen op de telefoon</span></span>
-            <button class="sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
+            <span class="wie"><b id="wie"></b><span class="onder"></span></span>
+            <button class="sluit" type="button">${resolve("close")}</button>
           </header>
           <div class="storing" hidden></div>
           <div class="lijst"></div>
           <div class="proef" hidden>
-            <button type="button">${resolve("bell")}<span>Stuur een proefmelding</span></button>
+            <button type="button">${resolve("bell")}<span class="knop"></span></button>
             <div class="uit" role="status"></div>
           </div>
         </div>
@@ -274,6 +275,11 @@ class MeldingenScherm extends HTMLElement {
     // De uitkomst van een proef hoort bij de persoon voor wie hij was.
     this.$(".proef .uit").textContent = "";
     this.$(".proef button").disabled = false;
+    // De vaste woorden bij elke opening, en niet bij het bouwen: het scherm
+    // wordt één keer gebouwd, en de taal kan daarna nog wisselen.
+    this.$(".wie .onder").textContent = t("Meldingen op de telefoon");
+    this.$(".sluit").setAttribute("aria-label", t("Sluiten"));
+    this.$(".proef .knop").textContent = t("Stuur een proefmelding");
     this.setAttribute("open", "");
     this.teken();
     // De focus op het VAK en niet op het eerste vinkje: een vinkje dat na een
@@ -315,7 +321,7 @@ class MeldingenScherm extends HTMLElement {
     const lijst = this.$(".lijst");
     if (!inhoud.soorten.length) {
       delete lijst.dataset.sig;
-      lijst.innerHTML = `<div class="leeg">Op deze kaart staan nog geen meldingen aan. Zet ze aan in de editor van de kaart.</div>`;
+      lijst.innerHTML = `<div class="leeg">${t("Op deze kaart staan nog geen meldingen aan. Zet ze aan in de editor van de kaart.")}</div>`;
       return;
     }
 
@@ -329,13 +335,14 @@ class MeldingenScherm extends HTMLElement {
           (s) => `
           <div class="soort" role="checkbox" tabindex="0" data-soort="${veilig(s.id)}" aria-checked="false">
             <span class="ico">${resolve(s.icoon)}</span>
-            <span class="txt"><span class="nm">${veilig(s.naam)}</span><span class="rg"></span></span>
+            <span class="txt"><span class="nm">${veilig(t(s.naam))}</span><span class="rg"></span></span>
             <span class="vink">${resolve("check")}</span>
           </div>`
         )
         .join("");
     }
     for (const s of inhoud.soorten) {
+      const waarden = { soort: t(s.naam), naam: inhoud.naam };
       const regel = lijst.querySelector(`.soort[data-soort="${CSS.escape(s.id)}"]`);
       if (!regel) continue;
       regel.setAttribute("aria-checked", String(s.aan));
@@ -346,7 +353,7 @@ class MeldingenScherm extends HTMLElement {
       regel.querySelector(".rg").textContent = s.regel ?? "";
       regel.setAttribute(
         "aria-label",
-        `${s.naam} voor ${inhoud.naam}: ${s.aan ? "aan" : "uit"}${s.regel ? `. ${s.regel}` : ""}`
+        `${s.aan ? t("{soort} voor {naam}: aan", waarden) : t("{soort} voor {naam}: uit", waarden)}${s.regel ? `. ${s.regel}` : ""}`
       );
     }
   }
@@ -359,7 +366,7 @@ class MeldingenScherm extends HTMLElement {
     const persoon = this.persoon;
     knop.disabled = true;
     uit.dataset.soort = "";
-    uit.textContent = "Versturen…";
+    uit.textContent = t("Versturen…");
     const { tekst, fout } = await this.bron.proef(persoon);
     // Ondertussen dicht gegaan, of voor iemand anders geopend: niets zeggen.
     if (this.persoon !== persoon) return;

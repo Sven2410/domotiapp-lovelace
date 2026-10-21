@@ -2,7 +2,7 @@
  * De afvalkalender van het infoscherm.
  *
  * Apart van `infoscherm-logica.js`, en dat is geen willekeur: dat bestand heeft
- * met opzet GEEN imports -- het is pure rekenkunde die in een gewone Node-test
+ * met opzet geen imports buiten `taal.js` -- het is pure rekenkunde die in een gewone Node-test
  * draait zonder dat er iets uit de DOM of uit Home Assistant bij komt kijken.
  * Deze module leunt wel op `ha.js` (voor het lezen van een datum) en op
  * `afval-namen.js` (voor het inkorten), dus hij hoort hier en niet daar.
@@ -32,7 +32,9 @@ import { korteNamen } from "./afval-namen.js";
  *
  * Wat er UIT komt is op datum gesorteerd, met wat er al geweest is achteraan.
  * Een sensor die niets bruikbaars zegt verdwijnt niet maar krijgt een reden:
- * een lege plek in een rij van vier bakken leest als kapot.
+ * een lege plek in een rij van vier bakken leest als kapot. De reden is een
+ * sleutel ("bestaat niet", "geen datum", "voorbij"); de kaart vertaalt hem
+ * (`AFVAL_REDEN` in infoscherm-card.js).
  *
  * @param {Array<string>} entiteiten
  * @param {(id: string) => {state: string, attributes: object}|undefined} lees

@@ -47,6 +47,7 @@ import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } 
 import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { moreInfo, stateOf } from "../ha.js";
+import { nt, t } from "../taal.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   BLOKKEN,
@@ -302,7 +303,7 @@ class StofzuigerCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig (zie CLAUDE.md): zonder stofzuiger een uitlegkaart.
     const c = { merk: "auto", ...config };
-    if (!c.entity || domeinVan(c.entity) !== "vacuum") c[INCOMPLETE] = "Kies een robotstofzuiger (vacuum-entiteit).";
+    if (!c.entity || domeinVan(c.entity) !== "vacuum") c[INCOMPLETE] = t("Kies een robotstofzuiger (vacuum-entiteit).");
     return c;
   }
 
@@ -379,27 +380,27 @@ class StofzuigerCard extends DacCard {
           <span class="accu" hidden><span class="pct"></span><span class="onder"></span></span>
         </div>
 
-        <div class="schakels bediening" role="group" aria-label="Bediening" hidden></div>
+        <div class="schakels bediening" role="group" aria-label="${t("Bediening")}" hidden></div>
 
-        <div class="plattegrond" role="button" tabindex="0" aria-label="Kaart van het huis" hidden>
+        <div class="plattegrond" role="button" tabindex="0" aria-label="${t("Kaart van het huis")}" hidden>
           <img alt="" />
         </div>
 
         <div class="blok kamers" hidden>
-          <div class="kopregel"><span class="kopje">Kamers</span><button type="button" class="wis" hidden>Wis keuze</button></div>
-          <div class="chips" role="group" aria-label="Kamers"></div>
+          <div class="kopregel"><span class="kopje">${t("Kamers")}</span><button type="button" class="wis" hidden>${t("Wis keuze")}</button></div>
+          <div class="chips" role="group" aria-label="${t("Kamers")}"></div>
         </div>
 
         <div class="keuzes" hidden></div>
 
         <div class="blok station" hidden>
-          <span class="kopje">Station</span>
+          <span class="kopje">${t("Station")}</span>
           <div class="tanks"></div>
-          <div class="schakels knoppen" role="group" aria-label="Station"></div>
+          <div class="schakels knoppen" role="group" aria-label="${t("Station")}"></div>
         </div>
 
         <div class="blok onderhoud" hidden>
-          <span class="kopje">Onderhoud</span>
+          <span class="kopje">${t("Onderhoud")}</span>
           <div class="tegels"></div>
         </div>
 
@@ -483,8 +484,8 @@ class StofzuigerCard extends DacCard {
 
     // Een tank of een onderdeel opent zijn sensor: daar staat de geschiedenis.
     const open = (e) => {
-      const t = e.target?.closest?.("[data-open]");
-      if (t) moreInfo(this, t.dataset.open);
+      const vak = e.target?.closest?.("[data-open]");
+      if (vak) moreInfo(this, vak.dataset.open);
     };
     for (const vak of [this.$(".tanks"), this.$(".tegels")]) {
       this.on(vak, "click", open);
@@ -530,7 +531,7 @@ class StofzuigerCard extends DacCard {
     this.text(fout, s.fout);
     this.$(".kop").setAttribute(
       "aria-label",
-      [naam, s.tekst, s.detail, s.fout && `storing: ${s.fout}`].filter(Boolean).join(", "),
+      [naam, s.tekst, s.detail, s.fout && t("storing: {fout}", { fout: s.fout })].filter(Boolean).join(", "),
     );
 
     // ----- de accu
@@ -543,7 +544,7 @@ class StofzuigerCard extends DacCard {
         pct.dataset.html = html;
         pct.innerHTML = html;
       }
-      this.text(".accu .onder", s.laadt ? "laadt op" : "accu");
+      this.text(".accu .onder", s.laadt ? t("laadt op") : t("accu"));
     }
 
     // ----- de kamers (vóór de bediening: die hangt van de keuze af)
@@ -703,7 +704,7 @@ class StofzuigerCard extends DacCard {
               .join("")}</div>
           </div>${
             r.soort === "cleangenius" && genius
-              ? `<div class="uitleg">CleanGenius kiest zelf de zuigkracht en hoe nat hij dweilt.</div>`
+              ? `<div class="uitleg">${t("CleanGenius kiest zelf de zuigkracht en hoe nat hij dweilt.")}</div>`
               : ""
           }`,
         )
@@ -732,10 +733,10 @@ class StofzuigerCard extends DacCard {
       tanks.dataset.sig = tsig;
       tanks.innerHTML = stand.tanks
         .map(
-          (t) => `
-          <div class="tank" role="button" tabindex="0" data-open="${escapeHtml(t.id)}" data-ok="${t.ok}" aria-label="${escapeHtml(`${t.naam}: ${t.tekst}`)}">
-            <span class="w">${t.ok ? icons.check : icons.warning}<span>${escapeHtml(t.tekst)}</span></span>
-            <span class="l">${escapeHtml(t.naam)}</span>
+          (tank) => `
+          <div class="tank" role="button" tabindex="0" data-open="${escapeHtml(tank.id)}" data-ok="${tank.ok}" aria-label="${escapeHtml(`${tank.naam}: ${tank.tekst}`)}">
+            <span class="w">${tank.ok ? icons.check : icons.warning}<span>${escapeHtml(tank.tekst)}</span></span>
+            <span class="l">${escapeHtml(tank.naam)}</span>
           </div>`,
         )
         .join("");
@@ -773,9 +774,10 @@ class StofzuigerCard extends DacCard {
     tegels.innerHTML = lijst
       .map((o) => {
         const balk = o.toon ? ` style="--balk:${TONES[o.toon]}"` : "";
-        const label = `${o.naam}: ${o.procent} %${o.rest ? `, nog ${o.rest}` : ""}`;
+        const nog = o.rest ? t("nog {duur}", { duur: o.rest }) : "";
+        const label = `${o.naam}: ${o.procent} %${nog ? `, ${nog}` : ""}`;
         return `
-        <div class="tegel" role="button" tabindex="0" data-open="${escapeHtml(o.id)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(o.rest ? `nog ${o.rest}` : o.naam)}">
+        <div class="tegel" role="button" tabindex="0" data-open="${escapeHtml(o.id)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(nog || o.naam)}">
           <span class="w">${o.procent}<small>%</small></span>
           <span class="l">${escapeHtml(o.naam)}</span>
           <span class="balk"${balk}><i style="width:${o.procent}%"></i></span>
@@ -816,9 +818,9 @@ class StofzuigerEditor extends DacEditor {
   /** De fotokiezer alleen bij een ander merk: anders is het een veld dat niets doet. */
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "stofzuiger" },
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: "stofzuiger" },
       ...(this.config_?.merk === "eigen"
-        ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "stofzuiger" }]
+        ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "stofzuiger" }]
         : []),
     ];
   }
@@ -831,7 +833,7 @@ class StofzuigerEditor extends DacEditor {
       { name: "merk", selector: sel.select(merkKeuzes()) },
       ...(types.length ? [{ name: "model", selector: sel.select(types) }] : []),
       { name: "camera", selector: { entity: { domain: ["camera", "image"] } } },
-      { name: "verberg", selector: { select: { multiple: true, mode: "list", options: BLOKKEN } } },
+      { name: "verberg", selector: { select: { multiple: true, mode: "list", options: BLOKKEN.map((b) => ({ ...b, label: t(b.label) })) } } },
     ];
   }
 
@@ -847,35 +849,38 @@ class StofzuigerEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Robotstofzuiger",
-        name: "Naam",
-        merk: "Merk",
-        model: "Type",
-        camera: "Kaart van het huis",
-        verberg: "Verbergen",
+        entity: t("Robotstofzuiger"),
+        name: t("Naam"),
+        merk: t("Merk"),
+        model: t("Type"),
+        camera: t("Kaart van het huis"),
+        verberg: t("Verbergen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      entity:
-        "De vacuum-entiteit. Accu, status, storing, kamers, keuzes, station, onderhoud en de kaart van hetzelfde apparaat zoekt de kaart zelf.",
-      name: "Leeg laten: de naam van het apparaat in Home Assistant.",
-      merk:
-        "Automatisch toont de productfoto als het type bekend is, en anders het icoon. Een tik op de foto of het icoon doet wat de eerste knop doet: starten, pauzeren of hervatten.",
-      model: "Het type bepaalt de productfoto.",
-      camera: "Leeg laten: de live kaart van dezelfde stofzuiger.",
-      verberg: "Vink aan wat niet op de kaart hoeft. Een blok waar niets voor gevonden is, staat er sowieso niet.",
+      entity: t(
+        "De vacuum-entiteit. Accu, status, storing, kamers, keuzes, station, onderhoud en de kaart van hetzelfde apparaat zoekt de kaart zelf."
+      ),
+      name: t("Leeg laten: de naam van het apparaat in Home Assistant."),
+      merk: t(
+        "Automatisch toont de productfoto als het type bekend is, en anders het icoon. Een tik op de foto of het icoon doet wat de eerste knop doet: starten, pauzeren of hervatten."
+      ),
+      model: t("Het type bepaalt de productfoto."),
+      camera: t("Leeg laten: de live kaart van dezelfde stofzuiger."),
+      verberg: t("Vink aan wat niet op de kaart hoeft. Een blok waar niets voor gevonden is, staat er sowieso niet."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-stofzuiger-card-editor", StofzuigerEditor);
 registerCard("domotiapp-stofzuiger-card", StofzuigerCard, {
-  name: "DomotiApp Robotstofzuiger",
-  description:
-    "Een robotstofzuiger met zijn station: starten per kamer, schoonmaken en zuigkracht, de kaart van het huis, het station en het onderhoud. Met een productfoto per merk en type.",
+  name: nt("DomotiApp Robotstofzuiger"),
+  description: nt(
+    "Een robotstofzuiger met zijn station: starten per kamer, schoonmaken en zuigkracht, de kaart van het huis, het station en het onderhoud. Met een productfoto per merk en type."
+  ),
 });
 
 export { StofzuigerCard };

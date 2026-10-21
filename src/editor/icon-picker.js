@@ -26,6 +26,14 @@ import { tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { meldAan } from "../registratie.js";
 import { GROEPEN, naamVan, zoekIconen } from "./icoon-zoek.js";
+import { nt, t, tc } from "../taal.js";
+
+/**
+ * De naam onder een icoon, in de taal van de kaarten. Via `tc`, omdat een
+ * paar namen elders iets anders betekenen: "zon" is bij de coach "solar",
+ * onder een icoon "sun".
+ */
+const naamOp = (k) => tc("icoon", naamVan(k));
 
 const css = /* css */ `
   ${themaCss}
@@ -168,13 +176,13 @@ const rasterHtml = (groepen) =>
     .map(
       ([titel, keys]) => `
       <div class="group">
-        <h4>${titel}</h4>
+        <h4>${t(titel)}</h4>
         <div class="grid">
           ${keys
             .map(
               (k) =>
-                `<button type="button" class="opt" data-icon="${k}" title="${naamVan(k)} (${k})" aria-pressed="false">` +
-                `${icons[k] ?? ""}<span class="naam">${naamVan(k)}</span></button>`
+                `<button type="button" class="opt" data-icon="${k}" title="${naamOp(k)} (${k})" aria-pressed="false">` +
+                `${icons[k] ?? ""}<span class="naam">${naamOp(k)}</span></button>`
             )
             .join("")}
         </div>
@@ -190,7 +198,7 @@ class DacIconPicker extends HTMLElement {
     this.shadowRoot.adoptedStyleSheets = sheets;
     this.value_ = "";
     this.vraag_ = "";
-    this.label = "Icoon";
+    this.label = nt("Icoon");
     this.fallback = "question";
     // Sommige velden hebben geen zinnige automatische keuze -- daar is leeg
     // laten geen instelling maar een half ingevuld formulier.
@@ -228,16 +236,16 @@ class DacIconPicker extends HTMLElement {
           <div class="zoekrij">
             <span class="zoekveld">
               <span class="loep">${icons.search}</span>
-              <input id="zoek" type="search" placeholder="Zoek een icoon -- slapen, gordijn, vaatwasser"
+              <input id="zoek" type="search" placeholder="${t("Zoek een icoon -- slapen, gordijn, vaatwasser")}"
                      spellcheck="false" autocomplete="off" />
-              <button type="button" class="wis" title="Zoekopdracht wissen">${icons.close}</button>
+              <button type="button" class="wis" title="${t("Zoekopdracht wissen")}">${icons.close}</button>
             </span>
           </div>
           <div class="groepen">${rasterHtml(GROEPEN)}</div>
           <div class="mdi">
-            <label for="mdi">Of Home Assistant-icoon</label>
+            <label for="mdi">${t("Of Home Assistant-icoon")}</label>
             <input id="mdi" type="text" placeholder="mdi:washing-machine" spellcheck="false" />
-            <button type="button" class="clear">Wissen</button>
+            <button type="button" class="clear">${t("Wissen")}</button>
           </div>
         </div>
       </div>`;
@@ -296,8 +304,8 @@ class DacIconPicker extends HTMLElement {
     const bak = this.$(".groepen");
     const leeg = groepen.length === 1 && !groepen[0][1].length;
     bak.innerHTML = leeg
-      ? `<div class="niets">Geen icoon gevonden voor "${this.vraag_.trim()}".<br>` +
-        `Een <code>mdi:</code>-naam hieronder werkt altijd.</div>`
+      ? `<div class="niets">${t("Geen icoon gevonden voor \"{vraag}\".", { vraag: this.vraag_.trim() })}<br>` +
+        `${t("Een <code>mdi:</code>-naam hieronder werkt altijd.")}</div>`
       : rasterHtml(groepen);
     bak.scrollTop = 0;
     this.markeer_();
@@ -312,7 +320,7 @@ class DacIconPicker extends HTMLElement {
 
   paint_() {
     if (!this.shadowRoot.firstElementChild) return;
-    this.$(".label").textContent = this.label ?? "Icoon";
+    this.$(".label").textContent = t(this.label ?? "Icoon");
 
     const v = this.value_;
     const shown = v || this.fallback || "question";
@@ -320,10 +328,10 @@ class DacIconPicker extends HTMLElement {
     this.$(".who b").textContent = v
       ? v.includes(":")
         ? v
-        : naamVan(v)
+        : naamOp(v)
       : this.auto
-        ? "Automatisch"
-        : "Kies een icoon";
+        ? t("Automatisch")
+        : t("Kies een icoon");
     // Onder de naam staat sinds 0.44.0 de `dai:`-vorm en niet de kale sleutel.
     //
     // Dat is geen versiering. Op de badge is het icoon een SJABLOON, en daar
@@ -334,11 +342,11 @@ class DacIconPicker extends HTMLElement {
     // letterlijk in je sjabloon kunt overtypen, naast `mdi:fire` van HA.
     this.$(".who small").textContent = v
       ? v.includes(":") && !v.startsWith(DAI)
-        ? "Home Assistant-icoon"
-        : `DomotiApp-icoon -- ${v.startsWith(DAI) ? v : DAI + v}`
+        ? t("Home Assistant-icoon")
+        : t("DomotiApp-icoon -- {naam}", { naam: v.startsWith(DAI) ? v : DAI + v })
       : this.auto
-        ? "Past zich aan de entiteit aan"
-        : "Nog niets gekozen";
+        ? t("Past zich aan de entiteit aan")
+        : t("Nog niets gekozen");
 
     this.markeer_();
 

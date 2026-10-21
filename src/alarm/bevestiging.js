@@ -47,6 +47,8 @@
  * hele antwoord.
  */
 
+import { t } from "../taal.js";
+
 /**
  * De vraag die de klant te zien krijgt (SPEC 3.2).
  *
@@ -62,13 +64,13 @@ export function bevestigingsTekst(wekker) {
   const naam = typeof wekker?.name === "string" ? wekker.name.trim() : "";
   const tijd = typeof wekker?.time === "string" ? wekker.time.trim() : "";
   if (naam && tijd) {
-    return `Wil je de wekker "${naam}" van ${tijd} verwijderen?`;
+    return t("Wil je de wekker \"{naam}\" van {tijd} verwijderen?", { naam, tijd });
   }
   if (naam) {
-    return `Wil je de wekker "${naam}" verwijderen?`;
+    return t("Wil je de wekker \"{naam}\" verwijderen?", { naam });
   }
   if (tijd) {
-    return `Wil je de wekker van ${tijd} verwijderen?`;
+    return t("Wil je de wekker van {tijd} verwijderen?", { tijd });
   }
-  return "Wil je deze wekker verwijderen?";
+  return t("Wil je deze wekker verwijderen?");
 }

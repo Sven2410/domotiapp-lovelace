@@ -33,6 +33,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 
 from . import meldingen
+from ..taal import t
 from ..const import DOMAIN
 from .const import (
     DATA_ABONNEES,
@@ -142,7 +143,7 @@ def ws_get(
     """De regels, plus alles wat de editor nodig heeft om ze te tonen."""
     regels = hass.data.get(DOMAIN, {}).get(DATA_REGELS)
     if regels is None:
-        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
         return
 
     if (camera := msg.get("camera")) is not None:
@@ -185,7 +186,7 @@ async def ws_save(
     data = hass.data.get(DOMAIN, {})
     regels = data.get(DATA_REGELS)
     if regels is None:
-        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
         return
 
     try:
@@ -221,7 +222,7 @@ def ws_timeline(
     """De timeline, nieuwste eerst, met een ondertekende URL per beeld."""
     index = hass.data.get(DOMAIN, {}).get(DATA_INDEX)
     if index is None:
-        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
         return
 
     beelden = index.voor(
@@ -250,7 +251,7 @@ async def ws_verwijder(
     """
     motor = hass.data.get(DOMAIN, {}).get(DATA_MOTOR)
     if motor is None:
-        connection.send_error(msg["id"], "not_loaded", "De integratie is niet geladen")
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
         return
 
     verwijderd = await motor.async_verwijder(list(msg["ids"]))

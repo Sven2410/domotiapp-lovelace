@@ -322,6 +322,28 @@ op twee dingen na:
 dan hoort hij hier mee te gaan, en dan valt de test in
 `tests/js/thema-contrast.test.mjs` om.
 
+### Nederlands en Engels
+
+Sinds 0.81.0 kunnen de kaarten Engels. De eigenaar zei het op 21 oktober 2026,
+toen DomotiApp Coach Engels werd. Hoe het werkt, de regels en de woordenlijst
+staan in `docs/taal.md`. Voor elke kaart die je schrijft of aanraakt geldt:
+
+1. **Elke tekst die een mens leest gaat door `t()`**, met de Nederlandse zin
+   als sleutel: `t("Laden tot {pct}%", { pct })`. Het Engels staat in
+   `src/i18n/en/<deel>.js`. Een tabel op modulescope gebruikt `nt()`, en nooit
+   `t()`, want bij het laden is de taal nog niet bekend.
+2. **Datums en getallen gaan via `locale()`**, nooit met `"nl-NL"` erin en
+   nooit met een eigen lijst dagnamen.
+3. **`npm run check:taal` hoort groen te zijn**; hij draait in CI. Hij vangt
+   een zin in `t()` zonder Engels, maar niet een zin die buiten `t()` staat.
+4. **Wat van Home Assistant of de coach komt, vertaal je niet.** Wat
+   vergeleken of herkend wordt ook niet.
+5. **Een woord met twee betekenissen** krijgt `tc("context", "Stil")`.
+
+De keuze staat bij de integratie (Uiterlijk, Taal: Automatisch, Nederlands of
+English) en reist met de lader mee, net als het thema. De serverkant heeft
+`taal.py` met hetzelfde patroon.
+
 ---
 
 ## Distributie via HACS

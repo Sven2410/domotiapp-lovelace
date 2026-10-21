@@ -1,0 +1,18 @@
+{
+  "{eerder} en {laatste}": "{eerder} and {laatste}",
+  "Morgen {wat}": "Tomorrow {wat}",
+  "Vandaag {wat}": "Today {wat}",
+  "Morgen wordt {wat} opgehaald. Zet de container vanavond aan de straat.": "{wat} will be collected tomorrow. Put the bin out tonight.",
+  "Morgen worden {wat} opgehaald. Zet de containers vanavond aan de straat.": "{wat} will be collected tomorrow. Put the bins out tonight.",
+  "Vandaag wordt {wat} opgehaald. Zet de container aan de straat als dat nog niet gebeurd is.": "{wat} will be collected today. Put the bin out if that has not happened yet.",
+  "Vandaag worden {wat} opgehaald. Zet de containers aan de straat als dat nog niet gebeurd is.": "{wat} will be collected today. Put the bins out if that has not happened yet.",
+  "Proef · {titel}": "Test · {titel}",
+  "Staat buiten": "Put out",
+  "Deze melding staat op geen enkel opgeslagen dashboard": "This notification is not on any saved dashboard",
+  "Geen sensor voor morgen": "No sensor for tomorrow",
+  "Geen sensor voor vandaag": "No sensor for today",
+  "Er wordt niets opgehaald": "Nothing is being collected",
+  "Vandaag al verstuurd": "Already sent today",
+  "Staat al buiten": "Already put out",
+  "De meldingen zijn nog niet geladen": "The notifications have not loaded yet"
+}

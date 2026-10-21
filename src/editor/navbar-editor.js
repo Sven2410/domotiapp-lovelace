@@ -33,6 +33,7 @@ import "./icon-picker.js";
 import { meldAan } from "../registratie.js";
 import { icons, resolve } from "../icons.js";
 import { naamVan } from "./icoon-zoek.js";
+import { t, tn } from "../taal.js";
 import {
   BALK_MAX,
   BALK_MIN,
@@ -305,7 +306,7 @@ class NavbarEditor extends HTMLElement {
       if (plek === inBalk && gevuldeItems.length > inBalk) {
         const grens = document.createElement("div");
         grens.className = "grens";
-        grens.textContent = "Achter de meer-knop";
+        grens.textContent = t("Achter de meer-knop");
         lijst.appendChild(grens);
       }
       lijst.appendChild(this.itemBlok_(item, i));
@@ -314,17 +315,16 @@ class NavbarEditor extends HTMLElement {
     if (!this.items_.length) {
       const uitleg = document.createElement("p");
       uitleg.className = "uitleg";
-      uitleg.textContent =
-        "Elke knop heeft een naam, een icoon en een pad -- bijvoorbeeld /lovelace/keuken " +
-        "voor een view op dit dashboard, of #keuken voor een pop-up. Wat er niet meer in " +
-        "de balk past valt vanzelf achter de meer-knop rechts.";
+      uitleg.textContent = t(
+        "Elke knop heeft een naam, een icoon en een pad -- bijvoorbeeld /lovelace/keuken voor een view op dit dashboard, of #keuken voor een pop-up. Wat er niet meer in de balk past valt vanzelf achter de meer-knop rechts."
+      );
       wrap.appendChild(uitleg);
     }
 
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "toevoegen";
-    knop.textContent = "＋  Knop toevoegen";
+    knop.textContent = `＋  ${t("Knop toevoegen")}`;
     knop.disabled = this.items_.length >= ITEMS_MAX;
     knop.addEventListener("click", () => {
       this.items_.push({ name: "", icon: "", path: "" });
@@ -346,20 +346,20 @@ class NavbarEditor extends HTMLElement {
     ];
     form.computeLabel = (s) =>
       ({
-        max: "Knoppen in de balk",
-        labels: "Namen onder de iconen",
-        bare: "Achtergrond weglaten",
+        max: t("Knoppen in de balk"),
+        labels: t("Namen onder de iconen"),
+        bare: t("Achtergrond weglaten"),
       })[s.name] ?? s.name;
     form.computeHelper = (s) => {
       if (s.name === "max")
-        return (
-          "De meer-knop telt zelf mee. Staan er meer knoppen dan dit, dan komen de eerste " +
-          `${klemBalk(this.rest_.max) - 1} in de balk en valt de rest achter "Meer".`
+        return t(
+          "De meer-knop telt zelf mee. Staan er meer knoppen dan dit, dan komen de eerste {n} in de balk en valt de rest achter \"Meer\".",
+          { n: klemBalk(this.rest_.max) - 1 }
         );
       if (s.name === "labels")
-        return "Uit geeft een rij kale iconen. Dan passen er meer naast elkaar op een telefoon.";
+        return t("Uit geeft een rij kale iconen. Dan passen er meer naast elkaar op een telefoon.");
       if (s.name === "bare")
-        return "Haalt de pil onder de balk weg: alleen de iconen blijven over, zwevend boven het dashboard.";
+        return t("Haalt de pil onder de balk weg: alleen de iconen blijven over, zwevend boven het dashboard.");
       return undefined;
     };
     form.data = {
@@ -407,26 +407,26 @@ class NavbarEditor extends HTMLElement {
       const leeg = !gevuld(item);
       det.dataset.leeg = String(leeg);
       voor.innerHTML = resolve(item.icon, "grid");
-      b.textContent = item.name || (leeg ? "Nieuwe knop" : item.path || "Zonder naam");
+      b.textContent = item.name || (leeg ? t("Nieuwe knop") : item.path || t("Zonder naam"));
       const sub = subVan(item).length;
       // Een knop met een menu gaat nergens heen, dus zijn pad noemen zou
       // liegen. Wat hij wél doet staat er dan: hoeveel knoppen erin zitten.
       small.textContent = sub
-        ? `Menu met ${sub} knop${sub === 1 ? "" : "pen"}`
+        ? tn(sub, "Menu met {n} knop", "Menu met {n} knoppen")
         : item.path
           ? item.path
           : item.icon
-            ? `${naamVan(item.icon)} -- nog geen pad`
-            : "Nog geen pad";
+            ? t("{icoon} -- nog geen pad", { icoon: naamVan(item.icon) })
+            : t("Nog geen pad");
     };
     kop();
     this.koppen_.push(kop);
 
-    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaats_(i, -1));
+    const omhoog = this.kopKnop_(t("Omhoog"), icons.arrowUp, () => this.verplaats_(i, -1));
     omhoog.disabled = i === 0;
-    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () => this.verplaats_(i, 1));
+    const omlaag = this.kopKnop_(t("Omlaag"), icons.arrowDown, () => this.verplaats_(i, 1));
     omlaag.disabled = i === this.items_.length - 1;
-    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijder_(i));
+    const weg = this.kopKnop_(t("Verwijderen"), icons.close, () => this.verwijder_(i));
     weg.classList.add("weg");
 
     sum.append(voor, titel, omhoog, omlaag, weg);
@@ -436,7 +436,7 @@ class NavbarEditor extends HTMLElement {
     body.className = "body";
 
     const kiezer = document.createElement("dac-icon-picker");
-    kiezer.label = "Icoon";
+    kiezer.label = t("Icoon");
     kiezer.fallback = "grid";
     kiezer.auto = false;
     kiezer.hass = this.hass_;
@@ -453,18 +453,19 @@ class NavbarEditor extends HTMLElement {
       { name: "name", selector: { text: {} } },
       { name: "path", selector: { text: {} } },
     ];
-    form.computeLabel = (s) => ({ name: "Naam", path: "Waar gaat hij heen" })[s.name] ?? s.name;
+    form.computeLabel = (s) => ({ name: t("Naam"), path: t("Waar gaat hij heen") })[s.name] ?? s.name;
     form.computeHelper = (s) => {
       if (s.name !== "path") return undefined;
-      const basis =
-        "/lovelace/keuken voor een view, #keuken voor een pop-up van bubble-card, of een https-adres voor iets buiten Home Assistant.";
+      const basis = t(
+        "/lovelace/keuken voor een view, #keuken voor een pop-up van bubble-card, of een https-adres voor iets buiten Home Assistant."
+      );
       // Eerlijk zijn over wat er gebeurt: een knop met subknoppen klapt open en
       // gaat niet naar zijn eigen pad. Twee dingen op één tik (kort tikken
       // navigeert, lang tikken opent) is bediening die niemand vindt.
       return heeftSub(item)
         ? `${basis}
 
-Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; zijn eigen pad wordt niet gebruikt.`
+${t("Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; zijn eigen pad wordt niet gebruikt.")}`
         : basis;
     };
     form.data = { name: item.name, path: item.path };
@@ -494,7 +495,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
 
     const kop = document.createElement("div");
     kop.className = "subkop";
-    kop.textContent = "Subknoppen";
+    kop.textContent = t("Subknoppen");
 
     const lijst = document.createElement("div");
     lijst.className = "sublijst";
@@ -504,10 +505,9 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
 
     const uitleg = document.createElement("p");
     uitleg.className = "uitleg";
-    uitleg.textContent =
-      "Hangt hier iets onder, dan klapt deze knop een menu open BOVEN zichzelf in " +
-      "plaats van ergens heen te gaan. Valt de knop zelf achter de meer-knop, dan " +
-      "staan zijn subknoppen daar ingesprongen onder hem.";
+    uitleg.textContent = t(
+      "Hangt hier iets onder, dan klapt deze knop een menu open BOVEN zichzelf in plaats van ergens heen te gaan. Valt de knop zelf achter de meer-knop, dan staan zijn subknoppen daar ingesprongen onder hem."
+    );
 
     return [kop, lijst, knop, uitleg];
   }
@@ -525,7 +525,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     if (item.items.length >= SUB_MAX) det.setAttribute("vol", "");
 
     const sum = document.createElement("summary");
-    sum.textContent = "＋  Subknop toevoegen";
+    sum.textContent = `＋  ${t("Subknop toevoegen")}`;
     det.appendChild(sum);
 
     const keuzes = document.createElement("div");
@@ -548,7 +548,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     };
 
     keuzes.appendChild(
-      this.keuzeKnop_("plus", "Lege subknop", "Zelf een naam, een icoon en een pad invullen.", () =>
+      this.keuzeKnop_("plus", t("Lege subknop"), t("Zelf een naam, een icoon en een pad invullen."), () =>
         // ACHTERAAN, in de volgorde waarin je ze maakt. Gemeld op 26 augustus 2026.
         zet({ name: "", icon: "", path: "", action: null, items: [] }, false),
       ),
@@ -557,7 +557,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     for (const v of VOORAF) {
       const gemaakt = v.maak();
       keuzes.appendChild(
-        this.keuzeKnop_(gemaakt.icon, v.label, v.uitleg, () => zet(v.maak(), v.bovenaan)),
+        this.keuzeKnop_(gemaakt.icon, t(v.label), t(v.uitleg), () => zet(v.maak(), v.bovenaan)),
       );
     }
 
@@ -599,21 +599,21 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
 
     const kop = () => {
       voor.innerHTML = resolve(sub.icon, "grid");
-      b.textContent = sub.name || (gevuld(sub) ? sub.path || "Zonder naam" : "Nieuwe subknop");
+      b.textContent = sub.name || (gevuld(sub) ? sub.path || t("Zonder naam") : t("Nieuwe subknop"));
       small.textContent = sub.action
-        ? `Roept ${sub.action.perform_action ?? sub.action.service ?? sub.action.action} aan`
-        : sub.path || "Nog geen pad";
+        ? t("Roept {actie} aan", { actie: sub.action.perform_action ?? sub.action.service ?? sub.action.action })
+        : sub.path || t("Nog geen pad");
     };
     kop();
     this.koppen_.push(kop);
 
-    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaatsSub_(ouder, i, j, -1));
+    const omhoog = this.kopKnop_(t("Omhoog"), icons.arrowUp, () => this.verplaatsSub_(ouder, i, j, -1));
     omhoog.disabled = j === 0;
-    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () =>
+    const omlaag = this.kopKnop_(t("Omlaag"), icons.arrowDown, () =>
       this.verplaatsSub_(ouder, i, j, 1),
     );
     omlaag.disabled = j === ouder.items.length - 1;
-    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijderSub_(ouder, i, j));
+    const weg = this.kopKnop_(t("Verwijderen"), icons.close, () => this.verwijderSub_(ouder, i, j));
     weg.classList.add("weg");
 
     sum.append(voor, titel, omhoog, omlaag, weg);
@@ -623,7 +623,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
     body.className = "body";
 
     const kiezer = document.createElement("dac-icon-picker");
-    kiezer.label = "Icoon";
+    kiezer.label = t("Icoon");
     kiezer.fallback = "grid";
     kiezer.auto = false;
     kiezer.hass = this.hass_;
@@ -640,7 +640,7 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       { name: "name", selector: { text: {} } },
       { name: "path", selector: { text: {} } },
     ];
-    form.computeLabel = (s) => ({ name: "Naam", path: "Waar gaat hij heen" })[s.name] ?? s.name;
+    form.computeLabel = (s) => ({ name: t("Naam"), path: t("Waar gaat hij heen") })[s.name] ?? s.name;
     // Een kant-en-klare knop DOET iets in plaats van ergens heen te gaan. Zijn
     // pad wordt dan niet gebruikt, en een veld dat niets doet is een veld waar
     // je aan blijft zitten.
@@ -648,9 +648,9 @@ Deze knop heeft subknoppen en klapt dus open in plaats van ergens heen te gaan; 
       form.schema = [{ name: "name", selector: { text: {} } }];
       form.computeHelper = (s) =>
         s.name === "name"
-          ? `Deze knop voert een actie uit (${
-              sub.action.perform_action ?? sub.action.service ?? sub.action.action
-            }) en gaat dus nergens heen. Weg met de knop rechtsboven.`
+          ? t("Deze knop voert een actie uit ({actie}) en gaat dus nergens heen. Weg met de knop rechtsboven.", {
+              actie: sub.action.perform_action ?? sub.action.service ?? sub.action.action,
+            })
           : undefined;
     }
     form.data = { name: sub.name, path: sub.path };

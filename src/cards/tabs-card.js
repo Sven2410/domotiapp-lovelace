@@ -39,6 +39,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { heeftHaGereedschap, kaartenLijst } from "../editor/kaartenlijst.js";
 import { openTab, schrijfKeuze, sleutelVoor, tabsVan } from "./tabs-logica.js";
 import { KOLOMMEN, grenzenVan, pasIndelingToe } from "./tab-indeling.js";
+import { nt, t } from "../taal.js";
 
 /** Eén stap omhoog, dwars door shadow roots heen. */
 const omhoog = (knoop) =>
@@ -84,13 +85,13 @@ function bewerkerVan(kaart) {
     if (!knoop || diepte > 25) return null;
     if (knoop.tagName?.toLowerCase?.() === "domotiapp-tabs-card-editor") return knoop;
     for (const k of knoop.children ?? []) {
-      const t = zoek(k, diepte + 1);
-      if (t) return t;
+      const gevonden = zoek(k, diepte + 1);
+      if (gevonden) return gevonden;
     }
     if (knoop.shadowRoot) {
       for (const k of knoop.shadowRoot.children) {
-        const t = zoek(k, diepte + 1);
-        if (t) return t;
+        const gevonden = zoek(k, diepte + 1);
+        if (gevonden) return gevonden;
       }
     }
     return null;
@@ -214,7 +215,7 @@ class TabsCard extends DacCard {
     const tabs = tabsVan(config);
     const c = { tone: "accent", ...config, tabs };
     if (!tabs.length) {
-      c[INCOMPLETE] = "Voeg tabbladen toe: elk met een naam, een icoon en een kaart erin.";
+      c[INCOMPLETE] = t("Voeg tabbladen toe: elk met een naam, een icoon en een kaart erin.");
     }
     return c;
   }
@@ -284,7 +285,7 @@ class TabsCard extends DacCard {
         <button type="button" class="tab" role="tab" data-i="${i}" aria-selected="false"
                 title="${escapeHtml(tab.name)}">
           ${tab.icon ? `<span class="ic">${resolve(tab.icon, "grid")}</span>` : ""}
-          <span class="nm">${escapeHtml(tab.name || `Tab ${i + 1}`)}</span>
+          <span class="nm">${escapeHtml(tab.name || t("Tab {n}", { n: i + 1 }))}</span>
         </button>`
       )
       .join("");
@@ -364,7 +365,7 @@ class TabsCard extends DacCard {
     if (!tab.cards.length) {
       const leeg = document.createElement("div");
       leeg.className = "leeg";
-      leeg.textContent = "Deze tab heeft nog geen kaart.";
+      leeg.textContent = t("Deze tab heeft nog geen kaart.");
       vak.replaceChildren(leeg);
       meetRaster(this.$(".card"));
       // In het voorbeeld van de editor hoort hier de knop te staan waarmee je er
@@ -443,9 +444,9 @@ class TabsCard extends DacCard {
       this.herijkIndeling_();
     } catch (e) {
       this.kinderen_.delete(i);
-      vak.innerHTML = `<div class="leeg">Deze kaart kon niet geladen worden: ${escapeHtml(
-        e?.message ?? e
-      )}</div>`;
+      vak.innerHTML = `<div class="leeg">${t("Deze kaart kon niet geladen worden: {fout}", {
+        fout: escapeHtml(e?.message ?? e),
+      })}</div>`;
       meetRaster(this.$(".card"));
     }
   }
@@ -547,7 +548,7 @@ class TabsCard extends DacCard {
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "voegtoe";
-    knop.textContent = "＋  Kaart toevoegen";
+    knop.textContent = `＋  ${t("Kaart toevoegen")}`;
     knop.addEventListener("click", (e) => {
       e.stopPropagation();
       bewerkerVan(this)?.uitVoorbeeld?.(i, "toevoegen", {});
@@ -580,17 +581,18 @@ class TabsCard extends DacCard {
   static getStubConfig() {
     return {
       tabs: [
-        { name: "Woning", icon: "house", card: null },
-        { name: "Weer", icon: "cloudSun", card: null },
+        { name: t("Woning"), icon: "house", card: null },
+        { name: t("Weer"), icon: "cloudSun", card: null },
       ],
     };
   }
 }
 
 registerCard("domotiapp-tabs-card", TabsCard, {
-  name: "DomotiApp Tabbladen",
-  description:
-    "Meerdere kaarten achter tabbladen, met een rij knoppen erboven. De gekozen tab wordt per apparaat onthouden.",
+  name: nt("DomotiApp Tabbladen"),
+  description: nt(
+    "Meerdere kaarten achter tabbladen, met een rij knoppen erboven. De gekozen tab wordt per apparaat onthouden."
+  ),
 });
 
 export { TabsCard };
