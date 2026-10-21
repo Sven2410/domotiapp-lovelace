@@ -15,16 +15,18 @@
  * hier binnenkomt en getoetst wordt.
  */
 
+import { nt, t } from "../taal.js";
+
 /** De standen die een printer kan hebben, en hoe wij ze noemen. */
 export const STANDEN = {
-  idle: { woord: "Klaar voor gebruik", toon: "neutral" },
-  printing: { woord: "Aan het printen", toon: "accent" },
-  paused: { woord: "Gepauzeerd", toon: "warn" },
-  finished: { woord: "Klaar", toon: "good" },
-  failed: { woord: "Mislukt", toon: "bad" },
-  offline: { woord: "Offline", toon: "neutral" },
-  prepare: { woord: "Voorbereiden", toon: "accent" },
-  unknown: { woord: "Onbekend", toon: "neutral" },
+  idle: { woord: nt("Klaar voor gebruik"), toon: "neutral" },
+  printing: { woord: nt("Aan het printen"), toon: "accent" },
+  paused: { woord: nt("Gepauzeerd"), toon: "warn" },
+  finished: { woord: nt("Klaar"), toon: "good" },
+  failed: { woord: nt("Mislukt"), toon: "bad" },
+  offline: { woord: nt("Offline"), toon: "neutral" },
+  prepare: { woord: nt("Voorbereiden"), toon: "accent" },
+  unknown: { woord: nt("Onbekend"), toon: "neutral" },
 };
 
 /**
@@ -107,8 +109,8 @@ export function restMinuten(st, nu = Date.now()) {
 
   const klasse = st?.attributes?.device_class;
   if (klasse === "timestamp" || /[T ]\d{2}:\d{2}/.test(ruw)) {
-    const t = Date.parse(ruw);
-    if (Number.isFinite(t)) return Math.max(0, Math.round((t - nu) / 60000));
+    const tijd = Date.parse(ruw);
+    if (Number.isFinite(tijd)) return Math.max(0, Math.round((tijd - nu) / 60000));
   }
 
   // Een klok: 1:24:00 of 24:00.
@@ -133,7 +135,7 @@ export function alsDuur(minuten) {
   if (minuten === null || minuten === undefined) return "";
   const m = Math.max(0, Math.round(minuten));
   if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)} u ${String(m % 60).padStart(2, "0")}`;
+  return t("{uur} u {min}", { uur: Math.floor(m / 60), min: String(m % 60).padStart(2, "0") });
 }
 
 /**

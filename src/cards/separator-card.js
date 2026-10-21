@@ -14,6 +14,7 @@ import { DacCard, registerCard, registerEditor, toneValue } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { localizeState, stateOf } from "../ha.js";
+import { nt, t } from "../taal.js";
 
 class SeparatorCard extends DacCard {
   static css = /* css */ `
@@ -127,7 +128,7 @@ class SeparatorCard extends DacCard {
   }
 
   static getStubConfig() {
-    return { name: "Nieuwe sectie", icon: "house", tone: "accent" };
+    return { name: t("Nieuwe sectie"), icon: "house", tone: "accent" };
   }
 }
 
@@ -143,8 +144,8 @@ class SeparatorEditor extends DacEditor {
 
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon links", fallback: "star", auto: false },
-      { key: "secondary_icon", kind: "icon", label: "Icoon bij de waarde rechts", auto: false },
+      { key: "icon", kind: "icon", label: t("Icoon links"), fallback: "star", auto: false },
+      { key: "secondary_icon", kind: "icon", label: t("Icoon bij de waarde rechts"), auto: false },
     ];
   }
 
@@ -158,20 +159,20 @@ class SeparatorEditor extends DacEditor {
 
   label(s) {
     return (
-      { line: "Lijn tonen", secondary_entity: "Waarde rechts (optioneel)" }[s.name] ??
+      { line: t("Lijn tonen"), secondary_entity: t("Waarde rechts (optioneel)") }[s.name] ??
       super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "secondary_entity")
-      return "Toont de status van deze entiteit rechts van de lijn, bijvoorbeeld een temperatuur of een aantal.";
+      return t("Toont de status van deze entiteit rechts van de lijn, bijvoorbeeld een temperatuur of een aantal.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-separator-card-editor", SeparatorEditor);
 registerCard("domotiapp-separator-card", SeparatorCard, {
-  name: "DomotiApp Separator",
-  description: "Sectiekop met icoon en vervagende lijn.",
+  name: nt("DomotiApp Separator"),
+  description: nt("Sectiekop met icoon en vervagende lijn."),
 });

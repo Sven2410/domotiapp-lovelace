@@ -37,6 +37,10 @@ export function zinnen(pad) {
   const bron = readFileSync(pad, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const uit = new Set();
   for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])(?:t|nt)\\(\\s*${LIT}`, "g"))) uit.add(JSON.parse(`"${m[1]}"`));
+  // tc("stand", "Stil") zoekt "Stil|stand", en anders "Stil".
+  for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])tc\\(\\s*${LIT},\\s*${LIT}`, "g"))) {
+    uit.add(`${JSON.parse(`"${m[2]}"`)}|${JSON.parse(`"${m[1]}"`)}`);
+  }
   for (const m of bron.matchAll(new RegExp(`(?<![\\w.$])tn\\([^,()]+(?:\\([^()]*\\))?[^,()]*,\\s*${LIT},\\s*${LIT}`, "g"))) {
     uit.add(JSON.parse(`"${m[1]}"`));
     uit.add(JSON.parse(`"${m[2]}"`));

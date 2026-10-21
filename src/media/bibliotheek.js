@@ -23,22 +23,24 @@
  * `ma.py`. Een kaart in de browser zou anders een eigen token moeten dragen.
  */
 
+import { nt, t } from "../taal.js";
+
 /** De soorten die de bibliotheek kent, in de volgorde van de filterknoppen. */
 export const BIB_SOORTEN = [
-  ["playlists", "Afspeellijsten"],
-  ["radio", "Radio"],
-  ["tracks", "Nummers"],
-  ["albums", "Albums"],
-  ["artists", "Artiesten"],
+  ["playlists", nt("Afspeellijsten")],
+  ["radio", nt("Radio")],
+  ["tracks", nt("Nummers")],
+  ["albums", nt("Albums")],
+  ["artists", nt("Artiesten")],
 ];
 
 /** Van onze soortnaam naar het woord dat onder een regel komt te staan. */
 export const BIB_WOORD = {
-  playlists: "Afspeellijst",
-  radio: "Radiozender",
-  tracks: "Nummer",
-  albums: "Album",
-  artists: "Artiest",
+  playlists: nt("Afspeellijst"),
+  radio: nt("Radiozender"),
+  tracks: nt("Nummer"),
+  albums: nt("Album"),
+  artists: nt("Artiest"),
 };
 
 const CMD = (naam) => `domotiapp_lovelace/media/${naam}`;
@@ -114,12 +116,12 @@ export const SOORT_ENKELVOUD = {
  * bestanden verderop was het onzichtbaar.
  */
 export const ZOEK_SOORTEN = [
-  ["", "Alles"],
-  ["track", "Nummers"],
-  ["album", "Albums"],
-  ["artist", "Artiesten"],
-  ["playlist", "Afspeellijsten"],
-  ["radio", "Radio"],
+  ["", nt("Alles")],
+  ["track", nt("Nummers")],
+  ["album", nt("Albums")],
+  ["artist", nt("Artiesten")],
+  ["playlist", nt("Afspeellijsten")],
+  ["radio", nt("Radio")],
 ];
 
 /**
@@ -155,7 +157,7 @@ export const haalBibliotheek = (hass, soort, { favoriet = false, zoek = "", limi
 
 export const zetFavoriet = (hass, item, aan) => {
   const bericht = favorietBericht(item, aan);
-  if (!bericht) return Promise.reject(new Error("Dit item kan niet favoriet gemaakt worden."));
+  if (!bericht) return Promise.reject(new Error(t("Dit item kan niet favoriet gemaakt worden.")));
   return hass.callWS(bericht);
 };
 

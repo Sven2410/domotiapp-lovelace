@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import re
 
+from ..taal import NL, vertaal
+
 # Wat een ophaalsensor zegt als er niets is. Kleine letters, zonder spaties.
 GEEN = frozenset(
     {
@@ -86,34 +88,44 @@ def soorten(toestand: str | None) -> list[str]:
     return uit
 
 
-def opsomming(namen: list[str]) -> str:
-    """"GFT", "GFT en Papier", "GFT, PMD en Papier"."""
+def opsomming(namen: list[str], taal: str = NL) -> str:
+    """"GFT", "GFT en Papier", "GFT, PMD en Papier" (in het Engels "and")."""
     if not namen:
         return ""
     if len(namen) == 1:
         return namen[0]
-    return f"{', '.join(namen[:-1])} en {namen[-1]}"
+    return vertaal(taal, "{eerder} en {laatste}", eerder=", ".join(namen[:-1]), laatste=namen[-1])
 
 
-def bericht(moment: str, namen: list[str]) -> tuple[str, str]:
-    """Titel en tekst van de melding.
+def bericht(moment: str, namen: list[str], taal: str = NL) -> tuple[str, str]:
+    """Titel en tekst van de melding, in de taal van de installatie.
 
     `moment` is "morgen" (de avond ervoor) of "vandaag" (de ochtend zelf). De
     titel noemt meteen de bak: op een vergrendeld scherm is dat vaak het enige
-    wat je leest.
+    wat je leest. De namen van de bakken blijven zoals de sensor ze geeft.
     """
-    wat = opsomming(namen)
+    wat = opsomming(namen, taal)
     meer = len(namen) > 1
-    ww = "worden" if meer else "wordt"
-    bak = "de containers" if meer else "de container"
     if moment == "morgen":
-        return (
-            f"Morgen {wat}",
-            f"Morgen {ww} {wat} opgehaald. Zet {bak} vanavond aan de straat.",
+        titel = vertaal(taal, "Morgen {wat}", wat=wat)
+        if meer:
+            return titel, vertaal(
+                taal, "Morgen worden {wat} opgehaald. Zet de containers vanavond aan de straat.", wat=wat
+            )
+        return titel, vertaal(
+            taal, "Morgen wordt {wat} opgehaald. Zet de container vanavond aan de straat.", wat=wat
         )
-    return (
-        f"Vandaag {wat}",
-        f"Vandaag {ww} {wat} opgehaald. Zet {bak} aan de straat als dat nog niet gebeurd is.",
+    titel = vertaal(taal, "Vandaag {wat}", wat=wat)
+    if meer:
+        return titel, vertaal(
+            taal,
+            "Vandaag worden {wat} opgehaald. Zet de containers aan de straat als dat nog niet gebeurd is.",
+            wat=wat,
+        )
+    return titel, vertaal(
+        taal,
+        "Vandaag wordt {wat} opgehaald. Zet de container aan de straat als dat nog niet gebeurd is.",
+        wat=wat,
     )
 
 

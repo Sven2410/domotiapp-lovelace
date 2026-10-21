@@ -27,6 +27,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 
+from ..taal import NL, taal_van, vertaal
 from .const import (
     DOMAIN,
     ISSUE_CORRUPT_PERSON_PREFIX,
@@ -80,26 +81,34 @@ def severity_van(kind: str) -> str:
     return _SEVERITY[kind]
 
 
-def tekst_voor(kind: str, wekker: dict[str, Any], **extra: str) -> str:
-    """De Nederlandse tekst uit SPEC 11.7, letterlijk.
+def tekst_voor(kind: str, wekker: dict[str, Any], taal: str = NL, **extra: str) -> str:
+    """De Nederlandse tekst uit SPEC 11.7, letterlijk; of het Engels ervan.
 
     De tekst wordt **in de opslag** gezet en niet in de kaart samengesteld, zodat een
     melding die een herstart moet overleven niet afhangt van de versie van de kaart
-    die hem leest (SPEC 14.2.1).
+    die hem leest (SPEC 14.2.1). Daarom ook in de taal van de installatie op het
+    moment van de melding (0.81.0): de kaart toont `text` zoals hij is.
     """
     tijd = wekker.get("time", "??:??")
-    speaker = extra.get("speaker_naam") or wekker.get("speaker", "de speaker")
-    geluid = extra.get("geluid_naam") or (wekker.get("sound") or {}).get("name", "het geluid")
-    lamp = extra.get("lamp_naam") or ((wekker.get("light") or {}).get("entity_id") or "de lamp")
+    speaker = extra.get("speaker_naam") or wekker.get("speaker", vertaal(taal, "de speaker"))
+    geluid = extra.get("geluid_naam") or (wekker.get("sound") or {}).get(
+        "name", vertaal(taal, "het geluid")
+    )
+    lamp = extra.get("lamp_naam") or (
+        (wekker.get("light") or {}).get("entity_id") or vertaal(taal, "de lamp")
+    )
 
     if kind == KIND_SPEAKER_UNAVAILABLE:
         # Was: "was niet bereikbaar". Bereikbaarheid is een uitspraak over het
         # netwerk, en die doet de code nergens. Wat `noodrem.py:101-102` vaststelt
         # is dat de state van de entiteit `unavailable` is of helemaal ontbreekt —
         # dat is Home Assistants eigen woord en verder niets.
-        return (
-            f"De wekker van {tijd} is niet afgegaan: de speaker '{speaker}' was niet "
-            "beschikbaar in Home Assistant."
+        return vertaal(
+            taal,
+            "De wekker van {tijd} is niet afgegaan: de speaker '{speaker}' was niet "
+            "beschikbaar in Home Assistant.",
+            tijd=tijd,
+            speaker=speaker,
         )
     if kind == KIND_MA_UNAVAILABLE:
         # Was: "Music Assistant was niet bereikbaar". Ook dat is een uitspraak over
@@ -107,52 +116,74 @@ def tekst_voor(kind: str, wekker: dict[str, Any], **extra: str) -> str:
         # en weet daarmee precies één ding: er is geen geladen MA-config-entry. Dat
         # kan ook betekenen dat MA niet geïnstalleerd is of dat de entry uitstaat,
         # en dan wees de oude tekst de klant de verkeerde kant op.
-        return (
-            f"De wekker van {tijd} is niet afgegaan: de Music Assistant-integratie "
-            "is niet actief in Home Assistant."
+        return vertaal(
+            taal,
+            "De wekker van {tijd} is niet afgegaan: de Music Assistant-integratie "
+            "is niet actief in Home Assistant.",
+            tijd=tijd,
         )
     if kind == KIND_SOUND_GONE:
         # De reden die MA meegaf, tussen haakjes achter de vaststelling. Ontbreekt
         # hij, dan staat er niets — geen leeg haakje en geen verzonnen oorzaak.
         reden = (extra.get("ma_reden") or "").strip()
-        erbij = f' Music Assistant meldde: "{reden}".' if reden else ""
-        return (
-            f"De wekker van {tijd} is niet afgegaan: het geluid '{geluid}' kon niet "
-            f"gestart worden.{erbij} Controleer het geluid in Music Assistant, of "
-            "kies een ander."
+        if reden:
+            return vertaal(
+                taal,
+                "De wekker van {tijd} is niet afgegaan: het geluid '{geluid}' kon niet "
+                'gestart worden. Music Assistant meldde: "{reden}". Controleer het geluid '
+                "in Music Assistant, of kies een ander.",
+                tijd=tijd,
+                geluid=geluid,
+                reden=reden,
+            )
+        return vertaal(
+            taal,
+            "De wekker van {tijd} is niet afgegaan: het geluid '{geluid}' kon niet "
+            "gestart worden. Controleer het geluid in Music Assistant, of "
+            "kies een ander.",
+            tijd=tijd,
+            geluid=geluid,
         )
     if kind == KIND_SPEAKER_LOST_DURING_PLAY:
-        return (
-            f"De wekker van {tijd} is mogelijk niet hoorbaar geweest: de speaker "
-            f"'{speaker}' viel weg tijdens het spelen."
+        return vertaal(
+            taal,
+            "De wekker van {tijd} is mogelijk niet hoorbaar geweest: de speaker "
+            "'{speaker}' viel weg tijdens het spelen.",
+            tijd=tijd,
+            speaker=speaker,
         )
     if kind == KIND_LIGHT_FAILED:
-        return f"De wekker is afgegaan, maar de lamp '{lamp}' kon niet aangezet worden."
+        return vertaal(
+            taal, "De wekker is afgegaan, maar de lamp '{lamp}' kon niet aangezet worden.", lamp=lamp
+        )
     if kind == KIND_VOLUME_RAMP_UNAVAILABLE:
         # Was: "afgegaan op het ingestelde volume". Dat was een bewering over de
         # uitkomst van een `volume_set` die niet gelezen wordt — en het is dezelfde
         # aanroep die een regel eerder wéigerde (`afvuren.py:198-210`). Wat vaststaat
         # is dat het volume niet te zetten was en dat de oploop daardoor vervalt.
-        return (
+        return vertaal(
+            taal,
             "De wekker is afgegaan, maar het volume was op deze speaker niet in te "
-            "stellen; het oplopende volume is overgeslagen."
+            "stellen; het oplopende volume is overgeslagen.",
         )
     if kind == KIND_SKIPPED_GRACE_WINDOW:
         # Was: "omdat Home Assistant uit stond". Dat is een oorzaak, en de code kent
         # er geen: hij weet alleen dat het moment verstreek zonder `last_fired`. Een
         # wekker die ná dat moment is aangemaakt meldt dit bij de eerstvolgende
         # herstart, en dan zou de oude tekst onwaar zijn.
-        return f"Je wekker van {tijd} is niet afgegaan; Home Assistant heeft dat moment gemist."
+        return vertaal(
+            taal, "Je wekker van {tijd} is niet afgegaan; Home Assistant heeft dat moment gemist.", tijd=tijd
+        )
     raise ValueError(f"onbekende meldingssoort {kind!r}")
 
 
-def bouw_message(kind: str, wekker: dict[str, Any], **extra: str) -> dict[str, Any]:
-    """Het `last_message`-object uit SPEC 14.2."""
+def bouw_message(kind: str, wekker: dict[str, Any], taal: str = NL, **extra: str) -> dict[str, Any]:
+    """Het `last_message`-object uit SPEC 14.2. `taal` is die van de installatie."""
     return {
         "at": dt_util.now().isoformat(),
         "kind": kind,
         "severity": severity_van(kind),
-        "text": tekst_voor(kind, wekker, **extra),
+        "text": tekst_voor(kind, wekker, taal, **extra),
     }
 
 
@@ -169,7 +200,7 @@ async def async_meld(
     Geeft het `last_message`-object terug. Gooit nooit: een melding die niet
     weggeschreven kan worden mag de wekker niet meesleuren.
     """
-    message = bouw_message(kind, wekker, **extra)
+    message = bouw_message(kind, wekker, taal_van(hass), **extra)
 
     try:
         await store.async_werk_velden_bij(registry_id, wekker["id"], {"last_message": message})

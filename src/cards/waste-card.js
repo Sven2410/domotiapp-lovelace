@@ -26,6 +26,7 @@ import { buitenTekst, eersteOphaaldag, heroWoorden } from "./afval-logica.js";
 import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { opsomming } from "./meldingen-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { nt, t } from "../taal.js";
 
 /** Bin colours, matched on what the sensor happens to be called. */
 const FRACTIONS = [
@@ -48,9 +49,9 @@ function fractionStyle(label) {
 /** Strip the boilerplate integrations put in front of the useful bit. */
 /** Waarom een bak niet in de gewone lijst staat, in gewone taal. */
 const REDEN = {
-  "geen datum": "geen datum",
-  voorbij: "is geweest",
-  "bestaat niet": "sensor ontbreekt",
+  "geen datum": nt("geen datum"),
+  voorbij: nt("is geweest"),
+  "bestaat niet": nt("sensor ontbreekt"),
 };
 
 const cleanLabel = (name) =>
@@ -248,7 +249,7 @@ class WasteCard extends DacCard {
   validate(config) {
     const list = config.sensors ?? config.entities ?? (config.entity ? [config.entity] : []);
     if (!list.length) {
-      return { ...config, [INCOMPLETE]: "Kies minstens één afvalsensor waarvan de status een datum is." };
+      return { ...config, [INCOMPLETE]: t("Kies minstens één afvalsensor waarvan de status een datum is.") };
     }
     return {
       show_hero: true,
@@ -413,7 +414,7 @@ class WasteCard extends DacCard {
           ${c.title ? `<div class="head"><b>${escapeHtml(c.title)}</b></div>` : ""}
           <div class="breed"></div>
         </div>
-        <div class="empty" hidden>Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>
+        <div class="empty" hidden>${t("Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.")}</div>
       </div>`;
     }
     return `
@@ -429,7 +430,7 @@ class WasteCard extends DacCard {
         </div>`}
         ${c.show_list === false ? "" : `<div class="list"></div>`}
         <div class="breed"></div>
-        <div class="empty" hidden>Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.</div>
+        <div class="empty" hidden>${t("Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.")}</div>
       </div>`;
   }
 
@@ -513,7 +514,7 @@ class WasteCard extends DacCard {
             return `
         <div class="r" data-stil="true" style="--tone:${i.tone}">
           <i></i><span>${escapeHtml(i.label)}</span>
-          <span class="d">${REDEN[i.reden] ?? i.reden}</span>
+          <span class="d">${REDEN[i.reden] ? t(REDEN[i.reden]) : i.reden}</span>
         </div>`;
           }
           // Beyond a week `relativeDay` already falls back to a date, so
@@ -552,11 +553,11 @@ class WasteCard extends DacCard {
         const wanneer = buiten && eerst.includes(i)
           ? buiten
           : i.reden
-          ? REDEN[i.reden] ?? i.reden
+          ? (REDEN[i.reden] ? t(REDEN[i.reden]) : i.reden)
           : i.days === 0
-            ? "vandaag"
+            ? t("vandaag")
             : i.days === 1
-              ? "morgen"
+              ? t("morgen")
               : relativeDay(i.date);
         return `
           <div class="b" style="--tone:${i.tone}" data-eerst="${eerst.includes(i)}"
@@ -617,7 +618,7 @@ class WasteCard extends DacCard {
       .filter((e) => /afval|waste|trash|garbage|ophaal/i.test(e) && e.startsWith("sensor."))
       .filter((e) => parseDate(hass.states[e]?.state))
       .slice(0, 6);
-    return { sensors, title: "Afvalkalender" };
+    return { sensors, title: t("Afvalkalender") };
   }
 }
 
@@ -680,7 +681,7 @@ class WasteEditor extends DacEditor {
     return ids.map((id, i) => ({
       key: `kleur:${id}`,
       kind: "tone",
-      label: `Kleur voor ${namen[i] || id}`,
+      label: t("Kleur voor {naam}", { naam: namen[i] || id }),
       compact: true,
       after: true,
     }));
@@ -692,8 +693,8 @@ class WasteEditor extends DacEditor {
       {
         name: "layout",
         selector: sel.select([
-          { value: "lijst", label: "Lijst (eerstvolgende uitgelicht)" },
-          { value: "breed", label: "Over de breedte (veel lager)" },
+          { value: "lijst", label: t("Lijst (eerstvolgende uitgelicht)") },
+          { value: "breed", label: t("Over de breedte (veel lager)") },
         ]),
       },
     ];
@@ -702,25 +703,29 @@ class WasteEditor extends DacEditor {
   label(s) {
     return (
       {
-        sensors: "Afvalsensoren",
-        layout: "Vorm",
-        show_hero: "Eerstvolgende uitlichten",
-        show_list: "Overige data tonen",
+        sensors: t("Afvalsensoren"),
+        layout: t("Vorm"),
+        show_hero: t("Eerstvolgende uitlichten"),
+        show_list: t("Overige data tonen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "layout")
-      return "Over de breedte zet alle bakken naast elkaar in plaats van onder elkaar. Vier bakken passen dan op één rasterrij in plaats van vier — dat scheelt bijna tweehonderd pixels. De eerstvolgende licht op.";
+      return t(
+        "Over de breedte zet alle bakken naast elkaar in plaats van onder elkaar. Vier bakken passen dan op één rasterrij in plaats van vier — dat scheelt bijna tweehonderd pixels. De eerstvolgende licht op."
+      );
     if (s.name === "sensors")
-      return "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen.";
+      return t(
+        "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen."
+      );
     return undefined;
   }
 }
 
 registerEditor("domotiapp-waste-card-editor", WasteEditor);
 registerCard("domotiapp-waste-card", WasteCard, {
-  name: "DomotiApp Afvalkalender",
-  description: "Eerstvolgende ophaling als hero, de rest eronder. Kleur per fractie.",
+  name: nt("DomotiApp Afvalkalender"),
+  description: nt("Eerstvolgende ophaling als hero, de rest eronder. Kleur per fractie."),
 });

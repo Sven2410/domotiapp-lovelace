@@ -29,6 +29,7 @@
  */
 
 import { BlijvendAbonnement, nogNietGereed } from "./herkansing.js";
+import { t } from "./taal.js";
 
 const PREFIX = "domotiapp_lovelace/infoscherm";
 const URL = "/api/domotiapp_lovelace/infoscherm";
@@ -150,7 +151,7 @@ export async function upload(hass, bestand) {
     /* geen JSON: de status zegt genoeg */
   }
   if (!antwoord.ok) {
-    throw new Error(gegevens?.message ?? `Home Assistant antwoordde met ${antwoord.status}`);
+    throw new Error(gegevens?.message ?? t("Home Assistant antwoordde met {status}", { status: antwoord.status }));
   }
   return gegevens;
 }

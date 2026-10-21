@@ -23,6 +23,7 @@ import { resolve } from "../icons.js";
 import { bindActions, isDead, lampkleurCss, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { nt, t } from "../taal.js";
 
 const DIMMABLE = new Set(["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"]);
 const COLOURFUL = new Set(["hs", "rgb", "rgbw", "rgbww", "xy"]);
@@ -101,7 +102,7 @@ class LightCard extends DacCard {
   validate(config) {
     const entity = config.entity ?? config.lights?.[0] ?? config.entities?.[0];
     const id = typeof entity === "string" ? entity : entity?.entity;
-    if (!id) return { ...config, [INCOMPLETE]: "Kies een lamp." };
+    if (!id) return { ...config, [INCOMPLETE]: t("Kies een lamp.") };
     return { show_colour: true, ...config, entity: id };
   }
 
@@ -114,7 +115,7 @@ class LightCard extends DacCard {
     return `
       <div class="card surface">
         <div class="lamp" data-on="false" style="--tone:var(--dac-lit)">
-          <button class="chip" type="button" aria-label="Aan of uit"></button>
+          <button class="chip" type="button" aria-label="${t("Aan of uit")}"></button>
           <span class="txt"><span class="nm"></span><span class="v tnum"></span></span>
           <span class="ctl" style="display:contents"></span>
         </div>
@@ -198,7 +199,7 @@ class LightCard extends DacCard {
         kind === "range"
           ? sliderHtml("brightness")
           : kind === "toggle"
-            ? `<button class="toggle" type="button" role="switch" aria-checked="false" aria-label="Aan of uit"></button>`
+            ? `<button class="toggle" type="button" role="switch" aria-checked="false" aria-label="${t("Aan of uit")}"></button>`
             : "";
       this.sliders_.delete("brightness");
     }
@@ -209,7 +210,7 @@ class LightCard extends DacCard {
         value: () => (st?.state === "on" ? pct(stateOf(this.hass, c.entity)?.attributes?.brightness) : 0),
         onInput: (v) => {
           this.setSlider_(el, v);
-          this.text(".v", v === 0 ? "Uit" : `${v}%`);
+          this.text(".v", v === 0 ? t("Uit") : `${v}%`);
         },
         onCommit: (v) => {
           if (v === 0) this.hass.callService("light", "turn_off", { entity_id: c.entity });
@@ -220,13 +221,13 @@ class LightCard extends DacCard {
       if (!el.classList.contains("dragging")) {
         const v = on ? pct(st.attributes.brightness) : 0;
         this.setSlider_(el, v);
-        this.text(".v", on ? `${v}%` : "Uit");
+        this.text(".v", on ? `${v}%` : t("Uit"));
       }
     } else if (kind === "toggle") {
       ctl.querySelector(".toggle")?.setAttribute("aria-checked", String(on));
-      this.text(".v", on ? "Aan" : "Uit");
+      this.text(".v", on ? t("Aan") : t("Uit"));
     } else {
-      this.text(".v", "Niet bereikbaar");
+      this.text(".v", t("Niet bereikbaar"));
     }
 
     this.paintColour_(st, on);
@@ -262,7 +263,7 @@ class LightCard extends DacCard {
           "linear-gradient(90deg, hsl(0 90% 55%), hsl(60 90% 55%), hsl(120 90% 55%)," +
             " hsl(180 90% 55%), hsl(240 90% 55%), hsl(300 90% 55%), hsl(360 90% 55%))"
         );
-        hueEl.setAttribute("aria-label", "Kleur");
+        hueEl.setAttribute("aria-label", t("Kleur"));
       }
       const kEl = box.querySelector(".slider.kelvin");
       if (kEl) {
@@ -271,7 +272,7 @@ class LightCard extends DacCard {
           "--strip",
           "linear-gradient(90deg,#ffb15e,#ffd6a8,#fff5e8,#eaf1ff,#cbdcff)"
         );
-        kEl.setAttribute("aria-label", "Kleurtemperatuur");
+        kEl.setAttribute("aria-label", t("Kleurtemperatuur"));
       }
       this.sliders_.delete("hue");
       this.sliders_.delete("kelvin");
@@ -351,7 +352,7 @@ class LightEditor extends DacEditor {
   // Geen kleurkiezer: een brandende lamp draagt zijn eigen kleur, en uit is
   // gedempt. Daar valt niets aan te kiezen dat de kaart beter maakt.
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "bulb" }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "bulb" }];
   }
 
   schema() {
@@ -364,22 +365,22 @@ class LightEditor extends DacEditor {
 
   label(s) {
     return (
-      { entity: "Lamp", name: "Naam (overschrijft die van de lamp)",
-        show_colour: "Kleurstrips tonen" }[s.name] ?? super.label(s)
+      { entity: t("Lamp"), name: t("Naam (overschrijft die van de lamp)"),
+        show_colour: t("Kleurstrips tonen") }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "entity")
-      return "Eén lamp per kaart. Dimbaar krijgt een schuif, alleen schakelbaar een tuimelaar.";
+      return t("Eén lamp per kaart. Dimbaar krijgt een schuif, alleen schakelbaar een tuimelaar.");
     if (s.name === "show_colour")
-      return "Kleur en kleurtemperatuur verschijnen zodra de lamp aan is. De kaart is dan twee rijen hoog.";
+      return t("Kleur en kleurtemperatuur verschijnen zodra de lamp aan is. De kaart is dan twee rijen hoog.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-light-card-editor", LightEditor);
 registerCard("domotiapp-light-card", LightCard, {
-  name: "DomotiApp Verlichting",
-  description: "Eén lamp op één rasterrij: dimmen, kleur en kleurtemperatuur.",
+  name: nt("DomotiApp Verlichting"),
+  description: nt("Eén lamp op één rasterrij: dimmen, kleur en kleurtemperatuur."),
 });

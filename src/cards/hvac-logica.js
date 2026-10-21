@@ -25,6 +25,8 @@
  * aanbiedt en vertaalt alleen de woorden.
  */
 
+import { locale, nt, t, tc } from "../taal.js";
+
 /** Het domein van een entiteit, zonder iets uit ha.js nodig te hebben. */
 const domeinVan = (entityId) => String(entityId ?? "").split(".")[0];
 
@@ -47,98 +49,98 @@ const TEMP = { domeinen: ["sensor"], device_class: "temperature", rol: "tegel", 
 const VELDEN = {
   hoofd_climate: {
     key: "entity",
-    label: "Apparaat (climate)",
+    label: nt("Apparaat (climate)"),
     domeinen: ["climate"],
     rol: "hoofd",
-    hulp: "De climate-entiteit. Daar komen de standen en de temperatuurknoppen vandaan. Leeg laten mag: dan toont de kaart alleen de sensoren.",
+    hulp: nt("De climate-entiteit. Daar komen de standen en de temperatuurknoppen vandaan. Leeg laten mag: dan toont de kaart alleen de sensoren."),
   },
   hoofd_ventilatie: {
     key: "entity",
-    label: "Ventilatie-unit",
+    label: nt("Ventilatie-unit"),
     domeinen: ["fan", "select", "input_select", "climate"],
     rol: "hoofd",
-    hulp: "Een fan-entiteit (standen of percentage), of een keuzelijst met de standen. Leeg laten mag.",
+    hulp: nt("Een fan-entiteit (standen of percentage), of een keuzelijst met de standen. Leeg laten mag."),
   },
   hoofd_boiler: {
     key: "entity",
-    label: "Boiler (water_heater of climate)",
+    label: nt("Boiler (water_heater of climate)"),
     domeinen: ["water_heater", "climate"],
     rol: "hoofd",
-    hulp: "Daar komen de doeltemperatuur en de bedrijfsstanden vandaan. Leeg laten mag.",
+    hulp: nt("Daar komen de doeltemperatuur en de bedrijfsstanden vandaan. Leeg laten mag."),
   },
-  temperature: { key: "temperature", label: "Binnentemperatuur", ...TEMP, hulp: "Wint van de meting van het apparaat zelf." },
-  outdoor: { key: "outdoor", label: "Buitentemperatuur", ...TEMP },
+  temperature: { key: "temperature", label: nt("Binnentemperatuur"), ...TEMP, hulp: nt("Wint van de meting van het apparaat zelf.") },
+  outdoor: { key: "outdoor", label: nt("Buitentemperatuur"), ...TEMP },
   humidity: {
     key: "humidity",
-    label: "Luchtvochtigheid",
+    label: nt("Luchtvochtigheid"),
     domeinen: ["sensor"],
     device_class: "humidity",
     rol: "tegel",
     eenheid: "%",
   },
-  co2: { key: "co2", label: "CO₂", domeinen: ["sensor"], rol: "tegel", eenheid: "ppm", hulp: "Kleurt oranje boven 1200 ppm en rood boven 1600." },
-  voc: { key: "voc", label: "Luchtkwaliteit (VOC)", domeinen: ["sensor"], rol: "tegel" },
-  power: { key: "power", label: "Vermogen", domeinen: ["sensor"], device_class: "power", rol: "tegel", eenheid: "W" },
-  energy: { key: "energy", label: "Energie vandaag", domeinen: ["sensor"], device_class: "energy", rol: "tegel", eenheid: "kWh" },
-  flow_temp: { key: "flow_temp", label: "Aanvoertemperatuur", ...TEMP },
-  return_temp: { key: "return_temp", label: "Retourtemperatuur", ...TEMP },
-  dhw_temp: { key: "dhw_temp", label: "Tapwatertemperatuur", ...TEMP },
-  water_temp: { key: "water_temp", label: "Watertemperatuur", ...TEMP, hulp: "Wint van de meting van de boiler zelf." },
-  supply_temp: { key: "supply_temp", label: "Toevoertemperatuur", ...TEMP },
-  exhaust_temp: { key: "exhaust_temp", label: "Afvoertemperatuur", ...TEMP },
-  cop: { key: "cop", label: "COP", domeinen: ["sensor"], rol: "tegel", hulp: "Rendement: geleverde warmte gedeeld door verbruikte stroom." },
-  thermal: { key: "thermal", label: "Thermisch vermogen", domeinen: ["sensor"], rol: "tegel", eenheid: "kW" },
+  co2: { key: "co2", label: nt("CO₂"), domeinen: ["sensor"], rol: "tegel", eenheid: "ppm", hulp: nt("Kleurt oranje boven 1200 ppm en rood boven 1600.") },
+  voc: { key: "voc", label: nt("Luchtkwaliteit (VOC)"), domeinen: ["sensor"], rol: "tegel" },
+  power: { key: "power", label: nt("Vermogen"), domeinen: ["sensor"], device_class: "power", rol: "tegel", eenheid: "W" },
+  energy: { key: "energy", label: nt("Energie vandaag"), domeinen: ["sensor"], device_class: "energy", rol: "tegel", eenheid: "kWh" },
+  flow_temp: { key: "flow_temp", label: nt("Aanvoertemperatuur"), ...TEMP },
+  return_temp: { key: "return_temp", label: nt("Retourtemperatuur"), ...TEMP },
+  dhw_temp: { key: "dhw_temp", label: nt("Tapwatertemperatuur"), ...TEMP },
+  water_temp: { key: "water_temp", label: nt("Watertemperatuur"), ...TEMP, hulp: nt("Wint van de meting van de boiler zelf.") },
+  supply_temp: { key: "supply_temp", label: nt("Toevoertemperatuur"), ...TEMP },
+  exhaust_temp: { key: "exhaust_temp", label: nt("Afvoertemperatuur"), ...TEMP },
+  cop: { key: "cop", label: nt("COP"), domeinen: ["sensor"], rol: "tegel", hulp: nt("Rendement: geleverde warmte gedeeld door verbruikte stroom.") },
+  thermal: { key: "thermal", label: nt("Thermisch vermogen"), domeinen: ["sensor"], rol: "tegel", eenheid: "kW" },
   compressor: {
     key: "compressor",
-    label: "Compressor",
+    label: nt("Compressor"),
     domeinen: ["sensor", "binary_sensor"],
     rol: "tegel",
-    hulp: "Een toerental of percentage, of een aan/uit-sensor.",
+    hulp: nt("Een toerental of percentage, of een aan/uit-sensor."),
   },
-  flow_rate: { key: "flow_rate", label: "Debiet", domeinen: ["sensor"], rol: "tegel", eenheid: "l/min" },
-  pressure: { key: "pressure", label: "Waterdruk", domeinen: ["sensor"], rol: "tegel", eenheid: "bar" },
+  flow_rate: { key: "flow_rate", label: nt("Debiet"), domeinen: ["sensor"], rol: "tegel", eenheid: "l/min" },
+  pressure: { key: "pressure", label: nt("Waterdruk"), domeinen: ["sensor"], rol: "tegel", eenheid: "bar" },
   status: {
     key: "status",
-    label: "Statussensor",
+    label: nt("Statussensor"),
     domeinen: ["sensor"],
     rol: "status",
-    hulp: "Een sensor met een woord als toestand (Verwarmen, Tapwater, Stand 2). Komt in de regel onder de naam.",
+    hulp: nt("Een sensor met een woord als toestand (Verwarmen, Tapwater, Stand 2). Komt in de regel onder de naam."),
   },
   fault: {
     key: "fault",
-    label: "Storing",
+    label: nt("Storing"),
     domeinen: ["binary_sensor"],
     rol: "storing",
-    hulp: "Een binary_sensor die aan gaat bij een storing. De kaart kleurt dan rood, wat er verder ook aan de hand is.",
+    hulp: nt("Een binary_sensor die aan gaat bij een storing. De kaart kleurt dan rood, wat er verder ook aan de hand is."),
   },
   filter: {
     key: "filter",
-    label: "Filter",
+    label: nt("Filter"),
     domeinen: ["binary_sensor", "sensor"],
     rol: "filter",
-    hulp: "Een binary_sensor die aan gaat als het filter vervangen moet worden, of een sensor met de dagen tot vervanging.",
+    hulp: nt("Een binary_sensor die aan gaat als het filter vervangen moet worden, of een sensor met de dagen tot vervanging."),
   },
-  bypass: { key: "bypass", label: "Bypass", domeinen: ["binary_sensor"], rol: "tegel" },
+  bypass: { key: "bypass", label: nt("Bypass"), domeinen: ["binary_sensor"], rol: "tegel" },
   heating: {
     key: "heating",
-    label: "Verwarmt (aan/uit)",
+    label: nt("Verwarmt (aan/uit)"),
     domeinen: ["binary_sensor"],
     rol: "verwarmt",
-    hulp: "Een binary_sensor die aan is zolang de boiler opwarmt.",
+    hulp: nt("Een binary_sensor die aan is zolang de boiler opwarmt."),
   },
   mode: {
     key: "mode",
-    label: "Bedrijfsmodus (keuzelijst)",
+    label: nt("Bedrijfsmodus (keuzelijst)"),
     domeinen: ["select", "input_select"],
     rol: "keuze",
-    hulp: "Een keuzelijst van de integratie, bijvoorbeeld Verwarmen / Koelen / Auto. Verschijnt als uitklaplijst op de kaart.",
+    hulp: nt("Een keuzelijst van de integratie, bijvoorbeeld Verwarmen / Koelen / Auto. Verschijnt als uitklaplijst op de kaart."),
   },
   boost: {
     key: "boost",
-    label: "Boost",
+    label: nt("Boost"),
     domeinen: ["switch", "input_boolean", "button", "input_button", "script"],
     rol: "boost",
-    hulp: "Een schakelaar wordt een schuifschakelaar op de kaart; een knop of script een drukknop.",
+    hulp: nt("Een schakelaar wordt een schuifschakelaar op de kaart; een knop of script een drukknop."),
   },
 };
 
@@ -148,14 +150,14 @@ const VELDEN = {
  */
 export const SOORTEN = {
   airco: {
-    label: "Airco",
-    naam: "Airco",
+    label: nt("Airco"),
+    naam: nt("Airco"),
     icoon: "airco",
     velden: ["hoofd_climate", "temperature", "outdoor", "humidity", "power", "energy", "fault"],
   },
   warmtepomp: {
-    label: "Warmtepomp",
-    naam: "Warmtepomp",
+    label: nt("Warmtepomp"),
+    naam: nt("Warmtepomp"),
     icoon: "heatPump",
     velden: [
       "hoofd_climate",
@@ -177,8 +179,8 @@ export const SOORTEN = {
     ],
   },
   ventilatie: {
-    label: "Ventilatie (WTW)",
-    naam: "Ventilatie",
+    label: nt("Ventilatie (WTW)"),
+    naam: nt("Ventilatie"),
     icoon: "fan",
     velden: [
       "hoofd_ventilatie",
@@ -198,8 +200,8 @@ export const SOORTEN = {
     ],
   },
   boiler: {
-    label: "Boiler / warm water",
-    naam: "Boiler",
+    label: nt("Boiler / warm water"),
+    naam: nt("Boiler"),
     icoon: "boiler",
     velden: ["hoofd_boiler", "water_temp", "heating", "power", "energy", "fault", "mode", "boost"],
   },
@@ -219,71 +221,79 @@ export const veldenMetRol = (soort, rol) => veldenVan(soort).filter((v) => v.rol
 /* --------------------------------------------------------------- woorden */
 
 const HVAC_MODE = {
-  off: "Uit",
-  heat: "Verwarmen",
-  cool: "Koelen",
-  heat_cool: "Auto",
-  auto: "Auto",
-  dry: "Drogen",
-  fan_only: "Ventileren",
+  off: nt("Uit"),
+  heat: nt("Verwarmen"),
+  cool: nt("Koelen"),
+  heat_cool: nt("Auto"),
+  auto: nt("Auto"),
+  dry: nt("Drogen"),
+  fan_only: nt("Ventileren"),
 };
 
 const HVAC_ACTION = {
-  heating: "Verwarmt",
-  cooling: "Koelt",
-  drying: "Droogt",
-  fan: "Ventileert",
-  idle: "Standby",
-  off: "Uit",
-  preheating: "Voorverwarmt",
-  defrosting: "Ontdooit",
+  heating: nt("Verwarmt"),
+  cooling: nt("Koelt"),
+  drying: nt("Droogt"),
+  fan: nt("Ventileert"),
+  idle: nt("Standby"),
+  off: nt("Uit"),
+  preheating: nt("Voorverwarmt"),
+  defrosting: nt("Ontdooit"),
 };
 
 /** Standen zoals fabrikanten ze noemen, in het Nederlands. */
 const STAND = {
-  off: "Uit",
-  on: "Aan",
-  auto: "Auto",
-  low: "Laag",
-  lowest: "Laagst",
-  min: "Min",
-  minimum: "Min",
-  medium: "Midden",
-  mid: "Midden",
-  middle: "Midden",
-  high: "Hoog",
-  highest: "Hoogst",
-  max: "Max",
-  maximum: "Max",
-  boost: "Boost",
-  turbo: "Turbo",
-  quiet: "Stil",
-  silent: "Stil",
-  silence: "Stil",
-  sleep: "Nacht",
-  night: "Nacht",
-  away: "Afwezig",
-  home: "Thuis",
-  eco: "Eco",
-  comfort: "Comfort",
-  party: "Feest",
-  holiday: "Vakantie",
+  off: nt("Uit"),
+  on: nt("Aan"),
+  auto: nt("Auto"),
+  low: nt("Laag"),
+  lowest: nt("Laagst"),
+  min: nt("Min"),
+  minimum: nt("Min"),
+  medium: nt("Midden"),
+  mid: nt("Midden"),
+  middle: nt("Midden"),
+  high: nt("Hoog"),
+  highest: nt("Hoogst"),
+  max: nt("Max"),
+  maximum: nt("Max"),
+  boost: nt("Boost"),
+  turbo: nt("Turbo"),
+  quiet: nt("Stil"),
+  silent: nt("Stil"),
+  silence: nt("Stil"),
+  sleep: nt("Nacht"),
+  night: nt("Nacht"),
+  away: nt("Afwezig"),
+  home: nt("Thuis"),
+  eco: nt("Eco"),
+  comfort: nt("Comfort"),
+  party: nt("Feest"),
+  holiday: nt("Vakantie"),
   // water_heater
-  electric: "Elektrisch",
-  gas: "Gas",
-  heat_pump: "Warmtepomp",
-  high_demand: "Veel vraag",
-  performance: "Snel",
+  electric: nt("Elektrisch"),
+  gas: nt("Gas"),
+  heat_pump: nt("Warmtepomp"),
+  high_demand: nt("Veel vraag"),
+  performance: nt("Snel"),
   // climate hvac_modes, als ze hier langskomen
   ...HVAC_MODE,
 };
+
+/**
+ * Een stand met het context-Engels (`tc`): "Stil" is elders "Idle" (een
+ * batterij die niets doet) en "Midden" "Centre" (de uitlijning van een tegel),
+ * maar als stand van een apparaat zegt Home Assistant "Quiet" en "Medium".
+ * Die staan als "Stil|stand" en "Midden|stand" in het Engels.
+ */
+const standWoord = (nl) => tc("stand", nl);
 
 /** Een stand als een mens hem zegt. Onbekende woorden houden hun eigen naam. */
 export function standLabel(raw) {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   const kern = s.toLowerCase().replace(/[\s-]+/g, "_");
-  if (STAND[kern]) return STAND[kern];
+  if (STAND[kern]) return standWoord(STAND[kern]);
   // "fan_only" -> "Fan only"; "stand 2" blijft "Stand 2".
   const los = s.replace(/_/g, " ");
   return los.charAt(0).toUpperCase() + los.slice(1);
@@ -307,20 +317,20 @@ export function cijfers(eenheid, waarde) {
   return n >= 100 ? 0 : 1;
 }
 
-/** Een getal als tekst, in de Nederlandse notatie. */
-export function formatteer(waarde, eenheid, taal = "nl") {
+/** Een getal als tekst, in de notatie van de taal van nu. */
+export function formatteer(waarde, eenheid, code = locale()) {
   const n = Number(waarde);
   if (!Number.isFinite(n)) return "--";
   const d = cijfers(eenheid, n);
-  return n.toLocaleString(taal, { minimumFractionDigits: d, maximumFractionDigits: d });
+  return n.toLocaleString(code, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
 /** Aan/uit-woorden per veld, zodat een binaire tegel iets zinnigs zegt. */
 const BINAIR = {
-  bypass: ["Open", "Dicht"],
-  compressor: ["Aan", "Uit"],
-  heating: ["Ja", "Nee"],
-  filter: ["Vervangen", "Schoon"],
+  bypass: [nt("Open"), nt("Dicht")],
+  compressor: [nt("Aan"), nt("Uit")],
+  heating: [nt("Ja"), nt("Nee")],
+  filter: [nt("Vervangen"), nt("Schoon")],
 };
 
 /**
@@ -329,19 +339,19 @@ const BINAIR = {
  * `let` is de status-kleur van de tegel: "warn" of "bad", of leeg. Alleen CO₂
  * en het filter krijgen een oordeel; een temperatuur is een feit.
  */
-export function tegel(veld, st, taal = "nl") {
+export function tegel(veld, st, code = locale()) {
   if (!veld || !st) return null;
   const s = String(st.state ?? "").trim();
   const eenheid = st.attributes?.unit_of_measurement ?? veld.eenheid ?? "";
 
   // Een aan/uit-sensor: een woord in plaats van een getal.
   if (domeinVan(st.entity_id) === "binary_sensor") {
-    const [aan, uit] = BINAIR[veld.key] ?? ["Aan", "Uit"];
+    const [aan, uit] = (BINAIR[veld.key] ?? [nt("Aan"), nt("Uit")]).map((w) => t(w));
     const dood = leeg(s);
     const isAan = s === "on";
     return {
       key: veld.key,
-      label: veld.label.replace(/\s*\(.*\)$/, ""),
+      label: t(veld.label).replace(/\s*\(.*\)$/, ""),
       waarde: dood ? "--" : isAan ? aan : uit,
       eenheid: "",
       let: veld.key === "filter" && isAan ? "warn" : "",
@@ -356,8 +366,8 @@ export function tegel(veld, st, taal = "nl") {
 
   return {
     key: veld.key,
-    label: veld.label.replace(/\s*\(.*\)$/, ""),
-    waarde: getal ? formatteer(n, eenheid, taal) : leeg(s) ? "--" : s,
+    label: t(veld.label).replace(/\s*\(.*\)$/, ""),
+    waarde: getal ? formatteer(n, eenheid, code) : leeg(s) ? "--" : s,
     eenheid: getal ? eenheid : "",
     let: oordeel,
   };
@@ -370,14 +380,14 @@ export function tegel(veld, st, taal = "nl") {
  * @param {object} config
  * @param {(entityId: string) => object|null} lees geeft de state van een entiteit
  */
-export function tegels(soort, config, lees, taal = "nl") {
+export function tegels(soort, config, lees, code = locale()) {
   const uit = [];
   for (const veld of veldenVan(soort)) {
     if (veld.rol !== "tegel" && veld.rol !== "filter") continue;
     const id = config?.[veld.key];
     if (!id) continue;
-    const t = tegel(veld, lees(id) ?? { entity_id: id, state: "unavailable", attributes: {} }, taal);
-    if (t) uit.push(t);
+    const tg = tegel(veld, lees(id) ?? { entity_id: id, state: "unavailable", attributes: {} }, code);
+    if (tg) uit.push(tg);
   }
   return uit;
 }
@@ -403,11 +413,11 @@ export function statusRegel({ soort, hoofd, status, fault, filter, heating } = {
   const waarschuwing = filterWaarschuwing(filter);
 
   if (fault && fault.state === "on") {
-    return { tekst: "Storing", tone: "bad", bezig: false, waarschuwing };
+    return { tekst: t("Storing"), tone: "bad", bezig: false, waarschuwing };
   }
 
   if (hoofd && leeg(hoofd.state)) {
-    return { tekst: "Niet bereikbaar", tone: "neutral", bezig: false, waarschuwing };
+    return { tekst: t("Niet bereikbaar"), tone: "neutral", bezig: false, waarschuwing };
   }
 
   const extra = status && !leeg(status.state) ? standLabel(status.state) : "";
@@ -416,7 +426,7 @@ export function statusRegel({ soort, hoofd, status, fault, filter, heating } = {
   if (hoofd && domein === "climate") {
     const a = hoofd.attributes ?? {};
     const actie = a.hvac_action ?? (hoofd.state === "off" ? "off" : "idle");
-    const woord = HVAC_ACTION[actie] ?? standLabel(actie);
+    const woord = HVAC_ACTION[actie] ? t(HVAC_ACTION[actie]) : standLabel(actie);
     const tone = actie === "heating" || actie === "preheating" ? "solar" : ["cooling", "drying", "fan"].includes(actie) ? "water" : "neutral";
     const bezig = tone !== "neutral" || actie === "defrosting";
     // Bij een warmtepomp zegt de statussensor vaak méér dan hvac_action
@@ -427,13 +437,13 @@ export function statusRegel({ soort, hoofd, status, fault, filter, heating } = {
 
   if (hoofd && domein === "fan") {
     const a = hoofd.attributes ?? {};
-    if (hoofd.state === "off") return { tekst: "Uit", tone: "neutral", bezig: false, waarschuwing };
+    if (hoofd.state === "off") return { tekst: t("Uit"), tone: "neutral", bezig: false, waarschuwing };
     const stand = a.preset_mode
       ? standLabel(a.preset_mode)
       : Number.isFinite(Number(a.percentage))
         ? `${Math.round(Number(a.percentage))}%`
-        : "Aan";
-    const tekst = extra && extra !== stand ? `${stand} · ${extra}` : `Ventileert · ${stand}`;
+        : t("Aan");
+    const tekst = extra && extra !== stand ? `${stand} · ${extra}` : `${t("Ventileert")} · ${stand}`;
     return { tekst, tone: "water", bezig: true, waarschuwing };
   }
 
@@ -441,31 +451,31 @@ export function statusRegel({ soort, hoofd, status, fault, filter, heating } = {
     const a = hoofd.attributes ?? {};
     const stand = standLabel(hoofd.state);
     const warmt = heating ? heating.state === "on" : a.operation_mode !== "off" && hoofd.state !== "off" && a.hvac_action === "heating";
-    if (hoofd.state === "off") return { tekst: "Uit", tone: "neutral", bezig: false, waarschuwing };
-    const tekst = warmt ? `Verwarmt · ${stand}` : stand;
+    if (hoofd.state === "off") return { tekst: t("Uit"), tone: "neutral", bezig: false, waarschuwing };
+    const tekst = warmt ? `${t("Verwarmt")} · ${stand}` : stand;
     return { tekst, tone: warmt ? "solar" : "neutral", bezig: warmt, waarschuwing };
   }
 
   if (hoofd && (domein === "select" || domein === "input_select")) {
     const stand = standLabel(hoofd.state);
     const uit = /^(uit|off)$/i.test(hoofd.state);
-    return { tekst: uit ? "Uit" : `Stand · ${stand}`, tone: uit ? "neutral" : "water", bezig: !uit, waarschuwing };
+    return { tekst: uit ? t("Uit") : `${t("Stand")} · ${stand}`, tone: uit ? "neutral" : "water", bezig: !uit, waarschuwing };
   }
 
   // Geen hoofdentiteit: dan zeggen de losse sensoren het.
   if (heating && heating.state === "on") {
-    return { tekst: extra ? `Verwarmt · ${extra}` : "Verwarmt", tone: "solar", bezig: true, waarschuwing };
+    return { tekst: extra ? `${t("Verwarmt")} · ${extra}` : t("Verwarmt"), tone: "solar", bezig: true, waarschuwing };
   }
   if (extra) return { tekst: extra, tone: "neutral", bezig: false, waarschuwing };
-  return { tekst: soortDef(soort).naam, tone: "neutral", bezig: false, waarschuwing };
+  return { tekst: t(soortDef(soort).naam), tone: "neutral", bezig: false, waarschuwing };
 }
 
 /** "Filter vervangen", of leeg. Een sensor met dagen telt af naar nul. */
 export function filterWaarschuwing(filter) {
   if (!filter || leeg(filter.state)) return "";
-  if (domeinVan(filter.entity_id) === "binary_sensor") return filter.state === "on" ? "Filter vervangen" : "";
+  if (domeinVan(filter.entity_id) === "binary_sensor") return filter.state === "on" ? t("Filter vervangen") : "";
   const n = Number(filter.state);
-  if (Number.isFinite(n) && n <= 0) return "Filter vervangen";
+  if (Number.isFinite(n) && n <= 0) return t("Filter vervangen");
   return "";
 }
 
@@ -473,16 +483,16 @@ export function filterWaarschuwing(filter) {
 
 /** De vier stappen waarin een ventilator zonder standen wordt bediend. */
 const PCT_STAPPEN = [
-  ["0", "Uit"],
-  ["33", "Laag"],
-  ["66", "Midden"],
-  ["100", "Hoog"],
+  ["0", nt("Uit")],
+  ["33", nt("Laag")],
+  ["66", nt("Midden")],
+  ["100", nt("Hoog")],
 ];
 
 /**
  * De standen waaruit gekozen kan worden op de hoofdentiteit.
  *
- * De waarde is wat straks naar de service gaat; het label is Nederlands. Bij
+ * De waarde is wat straks naar de service gaat; het label in de taal van nu. Bij
  * een ventilator zonder `preset_modes` worden het vier percentages, afgerond
  * op wat het apparaat kan (`percentage_step`).
  *
@@ -494,7 +504,7 @@ export function standen(hoofd) {
   const domein = domeinVan(hoofd.entity_id);
   const lijst = (arr) => (Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x !== "") : []);
 
-  if (domein === "climate") return lijst(a.hvac_modes).map((m) => ({ waarde: m, label: HVAC_MODE[m] ?? standLabel(m) }));
+  if (domein === "climate") return lijst(a.hvac_modes).map((m) => ({ waarde: m, label: HVAC_MODE[m] ? t(HVAC_MODE[m]) : standLabel(m) }));
   if (domein === "water_heater") return lijst(a.operation_list).map((m) => ({ waarde: m, label: standLabel(m) }));
   if (domein === "select" || domein === "input_select") return lijst(a.options).map((m) => ({ waarde: m, label: standLabel(m) }));
   if (domein === "fan") {
@@ -504,12 +514,12 @@ export function standen(hoofd) {
       const stap = Number(a.percentage_step) || 1;
       return PCT_STAPPEN.map(([p, label]) => ({
         waarde: String(Math.min(100, Math.round(Number(p) / stap) * stap)),
-        label,
+        label: standWoord(label),
       }));
     }
     return [
-      { waarde: "off", label: "Uit" },
-      { waarde: "on", label: "Aan" },
+      { waarde: "off", label: t("Uit") },
+      { waarde: "on", label: t("Aan") },
     ];
   }
   return [];

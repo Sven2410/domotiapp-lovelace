@@ -57,6 +57,7 @@ import {
   staatAan,
 } from "./meldingen-logica.js";
 import { meldingenScherm, toonMeldingenScherm } from "./meldingen-scherm.js";
+import { nt, t } from "../taal.js";
 
 class MeldingenCard extends DacCard {
   static css = /* css */ `
@@ -124,7 +125,7 @@ class MeldingenCard extends DacCard {
   validate(config) {
     const c = { ...config };
     c.personen = personenUit(c);
-    if (!c.personen.length) c[INCOMPLETE] = "Kies minstens één persoon.";
+    if (!c.personen.length) c[INCOMPLETE] = t("Kies minstens één persoon.");
     return c;
   }
 
@@ -282,7 +283,9 @@ class MeldingenCard extends DacCard {
       naam,
       foto: pictureOf(this.hass, persoon),
       storing: this.zonderTelefoon_(persoon)
-        ? `Geen telefoon gevonden. Zonder de app van Home Assistant krijgt ${voornaam(naam)} niets, ook niet met een vinkje.`
+        ? t("Geen telefoon gevonden. Zonder de app van Home Assistant krijgt {naam} niets, ook niet met een vinkje.", {
+            naam: voornaam(naam),
+          })
         : null,
       // Alleen voor een beheerder (de server weigert het anders), en pas als de
       // server de kaart kent: een kaart die nog niet is opgeslagen heeft niets
@@ -317,7 +320,7 @@ class MeldingenCard extends DacCard {
       });
       return proefUitkomst(uitkomst, naam);
     } catch (fout) {
-      return { tekst: `Proef mislukt: ${fout?.message ?? fout}`, fout: true };
+      return { tekst: t("Proef mislukt: {fout}", { fout: fout?.message ?? fout }), fout: true };
     }
   }
 
@@ -359,9 +362,9 @@ class MeldingenCard extends DacCard {
       const ps = rij.querySelector(".ps");
       const zonder = this.zonderTelefoon_(p) === true;
       ps.hidden = !zonder;
-      this.text(ps, zonder ? "Geen telefoon gevonden" : "");
+      this.text(ps, zonder ? t("Geen telefoon gevonden") : "");
 
-      rij.querySelector(".potlood").setAttribute("aria-label", `Meldingen van ${naam} instellen`);
+      rij.querySelector(".potlood").setAttribute("aria-label", t("Meldingen van {naam} instellen", { naam }));
     }
 
     // Staat de pop-up open voor deze kaart, dan hoort die mee te bewegen: een
@@ -444,7 +447,7 @@ class MeldingenEditor extends DacEditor {
             // vlak boven, en twee keer hetzelfde woord onder elkaar leest als
             // een dubbele regel. Gezien in de editor op 29 september 2026.
             section(
-              "Sensoren en tijden",
+              t("Sensoren en tijden"),
               "mdi:trash-can-outline",
               [
                 { name: "afval_morgen", selector: sel.entity(["sensor"]) },
@@ -462,38 +465,42 @@ class MeldingenEditor extends DacEditor {
   label(s) {
     return (
       {
-        personen: "Personen",
-        afval: "Afvalmeldingen",
-        afval_morgen: "Afval morgen",
-        tijd_morgen: "Melding de avond ervoor",
-        afval_vandaag: "Afval vandaag",
-        tijd_vandaag: "Melding op de dag zelf",
+        personen: t("Personen"),
+        afval: t("Afvalmeldingen"),
+        afval_morgen: t("Afval morgen"),
+        tijd_morgen: t("Melding de avond ervoor"),
+        afval_vandaag: t("Afval vandaag"),
+        tijd_vandaag: t("Melding op de dag zelf"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      personen:
-        "Wie er op de kaart staat. Met het potlood kiest ieder zelf welke meldingen hij krijgt. De telefoon wordt bij de persoon gezocht (de app van Home Assistant); vindt de kaart er geen, dan staat dat op de rij.",
-      afval:
-        "Een herinnering om de container buiten te zetten: de avond ervoor en de ochtend zelf, met een knop 'Staat buiten' in de melding.",
-      afval_morgen:
-        "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen. Leeg laten: geen melding de avond ervoor.",
-      tijd_morgen: "Standaard 19:30.",
-      afval_vandaag:
-        "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf.",
-      tijd_vandaag:
-        "Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte.",
+      personen: t(
+        "Wie er op de kaart staat. Met het potlood kiest ieder zelf welke meldingen hij krijgt. De telefoon wordt bij de persoon gezocht (de app van Home Assistant); vindt de kaart er geen, dan staat dat op de rij."
+      ),
+      afval: t(
+        "Een herinnering om de container buiten te zetten: de avond ervoor en de ochtend zelf, met een knop 'Staat buiten' in de melding."
+      ),
+      afval_morgen: t(
+        "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen. Leeg laten: geen melding de avond ervoor."
+      ),
+      tijd_morgen: t("Standaard 19:30."),
+      afval_vandaag: t(
+        "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf."
+      ),
+      tijd_vandaag: t("Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
-  name: "DomotiApp Meldingen",
-  description:
-    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Voorlopig: afval.",
+  name: nt("DomotiApp Meldingen"),
+  description: nt(
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Voorlopig: afval."
+  ),
 });
 
 export { MeldingenCard };

@@ -8,6 +8,8 @@
  * Waarom die kiezer er überhaupt is, staat in de kop van `foto-picker.js`.
  */
 
+
+import { t } from "../taal.js";
 /** Wat Home Assistant aanneemt. Groter dan dit is een foto van een fototoestel. */
 export const MAX_BYTES = 12 * 1024 * 1024;
 
@@ -30,12 +32,15 @@ export function serveerUrl(id) {
  * @returns {string|null} de klacht, of null als het goed is
  */
 export function keurBestand(bestand) {
-  if (!bestand) return "Geen bestand gekozen.";
+  if (!bestand) return t("Geen bestand gekozen.");
   if (!TOEGESTAAN.includes(bestand.type)) {
-    return "Kies een afbeelding: PNG, JPEG, GIF, WebP of SVG.";
+    return t("Kies een afbeelding: PNG, JPEG, GIF, WebP of SVG.");
   }
   if (bestand.size > MAX_BYTES) {
-    return `Deze afbeelding is ${Math.round(bestand.size / 1024 / 1024)} MB. Home Assistant neemt er tot ${MAX_BYTES / 1024 / 1024} MB aan.`;
+    return t("Deze afbeelding is {mb} MB. Home Assistant neemt er tot {max} MB aan.", {
+      mb: Math.round(bestand.size / 1024 / 1024),
+      max: MAX_BYTES / 1024 / 1024,
+    });
   }
   return null;
 }

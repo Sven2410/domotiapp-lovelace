@@ -38,6 +38,7 @@ import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } 
 import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { fmtNumber, isOn, moreInfo, nameOf, stateOf } from "../ha.js";
+import { nt, t } from "../taal.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { huidigeKeuze, keuzes, kiesOproep } from "./keuzeveld.js";
@@ -251,7 +252,7 @@ class HvacCard extends DacCard {
     if (!SOORTEN[c.soort]) c.soort = SOORT_STANDAARD;
     const iets = veldenVan(c.soort).some((v) => c[v.key]);
     if (!iets) {
-      c[INCOMPLETE] = `Kies de soort en minstens één entiteit: het apparaat zelf, of een sensor.`;
+      c[INCOMPLETE] = t("Kies de soort en minstens één entiteit: het apparaat zelf, of een sensor.");
     }
     return c;
   }
@@ -282,8 +283,8 @@ class HvacCard extends DacCard {
 
     const boostEl = c.boost
       ? boostIsSchakelaar(c.boost)
-        ? toggleHtml({ label: "Boost" })
-        : `<button type="button" class="knop">${resolve("bolt")}<span>Boost</span></button>`
+        ? toggleHtml({ label: t("Boost") })
+        : `<button type="button" class="knop">${resolve("bolt")}<span>${t("Boost")}</span></button>`
       : "";
 
     return `
@@ -301,21 +302,21 @@ class HvacCard extends DacCard {
         <div class="standen" hidden></div>
 
         <div class="set" hidden>
-          <button type="button" data-d="-1" aria-label="Lager">${icons.minus}</button>
+          <button type="button" data-d="-1" aria-label="${t("Lager")}">${icons.minus}</button>
           <span class="target tnum"></span>
-          <button type="button" data-d="1" aria-label="Hoger">${icons.plus}</button>
+          <button type="button" data-d="1" aria-label="${t("Hoger")}">${icons.plus}</button>
         </div>
 
         <div class="rij ventilator" hidden>
-          <span class="lb">Ventilator</span>
+          <span class="lb">${t("Ventilator")}</span>
           <span class="ventslot" style="display:contents"></span>
         </div>
         <div class="rij modus" hidden>
-          <span class="lb">Modus</span>
+          <span class="lb">${t("Modus")}</span>
           <span class="modusslot" style="display:contents"></span>
         </div>
         <div class="rij boost" ${c.boost ? "" : "hidden"}>
-          <span class="lb">Boost</span>
+          <span class="lb">${t("Boost")}</span>
           ${boostEl}
         </div>
       </div>`;
@@ -415,7 +416,7 @@ class HvacCard extends DacCard {
     const v = this.pending_ ?? bereik.doel;
     const el = set.querySelector(".target");
     el.classList.toggle("pending", this.pending_ != null);
-    el.innerHTML = `${fmtNumber(this.hass, v, v % 1 ? 1 : 0)}°<small>doel</small>`;
+    el.innerHTML = `${fmtNumber(this.hass, v, v % 1 ? 1 : 0)}°<small>${t("doel")}</small>`;
     set.querySelector('[data-d="-1"]').disabled = v <= bereik.min;
     set.querySelector('[data-d="1"]').disabled = v >= bereik.max;
   }
@@ -438,7 +439,7 @@ class HvacCard extends DacCard {
     this.$(".card").style.setProperty("--tone", tone);
     this.toggleAttribute("bezig", nu.bezig);
     this.toggleAttribute("storing", nu.tone === "bad");
-    this.$(".top").classList.toggle("dood", nu.tekst === "Niet bereikbaar");
+    this.$(".top").classList.toggle("dood", nu.tekst === t("Niet bereikbaar"));
 
     const chip = this.$(".chip");
     const wens = c.icon || def.icoon;
@@ -447,7 +448,7 @@ class HvacCard extends DacCard {
       chip.innerHTML = resolve(wens, def.icoon);
     }
 
-    this.text(".nm", c.name || (c.entity ? nameOf(this.hass, c.entity, null) : "") || def.naam);
+    this.text(".nm", c.name || (c.entity ? nameOf(this.hass, c.entity, null) : "") || t(def.naam));
 
     const stEl = this.$(".st");
     const html =
@@ -462,16 +463,16 @@ class HvacCard extends DacCard {
     // De meting van nu in de kop: de aangewezen sensor wint van het apparaat.
     const tempVeld = c.soort === "boiler" ? "water_temp" : "temperature";
     const sensor = stateOf(this.hass, c[tempVeld]) ?? null;
-    const t = huidigeTemperatuur(hoofd, sensor);
+    const temp = huidigeTemperatuur(hoofd, sensor);
     const eenheid = sensor?.attributes?.unit_of_measurement ?? this.hass?.config?.unit_system?.temperature ?? "°C";
     const gradenEl = this.$(".graden");
-    const gradenHtml = t == null ? "" : `${fmtNumber(this.hass, t, 1)}<small>${escapeHtml(eenheid)}</small>`;
+    const gradenHtml = temp == null ? "" : `${fmtNumber(this.hass, temp, 1)}<small>${escapeHtml(eenheid)}</small>`;
     if (gradenEl.dataset.html !== gradenHtml) {
       gradenEl.dataset.html = gradenHtml;
       gradenEl.innerHTML = gradenHtml;
     }
 
-    this.paintTegels_(t == null ? null : tempVeld);
+    this.paintTegels_(temp == null ? null : tempVeld);
     this.paintStanden_(hoofd);
     this.paintDoel_();
     this.paintKeuzes_(hoofd);
@@ -491,19 +492,17 @@ class HvacCard extends DacCard {
   paintTegels_(inKop) {
     const c = this.config;
     const vak = this.$(".tegels");
-    const lijst = tegels(c.soort, c, (id) => stateOf(this.hass, id) ?? null, this.hass?.locale?.language ?? "nl").filter(
-      (t) => t.key !== inKop
-    );
+    const lijst = tegels(c.soort, c, (id) => stateOf(this.hass, id) ?? null).filter((tg) => tg.key !== inKop);
     vak.hidden = lijst.length === 0;
     const sig = JSON.stringify(lijst);
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = lijst
       .map(
-        (t) => `
-        <div class="tegel" data-let="${t.let}" title="${escapeHtml(t.label)}">
-          <span class="w">${escapeHtml(t.waarde)}${t.eenheid ? `<small>${escapeHtml(t.eenheid)}</small>` : ""}</span>
-          <span class="l">${escapeHtml(t.label)}</span>
+        (tg) => `
+        <div class="tegel" data-let="${tg.let}" title="${escapeHtml(tg.label)}">
+          <span class="w">${escapeHtml(tg.waarde)}${tg.eenheid ? `<small>${escapeHtml(tg.eenheid)}</small>` : ""}</span>
+          <span class="l">${escapeHtml(tg.label)}</span>
         </div>`
       )
       .join("");
@@ -534,13 +533,13 @@ class HvacCard extends DacCard {
 
     const vent = ventilatorStanden(hoofd);
     const ventSlot = this.$(".ventslot");
-    this.vulLijst_(ventSlot, vent, hoofd?.attributes?.fan_mode ?? "", "Ventilator");
+    this.vulLijst_(ventSlot, vent, hoofd?.attributes?.fan_mode ?? "", t("Ventilator"));
     this.$(".rij.ventilator").hidden = vent.length === 0;
 
     const modusSt = stateOf(this.hass, c.mode);
     const modusOpties = c.mode ? keuzes(modusSt).map((o) => ({ waarde: o, label: standLabel(o) })) : [];
     const modusSlot = this.$(".modusslot");
-    this.vulLijst_(modusSlot, modusOpties, huidigeKeuze(modusSt), "Modus");
+    this.vulLijst_(modusSlot, modusOpties, huidigeKeuze(modusSt), t("Modus"));
     this.$(".rij.modus").hidden = modusOpties.length === 0;
   }
 
@@ -605,7 +604,7 @@ class HvacEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: soortDef(this.soort_()).icoon, auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: soortDef(this.soort_()).icoon, auto: false }];
   }
 
   /** Het icoon volgt de soort zolang er geen eigen icoon gekozen is. */
@@ -627,7 +626,7 @@ class HvacEditor extends DacEditor {
     return [
       {
         name: "soort",
-        selector: sel.select(Object.entries(SOORTEN).map(([value, d]) => ({ value, label: d.label }))),
+        selector: sel.select(Object.entries(SOORTEN).map(([value, d]) => ({ value, label: t(d.label) }))),
       },
       { name: "name", selector: sel.text() },
       ...velden,
@@ -637,31 +636,33 @@ class HvacEditor extends DacEditor {
 
   label(s) {
     const veld = veldenVan(this.soort_()).find((v) => v.key === s.name);
-    if (veld) return veld.label;
+    if (veld) return t(veld.label);
     return (
       {
-        soort: "Soort apparaat",
-        name: "Naam",
-        step: "Stap van de temperatuurknoppen",
+        soort: t("Soort apparaat"),
+        name: t("Naam"),
+        step: t("Stap van de temperatuurknoppen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     const veld = veldenVan(this.soort_()).find((v) => v.key === s.name);
-    if (veld?.hulp) return veld.hulp;
-    if (s.name === "soort") return "Bepaalt welke velden hieronder staan, het icoon, en hoe de statusregel leest.";
-    if (s.name === "name") return `Leeg laten geeft de naam van het apparaat, of anders "${soortDef(this.soort_()).naam}".`;
-    if (s.name === "step") return "Leeg laten volgt het apparaat: een halve graad bij een climate, een hele bij een boiler.";
+    if (veld?.hulp) return t(veld.hulp);
+    if (s.name === "soort") return t("Bepaalt welke velden hieronder staan, het icoon, en hoe de statusregel leest.");
+    if (s.name === "name")
+      return t("Leeg laten geeft de naam van het apparaat, of anders \"{naam}\".", { naam: t(soortDef(this.soort_()).naam) });
+    if (s.name === "step") return t("Leeg laten volgt het apparaat: een halve graad bij een climate, een hele bij een boiler.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-hvac-card-editor", HvacEditor);
 registerCard("domotiapp-hvac-card", HvacCard, {
-  name: "DomotiApp HVAC",
-  description:
-    "Airco, warmtepomp, ventilatie of boiler: status, metingen als tegels, de standen van het apparaat, doeltemperatuur en boost.",
+  name: nt("DomotiApp HVAC"),
+  description: nt(
+    "Airco, warmtepomp, ventilatie of boiler: status, metingen als tegels, de standen van het apparaat, doeltemperatuur en boost."
+  ),
 });
 
 export { HvacCard };

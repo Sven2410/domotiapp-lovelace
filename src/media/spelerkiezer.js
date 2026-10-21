@@ -44,6 +44,7 @@ import { resolve } from "../icons.js";
 import { localizeState, nameOf, stateOf } from "../ha.js";
 import { isSpelend, isUit, mediaIcoon, watSpeeltEr } from "../cards/media-logica.js";
 import { koppelOproep, koppelStand } from "./koppelen.js";
+import { t, taal, tn } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -170,8 +171,8 @@ const css = /* css */ `
 
 let sheets = null;
 
-const veilig = (t) =>
-  String(t ?? "")
+const veilig = (tekst) =>
+  String(tekst ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -199,16 +200,17 @@ class SpelerKiezer extends HTMLElement {
   }
 
   bouw_() {
+    this.taal_ = taal();
     this.shadowRoot.innerHTML = `
       <div class="laag">
         <header>
-          <span class="wie"><b class="naam">Speaker kiezen</b><span class="sub"></span></span>
-          <button class="rond sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
+          <span class="wie"><b class="naam">${t("Speaker kiezen")}</b><span class="sub"></span></span>
+          <button class="rond sluit" type="button" aria-label="${t("Sluiten")}">${resolve("close")}</button>
         </header>
         <div class="zoek">
           <label class="veld">
             ${resolve("search")}
-            <input type="search" placeholder="Zoek een speaker" aria-label="Zoeken" />
+            <input type="search" placeholder="${t("Zoek een speaker")}" aria-label="${t("Zoeken")}" />
           </label>
         </div>
         <div class="tel"></div>
@@ -282,6 +284,8 @@ class SpelerKiezer extends HTMLElement {
     this.huidig_ = huidig;
     this.opKeuze_ = opKeuze;
     this.filter_ = "";
+    // Een andere taal dan bij het opbouwen: de vaste tekst opnieuw opbouwen.
+    if (this.gebouwd_ && this.taal_ !== taal()) this.disconnectedCallback();
     if (!this.gebouwd_) this.bouw_();
     this.$("input").value = "";
     // Zoeken heeft pas zin als er meer namen zijn dan je in één blik ziet.
@@ -301,14 +305,14 @@ class SpelerKiezer extends HTMLElement {
       ? alle.filter((id) => String(nameOf(this.hass, id)).toLowerCase().includes(this.filter_))
       : [...alle];
 
-    this.$(".sub").textContent = this.huidig_ ? `Nu: ${nameOf(this.hass, this.huidig_)}` : "";
+    this.$(".sub").textContent = this.huidig_ ? t("Nu: {naam}", { naam: nameOf(this.hass, this.huidig_) }) : "";
     this.$(".tel").textContent = this.filter_
-      ? `${passen.length} van ${alle.length}`
-      : `${alle.length} speaker${alle.length === 1 ? "" : "s"}`;
+      ? t("{n} van {totaal}", { n: passen.length, totaal: alle.length })
+      : tn(alle.length, "{n} speaker", "{n} speakers");
 
     const lijstEl = this.$(".lijst");
     if (!passen.length) {
-      lijstEl.innerHTML = `<div class="leeg">Niets gevonden.</div>`;
+      lijstEl.innerHTML = `<div class="leeg">${t("Niets gevonden.")}</div>`;
       return;
     }
 
@@ -316,7 +320,7 @@ class SpelerKiezer extends HTMLElement {
       .map((id) => {
         const st = stateOf(this.hass, id);
         const huidig = id === this.huidig_;
-        const wat = isUit(st) ? "Uit" : watSpeeltEr(st, (x) => localizeState(this.hass, x));
+        const wat = isUit(st) ? t("Uit") : watSpeeltEr(st, (x) => localizeState(this.hass, x));
         const stand = koppelStand(this.hass, id, this.huidig_);
         const mee = stand === "mee";
         return `<div class="rij">
@@ -326,22 +330,22 @@ class SpelerKiezer extends HTMLElement {
                     <span class="ico">${resolve(mediaIcoon(st), "speaker")}</span>
                     <span class="tekst">
                       <b>${veilig(nameOf(this.hass, id))}</b>
-                      <span>${veilig(mee ? `${wat} · speelt mee` : wat)}</span>
+                      <span>${veilig(mee ? t("{wat} · speelt mee", { wat }) : wat)}</span>
                     </span>
-                    ${huidig ? `<span class="nu">NU</span>` : ""}
+                    ${huidig ? `<span class="nu">${t("NU")}</span>` : ""}
                   </button>
                   <button class="mee" type="button" data-id="${veilig(id)}"
                     aria-pressed="${mee}" ${stand === "zelf" || stand === "kan-niet" ? "disabled" : ""}
                     ${stand === "zelf" ? "hidden" : ""}
-                    aria-label="${mee ? "Laat deze speaker niet meer meespelen" : "Laat deze speaker meespelen"}"
+                    aria-label="${mee ? t("Laat deze speaker niet meer meespelen") : t("Laat deze speaker meespelen")}"
                     title="${
                       stand === "kan-niet"
-                        ? "Deze speaker laat zich niet koppelen"
+                        ? t("Deze speaker laat zich niet koppelen")
                         : mee
-                          ? "Speelt mee — tik om los te koppelen"
-                          : "Laat meespelen met wat er nu speelt"
+                          ? t("Speelt mee — tik om los te koppelen")
+                          : t("Laat meespelen met wat er nu speelt")
                     }">
-                    ${resolve(mee ? "volume" : "speakers")}<span>${mee ? "MEE" : "ERBIJ"}</span>
+                    ${resolve(mee ? "volume" : "speakers")}<span>${mee ? t("MEE") : t("ERBIJ")}</span>
                   </button>
                 </div>`;
       })

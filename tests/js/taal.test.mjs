@@ -4,7 +4,7 @@
 import { strict as assert } from "node:assert";
 import { afterEach, test } from "node:test";
 
-import { _reset, getal, instelling, locale, t, taal, taalUit, taalVoor, tn, volgTaal, zetInstelling, zieHass } from "../../src/taal.js";
+import { _reset, getal, instelling, locale, t, taal, tc, taalUit, taalVoor, tn, volgTaal, zetInstelling, zieHass } from "../../src/taal.js";
 import { EN } from "../../src/i18n/en.js";
 import { sessieTekst } from "../../src/cards/laadpaal-logica.js";
 import { controle } from "../../scripts/check-taal.mjs";
@@ -28,6 +28,21 @@ test("t zoekt de zin op, vult waarden in, en laat een onbekende zin Nederlands",
   assert.equal(t("Een zin die er niet in staat"), "Een zin die er niet in staat");
   _reset({ instelling: "nl" });
   assert.equal(t("Laden tot {pct}%, {min} tot {max}", { pct: 80, min: 10, max: 100 }), "Laden tot 80%, 10 tot 100");
+});
+
+test("tc kiest het Engels bij de context, en anders het gewone", () => {
+  _reset({ instelling: "en" });
+  assert.equal(tc("stand", "Stil"), "Quiet");
+  assert.equal(t("Stil"), "Idle");
+  assert.equal(tc("onbekend", "Stil"), "Idle");
+  _reset({ instelling: "nl" });
+  assert.equal(tc("stand", "Stil"), "Stil");
+});
+
+test("een ontbrekende waarde wordt leeg, niet undefined", () => {
+  assert.equal(t("Wekker {naam} bewerken", { naam: undefined }), "Wekker  bewerken");
+  assert.equal(t("Wekker {naam} bewerken", { naam: null }), "Wekker  bewerken");
+  assert.equal(t("{n} van {totaal}", { n: 0, totaal: 3 }), "0 van 3");
 });
 
 test("tn kiest enkelvoud of meervoud", () => {

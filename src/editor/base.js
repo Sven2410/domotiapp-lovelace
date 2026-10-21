@@ -19,6 +19,7 @@
 
 import "./icon-picker.js";
 import "./tone-picker.js";
+import { nt, t } from "../taal.js";
 
 /** Selector shorthands, so a card's schema reads as a list of fields. */
 export const sel = {
@@ -98,7 +99,7 @@ export const section = (title, icon, schema, expanded = false) => ({
 const GEDEELD = [{ name: "bare", selector: sel.bool() }];
 
 const GEDEELDE_HELPERS = {
-  bare: "Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan, zodat de kaart nog een vorm heeft op een dashboard zonder vlakken.",
+  bare: nt("Haalt de vulling en de schaduw onder de kaart weg. De rand blijft staan, zodat de kaart nog een vorm heeft op een dashboard zonder vlakken."),
 };
 
 export class DacEditor extends HTMLElement {
@@ -187,8 +188,9 @@ export class DacEditor extends HTMLElement {
   label(schemaItem) {
     // Een uitklapblok draagt zijn kop in `title`; zijn naam is met opzet leeg
     // (zie `section`), dus zonder deze regel krijgt hij een lege kop.
-    if (schemaItem.type === "expandable") return schemaItem.title ?? "";
-    return LABELS[schemaItem.name] ?? schemaItem.name;
+    if (schemaItem.type === "expandable") return schemaItem.title ? t(schemaItem.title) : "";
+    const label = LABELS[schemaItem.name];
+    return label ? t(label) : schemaItem.name;
   }
 
   /** Optional helper text under a field. */
@@ -250,7 +252,8 @@ export class DacEditor extends HTMLElement {
     form.data = this.config_;
     form.schema = this.volledigSchema_();
     form.computeLabel = (s) => this.label(s);
-    form.computeHelper = (s) => this.helper(s) ?? GEDEELDE_HELPERS[s.name];
+    form.computeHelper = (s) =>
+      this.helper(s) ?? (GEDEELDE_HELPERS[s.name] ? t(GEDEELDE_HELPERS[s.name]) : undefined);
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();
       this.patch_(e.detail.value, true);
@@ -333,40 +336,40 @@ export class DacEditor extends HTMLElement {
  * spelled: a customer reads "Vasthouden", never "hold_action".
  */
 export const LABELS = {
-  entity: "Entiteit",
-  entities: "Entiteiten",
-  name: "Naam",
-  icon: "Icoon",
-  tone: "Kleur",
-  secondary: "Tweede regel",
-  layout: "Vorm",
-  tap_action: "Tikken",
-  hold_action: "Vasthouden",
-  double_tap_action: "Dubbeltikken",
-  show_state: "Status tonen",
-  show_name: "Naam tonen",
-  show_icon: "Icoon tonen",
-  fill: "Vullen",
-  collapsible: "Inklapbaar",
-  title: "Titel",
-  subtitle: "Ondertitel",
-  weather: "Weerentiteit",
-  sun: "Zon-entiteit",
-  person: "Persoon",
-  persons: "Personen",
-  covers: "Rolluiken",
-  lights: "Lampen",
-  sensors: "Sensoren",
-  greeting: "Begroeting",
-  show_clock: "Klok tonen",
-  show_weather: "Weer tonen",
-  show_chips: "Weerdetails tonen",
-  compact: "Compact",
-  columns: "Kolommen",
-  group: "Groepsregel tonen",
-  invert: "Open en dicht omdraaien",
-  label: "Label",
-  color: "Kleur",
-  date_format: "Datumnotatie",
-  bare: "Achtergrond weglaten",
+  entity: nt("Entiteit"),
+  entities: nt("Entiteiten"),
+  name: nt("Naam"),
+  icon: nt("Icoon"),
+  tone: nt("Kleur"),
+  secondary: nt("Tweede regel"),
+  layout: nt("Vorm"),
+  tap_action: nt("Tikken"),
+  hold_action: nt("Vasthouden"),
+  double_tap_action: nt("Dubbeltikken"),
+  show_state: nt("Status tonen"),
+  show_name: nt("Naam tonen"),
+  show_icon: nt("Icoon tonen"),
+  fill: nt("Vullen"),
+  collapsible: nt("Inklapbaar"),
+  title: nt("Titel"),
+  subtitle: nt("Ondertitel"),
+  weather: nt("Weerentiteit"),
+  sun: nt("Zon-entiteit"),
+  person: nt("Persoon"),
+  persons: nt("Personen"),
+  covers: nt("Rolluiken"),
+  lights: nt("Lampen"),
+  sensors: nt("Sensoren"),
+  greeting: nt("Begroeting"),
+  show_clock: nt("Klok tonen"),
+  show_weather: nt("Weer tonen"),
+  show_chips: nt("Weerdetails tonen"),
+  compact: nt("Compact"),
+  columns: nt("Kolommen"),
+  group: nt("Groepsregel tonen"),
+  invert: nt("Open en dicht omdraaien"),
+  label: nt("Label"),
+  color: nt("Kleur"),
+  date_format: nt("Datumnotatie"),
+  bare: nt("Achtergrond weglaten"),
 };

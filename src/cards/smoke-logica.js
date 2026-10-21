@@ -12,13 +12,15 @@
  * toetsen in een gewone Node-test.
  */
 
+import { nt, t } from "../taal.js";
+
 /** De vijf soorten, in de volgorde waarin ze op de kaart staan. */
 export const SOORTEN = [
-  { sleutel: "smoke", label: "Rook", icoon: "smoke", alarm: "Rook gedetecteerd", rust: "Geen" },
-  { sleutel: "co", label: "Koolmonoxide", icoon: "co", alarm: "Koolmonoxide gedetecteerd", rust: "Geen" },
-  { sleutel: "heat", label: "Warmte", icoon: "thermo", alarm: "Te warm", rust: "Normaal" },
-  { sleutel: "temperature", label: "Temperatuur", icoon: "thermo", meting: true },
-  { sleutel: "battery", label: "Batterij", icoon: "battery", meting: true },
+  { sleutel: "smoke", label: nt("Rook"), icoon: "smoke", alarm: nt("Rook gedetecteerd"), rust: nt("Geen") },
+  { sleutel: "co", label: nt("Koolmonoxide"), icoon: "co", alarm: nt("Koolmonoxide gedetecteerd"), rust: nt("Geen") },
+  { sleutel: "heat", label: nt("Warmte"), icoon: "thermo", alarm: nt("Te warm"), rust: nt("Normaal") },
+  { sleutel: "temperature", label: nt("Temperatuur"), icoon: "thermo", meting: true },
+  { sleutel: "battery", label: nt("Batterij"), icoon: "battery", meting: true },
 ];
 
 /**
@@ -29,7 +31,7 @@ export const SOORTEN = [
  * hoort "Normaal", want warmte is er altijd, alleen niet te veel. "Rustig" is
  * wat de KAART als geheel is, en dat staat al in de kop.
  */
-export const rustWoord = (soort) => soort?.rust ?? "Rustig";
+export const rustWoord = (soort) => (soort?.rust ? t(soort.rust) : t("Rustig"));
 
 /** Onder deze stand heet een batterij bijna leeg. */
 export const BATTERIJ_LAAG = 20;
@@ -67,14 +69,14 @@ export function toestand(gekozen, lees) {
   // 1. Een melder die afgaat. Alles daarna doet er niet toe.
   for (const soort of melders) {
     if (isAan(lees(soort.sleutel))) {
-      return { soort: "alarm", tekst: soort.alarm, tone: "bad", icoon: soort.icoon };
+      return { soort: "alarm", tekst: t(soort.alarm), tone: "bad", icoon: soort.icoon };
     }
   }
 
   // 2. Alles weg. Eén weggevallen sensor is geen kapotte melder -- alle
   //    sensoren weg wel, en dan mag er geen "alles rustig" staan.
   if (gekozen.length && gekozen.every((s) => isWeg(lees(s.sleutel)))) {
-    return { soort: "weg", tekst: "Niet bereikbaar", tone: "neutral", icoon: "smokeDetector" };
+    return { soort: "weg", tekst: t("Niet bereikbaar"), tone: "neutral", icoon: "smokeDetector" };
   }
 
   // 3. Een lege batterij. Een melder die niet kan melden is geen melder.
@@ -82,7 +84,7 @@ export function toestand(gekozen, lees) {
   if (pct != null && pct <= BATTERIJ_LAAG) {
     return {
       soort: "batterij",
-      tekst: `Batterij bijna leeg (${Math.round(pct)}%)`,
+      tekst: t("Batterij bijna leeg ({pct}%)", { pct: Math.round(pct) }),
       tone: "warn",
       icoon: "battery",
     };
@@ -95,5 +97,5 @@ export function toestand(gekozen, lees) {
     return { soort: "meting", tekst: "", tone: "accent", icoon: "smokeDetector" };
   }
 
-  return { soort: "goed", tekst: "Alles rustig", tone: "good", icoon: "smokeDetector" };
+  return { soort: "goed", tekst: t("Alles rustig"), tone: "good", icoon: "smokeDetector" };
 }

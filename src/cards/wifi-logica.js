@@ -25,6 +25,8 @@
  * Zonder DOM, zodat het in een gewone unittest kan.
  */
 
+import { t } from "../taal.js";
+
 /** Wat er achter de netwerknaam staat in `friendly_name`, in elke taal die we tegenkwamen. */
 const QR_ACHTER = /[\s-]*QR[\s-]?code\s*$/i;
 
@@ -86,11 +88,11 @@ export function qrAdres(hass, id) {
 
 /** Waarom er geen QR-code staat, of null als hij er wel is. */
 export function geenQrReden(hass, id) {
-  if (!id) return "Kies de QR-code van het wifi-netwerk.";
+  if (!id) return t("Kies de QR-code van het wifi-netwerk.");
   const st = hass?.states?.[id];
-  if (!st) return "Deze QR-code bestaat niet. In UniFi Network staat hij standaard uit: zet hem aan bij de entiteiten van het netwerk.";
-  if (st.state === "unavailable") return "De QR-code is niet bereikbaar.";
-  return qrAdres(hass, id) ? null : "Deze entiteit heeft geen afbeelding.";
+  if (!st) return t("Deze QR-code bestaat niet. In UniFi Network staat hij standaard uit: zet hem aan bij de entiteiten van het netwerk.");
+  if (st.state === "unavailable") return t("De QR-code is niet bereikbaar.");
+  return qrAdres(hass, id) ? null : t("Deze entiteit heeft geen afbeelding.");
 }
 
 /** Voor een nieuwe kaart: de QR-code van een gastnetwerk als die er is, anders de eerste. */

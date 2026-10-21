@@ -37,15 +37,11 @@
  * Bijkomend voordeel, en het is de reden dat het ook meetbaar beter is:
  * CLAUDE.md valkuil 8 zegt dat een klik op een knop zonder opgehaald icoon mist.
  * Deze knoppen hebben hun oppervlak uit CSS en niet uit een asynchroon icoon.
- *
- * `__CARD_VERSION__` wordt bij het bundelen vervangen door de `version` uit
- * custom_components/domotiapp_alarm/manifest.json (scripts/build.mjs).
  */
 import { LitElement, css, html, nothing, unsafeCSS } from "lit";
 
 import {
   ACCENT,
-  CARD_NAME,
   CARD_TYPE,
   CMD,
   DOCS_URL,
@@ -70,9 +66,8 @@ import {
   subtitel,
 } from "./weergave.js";
 import { MetThema, vormtaal } from "../scene/vormtaal.js";
+import { nt, t } from "../taal.js";
 import { meetRaster, opgegevenRijen, volgRaster } from "../rasterhoogte.js";
-
-const VERSION = __CARD_VERSION__;
 
 
 /**
@@ -353,7 +348,7 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
         this._fout = null;
       }
     } catch (fout) {
-      this._toon(fout?.message ?? "De opdracht is niet gelukt.");
+      this._toon(fout?.message ?? t("De opdracht is niet gelukt."));
     } finally {
       this._bezig = false;
     }
@@ -796,7 +791,7 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
       return this._mededeling(this._fout, true);
     }
     if (!this._toestand) {
-      return this._mededeling("Wekkers ophalen…", false);
+      return this._mededeling(t("Wekkers ophalen…"), false);
     }
 
     // De editor vervangt de lijst zolang hij open is (SPEC 5: een eigen
@@ -847,7 +842,7 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
     >
       <div class="stop-tijd">${stop.tijd}</div>
       <div class="stop-naam">${stop.naam}</div>
-      <div class="stop-woord">${TEKST_STOPPEN}</div>
+      <div class="stop-woord">${t(TEKST_STOPPEN)}</div>
     </button>`;
   }
 
@@ -873,8 +868,8 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
         <span class="volgende">${kopTekst(this._toestand)}</span>
         <button
           class="icoonknop"
-          title="Wekker toevoegen"
-          aria-label="Wekker toevoegen"
+          title=${t("Wekker toevoegen")}
+          aria-label=${t("Wekker toevoegen")}
           @click=${() => this._openEditor(null)}
         >
           ${svg(ICOON_PLUS)}
@@ -908,10 +903,10 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
           this._bevestigVoor = null;
         }}
       >
-        Annuleren
+        ${t("Annuleren")}
       </button>
       <button class="tekstknop gevaar" @click=${() => this._verwijder(wekker)}>
-        Verwijderen
+        ${t("Verwijderen")}
       </button>
     </div>`;
   }
@@ -924,7 +919,7 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
         <button
           class="tikvlak"
           type="button"
-          aria-label="Wekker ${wekker.name} bewerken"
+          aria-label=${t("Wekker {naam} bewerken", { naam: wekker.name })}
           @click=${() => this._openEditor(wekker)}
         >
           <div class="tijd">${wekker.time}</div>
@@ -937,13 +932,13 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
           class="schakelaar"
           role="switch"
           aria-checked=${aan ? "true" : "false"}
-          aria-label="Wekker ${wekker.name} aan of uit"
+          aria-label=${t("Wekker {naam} aan of uit", { naam: wekker.name })}
           @click=${() => this._zetAan(wekker, !aan)}
         ></button>
         <button
           class="icoonknop"
-          title="Verwijderen"
-          aria-label="Wekker ${wekker.name} verwijderen"
+          title=${t("Verwijderen")}
+          aria-label=${t("Wekker {naam} verwijderen", { naam: wekker.name })}
           @click=${() => {
             this._bevestigVoor = wekker.id;
           }}
@@ -957,7 +952,7 @@ class DomotiappAlarmCard extends MetThema(LitElement) {
             ${svg(melding.isFout ? ICOON_FOUT : ICOON_INFO, "icoon klein")}
             <span class="boodschap">${melding.tekst}</span>
             <button class="tekstknop" @click=${() => this._begrepen(wekker)}>
-              Begrepen
+              ${t("Begrepen")}
             </button>
           </div>`
         : nothing}
@@ -1004,7 +999,7 @@ class DomotiappAlarmCardEditor extends MetThema(LitElement, { alleenMeten: true 
   ];
 
   _label = (schema) =>
-    ({ person: "Persoon", bare: "Achtergrond weglaten" })[schema.name] ??
+    ({ person: t("Persoon"), bare: t("Achtergrond weglaten") })[schema.name] ??
     schema.name;
 
   render() {
@@ -1013,8 +1008,7 @@ class DomotiappAlarmCardEditor extends MetThema(LitElement, { alleenMeten: true 
     }
     return html`
       <div class="uitleg">
-        Elke persoon heeft zijn eigen wekkerlijst. De kaart toont alleen de
-        wekkers van de gekozen persoon.
+        ${t("Elke persoon heeft zijn eigen wekkerlijst. De kaart toont alleen de wekkers van de gekozen persoon.")}
       </div>
       <ha-form
         .hass=${this.hass}
@@ -1056,8 +1050,10 @@ meldAan(WEKKER_EDITOR_TYPE, DomotiappAlarmEditor);
 
 meldInKiezer({
   type: CARD_TYPE,
-  name: CARD_NAME,
-  description: `Wekkerkaart van DomotiApp (v${VERSION}).`,
+  name: nt("DomotiApp Wekker"),
+  // Zonder versienummer sinds 0.83.0: de kaartkiezer vertaalt de beschrijving
+  // met een vaste sleutel, en een versie erin maakt elke uitgave een andere zin.
+  description: nt("Wekkerkaart van DomotiApp."),
   preview: false,
   documentationURL: DOCS_URL,
 });

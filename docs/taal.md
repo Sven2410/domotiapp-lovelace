@@ -62,7 +62,10 @@ zijn op het moment dat Home Assistant ze leest.
    `console`-regels, de namen die de bewoner zelf koos, en tekst die van de
    coach of van Home Assistant komt (die is al in de taal van de installatie).
 7. **Het Nederlands blijft letterlijk hetzelfde.** De toetsen zien dat.
-8. Een variabele die `t` heet in een kaart botst met de import: hernoem hem
+8. **Eén Nederlands woord, twee betekenissen**: `tc("stand", "Stil")`. Het
+   Engels staat dan onder `"Stil|stand"` ("Quiet"), terwijl `t("Stil")` bij
+   de batterij "Idle" blijft. `check:taal` eist die sleutel.
+9. Een variabele die `t` heet in een kaart botst met de import: hernoem hem
    (`tik`, `beurt`).
 
 ## Schrijfwijze van het Engels
@@ -89,6 +92,8 @@ Waar het paneel van de coach dezelfde zin heeft, hetzelfde Engels.
 | Leeg laten: ... | Leave empty: ... |
 | Eigen afbeelding | Own image |
 | Opslaan, Annuleren, Toevoegen, Verwijderen | Save, Cancel, Add, Remove |
+| container (afval), Staat buiten | bin, Put out |
+| infoscherm | info screen |
 
 ## Wat er af is
 
@@ -97,3 +102,29 @@ dus deze lijst is wat er NAGELOPEN is.
 
 - **0.81.0:** de basis, de laadpaalkaart, de batterijkaart, de programmakaart
   (vaatwasser, wasmachine, droger) en de meldingen van `coach-logica.js`.
+- **0.82.0:** alle andere kaarten en editors, de badges, de gedeelde kiezers,
+  de wekker, het infoscherm en het beheer, en de serverkant.
+
+## De serverkant (sinds 0.82.0)
+
+`custom_components/domotiapp_lovelace/taal.py` is het tegenstuk van
+`src/taal.js`, net als bij de coach: `t(hass, nl, **waarden)`, `tn`, en
+`taal_van(hass)`. Het Engels staat in `engels/*.json`. `taal_van` volgt
+dezelfde keuze; bij Automatisch kijkt hij naar `hass.config.language`, de taal
+van de INSTALLATIE. De kaarten kijken naar `hass.language`, de taal van de
+GEBRUIKER. Bij een installatie in het Nederlands met één gebruiker in het
+Engels zijn de kaarten van die gebruiker dus Engels en de pushmeldingen
+Nederlands. Wie dat niet wil, zet de keuze vast.
+
+Wat de server vertaalt:
+- de afvalmelding (titel, tekst, de knop "Put out" en de proef);
+- de tekst van de wekker en zijn regel "volgende keer";
+- de fouten bij het boeken van een ruimte;
+- de vaste foutteksten van de commando's.
+
+Een `tests/test_taal_server.py` eist dat elke zin in een `t()` in de
+Python-bron Engels heeft.
+
+**In de tests** zet een autouse-fixture in `tests/conftest.py` de taal van
+Home Assistant op "nl". Het testharnas zet hem namelijk op "en", en dan zou
+Automatisch alle bestaande Nederlandse toetsen Engels maken.

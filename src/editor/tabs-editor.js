@@ -23,6 +23,7 @@ import "./icon-picker.js";
 import { meldAan } from "../registratie.js";
 import { icons, resolve } from "../icons.js";
 import { naamVan } from "./icoon-zoek.js";
+import { t, tn } from "../taal.js";
 import { TABS_MAX, asTab, gevuld } from "../cards/tabs-logica.js";
 import {
   beginConfig,
@@ -225,9 +226,9 @@ const CSS = `
 
 /** Wat er in de YAML komt: geen lege sleutels, en altijd verse objecten. */
 const uitgekleed = (tabs) =>
-  tabs.filter(gevuld).map((t) => ({
-    ...(t.name ? { name: t.name } : {}),
-    ...(t.icon ? { icon: t.icon } : {}),
+  tabs.filter(gevuld).map((tab) => ({
+    ...(tab.name ? { name: tab.name } : {}),
+    ...(tab.icon ? { icon: tab.icon } : {}),
     // Verse kopieën, want Home Assistant BEVRIEST wat er langskomt: geef je
     // hetzelfde object terug dat je van hem kreeg, dan is de eerstvolgende
     // wijziging in de kaarteditor een TypeError in een stille catch.
@@ -235,13 +236,13 @@ const uitgekleed = (tabs) =>
     // Altijd `cards` en nooit meer `card`: een tab draagt een lijst. Een
     // bestaande config met `card` wordt bij het inlezen omgezet (zie asTab) en
     // komt er hier dus als lijst weer uit.
-    ...(t.cards?.length ? { cards: t.cards.map((k) => structuredClone(k)) } : {}),
+    ...(tab.cards?.length ? { cards: tab.cards.map((k) => structuredClone(k)) } : {}),
   }));
 
 /** De naam van één kaart, zonder het voorvoegsel dat niemand leest. */
 function kaartNaam(kaart) {
   const type = String(kaart?.type ?? "").replace(/^custom:/, "");
-  if (!type) return "een kaart";
+  if (!type) return t("een kaart");
   // De custom kaarten melden zichzelf aan met een leesbare naam; die is beter
   // dan hun tagnaam.
   const bekend = (window.customCards ?? []).find((c) => c?.type === type);
@@ -251,9 +252,9 @@ function kaartNaam(kaart) {
 /** Waar een tab naar wijst, in één regel. */
 function inhoudRegel(tab) {
   const n = tab.cards?.length ?? 0;
-  if (!n) return "Nog geen kaart";
+  if (!n) return t("Nog geen kaart");
   if (n === 1) return kaartNaam(tab.cards[0]);
-  return `${n} kaarten`;
+  return tn(n, "{n} kaart", "{n} kaarten");
 }
 
 class TabsEditor extends HTMLElement {
@@ -349,7 +350,7 @@ class TabsEditor extends HTMLElement {
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "toevoegen";
-    knop.textContent = "＋  Tabblad toevoegen";
+    knop.textContent = `＋  ${t("Tabblad toevoegen")}`;
     knop.disabled = this.tabs_.length >= TABS_MAX;
     knop.addEventListener("click", () => {
       this.tabs_.push({ name: "", icon: "", cards: [] });
@@ -374,9 +375,9 @@ class TabsEditor extends HTMLElement {
           select: {
             mode: "dropdown",
             options: [
-              { value: "vullen", label: "Verdeeld over de breedte" },
-              { value: "links", label: "Links" },
-              { value: "rechts", label: "Rechts" },
+              { value: "vullen", label: t("Verdeeld over de breedte") },
+              { value: "links", label: t("Links") },
+              { value: "rechts", label: t("Rechts") },
             ],
           },
         },
@@ -386,22 +387,22 @@ class TabsEditor extends HTMLElement {
     ];
     form.computeLabel = (s) =>
       ({
-        default_tab: "Welk tabblad staat open op een nieuw apparaat",
-        alignment: "Uitlijning van de rij",
-        show_names: "Namen naast de iconen",
-        bare: "Achtergrond weglaten",
+        default_tab: t("Welk tabblad staat open op een nieuw apparaat"),
+        alignment: t("Uitlijning van de rij"),
+        show_names: t("Namen naast de iconen"),
+        bare: t("Achtergrond weglaten"),
       })[s.name] ?? s.name;
     form.computeHelper = (s) => {
       if (s.name === "default_tab")
         return (
-          "Telt vanaf 1. Dit geldt alleen zolang een apparaat nog niets gekozen heeft — " +
-          "daarna onthoudt elk apparaat zijn eigen tabblad, en dat van je telefoon staat " +
-          "los van dat van de tablet."
+          t(
+            "Telt vanaf 1. Dit geldt alleen zolang een apparaat nog niets gekozen heeft — daarna onthoudt elk apparaat zijn eigen tabblad, en dat van je telefoon staat los van dat van de tablet."
+          )
         );
       if (s.name === "show_names")
-        return "Uit geeft een rij kale iconen. Dan passen er meer naast elkaar op een telefoon.";
+        return t("Uit geeft een rij kale iconen. Dan passen er meer naast elkaar op een telefoon.");
       if (s.name === "bare")
-        return "Haalt het vlak onder de kaart weg. De rij tabbladen houdt zijn eigen pil.";
+        return t("Haalt het vlak onder de kaart weg. De rij tabbladen houdt zijn eigen pil.");
       return undefined;
     };
     form.data = {
@@ -447,17 +448,17 @@ class TabsEditor extends HTMLElement {
     const kop = () => {
       det.dataset.leeg = String(!gevuld(tab));
       voor.innerHTML = resolve(tab.icon, "grid");
-      b.textContent = tab.name || `Tabblad ${i + 1}`;
+      b.textContent = tab.name || t("Tabblad {n}", { n: i + 1 });
       small.textContent = inhoudRegel(tab);
     };
     kop();
     this.koppen_.push(kop);
 
-    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaats_(i, -1));
+    const omhoog = this.kopKnop_(t("Omhoog"), icons.arrowUp, () => this.verplaats_(i, -1));
     omhoog.disabled = i === 0;
-    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () => this.verplaats_(i, 1));
+    const omlaag = this.kopKnop_(t("Omlaag"), icons.arrowDown, () => this.verplaats_(i, 1));
     omlaag.disabled = i === this.tabs_.length - 1;
-    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijder_(i));
+    const weg = this.kopKnop_(t("Verwijderen"), icons.close, () => this.verwijder_(i));
     weg.classList.add("weg");
 
     sum.append(voor, titel, omhoog, omlaag, weg);
@@ -467,7 +468,7 @@ class TabsEditor extends HTMLElement {
     body.className = "body";
 
     const kiezer = document.createElement("dac-icon-picker");
-    kiezer.label = "Icoon";
+    kiezer.label = t("Icoon");
     kiezer.fallback = "grid";
     kiezer.auto = false;
     kiezer.hass = this.hass_;
@@ -481,10 +482,11 @@ class TabsEditor extends HTMLElement {
     const form = document.createElement("ha-form");
     form.hass = this.hass_;
     form.schema = [{ name: "name", selector: { text: {} } }];
-    form.computeLabel = () => "Naam";
+    form.computeLabel = () => t("Naam");
     form.computeHelper = () =>
-      "Deze naam bepaalt ook onder welke sleutel een apparaat zijn keuze onthoudt. " +
-      "Hernoem je hem, dan begint elk apparaat één keer opnieuw bij het eerste tabblad.";
+      t(
+        "Deze naam bepaalt ook onder welke sleutel een apparaat zijn keuze onthoudt. Hernoem je hem, dan begint elk apparaat één keer opnieuw bij het eerste tabblad."
+      );
     form.data = { name: tab.name };
     form.addEventListener("value-changed", (e) => {
       e.stopPropagation();
@@ -521,7 +523,7 @@ class TabsEditor extends HTMLElement {
     if (!heeftKaartEditor()) {
       const uitleg = document.createElement("div");
       uitleg.className = "inhoud";
-      uitleg.innerHTML = `${resolve("grid")}<span>Inhoud: <b>${inhoudRegel(tab)}</b> — aan te passen via Code-editor weergeven.</span>`;
+      uitleg.innerHTML = `${resolve("grid")}<span>${t("Inhoud: <b>{inhoud}</b> — aan te passen via Code-editor weergeven.", { inhoud: inhoudRegel(tab) })}</span>`;
       blok.appendChild(uitleg);
       return blok;
     }
@@ -535,8 +537,11 @@ class TabsEditor extends HTMLElement {
       wijs.className = "inhoud";
       wijs.innerHTML = `${resolve("grid")}<span>${
         tab.cards.length
-          ? `<b>${inhoudRegel(tab)}</b> — te bewerken in het voorbeeld hiernaast: slepen om te verplaatsen, het potlood om te bewerken.`
-          : "Nog geen kaart — voeg er een toe in het voorbeeld hiernaast."
+          ? t(
+              "<b>{inhoud}</b> — te bewerken in het voorbeeld hiernaast: slepen om te verplaatsen, het potlood om te bewerken.",
+              { inhoud: inhoudRegel(tab) }
+            )
+          : t("Nog geen kaart — voeg er een toe in het voorbeeld hiernaast.")
       }</span>`;
       blok.appendChild(wijs);
 
@@ -551,7 +556,7 @@ class TabsEditor extends HTMLElement {
     if (tab.cards.length) {
       const kop = document.createElement("div");
       kop.className = "subkop";
-      kop.textContent = tab.cards.length === 1 ? "Kaart" : `${tab.cards.length} kaarten`;
+      kop.textContent = tab.cards.length === 1 ? t("Kaart") : tn(tab.cards.length, "{n} kaart", "{n} kaarten");
       blok.appendChild(kop);
       tab.cards.forEach((kaart, j) => blok.appendChild(this.kaartBlok2_(tab, kaart, i, j)));
     }
@@ -564,7 +569,7 @@ class TabsEditor extends HTMLElement {
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "toevoegen";
-    knop.textContent = "＋  Kaart toevoegen";
+    knop.textContent = `＋  ${t("Kaart toevoegen")}`;
     knop.addEventListener("click", () => {
       this.kiest_ = `t${i}`;
       this.zoek_ = "";
@@ -665,7 +670,7 @@ class TabsEditor extends HTMLElement {
     naam.textContent = kaartNaam(tab.cards[j]);
     const dicht = document.createElement("button");
     dicht.type = "button";
-    dicht.textContent = "Klaar";
+    dicht.textContent = t("Klaar");
     dicht.addEventListener("click", () => {
       this.bewerkt_ = null;
       this.build_();
@@ -754,9 +759,9 @@ class TabsEditor extends HTMLElement {
     balk.className = "kaarttabs";
 
     const bladen = [
-      { id: "config", naam: "Configuratie" },
-      ...(heeftZicht ? [{ id: "zicht", naam: "Zichtbaarheid" }] : []),
-      ...(heeftIndeling ? [{ id: "indeling", naam: "Indeling" }] : []),
+      { id: "config", naam: t("Configuratie") },
+      ...(heeftZicht ? [{ id: "zicht", naam: t("Zichtbaarheid") }] : []),
+      ...(heeftIndeling ? [{ id: "indeling", naam: t("Indeling") }] : []),
     ];
 
     const toon = (id) => {
@@ -863,13 +868,13 @@ class TabsEditor extends HTMLElement {
     small.textContent = String(kaart?.type ?? "");
     titel.append(b, small);
 
-    const omhoog = this.kopKnop_("Omhoog", icons.arrowUp, () => this.verplaatsKaart_(tab, i, j, -1));
+    const omhoog = this.kopKnop_(t("Omhoog"), icons.arrowUp, () => this.verplaatsKaart_(tab, i, j, -1));
     omhoog.disabled = j === 0;
-    const omlaag = this.kopKnop_("Omlaag", icons.arrowDown, () =>
+    const omlaag = this.kopKnop_(t("Omlaag"), icons.arrowDown, () =>
       this.verplaatsKaart_(tab, i, j, 1),
     );
     omlaag.disabled = j === tab.cards.length - 1;
-    const weg = this.kopKnop_("Verwijderen", icons.close, () => this.verwijderKaart_(tab, i, j));
+    const weg = this.kopKnop_(t("Verwijderen"), icons.close, () => this.verwijderKaart_(tab, i, j));
     weg.classList.add("weg");
 
     sum.append(voor, titel, omhoog, omlaag, weg);
@@ -945,7 +950,7 @@ class TabsEditor extends HTMLElement {
 
     const zoek = document.createElement("input");
     zoek.type = "text";
-    zoek.placeholder = "Zoek een kaart...";
+    zoek.placeholder = t("Zoek een kaart...");
     zoek.value = this.zoek_ ?? "";
 
     const lijst = document.createElement("div");
@@ -957,7 +962,7 @@ class TabsEditor extends HTMLElement {
       if (!gevonden.length) {
         const leeg = document.createElement("p");
         leeg.className = "leeg";
-        leeg.textContent = "Niets gevonden. Kies iets anders, of gebruik de code-editor.";
+        leeg.textContent = t("Niets gevonden. Kies iets anders, of gebruik de code-editor.");
         lijst.appendChild(leeg);
         return;
       }
@@ -996,7 +1001,7 @@ class TabsEditor extends HTMLElement {
     const stop = document.createElement("button");
     stop.type = "button";
     stop.className = "toevoegen";
-    stop.textContent = "Annuleren";
+    stop.textContent = t("Annuleren");
     stop.addEventListener("click", () => {
       this.kiest_ = null;
       this.build_();

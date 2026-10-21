@@ -57,6 +57,7 @@ import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } 
 import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { moreInfo, nameOf, stateOf } from "../ha.js";
+import { locale, nt, t } from "../taal.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   AIRCO_FOTOS,
@@ -95,8 +96,8 @@ const domeinVan = (id) => String(id ?? "").split(".")[0];
 const toonVan = (soort) => TONES[SOORT_TOON[soort]] ?? TONES.neutral;
 
 /** Het woordje onder het getal in een stelknop. */
-const STEL_WOORD = { doel: "doel", laag: "laag", hoog: "hoog" };
-const STEL_NAAM = { doel: "Doeltemperatuur", laag: "Ondergrens", hoog: "Bovengrens" };
+const STEL_WOORD = { doel: nt("doel"), laag: nt("laag"), hoog: nt("hoog") };
+const STEL_NAAM = { doel: nt("Doeltemperatuur"), laag: nt("Ondergrens"), hoog: nt("Bovengrens") };
 
 class AircoCard extends DacCard {
   static css = /* css */ `
@@ -348,7 +349,7 @@ class AircoCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig (zie CLAUDE.md): zonder airco een uitlegkaart.
     const c = { afbeelding: "auto", ...config };
-    if (!c.entity || domeinVan(c.entity) !== "climate") c[INCOMPLETE] = "Kies een airco (climate-entiteit).";
+    if (!c.entity || domeinVan(c.entity) !== "climate") c[INCOMPLETE] = t("Kies een airco (climate-entiteit).");
     return c;
   }
 
@@ -426,7 +427,7 @@ class AircoCard extends DacCard {
   }
 
   taal_() {
-    return this.hass_?.locale?.language ?? "nl";
+    return locale();
   }
 
   eenheid_() {
@@ -446,44 +447,44 @@ class AircoCard extends DacCard {
 
     const stel = (welk) => `
       <div class="set" data-welk="${welk}" hidden>
-        <button type="button" data-d="-1" aria-label="${STEL_NAAM[welk]} lager">${icons.minus}</button>
+        <button type="button" data-d="-1" aria-label="${escapeHtml(t("{naam} lager", { naam: t(STEL_NAAM[welk]) }))}">${icons.minus}</button>
         <span class="target"></span>
-        <button type="button" data-d="1" aria-label="${STEL_NAAM[welk]} hoger">${icons.plus}</button>
+        <button type="button" data-d="1" aria-label="${escapeHtml(t("{naam} hoger", { naam: t(STEL_NAAM[welk]) }))}">${icons.plus}</button>
       </div>`;
     const lijst = (soort) => `
       <label class="blok lijst" data-soort="${soort}" hidden>
-        <span class="kopje">${escapeHtml(KEUZES[soort].naam)}</span>
+        <span class="kopje">${escapeHtml(t(KEUZES[soort].naam))}</span>
         <span class="slot" style="display:contents"></span>
       </label>`;
 
     return `
       <div class="card surface" style="--tone:${TONES.neutral}">
         <div class="kop" role="button" tabindex="0">
-          <button type="button" class="aan" aria-label="Aan of uit">
+          <button type="button" class="aan" aria-label="${t("Aan of uit")}">
             <img class="foto" alt="" hidden />
             <span class="chip"></span>
           </button>
           <span class="txt">
             <span class="nm"></span>
-            <span class="st"><span class="stip" hidden></span><span class="woord"></span><span class="storing" hidden>Storing</span></span>
+            <span class="st"><span class="stip" hidden></span><span class="woord"></span><span class="storing" hidden>${t("Storing")}</span></span>
             <span class="reden" hidden></span>
           </span>
-          <span class="binnen" hidden><span class="graden"></span><span class="onder">binnen</span></span>
+          <span class="binnen" hidden><span class="graden"></span><span class="onder">${t("binnen")}</span></span>
         </div>
 
-        <div class="standen" role="group" aria-label="Stand" hidden></div>
+        <div class="standen" role="group" aria-label="${t("Stand")}" hidden></div>
 
         <div class="doelen" hidden>${stel("doel")}${stel("laag")}${stel("hoog")}</div>
 
         <div class="blok aanop" hidden>
-          <span class="kopje">Aan op</span>
-          <div class="segs" role="group" aria-label="Aan op"></div>
+          <span class="kopje">${t("Aan op")}</span>
+          <div class="segs" role="group" aria-label="${t("Aan op")}"></div>
         </div>
 
         <div class="schakels" role="group" aria-label="Coach" hidden></div>
 
         <div class="blok vent" hidden>
-          <span class="kopje">${escapeHtml(KEUZES.ventilator.naam)}</span>
+          <span class="kopje">${escapeHtml(t(KEUZES.ventilator.naam))}</span>
           <div class="segs" hidden></div>
           <span class="slot" style="display:contents"></span>
         </div>
@@ -576,8 +577,8 @@ class AircoCard extends DacCard {
     // Een tegel opent zijn sensor: daar staat de geschiedenis.
     const tegels = this.$(".tegels");
     const open = (e) => {
-      const t = e.target?.closest?.(".tegel");
-      if (t?.dataset.id) moreInfo(this, t.dataset.id);
+      const tegel = e.target?.closest?.(".tegel");
+      if (tegel?.dataset.id) moreInfo(this, tegel.dataset.id);
     };
     this.on(tegels, "click", open);
     this.on(tegels, "keydown", (e) => {
@@ -645,7 +646,7 @@ class AircoCard extends DacCard {
     this.text(".woord", status);
     const storing = stateOf(hass, delen.storing)?.state === "on";
     this.$(".storing").hidden = !storing;
-    this.$(".kop").setAttribute("aria-label", `${naam}, ${status}${storing ? ", storing" : ""}`);
+    this.$(".kop").setAttribute("aria-label", `${naam}, ${status}${storing ? `, ${t("storing")}` : ""}`);
 
     // ----- de coach: zijn zin onder de status, en zijn knoppen onder het doel
     const coach = this.coach_();
@@ -677,7 +678,7 @@ class AircoCard extends DacCard {
     const aan = this.$(".aan");
     aan.disabled = !aanUitOproep(st, !s.aan);
     aan.setAttribute("aria-pressed", String(s.aan));
-    aan.setAttribute("aria-label", s.aan ? "Uitzetten" : "Aanzetten");
+    aan.setAttribute("aria-label", s.aan ? t("Uitzetten") : t("Aanzetten"));
 
     // ----- de kamertemperatuur
     this.$(".binnen").hidden = s.huidig == null;
@@ -758,7 +759,7 @@ class AircoCard extends DacCard {
       segs.innerHTML = keuze.opties
         .map(
           (o) =>
-            `<button type="button" class="seg" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="false" aria-label="Aan op ${escapeHtml(o.naam.toLowerCase())}" title="${escapeHtml(o.naam)}">${escapeHtml(o.label)}</button>`
+            `<button type="button" class="seg" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="false" aria-label="${escapeHtml(t("Aan op {wat}", { wat: o.naam.toLowerCase() }))}" title="${escapeHtml(o.naam)}">${escapeHtml(o.label)}</button>`
         )
         .join("");
     }
@@ -807,7 +808,7 @@ class AircoCard extends DacCard {
       const v = nu[welk];
       const el = set.querySelector(".target");
       el.classList.toggle("pending", this.pending_?.[welk] != null);
-      const html = `${escapeHtml(graden(v, taal))}°<small>${STEL_WOORD[welk]}</small>`;
+      const html = `${escapeHtml(graden(v, taal))}°<small>${escapeHtml(t(STEL_WOORD[welk]))}</small>`;
       if (el.dataset.html !== html) {
         el.dataset.html = html;
         el.innerHTML = html;
@@ -816,7 +817,7 @@ class AircoCard extends DacCard {
       // bereik) staat grijs.
       set.querySelector('[data-d="-1"]').disabled = volgendeWaarde(nu, welk, v, -1) === v;
       set.querySelector('[data-d="1"]').disabled = volgendeWaarde(nu, welk, v, 1) === v;
-      set.setAttribute("aria-label", `${STEL_NAAM[welk]} ${graden(v, taal)} graden`);
+      set.setAttribute("aria-label", t("{naam} {graden} graden", { naam: t(STEL_NAAM[welk]), graden: graden(v, taal) }));
     }
   }
 
@@ -838,7 +839,7 @@ class AircoCard extends DacCard {
         segs.innerHTML = opties
           .map(
             (o) =>
-              `<button type="button" class="seg" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="false" aria-label="Ventilator ${escapeHtml(o.label)}">${escapeHtml(o.label)}</button>`
+              `<button type="button" class="seg" data-waarde="${escapeHtml(o.waarde)}" aria-pressed="false" aria-label="${escapeHtml(`${t(KEUZES.ventilator.naam)} ${o.label}`)}">${escapeHtml(o.label)}</button>`
           )
           .join("");
       }
@@ -878,7 +879,7 @@ class AircoCard extends DacCard {
     if (slot.dataset.opties !== vinger) {
       slot.dataset.opties = vinger;
       slot.innerHTML = lijst.length
-        ? `<select class="keuze" data-soort="${soort}" aria-label="${escapeHtml(KEUZES[soort].naam)}">${lijst
+        ? `<select class="keuze" data-soort="${soort}" aria-label="${escapeHtml(t(KEUZES[soort].naam))}">${lijst
             .map((o) => `<option value="${escapeHtml(o.waarde)}">${escapeHtml(o.label)}</option>`)
             .join("")}</select>`
         : "";
@@ -900,10 +901,10 @@ class AircoCard extends DacCard {
     vak.dataset.sig = sig;
     vak.innerHTML = lijst
       .map(
-        (t) => `
-        <div class="tegel" role="button" tabindex="0" data-id="${escapeHtml(t.id)}" aria-label="${escapeHtml(`${t.label}: ${t.waarde} ${t.eenheid}`)}">
-          <span class="w">${escapeHtml(t.waarde)}${t.eenheid ? `<small>${escapeHtml(t.eenheid)}</small>` : ""}</span>
-          <span class="l">${escapeHtml(t.label)}</span>
+        (f) => `
+        <div class="tegel" role="button" tabindex="0" data-id="${escapeHtml(f.id)}" aria-label="${escapeHtml(`${f.label}: ${f.waarde} ${f.eenheid}`)}">
+          <span class="w">${escapeHtml(f.waarde)}${f.eenheid ? `<small>${escapeHtml(f.eenheid)}</small>` : ""}</span>
+          <span class="l">${escapeHtml(f.label)}</span>
         </div>`
       )
       .join("");
@@ -931,10 +932,10 @@ class AircoCard extends DacCard {
 
 /** De keuzes voor de foto. Valkuil 55: geen enkele met de waarde "". */
 const AFBEELDING_KEUZES = [
-  { value: "auto", label: "Automatisch" },
+  { value: "auto", label: nt("Automatisch") },
   ...Object.entries(AIRCO_FOTOS).map(([value, f]) => ({ value, label: f.label })),
-  { value: "eigen", label: "Eigen afbeelding" },
-  { value: "geen", label: "Geen afbeelding (icoon)" },
+  { value: "eigen", label: nt("Eigen afbeelding") },
+  { value: "geen", label: nt("Geen afbeelding (icoon)") },
 ];
 
 /**
@@ -949,9 +950,9 @@ class AircoEditor extends DacEditor {
   /** De fotokiezer alleen bij "Eigen afbeelding": anders is het een veld dat niets doet. */
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "airco" },
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: "airco" },
       ...(this.config_?.afbeelding === "eigen"
-        ? [{ key: "image", kind: "foto", label: "Eigen afbeelding", fallback: "airco" }]
+        ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "airco" }]
         : []),
     ];
   }
@@ -960,7 +961,7 @@ class AircoEditor extends DacEditor {
     return [
       { name: "entity", required: true, selector: sel.entity(["climate"]) },
       { name: "name", selector: sel.text() },
-      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES) },
+      { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
       { name: "temperature", selector: { entity: { domain: ["sensor"], device_class: "temperature" } } },
       { name: "energy", selector: { entity: { domain: ["sensor"], device_class: "energy" } } },
     ];
@@ -969,33 +970,36 @@ class AircoEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Airco",
-        name: "Naam",
-        afbeelding: "Afbeelding",
-        temperature: "Kamertemperatuur",
-        energy: "Energieverbruik",
+        entity: t("Airco"),
+        name: t("Naam"),
+        afbeelding: t("Afbeelding"),
+        temperature: t("Kamertemperatuur"),
+        energy: t("Energieverbruik"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     return {
-      entity:
-        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij.",
-      name: "Leeg laten: de naam van de airco in Home Assistant.",
-      afbeelding:
-        "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit.",
-      temperature: "Leeg laten: wat de airco zelf meet. Kies een sensor als die beter in de kamer hangt.",
-      energy: "Leeg laten: de energiesensor van hetzelfde apparaat, als die er is.",
+      entity: t(
+        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij."
+      ),
+      name: t("Leeg laten: de naam van de airco in Home Assistant."),
+      afbeelding: t(
+        "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit."
+      ),
+      temperature: t("Leeg laten: wat de airco zelf meet. Kies een sensor als die beter in de kamer hangt."),
+      energy: t("Leeg laten: de energiesensor van hetzelfde apparaat, als die er is."),
     }[s.name];
   }
 }
 
 registerEditor("domotiapp-airco-card-editor", AircoEditor);
 registerCard("domotiapp-airco-card", AircoCard, {
-  name: "DomotiApp Airco",
-  description:
-    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren.",
+  name: nt("DomotiApp Airco"),
+  description: nt(
+    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren."
+  ),
 });
 
 export { AircoCard };

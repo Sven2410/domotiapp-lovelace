@@ -46,6 +46,7 @@ from homeassistant.helpers.event import async_track_time_change, async_track_tim
 from homeassistant.util import dt as dt_util
 
 from ..bewaking import meldingen as telefoons
+from ..taal import t, taal_van
 from . import afval, kaarten
 from .const import (
     ACTIE_BUITEN,
@@ -182,7 +183,7 @@ class Motor:
         nu = nu or dt_util.now()
         melding = self.meldingen.get(ident)
         if melding is None:
-            return {"reden": "Deze melding staat op geen enkel opgeslagen dashboard"}
+            return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
 
         vandaag = nu.date()
         ophaaldag = vandaag if moment == MOMENT_VANDAAG else vandaag + timedelta(days=1)
@@ -193,18 +194,20 @@ class Motor:
             namen = afval.soorten(st.state)
         if not proef:
             if not sensor:
-                return {"reden": f"Geen sensor voor {moment}"}
+                if moment == MOMENT_VANDAAG:
+                    return {"reden": t(self.hass, "Geen sensor voor vandaag")}
+                return {"reden": t(self.hass, "Geen sensor voor morgen")}
             if not namen:
-                return {"reden": "Er wordt niets opgehaald"}
+                return {"reden": t(self.hass, "Er wordt niets opgehaald")}
             if self.opslag.verstuurd(ident, moment) == vandaag.isoformat():
-                return {"reden": "Vandaag al verstuurd"}
+                return {"reden": t(self.hass, "Vandaag al verstuurd")}
             buiten = self.opslag.buiten(ident)
             if moment == MOMENT_VANDAAG and buiten and buiten.get("datum") == ophaaldag.isoformat():
-                return {"reden": "Staat al buiten"}
+                return {"reden": t(self.hass, "Staat al buiten")}
 
-        titel, tekst = afval.bericht(moment, namen or ["GFT"])
+        titel, tekst = afval.bericht(moment, namen or ["GFT"], taal_van(self.hass))
         if proef:
-            titel = f"Proef · {titel}"
+            titel = t(self.hass, "Proef · {titel}", titel=titel)
 
         # Een proef krijgt een eigen tag: met die van de ophaaldag zou hij de
         # echte melding van vanavond op de telefoon vervangen.
@@ -212,7 +215,7 @@ class Motor:
         data = {
             "tag": tag_voor(ident, sleutel),
             "group": "domotiapp-afval",
-            "actions": [{"action": actie_voor(ident, sleutel), "title": "Staat buiten"}],
+            "actions": [{"action": actie_voor(ident, sleutel), "title": t(self.hass, "Staat buiten")}],
         }
 
         if alleen is not None:

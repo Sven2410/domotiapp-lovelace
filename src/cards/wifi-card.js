@@ -22,9 +22,10 @@ import { resolve } from "../icons.js";
 import { meetRaster } from "../rasterhoogte.js";
 import { eersteWifiQr, geenQrReden, netwerkNaam, qrAdres } from "./wifi-logica.js";
 import { toonWifiGroot } from "./wifi-groot.js";
+import { nt, t } from "../taal.js";
 
 const TAG = "domotiapp-wifi-card";
-const STANDAARD_TITEL = "Wifi voor gasten";
+const STANDAARD_TITEL = nt("Wifi voor gasten");
 
 class WifiCard extends DacCard {
   static css = /* css */ `
@@ -75,7 +76,7 @@ class WifiCard extends DacCard {
   validate(config) {
     // Nooit gooien in setConfig: zonder entiteit een uitlegkaart.
     const c = { name: "", password: "", title: "", ...config };
-    if (!c.entity) c[INCOMPLETE] = "Kies de QR-code van het wifi-netwerk (bij UniFi Network: de entiteit QR-code van het netwerk).";
+    if (!c.entity) c[INCOMPLETE] = t("Kies de QR-code van het wifi-netwerk (bij UniFi Network: de entiteit QR-code van het netwerk).");
     return c;
   }
 
@@ -83,12 +84,12 @@ class WifiCard extends DacCard {
     return `
       <div class="card surface" role="button" tabindex="0" style="--tone:${TONES.accent}">
         <div class="rij">
-          <div class="qr"><img alt="QR-code van de wifi" hidden /><div class="leeg" hidden></div></div>
+          <div class="qr"><img alt="${t("QR-code van de wifi")}" hidden /><div class="leeg" hidden></div></div>
           <div class="txt">
             <div class="titel">${resolve("wifi")}<span></span></div>
             <div class="naam"></div>
-            <div class="ww" hidden>Wachtwoord <b></b></div>
-            <div class="hint">Scan de code met de camera van je telefoon.</div>
+            <div class="ww" hidden>${t("Wachtwoord")} <b></b></div>
+            <div class="hint">${t("Scan de code met de camera van je telefoon.")}</div>
           </div>
         </div>
       </div>`;
@@ -100,7 +101,7 @@ class WifiCard extends DacCard {
       if (!adres) return;
       toonWifiGroot({
         adres,
-        titel: this.config.title || STANDAARD_TITEL,
+        titel: this.config.title || t(STANDAARD_TITEL),
         naam: netwerkNaam(this.hass, this.config.entity, this.config.name),
         wachtwoord: this.config.password,
       });
@@ -118,7 +119,7 @@ class WifiCard extends DacCard {
     const c = this.config;
     // Een QR die niet bestaat heeft geen naam; zijn entity_id is er geen.
     const naam = this.hass?.states?.[c.entity] ? netwerkNaam(this.hass, c.entity, c.name) : c.name || "";
-    this.text(".titel span", c.title || STANDAARD_TITEL);
+    this.text(".titel span", c.title || t(STANDAARD_TITEL));
     this.text(".naam", naam);
     this.$(".ww").hidden = !c.password;
     this.text(".ww b", c.password ?? "");
@@ -135,7 +136,7 @@ class WifiCard extends DacCard {
     const leeg = this.$(".qr .leeg");
     leeg.hidden = Boolean(adres);
     this.text(leeg, adres ? "" : geenQrReden(this.hass, c.entity) ?? "");
-    this.$(".card").setAttribute("aria-label", `${c.title || STANDAARD_TITEL}: ${naam}. Tik om de QR-code groot te tonen.`);
+    this.$(".card").setAttribute("aria-label", t("{titel}: {naam}. Tik om de QR-code groot te tonen.", { titel: c.title || t(STANDAARD_TITEL), naam }));
     meetRaster(this.$(".card"));
   }
 
@@ -172,29 +173,31 @@ class WifiEditor extends DacEditor {
 
   label(s) {
     return {
-      entity: "QR-code van het wifi-netwerk",
-      name: "Netwerknaam",
-      password: "Wachtwoord (als tekst erbij)",
-      title: "Kopje",
+      entity: t("QR-code van het wifi-netwerk"),
+      name: t("Netwerknaam"),
+      password: t("Wachtwoord (als tekst erbij)"),
+      title: t("Kopje"),
     }[s.name] ?? super.label(s);
   }
 
   helper(s) {
     return {
-      entity:
+      entity: t(
         "Bij UniFi Network heeft elk wifi-netwerk een entiteit QR-code. Die staat standaard UIT (en is er alleen met een beheerdersaccount in UniFi): zet hem aan bij de entiteiten van het netwerk.",
-      name: "Leeg laten: de naam van het netwerk uit UniFi.",
-      password:
+      ),
+      name: t("Leeg laten: de naam van het netwerk uit UniFi."),
+      password: t(
         "UniFi geeft het wachtwoord niet door aan Home Assistant; het zit alleen in de QR-code. Vul het hier in als je het ook als tekst wilt tonen, voor wie niet kan scannen. Wordt het in UniFi vernieuwd, dan past de QR-code zich aan, deze tekst niet.",
-      title: `Leeg laten: "${STANDAARD_TITEL}".`,
+      ),
+      title: t("Leeg laten: \"{titel}\".", { titel: t(STANDAARD_TITEL) }),
     }[s.name];
   }
 }
 
 registerEditor(`${TAG}-editor`, WifiEditor);
 registerCard(TAG, WifiCard, {
-  name: "DomotiApp Wifi",
-  description: "De QR-code van een wifi-netwerk (bijvoorbeeld het gastnetwerk van UniFi), met de netwerknaam. Tik erop en de code staat groot in beeld.",
+  name: nt("DomotiApp Wifi"),
+  description: nt("De QR-code van een wifi-netwerk (bijvoorbeeld het gastnetwerk van UniFi), met de netwerknaam. Tik erop en de code staat groot in beeld."),
 });
 
 export { WifiCard };

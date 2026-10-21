@@ -42,6 +42,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, runAction } from "../ha.js";
 import { terugDoel } from "./badge-logica.js";
+import { nt, t } from "../taal.js";
 
 const BADGE_TYPE = "domotiapp-terug-badge";
 const EDITOR_TYPE = "domotiapp-terug-badge-editor";
@@ -149,7 +150,7 @@ class DomotiappTerugBadge extends DacCard {
       ico.innerHTML = resolve(wens, "arrowLeft");
     }
     this.text(".tekst", c.label ?? "");
-    this.$(".badge").title = c.label || (this.config.path ? `Naar ${this.config.path}` : "Terug");
+    this.$(".badge").title = c.label || (this.config.path ? t("Naar {pad}", { pad: this.config.path }) : t("Terug"));
   }
 
   getCardSize() {
@@ -167,7 +168,7 @@ class DomotiappTerugBadge extends DacCard {
    * plek wil, vult die in.
    */
   static getStubConfig() {
-    return { icon: "arrowLeft", label: "Terug" };
+    return { icon: "arrowLeft", label: t("Terug") };
   }
 }
 
@@ -179,7 +180,7 @@ class DomotiappTerugBadgeEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "arrowLeft", auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "arrowLeft", auto: false }];
   }
 
   schema() {
@@ -190,22 +191,23 @@ class DomotiappTerugBadgeEditor extends DacEditor {
   }
 
   label(s) {
-    return { path: "Waar gaat hij heen", label: "Tekst ernaast (optioneel)" }[s.name] ?? super.label(s);
+    return { path: t("Waar gaat hij heen"), label: t("Tekst ernaast (optioneel)") }[s.name] ?? super.label(s);
   }
 
   helper(s) {
     return {
-      path: "Het pad waar je altijd op uitkomt, bijvoorbeeld /dashboard/thuis. Begint het met een # dan opent hij een pop-up op de huidige view. Laat je het leeg, dan gaat hij één stap terug in de geschiedenis — net als de terugknop van je browser.",
-      label: "Laat leeg voor alleen het pijltje. Dat is meestal genoeg en het scheelt breedte in de kop.",
+      path: t("Het pad waar je altijd op uitkomt, bijvoorbeeld /dashboard/thuis. Begint het met een # dan opent hij een pop-up op de huidige view. Laat je het leeg, dan gaat hij één stap terug in de geschiedenis — net als de terugknop van je browser."),
+      label: t("Laat leeg voor alleen het pijltje. Dat is meestal genoeg en het scheelt breedte in de kop."),
     }[s.name];
   }
 }
 
 registerEditor(EDITOR_TYPE, DomotiappTerugBadgeEditor);
 registerBadge(BADGE_TYPE, DomotiappTerugBadge, {
-  name: "DomotiApp Terug",
-  description:
-    "Een pijltje terug in de kop van je view: naar een vaste plek die je zelf opgeeft, of één stap terug als je niets invult.",
+  name: nt("DomotiApp Terug"),
+  description: nt(
+    "Een pijltje terug in de kop van je view: naar een vaste plek die je zelf opgeeft, of één stap terug als je niets invult."
+  ),
 });
 
 export { DomotiappTerugBadge };

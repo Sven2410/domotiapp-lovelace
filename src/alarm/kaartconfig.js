@@ -6,10 +6,12 @@
  * de kaart zelf.
  */
 
+import { nt, t } from "../taal.js";
+
 export const PERSON_DOMEIN = "person";
 
 /** De drie teksten uit SPEC 16.3 en 19.2, letterlijk. */
-export const TEKST_KIES_PERSOON = "Kies een persoon in de kaartinstellingen.";
+export const TEKST_KIES_PERSOON = nt("Kies een persoon in de kaartinstellingen.");
 /**
  * Was: "De gekozen persoon bestaat niet meer." (fase 11, na goedkeuring van de
  * eigenaar).
@@ -25,9 +27,8 @@ export const TEKST_KIES_PERSOON = "Kies een persoon in de kaartinstellingen.";
  * fase 6b: geschreven bij de SPEC-sectie in plaats van bij de regel code die het
  * vaststelt (valkuil 53).
  */
-export const TEKST_PERSOON_WEG = "De gekozen persoon is niet gevonden.";
-export const TEKST_ONLEESBAAR =
-  "De opgeslagen wekkers van deze persoon zijn onleesbaar.";
+export const TEKST_PERSOON_WEG = nt("De gekozen persoon is niet gevonden.");
+export const TEKST_ONLEESBAAR = nt("De opgeslagen wekkers van deze persoon zijn onleesbaar.");
 
 /**
  * Sleutels die Lovelace zelf aan een kaartconfig hangt. Ze worden **doorgelaten
@@ -56,19 +57,21 @@ export const LOVELACE_SLEUTELS = Object.freeze([
  */
 export function valideerConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
-    throw new Error("De kaartconfig ontbreekt of is geen object.");
+    throw new Error(t("De kaartconfig ontbreekt of is geen object."));
   }
   const person = config.person;
   if (person === undefined || person === null || person === "") {
     return { ...config };
   }
   if (typeof person !== "string") {
-    throw new Error("'person' moet een entity-ID zijn, zoals person.bram.");
+    throw new Error(t("'person' moet een entity-ID zijn, zoals person.bram."));
   }
   if (!person.startsWith(`${PERSON_DOMEIN}.`)) {
     throw new Error(
-      `'${person}' zit niet in het domein ${PERSON_DOMEIN}. ` +
-        "Kies een persoon, zoals person.bram.",
+      t("'{person}' zit niet in het domein {domein}. Kies een persoon, zoals person.bram.", {
+        person,
+        domein: PERSON_DOMEIN,
+      }),
     );
   }
   return { ...config };
@@ -96,10 +99,10 @@ export function stubConfig(cardType) {
  */
 export function personToestand(person, bestaat) {
   if (!person) {
-    return { soort: "ontbreekt", tekst: TEKST_KIES_PERSOON, isFout: false };
+    return { soort: "ontbreekt", tekst: t(TEKST_KIES_PERSOON), isFout: false };
   }
   if (!bestaat) {
-    return { soort: "weg", tekst: TEKST_PERSOON_WEG, isFout: true };
+    return { soort: "weg", tekst: t(TEKST_PERSOON_WEG), isFout: true };
   }
   return { soort: "ok", tekst: null, isFout: false };
 }
@@ -117,10 +120,11 @@ export function personToestand(person, bestaat) {
  */
 export function foutTekst(code, bericht) {
   if (code === "not_found") {
-    return TEKST_PERSOON_WEG;
+    return t(TEKST_PERSOON_WEG);
   }
   if (code === "home_assistant_error") {
-    return TEKST_ONLEESBAAR;
+    return t(TEKST_ONLEESBAAR);
   }
-  return bericht || "Er ging iets mis bij het ophalen van de wekkers.";
+  // Een bericht van de server blijft zoals het komt.
+  return bericht || t("Er ging iets mis bij het ophalen van de wekkers.");
 }

@@ -54,6 +54,7 @@ import {
   STAND_WIT,
 } from "./lamp-besturing.js";
 import { Snapshotbeheer, voerVoorbeeldUit } from "./voorbeeld.js";
+import { t } from "../taal.js";
 
 const LADEN = "laden";
 const KLAAR = "klaar";
@@ -458,16 +459,16 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
           ),
       });
       if (mislukt.length) {
-        this._melding = `Deze lampen reageerden niet: ${mislukt
-          .map((item) => this._naam(item.entityId))
-          .join(", ")}.`;
+        this._melding = t("Deze lampen reageerden niet: {namen}.", {
+          namen: mislukt.map((item) => this._naam(item.entityId)).join(", "),
+        });
       }
     } catch (fout) {
       // De snapshot is niet gemaakt, dus er is bewust niets omgezet: een
       // voorbeeld zonder weg terug is het faalgedrag dat SPEC 18 bestrijdt.
-      this._melding = `Het voorbeeld is niet gestart: ${
-        fout?.message ?? String(fout)
-      }`;
+      this._melding = t("Het voorbeeld is niet gestart: {fout}", {
+        fout: fout?.message ?? String(fout),
+      });
     } finally {
       this._bezig = false;
     }
@@ -540,7 +541,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
     return html`
       <ha-dialog
         open
-        .headerTitle=${"Scenes bewerken"}
+        .headerTitle=${t("Scenes bewerken")}
         @closed=${this._dialoogGesloten}
       >
         ${this._renderInhoud()}
@@ -550,11 +551,11 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
             .disabled=${!this._kanVoorbeeld}
             @click=${this._voorbeeld}
           >
-            Voorbeeld
+            ${t("Voorbeeld")}
           </ha-button>
-          <ha-button @click=${() => this._sluit()}>Annuleren</ha-button>
+          <ha-button @click=${() => this._sluit()}>${t("Annuleren")}</ha-button>
           <ha-button .disabled=${!this._kanOpslaan} @click=${this._slaOp}>
-            Opslaan
+            ${t("Opslaan")}
           </ha-button>
         </div>
       </ha-dialog>
@@ -563,7 +564,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
 
   _renderInhoud() {
     if (this._toestand === LADEN) {
-      return html`<div class="inhoud">Bezig met laden…</div>`;
+      return html`<div class="inhoud">${t("Bezig met laden…")}</div>`;
     }
     if (this._toestand === FOUT) {
       return html`
@@ -583,7 +584,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
                 .active=${index === this._tab}
                 @click=${() => this._kiesTab(index)}
               >
-                Scene ${index + 1}
+                ${t("Scene {n}", { n: index + 1 })}
               </ha-tab-group-tab>
             `,
           )}
@@ -591,7 +592,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
 
         <dac-icon-picker
           .hass=${this.hass}
-          label="Icoon van deze scene"
+          label=${t("Icoon van deze scene")}
           fallback="een"
           .auto=${false}
           .value=${this._scenes[this._tab].icon}
@@ -603,7 +604,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
           : nothing}
         ${this._leden.length === 0
           ? html`<ha-alert alert-type="info">
-              Deze lichtgroep bevat geen lampen.
+              ${t("Deze lichtgroep bevat geen lampen.")}
             </ha-alert>`
           : html`<div class="lampen">
               ${this._leden.map((entityId) => this._renderLamp(entityId))}
@@ -628,14 +629,14 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
             <span class="tekst">
               ${this._naam(entityId)}
               ${!kan.bekend
-                ? html`<span class="hint">lamp niet gevonden</span>`
+                ? html`<span class="hint">${t("lamp niet gevonden")}</span>`
                 : !kan.beschikbaar
-                  ? html`<span class="hint">niet bereikbaar</span>`
+                  ? html`<span class="hint">${t("niet bereikbaar")}</span>`
                   : nothing}
             </span>
             ${isIngesteld(waarde)
               ? nothing
-              : html`<span class="nieuw">nieuw</span>`}
+              : html`<span class="nieuw">${t("nieuw")}</span>`}
           </div>
           ${kan.bekend
             ? html`
@@ -715,7 +716,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
     return html`
       <div class="besturing">
         <div class="label">
-          <span>Helderheid</span><span>${procent} %</span>
+          <span>${t("Helderheid")}</span><span>${procent} %</span>
         </div>
         <ha-control-slider
           touch-action="pan-y"
@@ -761,14 +762,14 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
           aria-pressed=${stand === STAND_KLEUR ? "true" : "false"}
           @click=${wissel(STAND_KLEUR)}
         >
-          Kleur
+          ${t("Kleur")}
         </button>
         <button
           class="keuze ${stand === STAND_WIT ? "actief" : ""}"
           aria-pressed=${stand === STAND_WIT ? "true" : "false"}
           @click=${wissel(STAND_WIT)}
         >
-          Wit
+          ${t("Wit")}
         </button>
       </div>
     `;
@@ -787,7 +788,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
     return html`
       <div class="besturing">
         <div class="label">
-          <span>Kleurtemperatuur</span><span>${kelvin} K</span>
+          <span>${t("Kleurtemperatuur")}</span><span>${kelvin} K</span>
         </div>
         <ha-control-slider
           touch-action="pan-y"
@@ -821,7 +822,7 @@ export class DomotiappSceneEditor extends MetThema(LitElement) {
     return html`
       <div class="besturing">
         <div class="label">
-          <span>Kleur</span><span>${tint}° / ${verzadiging} %</span>
+          <span>${t("Kleur")}</span><span>${tint}° / ${verzadiging} %</span>
         </div>
         <div class="kleurregelaars">
           <div class="schuiven">

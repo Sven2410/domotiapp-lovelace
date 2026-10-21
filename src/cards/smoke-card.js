@@ -26,6 +26,7 @@ import { DacCard, registerCard, registerEditor, TONES, INCOMPLETE } from "../bas
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
+import { nt, t } from "../taal.js";
 import {
   bindActions,
   fmtNumber,
@@ -168,7 +169,7 @@ class SmokeCard extends DacCard {
     if (!gekozen.length) {
       return {
         ...config,
-        [INCOMPLETE]: "Kies minstens één entiteit: rook, koolmonoxide, warmte, temperatuur of batterij.",
+        [INCOMPLETE]: t("Kies minstens één entiteit: rook, koolmonoxide, warmte, temperatuur of batterij."),
       };
     }
     return { ...config };
@@ -205,7 +206,7 @@ class SmokeCard extends DacCard {
     if (this.config.bare) this.setAttribute("bare", "");
     const pillen = this.gekozen_()
       .map(
-        (s) => `<span class="pil" data-soort="${s.sleutel}" title="${s.label}">${resolve(s.icoon)}<b></b></span>`
+        (s) => `<span class="pil" data-soort="${s.sleutel}" title="${t(s.label)}">${resolve(s.icoon)}<b></b></span>`
       )
       .join("");
     return `
@@ -337,11 +338,11 @@ class SmokeCard extends DacCard {
     // vinden zijn: een muis krijgt het via `title` (gezet in template()), een
     // schermlezer via aria-label -- en die moet de WAARDE meelezen, anders
     // hoort iemand "temperatuur" zonder te horen hoeveel.
-    const zeg = (tekst) => pil.setAttribute("aria-label", `${soort.label}: ${tekst}`);
+    const zeg = (tekst) => pil.setAttribute("aria-label", `${t(soort.label)}: ${tekst}`);
 
     if (!st || isDead(st)) {
       waarde.textContent = "—";
-      zeg("onbekend");
+      zeg(t("onbekend"));
       pil.dataset.let = "";
       return;
     }
@@ -361,7 +362,7 @@ class SmokeCard extends DacCard {
     }
 
     const aan = isOn(st);
-    waarde.textContent = aan ? "Alarm" : rustWoord(soort);
+    waarde.textContent = aan ? t("Alarm") : rustWoord(soort);
     zeg(waarde.textContent);
     pil.dataset.let = aan ? "bad" : "";
   }
@@ -408,7 +409,7 @@ class SmokeCard extends DacCard {
 class SmokeEditor extends DacEditor {
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon", fallback: "smoke" },
+      { key: "icon", kind: "icon", label: t("Icoon"), fallback: "smoke" },
     ];
   }
 
@@ -428,29 +429,29 @@ class SmokeEditor extends DacEditor {
   label(s) {
     return (
       {
-        name: "Naam (overschrijft die van de melder)",
-        smoke: "Rook",
-        co: "Koolmonoxide",
-        heat: "Warmte",
-        temperature: "Temperatuur",
-        battery: "Batterij",
-        tap_action: "Tikken op de kaart",
-        hold_action: "Vasthouden op de kaart",
+        name: t("Naam (overschrijft die van de melder)"),
+        smoke: t("Rook"),
+        co: t("Koolmonoxide"),
+        heat: t("Warmte"),
+        temperature: t("Temperatuur"),
+        battery: t("Batterij"),
+        tap_action: t("Tikken op de kaart"),
+        hold_action: t("Vasthouden op de kaart"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "smoke")
-      return "Alle vijf zijn optioneel: vul in wat je melder heeft. Wat je leeg laat, komt niet op de kaart.";
+      return t("Alle vijf zijn optioneel: vul in wat je melder heeft. Wat je leeg laat, komt niet op de kaart.");
     if (s.name === "battery")
-      return "Een percentage of een 'batterij bijna leeg'-sensor. Onder de 20% meldt de kaart het uit zichzelf.";
+      return t("Een percentage of een 'batterij bijna leeg'-sensor. Onder de 20% meldt de kaart het uit zichzelf.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-smoke-card-editor", SmokeEditor);
 registerCard("domotiapp-smoke-card", SmokeCard, {
-  name: "DomotiApp Rookmelder",
-  description: "Rook, koolmonoxide, warmte, temperatuur en batterij — alles optioneel.",
+  name: nt("DomotiApp Rookmelder"),
+  description: nt("Rook, koolmonoxide, warmte, temperatuur en batterij — alles optioneel."),
 });

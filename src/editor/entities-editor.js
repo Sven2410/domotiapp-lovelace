@@ -64,22 +64,23 @@
 
 import "./icon-picker.js";
 import { meldAan } from "../registratie.js";
+import { nt, t, tn } from "../taal.js";
 import { BEELD_MAX, BEELD_MIN, clampBeeld, gevuld } from "../cards/entities-logica.js";
 import { naarRijen as toRows, schuifOpen, uitgekleed, vul } from "./entities-rijen.js";
 
 /** Wat een rij is en wat een plek is: één keer opgeschreven, in `entities-logica.js`. */
 const VORMEN = [
-  { waarde: "row", label: "Rij" },
-  { waarde: "tile", label: "Tegel" },
-  { waarde: "compact", label: "Compact" },
-  { waarde: "beeld", label: "Beeld" },
+  { waarde: "row", label: nt("Rij") },
+  { waarde: "tile", label: nt("Tegel") },
+  { waarde: "compact", label: nt("Compact") },
+  { waarde: "beeld", label: nt("Beeld") },
 ];
 
 const UITLIJNING = [
-  { waarde: "links", label: "Links" },
-  { waarde: "midden", label: "Midden" },
+  { waarde: "links", label: nt("Links") },
+  { waarde: "midden", label: nt("Midden") },
 ];
-const vormLabel = (v) => VORMEN.find((x) => x.waarde === v)?.label ?? "Rij";
+const vormLabel = (v) => t(VORMEN.find((x) => x.waarde === v)?.label ?? "Rij");
 
 const CSS = `
   .dac-ed { display: flex; flex-direction: column; gap: 12px; }
@@ -340,17 +341,16 @@ class EntitiesEditor extends HTMLElement {
     if (!this.rows_.length) {
       const uitleg = document.createElement("p");
       uitleg.className = "uitleg";
-      uitleg.textContent =
-        "Een rij is een regel op de kaart, met een, twee of drie entiteiten naast elkaar. " +
-        "Elke rij heeft zijn eigen indeling en zijn eigen vorm. Een rij van een kolom is " +
-        "een losse knop.";
+      uitleg.textContent = t(
+        "Een rij is een regel op de kaart, met een, twee of drie entiteiten naast elkaar. Elke rij heeft zijn eigen indeling en zijn eigen vorm. Een rij van een kolom is een losse knop."
+      );
       wrap.appendChild(uitleg);
     }
 
     const knop = document.createElement("button");
     knop.type = "button";
     knop.className = "rijtoevoegen";
-    knop.textContent = "＋  Rij toevoegen";
+    knop.textContent = `＋  ${t("Rij toevoegen")}`;
     knop.addEventListener("click", () => {
       const row = vul({ columns: 2, layout: "row", items: [] });
       this.rows_.push(row);
@@ -429,9 +429,9 @@ class EntitiesEditor extends HTMLElement {
           select: {
             mode: "dropdown",
             options: [
-              { value: "card", label: "Om de hele kaart" },
-              { value: "open", label: "Alleen een rand, geen vulling" },
-              { value: "none", label: "Geen vlak" },
+              { value: "card", label: t("Om de hele kaart") },
+              { value: "open", label: t("Alleen een rand, geen vulling") },
+              { value: "none", label: t("Geen vlak") },
             ],
           },
         },
@@ -442,8 +442,8 @@ class EntitiesEditor extends HTMLElement {
           select: {
             mode: "dropdown",
             options: [
-              { value: "below", label: "Onder de naam" },
-              { value: "right", label: "Rechts op de regel" },
+              { value: "below", label: t("Onder de naam") },
+              { value: "right", label: t("Rechts op de regel") },
             ],
           },
         },
@@ -451,17 +451,17 @@ class EntitiesEditor extends HTMLElement {
     ];
     form.computeLabel = (s) =>
       ({
-        name: "Naam van de kaart (optioneel)",
-        surface: "Waar het kaartvlak zit",
-        state_position: "Waar de status staat",
+        name: t("Naam van de kaart (optioneel)"),
+        surface: t("Waar het kaartvlak zit"),
+        state_position: t("Waar de status staat"),
       })[s.name] ?? s.name;
     form.computeHelper = (s) => {
       if (s.name === "name")
-        return "Een kop boven de entiteiten. Laat leeg voor geen kop -- de kaart is dan een rasterrij lager.";
+        return t("Een kop boven de entiteiten. Laat leeg voor geen kop -- de kaart is dan een rasterrij lager.");
       if (s.name === "surface")
-        return "Alleen een rand geeft een doorzichtige kaart die nog wel een vorm heeft; geen vlak laat de plekken los op het dashboard staan.";
+        return t("Alleen een rand geeft een doorzichtige kaart die nog wel een vorm heeft; geen vlak laat de plekken los op het dashboard staan.");
       if (s.name === "state_position")
-        return "Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar of een tijdveld tonen geen tekst, en op een tegel staat de status altijd onder de naam.";
+        return t("Rechts is de vorm van de entiteitenkaart van Home Assistant: de waarden komen onder elkaar uit. Regels met een schakelaar of een tijdveld tonen geen tekst, en op een tegel staat de status altijd onder de naam.");
       return undefined;
     };
     // `bare: true` was de oude spelling van "geen vlak" en wordt hier gewoon
@@ -508,7 +508,7 @@ class EntitiesEditor extends HTMLElement {
     const titel = document.createElement("span");
     titel.className = "titel";
     const naam = document.createElement("b");
-    naam.textContent = `Rij ${r + 1}`;
+    naam.textContent = t("Rij {n}", { n: r + 1 });
     const sub = document.createElement("small");
     titel.append(naam, sub);
 
@@ -516,7 +516,7 @@ class EntitiesEditor extends HTMLElement {
       [1, 2, 3].map((n) => ({
         waarde: n,
         label: String(n),
-        titel: `${n} entiteit${n > 1 ? "en" : ""} in deze rij`,
+        titel: tn(n, "{n} entiteit in deze rij", "{n} entiteiten in deze rij"),
       })),
       () => row.columns,
       (n) => {
@@ -536,7 +536,7 @@ class EntitiesEditor extends HTMLElement {
     const kopie = document.createElement("button");
     kopie.type = "button";
     kopie.className = "weg dupliceer";
-    kopie.title = "Rij dupliceren";
+    kopie.title = t("Rij dupliceren");
     // Getekend en niet als teken: het glyph voor "dupliceren" ontbreekt op
     // genoeg systemen om er een leeg vakje van te maken.
     kopie.innerHTML =
@@ -560,7 +560,7 @@ class EntitiesEditor extends HTMLElement {
     const weg = document.createElement("button");
     weg.type = "button";
     weg.className = "weg";
-    weg.title = "Rij verwijderen";
+    weg.title = t("Rij verwijderen");
     weg.textContent = "✕";
     this.binnenKop_(weg, () => {
       this.rows_.splice(r, 1);
@@ -576,7 +576,7 @@ class EntitiesEditor extends HTMLElement {
     body.className = "rijbody";
 
     const vormen = this.segment_(
-      VORMEN.map((v) => ({ waarde: v.waarde, label: v.label })),
+      VORMEN.map((v) => ({ waarde: v.waarde, label: t(v.label) })),
       () => row.layout,
       (v) => {
         row.layout = v;
@@ -590,13 +590,13 @@ class EntitiesEditor extends HTMLElement {
     const vormrij = document.createElement("div");
     vormrij.className = "vormrij";
     const vormNaam = document.createElement("b");
-    vormNaam.textContent = "Vorm van deze rij";
+    vormNaam.textContent = t("Vorm van deze rij");
     vormrij.append(vormNaam, vormen.wrap);
     body.appendChild(vormrij);
 
     // ---- uitlijning ----
     const uitlijning = this.segment_(
-      UITLIJNING.map((u) => ({ waarde: u.waarde, label: u.label })),
+      UITLIJNING.map((u) => ({ waarde: u.waarde, label: t(u.label) })),
       () => row.align ?? "links",
       (u) => {
         row.align = u;
@@ -606,7 +606,7 @@ class EntitiesEditor extends HTMLElement {
     const uitrij = document.createElement("div");
     uitrij.className = "vormrij";
     const uitNaam = document.createElement("b");
-    uitNaam.textContent = "Uitlijning";
+    uitNaam.textContent = t("Uitlijning");
     uitrij.append(uitNaam, uitlijning.wrap);
     body.appendChild(uitrij);
 
@@ -624,9 +624,9 @@ class EntitiesEditor extends HTMLElement {
         selector: { number: { min: BEELD_MIN, max: BEELD_MAX, step: 4, mode: "slider" } },
       },
     ];
-    beeldForm.computeLabel = () => "Grootte van de afbeelding";
+    beeldForm.computeLabel = () => t("Grootte van de afbeelding");
     beeldForm.computeHelper = () =>
-      "In pixels. Groot genoeg om een QR-code te scannen begint rond de 160.";
+      t("In pixels. Groot genoeg om een QR-code te scannen begint rond de 160.");
     beeldForm.data = { image_size: clampBeeld(row.image_size) };
     beeldForm.addEventListener("value-changed", (e) => {
       e.stopPropagation();
@@ -657,10 +657,10 @@ class EntitiesEditor extends HTMLElement {
     const kolomSchema = () =>
       Array.from({ length: row.columns }, (_, i) => ({ name: `k${i}`, selector: { text: {} } }));
     kolomForm.schema = kolomSchema();
-    kolomForm.computeLabel = (schema) => `Kop boven kolom ${Number(schema.name.slice(1)) + 1}`;
+    kolomForm.computeLabel = (schema) => t("Kop boven kolom {n}", { n: Number(schema.name.slice(1)) + 1 });
     kolomForm.computeHelper = (schema) =>
       schema.name === "k0"
-        ? "Laat leeg voor geen koppen. Handig als er twee dingen naast elkaar staan die allebei een naam verdienen."
+        ? t("Laat leeg voor geen koppen. Handig als er twee dingen naast elkaar staan die allebei een naam verdienen.")
         : undefined;
     const kolomData = () =>
       Object.fromEntries(
@@ -680,10 +680,10 @@ class EntitiesEditor extends HTMLElement {
     // hem kunnen herkennen zonder hem open te doen.
     const vernieuwKop = () => {
       const ingevuld = row.items.filter(gevuld);
-      const delen = [`${row.columns} kolom${row.columns > 1 ? "men" : ""}`];
+      const delen = [tn(row.columns, "{n} kolom", "{n} kolommen")];
       if (row.layout !== "row") delen.push(vormLabel(row.layout));
-      delen.push(ingevuld.length ? ingevuld.map((i) => this.itemNaam_(i)).join(", ") : "nog leeg");
-      if (row.column_names?.some?.(Boolean)) delen.push("met kolomkoppen");
+      delen.push(ingevuld.length ? ingevuld.map((i) => this.itemNaam_(i)).join(", ") : t("nog leeg"));
+      if (row.column_names?.some?.(Boolean)) delen.push(t("met kolomkoppen"));
       sub.textContent = delen.join(" · ");
       kolommen.vernieuw();
       vormen.vernieuw();
@@ -710,7 +710,7 @@ class EntitiesEditor extends HTMLElement {
       item.name ||
       this.hass_?.states?.[item.entity]?.attributes?.friendly_name ||
       item.entity ||
-      "Knop"
+      t("Knop")
     );
   }
 
@@ -728,7 +728,7 @@ class EntitiesEditor extends HTMLElement {
     const nr = document.createElement("span");
     nr.className = "nr";
     nr.textContent = String(i + 1);
-    nr.title = `Plek ${i + 1} in de rij`;
+    nr.title = t("Plek {n} in de rij", { n: i + 1 });
 
     const titel = document.createElement("span");
     titel.className = "titel";
@@ -739,7 +739,7 @@ class EntitiesEditor extends HTMLElement {
     const weg = document.createElement("button");
     weg.type = "button";
     weg.className = "weg";
-    weg.title = "Deze plek leegmaken";
+    weg.title = t("Deze plek leegmaken");
     weg.textContent = "✕";
     this.binnenKop_(weg, () => {
       // Leeghalen laat de rest opschuiven, want zo tekent de kaart het ook:
@@ -760,9 +760,9 @@ class EntitiesEditor extends HTMLElement {
     const kiezer = document.createElement("ha-form");
     kiezer.hass = this.hass_;
     kiezer.schema = [{ name: "entity", selector: { entity: {} } }];
-    kiezer.computeLabel = () => "Entiteit";
+    kiezer.computeLabel = () => t("Entiteit");
     kiezer.computeHelper = () =>
-      "Mag leeg blijven: zonder entiteit wordt dit een navigatieknop. Geef hem dan een naam, een icoon en een tikactie.";
+      t("Mag leeg blijven: zonder entiteit wordt dit een navigatieknop. Geef hem dan een naam, een icoon en een tikactie.");
     kiezer.addEventListener("value-changed", (e) => {
       e.stopPropagation();
       item.entity = e.detail.value.entity ?? "";
@@ -771,7 +771,7 @@ class EntitiesEditor extends HTMLElement {
     });
 
     const icoon = document.createElement("dac-icon-picker");
-    icoon.label = "Icoon";
+    icoon.label = t("Icoon");
     icoon.hass = this.hass_;
     icoon.addEventListener("value-changed", (e) => {
       e.stopPropagation();
@@ -796,26 +796,26 @@ class EntitiesEditor extends HTMLElement {
     ];
     rest.computeLabel = (s) =>
       ({
-        name: "Naam (overschrijft die van de entiteit)",
-        toggle: "Schakelaar tonen",
-        show_icon: "Icoon tonen",
-        show_name: "Naam tonen",
-        show_state: "Status tonen",
-        icon_tap_action: "Tikken op het icoon",
-        icon_hold_action: "Vasthouden op het icoon",
-        tap_action: "Tikken op de regel",
-        hold_action: "Vasthouden op de regel",
-        double_tap_action: "Dubbeltikken op de regel",
+        name: t("Naam (overschrijft die van de entiteit)"),
+        toggle: t("Schakelaar tonen"),
+        show_icon: t("Icoon tonen"),
+        show_name: t("Naam tonen"),
+        show_state: t("Status tonen"),
+        icon_tap_action: t("Tikken op het icoon"),
+        icon_hold_action: t("Vasthouden op het icoon"),
+        tap_action: t("Tikken op de regel"),
+        hold_action: t("Vasthouden op de regel"),
+        double_tap_action: t("Dubbeltikken op de regel"),
       })[s.name] ?? s.name;
     rest.computeHelper = (s) => {
       if (s.name === "icon_tap_action")
-        return "Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert.";
+        return t("Het icoon en de regel zijn twee knoppen: het icoon schakelt, de regel opent of navigeert.");
       if (s.name === "toggle")
-        return "Een schuifschakelaar in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.";
+        return t("Een schuifschakelaar in plaats van de statustekst. Alleen voor wat twee standen heeft: een lamp, een stopcontact, een schakelaar.");
       if (s.name === "show_state")
-        return "Een tijd of datum -- een input_datetime, of een klok van een apparaat -- verschijnt hier als een veld dat je meteen kunt zetten. Uit haalt met de tekst ook dat veld weg.";
+        return t("Een tijd of datum -- een input_datetime, of een klok van een apparaat -- verschijnt hier als een veld dat je meteen kunt zetten. Uit haalt met de tekst ook dat veld weg.");
       if (s.name === "double_tap_action")
-        return "Laat dit op geen actie staan als je het niet gebruikt: een regel die op dubbeltikken wacht, reageert trager op een gewone tik.";
+        return t("Laat dit op geen actie staan als je het niet gebruikt: een regel die op dubbeltikken wacht, reageert trager op een gewone tik.");
       return undefined;
     };
     rest.addEventListener("value-changed", (e) => {
@@ -848,8 +848,8 @@ class EntitiesEditor extends HTMLElement {
     // De kop: die mag bij elke wijziging opnieuw, want er staat niemand in te
     // typen. Naam en entiteit erin veranderen terwijl je ze invult.
     const vernieuwKop = () => {
-      naam.textContent = gevuld(item) ? this.itemNaam_(item) : "Kies een entiteit";
-      sub.textContent = item.entity || (gevuld(item) ? "Zonder entiteit: een navigatieknop" : "");
+      naam.textContent = gevuld(item) ? this.itemNaam_(item) : t("Kies een entiteit");
+      sub.textContent = item.entity || (gevuld(item) ? t("Zonder entiteit: een navigatieknop") : "");
       det.dataset.leeg = String(!gevuld(item));
       weg.hidden = !gevuld(item);
     };

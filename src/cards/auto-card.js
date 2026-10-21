@@ -52,6 +52,7 @@ import {
   staatOpen,
   statusregel,
 } from "./auto-logica.js";
+import { nt, t, tc } from "../taal.js";
 
 const TOON = {
   good: TONES.good,
@@ -209,8 +210,7 @@ class AutoCard extends DacCard {
     const iets =
       c.battery || c.fuel || c.range || c.range_electric || c.sensors?.length || c.lock || c.image;
     if (!iets) {
-      c[INCOMPLETE] =
-        "Kies de aandrijving en vul minstens één sensor in — de accu, de tank of de actieradius.";
+      c[INCOMPLETE] = t("Kies de aandrijving en vul minstens één sensor in — de accu, de tank of de actieradius.");
     }
     return c;
   }
@@ -302,7 +302,7 @@ class AutoCard extends DacCard {
       c.battery && !stateOf(this.hass, c.battery) && c.range && !stateOf(this.hass, c.range);
     this.toggleAttribute("dead", Boolean(dood));
 
-    this.text(".nm", c.name || nameOf(this.hass, c.battery || c.range || c.lock, "Auto"));
+    this.text(".nm", c.name || nameOf(this.hass, c.battery || c.range || c.lock, tc("voertuig", "Auto")));
 
     const regel = statusregel({
       open,
@@ -336,7 +336,7 @@ class AutoCard extends DacCard {
     vak.dataset.bron = bron;
     const img = document.createElement("img");
     img.src = bron;
-    img.alt = this.config.name || "De auto";
+    img.alt = this.config.name || t("De auto");
     img.loading = "lazy";
     // Een pad dat niet klopt geeft anders een gebroken plaatje; dan liever het
     // icoon terug, precies zoals bij een kaart zonder foto.
@@ -357,7 +357,7 @@ class AutoCard extends DacCard {
       meters.push({
         sleutel: "accu",
         icoon: "battery",
-        label: "Accu",
+        label: t("Accu"),
         pct: accu,
         // Zolang hij laadt is de kleur die van het laden en niet die van de
         // stand: een accu op 8% die aan de lader hangt is geen alarm.
@@ -371,7 +371,7 @@ class AutoCard extends DacCard {
       meters.push({
         sleutel: "tank",
         icoon: soort === "hybrid" ? "petrol" : AANDRIJVING[soort].icoon,
-        label: "Tank",
+        label: t("Tank"),
         pct: tank,
         toon: n.toon,
         waarde: `${tank}%`,
@@ -384,7 +384,7 @@ class AutoCard extends DacCard {
       meters.push({
         sleutel: "radius",
         icoon: "gaugeArrow",
-        label: "Actieradius",
+        label: t("Actieradius"),
         pct: null,
         toon: "neutral",
         waarde: `${radius.waarde} ${radius.eenheid}`,
@@ -410,7 +410,7 @@ class AutoCard extends DacCard {
             ? `<span class="w">${this.veilig_(m.waarde)} · ${this.veilig_(extra)}</span>`
             : `<span class="w">${this.veilig_(m.waarde)}</span>`;
         const bij =
-          m.laadt && laadMin ? ` · nog ${this.veilig_(alsDuur(laadMin))}` : "";
+          m.laadt && laadMin ? ` · ${this.veilig_(t("nog {duur}", { duur: alsDuur(laadMin) }))}` : "";
         return `
           <div class="meter" style="--balk:${TOON[m.toon] ?? TONES.neutral}">
             <div class="regel">
@@ -473,7 +473,7 @@ class AutoCard extends DacCard {
       uit.push({
         id: c.location,
         w: waar.tekst + ver,
-        l: "Waar hij staat",
+        l: t("Waar hij staat"),
         toon: waar.thuis === true ? "good" : null,
       });
     }
@@ -486,7 +486,7 @@ class AutoCard extends DacCard {
         uit.push({
           id: c.charging,
           w: tekst,
-          l: "Laadstatus",
+          l: t("Laadstatus"),
           toon: laden === "charging" ? "accent" : laden === "complete" ? "good" : null,
         });
       }
@@ -498,46 +498,46 @@ class AutoCard extends DacCard {
     if (c.lock && stand.slot !== null && stand.slot !== undefined) {
       uit.push({
         id: c.lock,
-        w: stand.slot ? "Op slot" : "Niet op slot",
-        l: "Portierslot",
+        w: stand.slot ? t("Op slot") : t("Niet op slot"),
+        l: t("Portierslot"),
         toon: stand.slot ? "good" : "warn",
       });
     }
     if (c.doors && stand.deurOpen !== null && stand.deurOpen !== undefined) {
       uit.push({
         id: c.doors,
-        w: stand.deurOpen ? "Open" : "Dicht",
-        l: "Deuren",
+        w: stand.deurOpen ? t("Open") : t("Dicht"),
+        l: t("Deuren"),
         toon: stand.deurOpen ? "warn" : null,
       });
     }
     if (c.windows && stand.raamOpen !== null && stand.raamOpen !== undefined) {
       uit.push({
         id: c.windows,
-        w: stand.raamOpen ? "Open" : "Dicht",
-        l: "Ramen",
+        w: stand.raamOpen ? t("Open") : t("Dicht"),
+        l: t("Ramen"),
         toon: stand.raamOpen ? "warn" : null,
       });
     }
-    if (c.climate) voegToe(c.climate, "Voorverwarmen");
+    if (c.climate) voegToe(c.climate, t("Voorverwarmen"));
 
-    if (c.odometer) voegToe(c.odometer, "Kilometerstand");
-    if (c.charging_power) voegToe(c.charging_power, "Laadvermogen");
+    if (c.odometer) voegToe(c.odometer, t("Kilometerstand"));
+    if (c.charging_power) voegToe(c.charging_power, t("Laadvermogen"));
     for (const id of Array.isArray(c.sensors) ? c.sensors : []) voegToe(id, null);
 
     vak.hidden = !uit.length;
     if (!uit.length) return;
 
-    const sig = uit.map((t) => `${t.id}|${t.w}|${t.toon ?? ""}`).join(",");
+    const sig = uit.map((tg) => `${tg.id}|${tg.w}|${tg.toon ?? ""}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = uit
       .map(
-        (t) =>
-          `<div class="tegel" data-id="${this.veilig_(t.id)}" role="button" tabindex="0"` +
-          `${t.toon ? ` style="--tegeltoon:${TOON[t.toon] ?? TONES.neutral}"` : ""}>` +
-          `<span class="w">${this.veilig_(t.w)}</span>` +
-          `<span class="l">${this.veilig_(t.l)}</span></div>`
+        (tg) =>
+          `<div class="tegel" data-id="${this.veilig_(tg.id)}" role="button" tabindex="0"` +
+          `${tg.toon ? ` style="--tegeltoon:${TOON[tg.toon] ?? TONES.neutral}"` : ""}>` +
+          `<span class="w">${this.veilig_(tg.w)}</span>` +
+          `<span class="l">${this.veilig_(tg.l)}</span></div>`
       )
       .join("");
   }
@@ -582,8 +582,8 @@ class AutoEditor extends DacEditor {
       // selector van Home Assistant wordt lui geladen en komt in onze editor
       // nooit: het veld blijft een leeg vak van nul pixels hoog. Gemeten op
       // 27 augustus 2026; zie de kop van foto-picker.js.
-      { key: "image", kind: "foto", label: "Foto van de auto" },
-      { key: "icon", kind: "icon", label: "Icoon (zonder foto)", fallback: "car" },
+      { key: "image", kind: "foto", label: t("Foto van de auto") },
+      { key: "icon", kind: "icon", label: t("Icoon (zonder foto)"), fallback: "car" },
     ];
   }
 
@@ -602,14 +602,14 @@ class AutoEditor extends DacEditor {
       {
         name: "drivetrain",
         selector: sel.select(
-          Object.entries(AANDRIJVING).map(([value, { label }]) => ({ value, label }))
+          Object.entries(AANDRIJVING).map(([value, { label }]) => ({ value, label: t(label) }))
         ),
       },
       {
         name: "photo_size",
         selector: sel.select([
-          { value: "klein", label: "Klein, naast de naam" },
-          { value: "groot", label: "Groot, over de hele breedte" },
+          { value: "klein", label: t("Klein, naast de naam") },
+          { value: "groot", label: t("Groot, over de hele breedte") },
         ]),
       },
       { name: "range", selector: sel.entity(["sensor", "number"]) },
@@ -647,26 +647,26 @@ class AutoEditor extends DacEditor {
   label(s) {
     return (
       {
-        name: "Naam",
-        drivetrain: "Aandrijving",
-        image: "Foto van de auto",
-        photo_size: "Hoe groot staat de foto",
-        range: "Actieradius",
-        battery: "Accupercentage",
-        battery_max: "Accu-inhoud (kWh), als de sensor geen procenten geeft",
-        charging: "Laadstatus",
-        charging_ready: "Klaar met laden om / nog te gaan",
-        charging_power: "Laadvermogen",
-        fuel: "Tankniveau",
-        fuel_max: "Tankinhoud (liter), als de sensor geen procenten geeft",
-        lock: "Portierslot",
-        doors: "Deuren open",
-        windows: "Ramen open",
-        climate: "Voorverwarmen (alleen uitlezen)",
-        location: "Waar hij staat",
-        home_radius: "Hoe dichtbij is thuis (meter)",
-        odometer: "Kilometerstand",
-        sensors: "Extra sensoren als tegel",
+        name: t("Naam"),
+        drivetrain: t("Aandrijving"),
+        image: t("Foto van de auto"),
+        photo_size: t("Hoe groot staat de foto"),
+        range: t("Actieradius"),
+        battery: t("Accupercentage"),
+        battery_max: t("Accu-inhoud (kWh), als de sensor geen procenten geeft"),
+        charging: t("Laadstatus"),
+        charging_ready: t("Klaar met laden om / nog te gaan"),
+        charging_power: t("Laadvermogen"),
+        fuel: t("Tankniveau"),
+        fuel_max: t("Tankinhoud (liter), als de sensor geen procenten geeft"),
+        lock: t("Portierslot"),
+        doors: t("Deuren open"),
+        windows: t("Ramen open"),
+        climate: t("Voorverwarmen (alleen uitlezen)"),
+        location: t("Waar hij staat"),
+        home_radius: t("Hoe dichtbij is thuis (meter)"),
+        odometer: t("Kilometerstand"),
+        sensors: t("Extra sensoren als tegel"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -674,24 +674,24 @@ class AutoEditor extends DacEditor {
   helper(s) {
     const uitleg = {
       drivetrain:
-        "Bepaalt welke balken er op de kaart komen — een accu, een tank, of allebei — en welke velden je hieronder ziet.",
+        t("Bepaalt welke balken er op de kaart komen — een accu, een tank, of allebei — en welke velden je hieronder ziet."),
       image:
-        "Kies een bestand of sleep er een op. Home Assistant zet hem in zijn eigen media-opslag; je kunt ook een pad als /local/auto.png intypen.",
+        t("Kies een bestand of sleep er een op. Home Assistant zet hem in zijn eigen media-opslag; je kunt ook een pad als /local/auto.png intypen."),
       range:
-        "In de eenheid van de sensor zelf. De kaart rekent niets om: staat je Home Assistant op mijlen, dan zie je mijlen.",
+        t("In de eenheid van de sensor zelf. De kaart rekent niets om: staat je Home Assistant op mijlen, dan zie je mijlen."),
       battery_max:
-        "Alleen nodig als je accusensor in kWh meldt in plaats van in procenten. Dan rekent de kaart het percentage zelf uit.",
-      fuel_max: "Alleen nodig als je tanksensor in liters meldt in plaats van in procenten.",
+        t("Alleen nodig als je accusensor in kWh meldt in plaats van in procenten. Dan rekent de kaart het percentage zelf uit."),
+      fuel_max: t("Alleen nodig als je tanksensor in liters meldt in plaats van in procenten."),
       charging_ready:
-        "Een aantal minuten, een klok of het tijdstip waarop hij vol is — alle drie worden gelezen.",
-      doors: "Staat er iets open, dan zegt de kaart dat en gaat al het andere even opzij. Een binary_sensor mag, maar een gewone sensor met een woord erin ook — Closed, Open, Ajar en LOCKED worden allemaal gelezen.",
-      lock: "Alleen uitlezen: deze kaart bedient niets. Een lock-entiteit mag, maar ook een sensor die LOCKED of UNLOCKED meldt.",
+        t("Een aantal minuten, een klok of het tijdstip waarop hij vol is — alle drie worden gelezen."),
+      doors: t("Staat er iets open, dan zegt de kaart dat en gaat al het andere even opzij. Een binary_sensor mag, maar een gewone sensor met een woord erin ook — Closed, Open, Ajar en LOCKED worden allemaal gelezen."),
+      lock: t("Alleen uitlezen: deze kaart bedient niets. Een lock-entiteit mag, maar ook een sensor die LOCKED of UNLOCKED meldt."),
       location:
-        "Een device_tracker die home of not_home meldt, of een sensor met een coordinaat — beide worden gelezen. Bij een coordinaat rekent de kaart de afstand tot de locatie van je Home Assistant uit en maakt daar Thuis of Afwezig van.",
+        t("Een device_tracker die home of not_home meldt, of een sensor met een coordinaat — beide worden gelezen. Bij een coordinaat rekent de kaart de afstand tot de locatie van je Home Assistant uit en maakt daar Thuis of Afwezig van."),
       home_radius:
-        "Alleen van belang bij een sensor met een coordinaat. Binnen deze afstand van je huis heet de auto thuis. Leeg laten is 100 meter — ruim genoeg voor een oprit of een parkeerplaats om de hoek.",
+        t("Alleen van belang bij een sensor met een coordinaat. Binnen deze afstand van je huis heet de auto thuis. Leeg laten is 100 meter — ruim genoeg voor een oprit of een parkeerplaats om de hoek."),
       sensors:
-        "Alles wat je verder nog kwijt wilt: bandenspanning, buitentemperatuur, de volgende beurt. Ze komen als tegels onderaan te staan, met de naam uit Home Assistant.",
+        t("Alles wat je verder nog kwijt wilt: bandenspanning, buitentemperatuur, de volgende beurt. Ze komen als tegels onderaan te staan, met de naam uit Home Assistant."),
     };
     return uitleg[s.name];
   }
@@ -699,9 +699,10 @@ class AutoEditor extends DacEditor {
 
 registerEditor("domotiapp-auto-card-editor", AutoEditor);
 registerCard("domotiapp-auto-card", AutoCard, {
-  name: "DomotiApp Auto",
-  description:
+  name: nt("DomotiApp Auto"),
+  description: nt(
     "Brandstof, hybride of elektrisch: accu- en tankbalk, actieradius, laadstatus, het slot en zoveel eigen sensoren als je kwijt wilt — met een foto van de auto erbij.",
+  ),
 });
 
 export { AutoCard };

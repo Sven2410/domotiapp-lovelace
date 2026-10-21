@@ -16,6 +16,8 @@
  * null-waarde; afwezigheid ís de toestand.
  */
 
+import { tn } from "../taal.js";
+
 /** Kleurmodi die een kleurkiezer verdienen (SPEC 6.1). */
 export const KLEURMODI = ["hs", "rgb", "rgbw", "rgbww", "xy"];
 
@@ -348,9 +350,7 @@ export function meldingNieuweLampen(aantal) {
   if (!Number.isInteger(aantal) || aantal <= 0) {
     return null;
   }
-  return aantal === 1
-    ? "1 lamp nog niet ingesteld"
-    : `${aantal} lampen nog niet ingesteld`;
+  return tn(aantal, "{n} lamp nog niet ingesteld", "{n} lampen nog niet ingesteld");
 }
 
 /**

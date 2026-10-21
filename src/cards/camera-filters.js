@@ -30,6 +30,8 @@
  * in `camera-card.js`; wat er WAAR is staat hier.
  */
 
+import { locale, nt, t } from "../taal.js";
+
 /**
  * De vijf soorten waar hij op wil kunnen filteren, in de volgorde waarin ze op
  * de kaart staan.
@@ -42,31 +44,31 @@
 export const SOORTEN = [
   {
     sleutel: "mens",
-    label: "Mens",
+    label: nt("Mens"),
     icoon: "person",
     woorden: ["person", "persoon", "personen", "mens", "people", "human"],
   },
   {
     sleutel: "dier",
-    label: "Dier",
+    label: nt("Dier"),
     icoon: "dier",
     woorden: ["pet", "pets", "dier", "dieren", "huisdier", "animal", "dog", "hond", "cat", "kat"],
   },
   {
     sleutel: "voertuig",
-    label: "Voertuig",
+    label: nt("Voertuig"),
     icoon: "car",
     woorden: ["vehicle", "voertuig", "car", "auto", "truck", "vrachtwagen", "motorcycle"],
   },
   {
     sleutel: "aanbellen",
-    label: "Aanbellen",
+    label: nt("Aanbellen"),
     icoon: "bell",
     woorden: ["doorbell", "deurbel", "aanbellen", "aangebeld", "visitor", "bezoeker", "bel", "ring", "chime"],
   },
   {
     sleutel: "ontgrendeling",
-    label: "Ontgrendeling",
+    label: nt("Ontgrendeling"),
     icoon: "lockOpen",
     woorden: [
       "unlock", "unlocked", "ontgrendeld", "ontgrendeling", "slot", "lock",
@@ -92,7 +94,7 @@ export const SOORTEN = [
  * gedefinieerd als beweging."* Terecht: raden mag om je werk uit handen te
  * nemen, niet om een knop te verzinnen.
  */
-export const ALGEMEEN = { sleutel: "beweging", label: "Beweging", icoon: "cctv", woorden: [] };
+export const ALGEMEEN = { sleutel: "beweging", label: nt("Beweging"), icoon: "cctv", woorden: [] };
 
 /** Alle soorten die een melder kan dragen, inclusief de algemene. */
 export const ALLE_SOORTEN = [...SOORTEN, ALGEMEEN];
@@ -346,9 +348,6 @@ export function verschuifDag(moment, dagen) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dagen).getTime();
 }
 
-const DAGEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];
-const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-
 /**
  * Hoe de gekozen dag heet.
  *
@@ -357,14 +356,26 @@ const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", 
  * rekenwerk is dat je zelf moet doen. `null` is "alle dagen".
  */
 export function dagLabel(dag, nu = Date.now()) {
-  if (dag === null || dag === undefined) return "Alles";
+  if (dag === null || dag === undefined) return t("Alles");
   const vandaag = dagOm(nu).vanaf;
   const gekozen = dagOm(dag).vanaf;
   const verschil = Math.round((vandaag - gekozen) / 86400000);
-  if (verschil === 0) return "Vandaag";
-  if (verschil === 1) return "Gisteren";
-  const d = new Date(gekozen);
-  return `${DAGEN[d.getDay()]} ${d.getDate()} ${MAANDEN[d.getMonth()]}`;
+  if (verschil === 0) return t("Vandaag");
+  if (verschil === 1) return t("Gisteren");
+  // Dag en maand in de taal van de kaart: "wo 26 aug" of "Wed 26 Aug".
+  return new Date(gekozen).toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
+}
+
+/**
+ * Dezelfde dag midden in een zin: "vandaag", "gisteren" of "wo 26 aug". In het
+ * Engels blijft een datum met een hoofdletter ("Wed 26 Aug"); daarom niet
+ * `dagLabel(...).toLowerCase()`.
+ */
+export function dagInZin(dag, nu = Date.now()) {
+  const verschil = Math.round((dagOm(nu).vanaf - dagOm(dag).vanaf) / 86400000);
+  if (verschil === 0) return t("vandaag");
+  if (verschil === 1) return t("gisteren");
+  return dagLabel(dag, nu);
 }
 
 /*

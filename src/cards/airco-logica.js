@@ -37,6 +37,7 @@
 import { huidigeStand, standLabel, standOproep, standen, volgendDoel } from "./hvac-logica.js";
 // Voor de tegels van de airco-kaart (onderaan dit bestand).
 import { formatteer } from "./hvac-logica.js";
+import { locale, nt, t, tc } from "../taal.js";
 // Voor de coach (helemaal onderaan).
 import { coachApparaten, coachRollen, contractVan } from "./coach-logica.js";
 
@@ -71,28 +72,28 @@ const lijst = (arr) => (Array.isArray(arr) ? arr.filter((x) => typeof x === "str
 /* ------------------------------------------------------------- woorden */
 
 const STAND = {
-  off: "Uit",
-  heat: "Verwarmen",
-  cool: "Koelen",
-  heat_cool: "Auto",
-  auto: "Auto",
-  dry: "Drogen",
-  fan_only: "Ventileren",
+  off: nt("Uit"),
+  heat: nt("Verwarmen"),
+  cool: nt("Koelen"),
+  heat_cool: nt("Auto"),
+  auto: nt("Auto"),
+  dry: nt("Drogen"),
+  fan_only: nt("Ventileren"),
 };
 
 const ACTIE = {
-  heating: "Verwarmt",
-  preheating: "Verwarmt voor",
-  defrosting: "Ontdooit",
-  cooling: "Koelt",
-  drying: "Droogt",
-  fan: "Ventileert",
-  idle: "Standby",
-  off: "Uit",
+  heating: nt("Verwarmt"),
+  preheating: nt("Verwarmt voor"),
+  defrosting: nt("Ontdooit"),
+  cooling: nt("Koelt"),
+  drying: nt("Droogt"),
+  fan: nt("Ventileert"),
+  idle: nt("Standby"),
+  off: nt("Uit"),
 };
 
 /** De stand (`hvac_mode`) in het Nederlands. */
-export const standNaam = (stand) => STAND[stand] ?? standLabel(stand);
+export const standNaam = (stand) => (STAND[stand] ? t(STAND[stand]) : standLabel(stand));
 
 /**
  * Wat de airco DOET, als één woord voor de kleur en het icoon.
@@ -180,7 +181,7 @@ export function aircoStand(st, { sensor = null, reserve = null } = {}) {
     stand,
     standNaam: beschikbaar ? standNaam(stand) : "",
     actie,
-    actieNaam: actie ? ACTIE[actie] ?? standLabel(actie) : "",
+    actieNaam: actie ? (ACTIE[actie] ? t(ACTIE[actie]) : standLabel(actie)) : "",
     soort: !beschikbaar ? "dood" : !aan ? "uit" : soortVan(stand, actie),
     huidig,
     doel: bereik ? null : enkel,
@@ -200,9 +201,9 @@ export function aircoStand(st, { sensor = null, reserve = null } = {}) {
  * gaat koelen of verwarmen.
  */
 export function statusTekst(s) {
-  if (!s.beschikbaar) return "Niet bereikbaar";
-  if (!s.aan) return "Uit";
-  if (s.actie === "idle") return `Standby · ${s.standNaam}`;
+  if (!s.beschikbaar) return t("Niet bereikbaar");
+  if (!s.aan) return t("Uit");
+  if (s.actie === "idle") return `${t("Standby")} · ${s.standNaam}`;
   return s.actieNaam || s.standNaam;
 }
 
@@ -220,7 +221,7 @@ export function doelTekst(s, fmt) {
 }
 
 /** Een graad zoals een mens hem leest: 21, 21,5. */
-export const graden = (n, taal = "nl") =>
+export const graden = (n, taal = locale()) =>
   Number(n).toLocaleString(taal, { minimumFractionDigits: n % 1 ? 1 : 0, maximumFractionDigits: 1 });
 
 /* ------------------------------------------------------------ aan en uit */
@@ -265,7 +266,7 @@ export function aircoStanden(st) {
   const beide = opties.some((o) => o.waarde === "auto") && opties.some((o) => o.waarde === "heat_cool");
   return opties.map((o) => ({
     ...o,
-    label: beide && o.waarde === "heat_cool" ? "Warm/koud" : standNaam(o.waarde),
+    label: beide && o.waarde === "heat_cool" ? t("Warm/koud") : standNaam(o.waarde),
   }));
 }
 
@@ -345,61 +346,61 @@ export function doelOproep(st, waarden) {
 /* ------------------------------------------- ventilator, lamellen, presets */
 
 const VENTILATOR = {
-  auto: "Auto",
-  low: "Laag",
-  lowest: "Laagst",
-  min: "Min",
-  quiet: "Stil",
-  silent: "Stil",
-  silence: "Stil",
-  medium: "Midden",
-  mid: "Midden",
-  middle: "Midden",
-  medium_low: "Midden-laag",
-  medium_high: "Midden-hoog",
-  high: "Hoog",
-  highest: "Hoogst",
-  max: "Max",
-  turbo: "Turbo",
-  powerful: "Krachtig",
-  strong: "Sterk",
-  diffuse: "Diffuus",
-  focus: "Gericht",
-  on: "Aan",
-  off: "Uit",
-  on_low: "Laag",
-  on_high: "Hoog",
-  auto_low: "Auto laag",
-  auto_high: "Auto hoog",
+  auto: nt("Auto"),
+  low: nt("Laag"),
+  lowest: nt("Laagst"),
+  min: nt("Min"),
+  quiet: nt("Stil"),
+  silent: nt("Stil"),
+  silence: nt("Stil"),
+  medium: nt("Midden"),
+  mid: nt("Midden"),
+  middle: nt("Midden"),
+  medium_low: nt("Midden-laag"),
+  medium_high: nt("Midden-hoog"),
+  high: nt("Hoog"),
+  highest: nt("Hoogst"),
+  max: nt("Max"),
+  turbo: nt("Turbo"),
+  powerful: nt("Krachtig"),
+  strong: nt("Sterk"),
+  diffuse: nt("Diffuus"),
+  focus: nt("Gericht"),
+  on: nt("Aan"),
+  off: nt("Uit"),
+  on_low: nt("Laag"),
+  on_high: nt("Hoog"),
+  auto_low: nt("Auto laag"),
+  auto_high: nt("Auto hoog"),
 };
 
 const LAMEL = {
-  auto: "Auto",
-  swing: "Zwaaien",
-  on: "Zwaaien",
-  off: "Vast",
-  both: "Beide",
-  vertical: "Op en neer",
-  horizontal: "Opzij",
-  left: "Links",
-  left_centre: "Links-midden",
-  left_center: "Links-midden",
-  centre: "Midden",
-  center: "Midden",
-  middle: "Midden",
-  right_centre: "Rechts-midden",
-  right_center: "Rechts-midden",
-  right: "Rechts",
-  wide: "Breed",
-  rangefull: "Breed",
-  split: "Gespreid",
-  top: "Boven",
-  highest: "Hoogst",
-  high: "Hoog",
-  middle_vertical: "Midden",
-  low: "Laag",
-  lowest: "Laagst",
-  bottom: "Onder",
+  auto: nt("Auto"),
+  swing: nt("Zwaaien"),
+  on: nt("Zwaaien"),
+  off: nt("Vast"),
+  both: nt("Beide"),
+  vertical: nt("Op en neer"),
+  horizontal: nt("Opzij"),
+  left: nt("Links"),
+  left_centre: nt("Links-midden"),
+  left_center: nt("Links-midden"),
+  centre: nt("Midden"),
+  center: nt("Midden"),
+  middle: nt("Midden"),
+  right_centre: nt("Rechts-midden"),
+  right_center: nt("Rechts-midden"),
+  right: nt("Rechts"),
+  wide: nt("Breed"),
+  rangefull: nt("Breed"),
+  split: nt("Gespreid"),
+  top: nt("Boven"),
+  highest: nt("Hoogst"),
+  high: nt("Hoog"),
+  middle_vertical: nt("Midden"),
+  low: nt("Laag"),
+  lowest: nt("Laagst"),
+  bottom: nt("Onder"),
 };
 
 /** Een stand met een nummer: "speed_3", "position_2", "level 4", "3". */
@@ -411,14 +412,15 @@ const genummerd = (s) => {
 /** Een stand van de ventilator in het Nederlands; een nummer blijft een nummer. */
 export function ventilatorLabel(m) {
   const kern = String(m ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-  if (VENTILATOR[kern]) return VENTILATOR[kern];
+  // Met het context-Engels van een stand: "Stil" is hier "Quiet", "Midden" "Medium".
+  if (VENTILATOR[kern]) return tc("stand", VENTILATOR[kern]);
   return genummerd(m) ?? standLabel(m);
 }
 
 /** Een stand van de lamellen in het Nederlands. */
 export function lamelLabel(m) {
   const kern = String(m ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-  if (LAMEL[kern]) return LAMEL[kern];
+  if (LAMEL[kern]) return t(LAMEL[kern]);
   return genummerd(m) ?? standLabel(m);
 }
 
@@ -428,7 +430,7 @@ export function lamelLabel(m) {
  */
 export const KEUZES = {
   ventilator: {
-    naam: "Ventilator",
+    naam: nt("Ventilator"),
     lijst: "fan_modes",
     nu: "fan_mode",
     service: "set_fan_mode",
@@ -436,7 +438,7 @@ export const KEUZES = {
     label: ventilatorLabel,
   },
   lamellen: {
-    naam: "Lamellen",
+    naam: nt("Lamellen"),
     lijst: "swing_modes",
     nu: "swing_mode",
     service: "set_swing_mode",
@@ -444,7 +446,7 @@ export const KEUZES = {
     label: lamelLabel,
   },
   lamellen_opzij: {
-    naam: "Opzij",
+    naam: nt("Opzij"),
     lijst: "swing_horizontal_modes",
     nu: "swing_horizontal_mode",
     service: "set_swing_horizontal_mode",
@@ -452,7 +454,7 @@ export const KEUZES = {
     label: lamelLabel,
   },
   preset: {
-    naam: "Programma",
+    naam: nt("Programma"),
     lijst: "preset_modes",
     nu: "preset_mode",
     service: "set_preset_mode",
@@ -535,10 +537,10 @@ export function apparaatDelen(hass, climateId) {
 /** Hoe een energiesensor heet op de kaart: over welke periode hij telt. */
 export function energieLabel(id, reg) {
   const s = `${reg?.translation_key ?? ""} ${id ?? ""}`.toLowerCase();
-  if (/month|maand/.test(s)) return "Deze maand";
-  if (/today|daily|dag|vandaag/.test(s)) return "Vandaag";
-  if (/year|jaar/.test(s)) return "Dit jaar";
-  return "Verbruik";
+  if (/month|maand/.test(s)) return t("Deze maand");
+  if (/today|daily|dag|vandaag/.test(s)) return t("Vandaag");
+  if (/year|jaar/.test(s)) return t("Dit jaar");
+  return t("Verbruik");
 }
 
 /* ======================================================================
@@ -580,7 +582,7 @@ export function standKnoppen(st) {
   if (domeinVan(st?.entity_id) !== "climate") return [];
   const opties = aircoStanden(st);
   const kanUit = kan(st, FUNCTIE.UIT) || lijst(st.attributes?.hvac_modes).includes("off");
-  const knoppen = [...(kanUit ? [{ waarde: "off", label: "Uit" }] : []), ...opties];
+  const knoppen = [...(kanUit ? [{ waarde: "off", label: t("Uit") }] : []), ...opties];
   const nu = leeg(st.state) ? "" : st.state === "off" ? "off" : gekozenStand(st);
   return knoppen.map((k) => ({ waarde: k.waarde, label: k.label, gekozen: k.waarde === nu }));
 }
@@ -617,7 +619,7 @@ export function alsKnoppen(opties, { max = 6, letters = 24 } = {}) {
  *   `delen` uit `apparaatDelen`; `energie` is de sensor uit de editor, die wint.
  * @returns {Array<{sleutel: string, label: string, waarde: string, eenheid: string, id: string}>}
  */
-export function aircoFeiten(hass, st, { delen = {}, energie = "" } = {}, taal = "nl") {
+export function aircoFeiten(hass, st, { delen = {}, energie = "" } = {}, taal = locale()) {
   const uit = [];
   const lees = (id) => (id ? hass?.states?.[id] ?? null : null);
   const tegel = (sleutel, id, label, standaard) => {
@@ -631,14 +633,14 @@ export function aircoFeiten(hass, st, { delen = {}, energie = "" } = {}, taal = 
 
   const energieId = energie || delen.energie || "";
   tegel("energie", energieId, energieLabel(energieId, hass?.entities?.[energieId]), "kWh");
-  tegel("vermogen", delen.vermogen, "Vermogen", "W");
-  if (!tegel("vocht", delen.vocht, "Vochtigheid", "%")) {
+  tegel("vermogen", delen.vermogen, t("Vermogen"), "W");
+  if (!tegel("vocht", delen.vocht, t("Vochtigheid"), "%")) {
     const v = getal(st?.attributes?.current_humidity);
     if (v != null) {
-      uit.push({ sleutel: "vocht", label: "Vochtigheid", waarde: formatteer(v, "%", taal), eenheid: "%", id: st.entity_id });
+      uit.push({ sleutel: "vocht", label: t("Vochtigheid"), waarde: formatteer(v, "%", taal), eenheid: "%", id: st.entity_id });
     }
   }
-  tegel("buiten", delen.buiten, "Buiten", "°C");
+  tegel("buiten", delen.buiten, t("Buiten"), "°C");
   return uit;
 }
 
@@ -834,18 +836,18 @@ export function aircoCoachStand(st) {
  * altijd een (`reason`), net als bij de laadpaal; dit is het vangnet.
  */
 export const COACH_STANDEN = {
-  zon: "Aan op zon.",
-  goedkoop: "Aan op een goedkoop uur.",
-  op_temperatuur: "Op temperatuur.",
-  uit: "Wacht op zon.",
-  bewoner: "Zelf bediend.",
-  pauze: "De coach is gepauzeerd.",
-  geen_meting: "De coach mist een meting.",
+  zon: nt("Aan op zon."),
+  goedkoop: nt("Aan op een goedkoop uur."),
+  op_temperatuur: nt("Op temperatuur."),
+  uit: nt("Wacht op zon."),
+  bewoner: nt("Zelf bediend."),
+  pauze: nt("De coach is gepauzeerd."),
+  geen_meting: nt("De coach mist een meting."),
 };
 
 /** "middernacht" of "14:30". */
 function klok(d) {
-  if (d.getHours() === 0 && d.getMinutes() === 0) return "middernacht";
+  if (d.getHours() === 0 && d.getMinutes() === 0) return t("middernacht");
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
@@ -864,13 +866,15 @@ export function coachRegel(s) {
   if (!s) return "";
   if (s.reden) return s.reden;
   if (s.stand === "bewoner") {
-    return s.bewonerTot ? `Zelf bediend. De coach doet weer mee vanaf ${klok(s.bewonerTot)}.` : COACH_STANDEN.bewoner;
+    return s.bewonerTot
+      ? t("Zelf bediend. De coach doet weer mee vanaf {klok}.", { klok: klok(s.bewonerTot) })
+      : t(COACH_STANDEN.bewoner);
   }
   if (s.stand === "uit" && s.dynamisch) {
-    if (s.aanOp === "goedkoop") return "Wacht op een goedkoop uur.";
-    if (s.aanOp === "beide") return "Wacht op zon of een goedkoop uur.";
+    if (s.aanOp === "goedkoop") return t("Wacht op een goedkoop uur.");
+    if (s.aanOp === "beide") return t("Wacht op zon of een goedkoop uur.");
   }
-  return COACH_STANDEN[s.stand] ?? "";
+  return COACH_STANDEN[s.stand] ? t(COACH_STANDEN[s.stand]) : "";
 }
 
 /**
@@ -879,9 +883,9 @@ export function coachRegel(s) {
  * 280 pixels passen: "Zon en goedkope uren" past daar niet in een knop.
  */
 export const AAN_OP = {
-  zon: { label: "Zon", naam: "Zon over" },
-  goedkoop: { label: "Goedkoop", naam: "Goedkope uren" },
-  beide: { label: "Beide", naam: "Zon en goedkope uren" },
+  zon: { label: nt("Zon"), naam: nt("Zon over") },
+  goedkoop: { label: nt("Goedkoop"), naam: nt("Goedkope uren") },
+  beide: { label: nt("Beide"), naam: nt("Zon en goedkope uren") },
 };
 
 /**
@@ -900,8 +904,8 @@ export function aanOpKeuzes(st, s) {
   if (!s?.dynamisch || !st || leeg(st.state)) return null;
   const opties = lijst(st.attributes?.options).map((w) => ({
     waarde: w,
-    label: AAN_OP[w]?.label ?? standLabel(w),
-    naam: AAN_OP[w]?.naam ?? standLabel(w),
+    label: AAN_OP[w] ? t(AAN_OP[w].label) : standLabel(w),
+    naam: AAN_OP[w] ? t(AAN_OP[w].naam) : standLabel(w),
   }));
   if (opties.length < 2) return null;
   return { id: st.entity_id, gekozen: st.state, opties };
@@ -970,6 +974,6 @@ export function coachKnoppen(hass, rollen, s) {
     if (!st || st.state === "unavailable") return;
     uit.push({ rol, id: st.entity_id, aan: st.state === "on", label, icoon });
   };
-  if (s) knop("pauze", "Pauze", "pause");
+  if (s) knop("pauze", t("Pauze"), "pause");
   return uit;
 }

@@ -51,6 +51,7 @@ import { DacEditor, row, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, defaultTapAction, isOn, lightTone, localizeState, runAction, stateOf } from "../ha.js";
 import { SjabloonSet, isSjabloon } from "../sjabloon.js";
+import { nt, t } from "../taal.js";
 import {
   KLEUREN,
   SOORT_STANDAARD,
@@ -339,18 +340,18 @@ class DomotiappTemplateBadge extends DacCard {
     const st = stateOf(this.hass, c.entity);
     if (soort === "energy") {
       const v = vermogen(st);
-      if (!v) return { tekst: st ? localizeState(this.hass, st) : "Geen sensor", band: null, icoon: "bolt" };
+      if (!v) return { tekst: st ? localizeState(this.hass, st) : t("Geen sensor"), band: null, icoon: "bolt" };
       return { tekst: v.tekst, band: energieBand(v.watt, c), icoon: "bolt" };
     }
     if (soort === "alarm") {
-      if (!st) return { tekst: "Geen entiteit", stand: null, icoon: "shield" };
+      if (!st) return { tekst: t("Geen entiteit"), stand: null, icoon: "shield" };
       const { waarde, stand } = alarmStand(st, c);
       // Een attribuut dat niet bestaat gaf een lege regel, en dan zie je niet
       // dat je je vergist hebt in de naam. Gevonden in de editor op
       // 29 september 2026 met "arm mode".
-      if (c.alarm_attribute && !waarde) return { tekst: "Attribuut ontbreekt", stand: null, icoon: "shield" };
+      if (c.alarm_attribute && !waarde) return { tekst: t("Attribuut ontbreekt"), stand: null, icoon: "shield" };
       const ruw = c.alarm_attribute ? waarde : localizeState(this.hass, st);
-      return { tekst: stand?.tekst ?? ruw, stand, icoon: stand?.icoon ?? "shield", ruw: waarde };
+      return { tekst: stand ? t(stand.tekst) : ruw, stand, icoon: stand?.icoon ?? "shield", ruw: waarde };
     }
     return null;
   }
@@ -382,7 +383,7 @@ class DomotiappTemplateBadge extends DacCard {
 
     const label = this.sjablonen_.waarde("label", c.label);
     const content = fouten.length
-      ? "Sjabloonfout"
+      ? t("Sjabloonfout")
       : lampen
         ? String(lampen.length)
         : uitkomst
@@ -441,16 +442,16 @@ class DomotiappTemplateBadge extends DacCard {
     const lamp = entities?.find((e) => e.startsWith("light."));
     if (!lamp) {
       return {
-        label: "Lampen aan",
+        label: t("Lampen aan"),
         icon: "bulb",
         content: "{{ states.light | selectattr('state','eq','on') | list | count }}",
       };
     }
     return {
       entity: lamp,
-      label: "Lamp",
+      label: t("Lamp"),
       icon: "bulb",
-      content: "{% if is_state(entity, 'on') %}Aan{% else %}Uit{% endif %}",
+      content: t("{% if is_state(entity, 'on') %}Aan{% else %}Uit{% endif %}"),
     };
   }
 }
@@ -459,16 +460,16 @@ class DomotiappTemplateBadge extends DacCard {
 
 /** De keuzelijst "Soort badge". Geen lege waarde: die is niet te kiezen (valkuil 55). */
 const SOORT_KEUZES = [
-  { value: "tekst", label: "Eigen tekst (sjablonen)" },
-  { value: "lights", label: "Lampenteller" },
-  { value: "energy", label: "Energie" },
-  { value: "alarm", label: "Alarm" },
+  { value: "tekst", label: nt("Eigen tekst (sjablonen)") },
+  { value: "lights", label: nt("Lampenteller") },
+  { value: "energy", label: nt("Energie") },
+  { value: "alarm", label: nt("Alarm") },
 ];
 
 /** Een kleurlijst, met "Automatisch" erbij waar dat iets betekent. */
 const kleurKeuzes = ({ automatisch = false, extra = "" } = {}) => [
-  ...(automatisch ? [{ value: "auto", label: "Automatisch" }] : []),
-  ...KLEUREN.map(([value, label]) => ({ value, label })),
+  ...(automatisch ? [{ value: "auto", label: t("Automatisch") }] : []),
+  ...KLEUREN.map(([value, label]) => ({ value, label: t(label) })),
   // Een kleur die er al stond maar niet in de lijst staat (een #hex, een oude
   // naam) houdt zijn eigen regel. Hem stil laten vallen zou betekenen dat de
   // badge een kleur draagt die nergens te zien is -- de vormregel over een oude
@@ -534,7 +535,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
    * is hier geen zinnige standaard -- er is vaak niets om te volgen.
    */
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "shield", auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "shield", auto: false }];
   }
 
   /**
@@ -557,9 +558,15 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       patch = replace ? straks : { ...patch };
       const oud = SOORT_STANDAARD[voor] ?? {};
       const nieuw = SOORT_STANDAARD[na] ?? {};
+      // De kop komt in de taal van nu in de config: vanaf dan is het zijn
+      // eigen tekst. Een kop die nog de standaard van de vorige soort draagt,
+      // in welke taal ook, gaat mee met de nieuwe soort.
+      const kop = (standaard) => (standaard.label === undefined ? undefined : t(standaard.label));
+      const isStandaard = (sleutel) =>
+        straks[sleutel] === oud[sleutel] || (sleutel === "label" && oud.label !== undefined && straks.label === kop(oud));
       for (const sleutel of ["label", "icon"]) {
         if (sleutel === "icon" && String(straks.icon_template ?? "").trim()) continue;
-        if (!straks[sleutel] || straks[sleutel] === oud[sleutel]) patch[sleutel] = nieuw[sleutel];
+        if (!straks[sleutel] || isStandaard(sleutel)) patch[sleutel] = sleutel === "label" ? kop(nieuw) : nieuw[sleutel];
       }
       for (const [sleutel, waarde] of Object.entries(nieuw)) {
         if (sleutel !== "label" && sleutel !== "icon" && straks[sleutel] === undefined) patch[sleutel] = waarde;
@@ -597,7 +604,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       // op 28 augustus 2026 voor de presets van de camera vroeg (valkuil 33).
       lights: [
         section(
-          "Niet meetellen",
+          t("Niet meetellen"),
           "mdi:lightbulb-off-outline",
           [{ name: "light_exclude", selector: { entity: { domain: "light", multiple: true } } }],
           true
@@ -609,7 +616,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       // bij de sensor erboven.
       energy: [
         section(
-          "Energie",
+          t("Energie"),
           "mdi:flash",
           [
             { name: "entity", selector: sel.entity(["sensor"]) },
@@ -622,7 +629,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
       ],
       alarm: [
         section(
-          "Alarm",
+          t("Alarm"),
           "mdi:shield-home-outline",
           [
             { name: "entity", selector: sel.entity() },
@@ -641,7 +648,7 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
     const eigenKleur = soort !== "energy" && soort !== "alarm";
 
     return [
-      { name: "mode", selector: sel.select(SOORT_KEUZES) },
+      { name: "mode", selector: sel.select(SOORT_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
       ...blok,
       ...(soort ? [] : [{ name: "entity", selector: sel.entity() }]),
       { name: "label", selector: sel.multiline() },
@@ -666,32 +673,32 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
   label(s) {
     return (
       {
-        mode: "Soort badge",
-        light_exclude: "Lampen die hij overslaat",
+        mode: t("Soort badge"),
+        light_exclude: t("Lampen die hij overslaat"),
         entity: badgeSoort(this.config_) === "energy"
-          ? "Vermogen"
+          ? t("Vermogen")
           : badgeSoort(this.config_) === "alarm"
-            ? "Alarm"
-            : "Entiteit (optioneel)",
-        energy_green_max: "Tot en met (W)",
-        energy_color_low: "Kleur",
-        energy_orange_max: "Daarna tot en met (W)",
-        energy_color_mid: "Kleur",
-        energy_color_high: "Kleur daarboven",
-        alarm_attribute: "Status uit een attribuut (optioneel)",
-        alarm_disarmed: "Uitgeschakeld bij",
-        alarm_disarmed_color: "Kleur",
-        alarm_partial: "Deels ingeschakeld bij",
-        alarm_partial_color: "Kleur",
-        alarm_armed: "Ingeschakeld bij",
-        alarm_armed_color: "Kleur",
-        label: "Bovenste regel",
-        content: "Onderste regel",
-        icon_template: "Icoon via een sjabloon (optioneel)",
-        tone: "Kleur van het icoon",
-        tone_template: "Kleur via een sjabloon (optioneel)",
-        tap_action: "Bij tikken",
-        hold_action: "Bij vasthouden",
+            ? t("Alarm")
+            : t("Entiteit (optioneel)"),
+        energy_green_max: t("Tot en met (W)"),
+        energy_color_low: t("Kleur"),
+        energy_orange_max: t("Daarna tot en met (W)"),
+        energy_color_mid: t("Kleur"),
+        energy_color_high: t("Kleur daarboven"),
+        alarm_attribute: t("Status uit een attribuut (optioneel)"),
+        alarm_disarmed: t("Uitgeschakeld bij"),
+        alarm_disarmed_color: t("Kleur"),
+        alarm_partial: t("Deels ingeschakeld bij"),
+        alarm_partial_color: t("Kleur"),
+        alarm_armed: t("Ingeschakeld bij"),
+        alarm_armed_color: t("Kleur"),
+        label: t("Bovenste regel"),
+        content: t("Onderste regel"),
+        icon_template: t("Icoon via een sjabloon (optioneel)"),
+        tone: t("Kleur van het icoon"),
+        tone_template: t("Kleur via een sjabloon (optioneel)"),
+        tap_action: t("Bij tikken"),
+        hold_action: t("Bij vasthouden"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -700,39 +707,40 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
     const soort = badgeSoort(this.config_);
     return {
       mode:
-        "Eigen tekst: jij bepaalt wat er staat, met sjablonen. Lampenteller: het aantal lampen dat aan staat. Energie: een vermogen met een kleur per grens. Alarm: de stand van je alarm met een kleur per stand.",
+        t("Eigen tekst: jij bepaalt wat er staat, met sjablonen. Lampenteller: het aantal lampen dat aan staat. Energie: een vermogen met een kleur per grens. Alarm: de stand van je alarm met een kleur per stand."),
       light_exclude:
-        "Bijvoorbeeld een nachtlampje dat altijd brandt. Lichtgroepen telt hij sowieso niet mee, anders telt een lamp in een groep dubbel.",
+        t("Bijvoorbeeld een nachtlampje dat altijd brandt. Lichtgroepen telt hij sowieso niet mee, anders telt een lamp in een groep dubbel."),
       entity:
         soort === "energy"
-          ? "De sensor met het vermogen, in W of kW. De grenzen hieronder zijn in watt: tot en met de eerste grens krijgt de eerste kleur (terugleveren ook), tot en met de tweede de tweede, en daarboven de derde."
+          ? t("De sensor met het vermogen, in W of kW. De grenzen hieronder zijn in watt: tot en met de eerste grens krijgt de eerste kleur (terugleveren ook), tot en met de tweede de tweede, en daarboven de derde.")
           : soort === "alarm"
-            ? "Het alarm. Vul hieronder bij elke stand in welke status daarbij hoort; meerdere mogen, met een komma ertussen. Hoofdletters maken niet uit."
-            : "Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven.",
+            ? t("Het alarm. Vul hieronder bij elke stand in welke status daarbij hoort; meerdere mogen, met een komma ertussen. Hoofdletters maken niet uit.")
+            : t("Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven."),
       alarm_attribute:
-        "Leeg laten: de toestand van het alarm zelf (disarmed, armed_away...). Staat de status bij jouw alarm in een attribuut, zet hier de naam van dat attribuut.",
+        t("Leeg laten: de toestand van het alarm zelf (disarmed, armed_away...). Staat de status bij jouw alarm in een attribuut, zet hier de naam van dat attribuut."),
       label:
-        "De kleine regel bovenin, bijvoorbeeld Alarm of Vaatwasser. Mag een sjabloon zijn.",
+        t("De kleine regel bovenin, bijvoorbeeld Alarm of Vaatwasser. Mag een sjabloon zijn."),
       content:
-        "De dikke regel eronder: wat er op dit moment aan de hand is. Hier hoort het sjabloon, bijvoorbeeld {% if is_state(entity, 'on') %}Rook!{% else %}Geen rook{% endif %}.",
+        t("De dikke regel eronder: wat er op dit moment aan de hand is. Hier hoort het sjabloon, bijvoorbeeld {% if is_state(entity, 'on') %}Rook!{% else %}Geen rook{% endif %}."),
       icon_template:
-        "Alleen invullen als het icoon per toestand moet verschillen. Onze eigen iconen heten dai:, die van Home Assistant mdi: — bijvoorbeeld {% if is_state(entity,'on') %}dai:alarmOn{% else %}dai:alarmOff{% endif %}. De naam die je nodig hebt staat onder het icoon in de kiezer hierboven. Staat hier iets, dan wint het van het gekozen icoon.",
+        t("Alleen invullen als het icoon per toestand moet verschillen. Onze eigen iconen heten dai:, die van Home Assistant mdi: — bijvoorbeeld {% if is_state(entity,'on') %}dai:alarmOn{% else %}dai:alarmOff{% endif %}. De naam die je nodig hebt staat onder het icoon in de kiezer hierboven. Staat hier iets, dan wint het van het gekozen icoon."),
       tone:
         soort === "lights"
-          ? "Automatisch: de kleur van de lampen die branden, en grijs als alles uit is."
-          : "Automatisch: blauw, en gedempt als het apparaat uit staat. Een lamp krijgt de kleur die hij maakt.",
+          ? t("Automatisch: de kleur van de lampen die branden, en grijs als alles uit is.")
+          : t("Automatisch: blauw, en gedempt als het apparaat uit staat. Een lamp krijgt de kleur die hij maakt."),
       tone_template:
-        "Voor een kleur die meebeweegt, bijvoorbeeld {% if is_state(entity, 'on') %}rood{% else %}groen{% endif %}. Kent de namen uit de lijst hierboven, en ook red, orange, amber en #ff8800. Staat hier iets, dan wint het van de keuze erboven.",
-      hold_action: "Wat er gebeurt als je hem ingedrukt houdt. Laat op Geen actie staan als je niets wilt.",
+        t("Voor een kleur die meebeweegt, bijvoorbeeld {% if is_state(entity, 'on') %}rood{% else %}groen{% endif %}. Kent de namen uit de lijst hierboven, en ook red, orange, amber en #ff8800. Staat hier iets, dan wint het van de keuze erboven."),
+      hold_action: t("Wat er gebeurt als je hem ingedrukt houdt. Laat op Geen actie staan als je niets wilt."),
     }[s.name];
   }
 }
 
 registerEditor(EDITOR_TYPE, DomotiappTemplateBadgeEditor);
 registerBadge(BADGE_TYPE, DomotiappTemplateBadge, {
-  name: "DomotiApp Badge",
-  description:
-    "Een pil in de kop van je view: icoon, een kop en een waarde. Alle drie mogen een sjabloon zijn, en de achtergrond kan er helemaal af.",
+  name: nt("DomotiApp Badge"),
+  description: nt(
+    "Een pil in de kop van je view: icoon, een kop en een waarde. Alle drie mogen een sjabloon zijn, en de achtergrond kan er helemaal af."
+  ),
 });
 
 export { DomotiappTemplateBadge, SJABLOONVELDEN };

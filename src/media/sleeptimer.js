@@ -31,6 +31,7 @@ import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { nameOf } from "../ha.js";
 import { FADE_STANDAARD, SNELKEUZES, alsKlok, minutenUit } from "./sleeptimer-logica.js";
+import { t, taal } from "../taal.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -146,16 +147,17 @@ class SleepTimer extends HTMLElement {
   }
 
   bouw_() {
+    this.taal_ = taal();
     this.shadowRoot.innerHTML = `
       <div class="laag">
-        <div class="vak" role="dialog" aria-modal="true" aria-label="Sleeptimer">
+        <div class="vak" role="dialog" aria-modal="true" aria-label="${t("Sleeptimer")}">
           <header>
             <span class="ic">${resolve("sleep")}</span>
             <span class="t">
-              <h2>Sleeptimer</h2>
+              <h2>${t("Sleeptimer")}</h2>
               <span class="waar"></span>
             </span>
-            <button class="sluit" type="button" aria-label="Sluiten">${resolve("close")}</button>
+            <button class="sluit" type="button" aria-label="${t("Sluiten")}">${resolve("close")}</button>
           </header>
 
           <div class="loopt">
@@ -166,27 +168,27 @@ class SleepTimer extends HTMLElement {
           <div class="instel">
             <div class="snel"></div>
             <label>
-              Of typ het zelf
+              ${t("Of typ het zelf")}
               <span class="veld">
                 <input class="min" type="number" inputmode="numeric" min="1" max="720"
-                       aria-label="Minuten" />
-                <span class="eenheid">minuten</span>
+                       aria-label="${t("Minuten")}" />
+                <span class="eenheid">${t("minuten")}</span>
               </span>
             </label>
             <label>
-              Uitfaden aan het eind
+              ${t("Uitfaden aan het eind")}
               <span class="veld">
                 <input class="fade" type="number" inputmode="numeric" min="0" max="600"
-                       aria-label="Seconden uitfaden" />
-                <span class="eenheid">seconden</span>
+                       aria-label="${t("Seconden uitfaden")}" />
+                <span class="eenheid">${t("seconden")}</span>
               </span>
             </label>
             <span class="fout" hidden></span>
           </div>
 
           <div class="knoppen">
-            <button class="weg" type="button" hidden>Timer stoppen</button>
-            <button class="doe" type="button">Starten</button>
+            <button class="weg" type="button" hidden>${t("Timer stoppen")}</button>
+            <button class="doe" type="button">${t("Starten")}</button>
           </div>
         </div>
       </div>`;
@@ -199,12 +201,17 @@ class SleepTimer extends HTMLElement {
     this.$(".laag").addEventListener("click", (e) => {
       if (e.target === this.$(".laag")) this.dicht_();
     });
-    this.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") this.dicht_();
-      // Enter in een van de velden start hem. Wie een getal typt, wil niet
-      // daarna nog met de muis naar een knop.
-      if (e.key === "Enter" && !this.hasAttribute("loopt")) this.start_();
-    });
+    // De host blijft staan als het vak opnieuw wordt opgebouwd (een andere
+    // taal), dus deze luisteraar maar één keer.
+    if (!this.toetsen_) {
+      this.toetsen_ = true;
+      this.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") this.dicht_();
+        // Enter in een van de velden start hem. Wie een getal typt, wil niet
+        // daarna nog met de muis naar een knop.
+        if (e.key === "Enter" && !this.hasAttribute("loopt")) this.start_();
+      });
+    }
 
     this.$(".snel").addEventListener("click", (e) => {
       const knop = e.target.closest("[data-m]");
@@ -236,7 +243,7 @@ class SleepTimer extends HTMLElement {
     // Het scherm hangt aan de body en weet dus niet welke kaart hem opende;
     // bij elke opening opnieuw kijken of het dashboard licht of donker is.
     volgThema(this);
-    if (!this.gebouwd_) this.bouw_();
+    if (!this.gebouwd_ || this.taal_ !== taal()) this.bouw_();
     this.hass = hass;
     this.entity_ = entityId;
     this.$(".waar").textContent = naam ?? entityId;
@@ -267,7 +274,7 @@ class SleepTimer extends HTMLElement {
       const antwoord = await this.hass.callWS({
         type: "domotiapp_lovelace/media/sleeptimer/list",
       });
-      stand = (antwoord?.timers ?? []).find((t) => t.entity_id === this.entity_) ?? null;
+      stand = (antwoord?.timers ?? []).find((timer) => timer.entity_id === this.entity_) ?? null;
     } catch {
       // Geen commando (de integratie start nog op, zie valkuil 28) of geen
       // antwoord. Dan tonen we gewoon het instelscherm; starten mag het
@@ -284,17 +291,17 @@ class SleepTimer extends HTMLElement {
 
     if (!stand) {
       this.removeAttribute("loopt");
-      this.$(".doe").textContent = "Starten";
+      this.$(".doe").textContent = t("Starten");
       this.$(".doe").hidden = false;
       return;
     }
 
     this.setAttribute("loopt", "");
-    this.$(".doe").textContent = "Opnieuw instellen";
+    this.$(".doe").textContent = t("Opnieuw instellen");
     this.$(".doe").hidden = false;
     this.$(".uitleg").textContent = stand.fade
-      ? `De laatste ${stand.fade} seconden zakt het volume weg, daarna pauzeert de muziek en gaat het volume terug.`
-      : "Aan het eind pauzeert de muziek.";
+      ? t("De laatste {n} seconden zakt het volume weg, daarna pauzeert de muziek en gaat het volume terug.", { n: stand.fade })
+      : t("Aan het eind pauzeert de muziek.");
 
     const eind = Date.parse(stand.ends_at);
     const teken = () => {
@@ -322,7 +329,7 @@ class SleepTimer extends HTMLElement {
     // bedoelt als je op een lopende timer klikt.
     if (this.hasAttribute("loopt")) {
       this.removeAttribute("loopt");
-      this.$(".doe").textContent = "Starten";
+      this.$(".doe").textContent = t("Starten");
       clearInterval(this.tik_);
       this.tik_ = null;
       setTimeout(() => this.$(".min")?.focus(), 40);
@@ -331,7 +338,7 @@ class SleepTimer extends HTMLElement {
 
     const minuten = minutenUit(this.$(".min").value);
     if (minuten === null) {
-      this.melding_("Vul een heel aantal minuten in, tussen 1 en 720.");
+      this.melding_(t("Vul een heel aantal minuten in, tussen 1 en 720."));
       return;
     }
     const fade = minutenUit(this.$(".fade").value, { min: 0, max: 600 }) ?? FADE_STANDAARD;
@@ -347,7 +354,7 @@ class SleepTimer extends HTMLElement {
     } catch (fout) {
       this.melding_(
         fout?.message ??
-          "De sleeptimer kon niet gezet worden. Is DomotiApp Lovelace klaar met opstarten?"
+          t("De sleeptimer kon niet gezet worden. Is DomotiApp Lovelace klaar met opstarten?")
       );
     }
   }

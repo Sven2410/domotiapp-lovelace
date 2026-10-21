@@ -25,6 +25,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { icons, resolve } from "../icons.js";
 import { attrsOf, bindActions, fmtNumber, isDead, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { nt, t } from "../taal.js";
 
 /** Een getal uit een sensor, of null als er niets bruikbaars staat. */
 function num(st) {
@@ -52,12 +53,12 @@ const ACTION_TONE = {
 };
 
 const ACTION_WORD = {
-  heating: "Verwarmt",
-  cooling: "Koelt",
-  drying: "Ontvochtigt",
-  fan: "Ventileert",
-  idle: "Uit",
-  off: "Uit",
+  heating: nt("Verwarmt"),
+  cooling: nt("Koelt"),
+  drying: nt("Ontvochtigt"),
+  fan: nt("Ventileert"),
+  idle: nt("Uit"),
+  off: nt("Uit"),
 };
 
 class ClimateCard extends DacCard {
@@ -184,7 +185,7 @@ class ClimateCard extends DacCard {
   validate(config) {
     const has = config.entity || config.temperature || config.humidity;
     if (!has) {
-      return { ...config, [INCOMPLETE]: "Kies een thermostaat, of een temperatuursensor." };
+      return { ...config, [INCOMPLETE]: t("Kies een thermostaat, of een temperatuursensor.") };
     }
     return { ...config };
   }
@@ -218,7 +219,7 @@ class ClimateCard extends DacCard {
     return `
       <div class="card surface">
         <div class="kop">
-          <button class="chip" type="button" aria-label="Meer info"></button>
+          <button class="chip" type="button" aria-label="${t("Meer info")}"></button>
           <div class="txt">
             <div class="nm"></div>
             <div class="read">
@@ -229,15 +230,15 @@ class ClimateCard extends DacCard {
           </div>
         </div>
         <div class="tegels">
-          <div class="tegel t-temp"><span class="w"></span><span class="l">Temperatuur</span></div>
-          <div class="tegel t-hum"><span class="w"></span><span class="l">Vochtigheid</span></div>
+          <div class="tegel t-temp"><span class="w"></span><span class="l">${t("Temperatuur")}</span></div>
+          <div class="tegel t-hum"><span class="w"></span><span class="l">${t("Vochtigheid")}</span></div>
         </div>
         ${
           c.entity
             ? `<div class="set">
-                 <button type="button" data-d="-1" aria-label="Lager">${icons.minus}</button>
+                 <button type="button" data-d="-1" aria-label="${t("Lager")}">${icons.minus}</button>
                  <span class="target tnum"></span>
-                 <button type="button" data-d="1" aria-label="Hoger">${icons.plus}</button>
+                 <button type="button" data-d="1" aria-label="${t("Hoger")}">${icons.plus}</button>
                </div>`
             : ""
         }
@@ -338,11 +339,11 @@ class ClimateCard extends DacCard {
     this.text(".nm", nameOf(this.hass, c.entity || c.temperature || c.humidity, c.name));
 
     // De aangewezen sensor wint van de meting van de thermostaat zelf.
-    const t = c.temperature
+    const temp = c.temperature
       ? num(stateOf(this.hass, c.temperature))
       : Number(attrsOf(this.hass, c.entity).current_temperature);
     const unit = this.hass?.config?.unit_system?.temperature ?? "°C";
-    this.text(".temp", Number.isFinite(t) ? `${fmtNumber(this.hass, t, 1)} ${unit}` : "--");
+    this.text(".temp", Number.isFinite(temp) ? `${fmtNumber(this.hass, temp, 1)} ${unit}` : "--");
 
     const h = c.humidity ? num(stateOf(this.hass, c.humidity)) : null;
     const humEl = this.$(".hum");
@@ -352,14 +353,14 @@ class ClimateCard extends DacCard {
       // wat de ketel doet -- precies zoals de rij-vorm dat doet als er geen
       // vochtsensor is.
       this.text(".temp", "");
-      humEl.textContent = ACTION_WORD[act] ?? "";
+      humEl.textContent = ACTION_WORD[act] ? t(ACTION_WORD[act]) : "";
 
       const tempTegel = this.$(".t-temp");
       const humTegel = this.$(".t-hum");
-      tempTegel.hidden = !Number.isFinite(t);
+      tempTegel.hidden = !Number.isFinite(temp);
       humTegel.hidden = h == null;
       if (!tempTegel.hidden) {
-        tempTegel.querySelector(".w").textContent = `${fmtNumber(this.hass, t, 1)} ${unit}`;
+        tempTegel.querySelector(".w").textContent = `${fmtNumber(this.hass, temp, 1)} ${unit}`;
       }
       if (!humTegel.hidden) {
         humTegel.querySelector(".w").textContent = `${fmtNumber(this.hass, h, 0)}%`;
@@ -371,7 +372,7 @@ class ClimateCard extends DacCard {
       // Wat de ketel doet staat er alleen bij als er iets te melden valt.
       if (c.entity && !c.humidity && ACTION_WORD[act] && act !== "idle") {
         this.text(".sep", "·");
-        humEl.textContent = ACTION_WORD[act];
+        humEl.textContent = t(ACTION_WORD[act]);
       }
     }
 
@@ -427,7 +428,7 @@ class ClimateCard extends DacCard {
 class ClimateEditor extends DacEditor {
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon", fallback: "thermo" },
+      { key: "icon", kind: "icon", label: t("Icoon"), fallback: "thermo" },
     ];
   }
 
@@ -440,8 +441,8 @@ class ClimateEditor extends DacEditor {
       {
         name: "layout",
         selector: sel.select([
-          { value: "rij", label: "Rij (één rasterrij hoog)" },
-          { value: "gestapeld", label: "Onder elkaar (past op een telefoon)" },
+          { value: "rij", label: t("Rij (één rasterrij hoog)") },
+          { value: "gestapeld", label: t("Onder elkaar (past op een telefoon)") },
         ]),
       },
       { name: "step", selector: sel.number(0.1, 5, 0.1) },
@@ -451,31 +452,33 @@ class ClimateEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Thermostaat (optioneel)",
-        temperature: "Temperatuursensor (optioneel)",
-        humidity: "Vochtigheidssensor (optioneel)",
-        name: "Naam",
-        layout: "Vorm",
-        step: "Stap van de knoppen",
+        entity: t("Thermostaat (optioneel)"),
+        temperature: t("Temperatuursensor (optioneel)"),
+        humidity: t("Vochtigheidssensor (optioneel)"),
+        name: t("Naam"),
+        layout: t("Vorm"),
+        step: t("Stap van de knoppen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "entity")
-      return "Leeg laten voor een kaart die alleen meet. Met thermostaat komen de stelknoppen erbij.";
+      return t("Leeg laten voor een kaart die alleen meet. Met thermostaat komen de stelknoppen erbij.");
     if (s.name === "temperature")
-      return "Wint van de meting van de thermostaat zelf. Handig als er een betere sensor in de kamer hangt.";
+      return t("Wint van de meting van de thermostaat zelf. Handig als er een betere sensor in de kamer hangt.");
     if (s.name === "layout")
-      return "Onder elkaar zet de metingen als twee tegels neer met de stelknop over de volle breedte eronder. Bedoeld voor een smalle kolom of een pop-up, waar de rij-vorm de naam en de meting samendrukt.";
+      return t(
+        "Onder elkaar zet de metingen als twee tegels neer met de stelknop over de volle breedte eronder. Bedoeld voor een smalle kolom of een pop-up, waar de rij-vorm de naam en de meting samendrukt."
+      );
     if (s.name === "step")
-      return "Leeg laten volgt de thermostaat, en anders een halve graad.";
+      return t("Leeg laten volgt de thermostaat, en anders een halve graad.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-climate-card-editor", ClimateEditor);
 registerCard("domotiapp-climate-card", ClimateCard, {
-  name: "DomotiApp Klimaat",
-  description: "Thermostaat, losse temperatuur- en vochtsensor, of allebei.",
+  name: nt("DomotiApp Klimaat"),
+  description: nt("Thermostaat, losse temperatuur- en vochtsensor, of allebei."),
 });

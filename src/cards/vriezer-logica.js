@@ -35,6 +35,7 @@
  */
 
 import { getalTekst } from "./laadpaal-logica.js";
+import { nt, t } from "../taal.js";
 
 const LEEG = new Set(["", "unknown", "unavailable"]);
 
@@ -77,7 +78,7 @@ export function koelSoort(st, reg) {
 }
 
 /** Hoe de soort heet: als naam, en in een zin ("op de koelkast"). */
-export const SOORTNAAM = { koelkast: "Koelkast", vriezer: "Vriezer" };
+export const SOORTNAAM = { koelkast: nt("Koelkast"), vriezer: nt("Vriezer") };
 
 /**
  * De delen van het apparaat bij deze climate.
@@ -154,12 +155,12 @@ export const gradenTekst = (n, eenheid = "°C") => (n == null ? "" : `${getalTek
  * @returns {{tekst: string, regels: string[], tone: string}}
  */
 export function vriezerMelding(s) {
-  if (!s) return { tekst: "Niet bereikbaar", regels: ["Niet bereikbaar"], tone: "neutral" };
+  if (!s) return { tekst: t("Niet bereikbaar"), regels: [t("Niet bereikbaar")], tone: "neutral" };
   const regels = [];
-  if (s.deurOpen) regels.push("Deur open");
-  if (s.storing) regels.push("Storing");
-  if (s.melding) regels.push(`Melding op de ${(SOORTNAAM[s.soort] ?? SOORTNAAM.vriezer).toLowerCase()}`);
-  if (s.deurBekend && !s.deurOpen) regels.push("Deur dicht");
+  if (s.deurOpen) regels.push(t("Deur open"));
+  if (s.storing) regels.push(t("Storing"));
+  if (s.melding) regels.push(s.soort === "koelkast" ? t("Melding op de koelkast") : t("Melding op de vriezer"));
+  if (s.deurBekend && !s.deurOpen) regels.push(t("Deur dicht"));
   const tone = s.storing ? "bad" : s.deurOpen || s.melding ? "warn" : "neutral";
   return { tekst: regels.join(" · "), regels, tone };
 }
@@ -197,8 +198,8 @@ export const KOELEN_EN_VRIEZEN = {
     label: "Miele",
     fabrikant: "miele",
     modellen: {
-      fns_7710_e: { label: "FNS 7710 E (vriezer)", pad: "vriezers/miele-fns-7710-e.webp", codes: ["FNS 7710 E"] },
-      k_7747_c: { label: "K 7747 C (koelkast)", pad: "koelkasten/miele-k-7747-c.webp", codes: ["K 7747 C"] },
+      fns_7710_e: { label: nt("FNS 7710 E (vriezer)"), pad: "vriezers/miele-fns-7710-e.webp", codes: ["FNS 7710 E"] },
+      k_7747_c: { label: nt("K 7747 C (koelkast)"), pad: "koelkasten/miele-k-7747-c.webp", codes: ["K 7747 C"] },
     },
   },
 };

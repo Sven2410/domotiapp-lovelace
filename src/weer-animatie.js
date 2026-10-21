@@ -30,6 +30,8 @@
  * niets zien bewegen. Uitzetten kan altijd nog met de schakelaar.
  */
 
+import { nt } from "./taal.js";
+
 const S = (klasse, body) => `<g class="${klasse}">${body}</g>`;
 
 /* ------------------------------------------------------------ delen */
@@ -145,23 +147,23 @@ export function weerAnimatie(toestand, nacht = false) {
   );
 }
 
-/** De Nederlandse naam van een toestand, voor onder het icoon. */
+/** De naam van een toestand, voor onder het icoon. Nederlands; vertaald waar hij getoond wordt, met `t()`. */
 export const WEER_NAAM = {
-  sunny: "Zonnig",
-  "clear-night": "Heldere nacht",
-  partlycloudy: "Half bewolkt",
-  cloudy: "Bewolkt",
-  rainy: "Regen",
-  pouring: "Stortregen",
-  hail: "Hagel",
-  lightning: "Onweer",
-  "lightning-rainy": "Onweer met regen",
-  snowy: "Sneeuw",
-  "snowy-rainy": "Natte sneeuw",
-  fog: "Mist",
-  windy: "Winderig",
-  "windy-variant": "Winderig en bewolkt",
-  exceptional: "Uitzonderlijk weer",
+  sunny: nt("Zonnig"),
+  "clear-night": nt("Heldere nacht"),
+  partlycloudy: nt("Half bewolkt"),
+  cloudy: nt("Bewolkt"),
+  rainy: nt("Regen"),
+  pouring: nt("Stortregen"),
+  hail: nt("Hagel"),
+  lightning: nt("Onweer"),
+  "lightning-rainy": nt("Onweer met regen"),
+  snowy: nt("Sneeuw"),
+  "snowy-rainy": nt("Natte sneeuw"),
+  fog: nt("Mist"),
+  windy: nt("Winderig"),
+  "windy-variant": nt("Winderig en bewolkt"),
+  exceptional: nt("Uitzonderlijk weer"),
 };
 
 /**

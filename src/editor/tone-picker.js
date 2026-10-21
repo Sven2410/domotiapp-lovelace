@@ -35,6 +35,7 @@ import { icons } from "../icons.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { meldAan } from "../registratie.js";
+import { nt, t } from "../taal.js";
 
 /** Wat `toneValue` in base.js als losse kleur doorlaat, en dus wat wij toestaan. */
 const EIGEN = /^(#[0-9a-f]{3,8}|var\(--[\w-]+\)|rgba?\([^)]*\))$/i;
@@ -117,7 +118,7 @@ class DacTonePicker extends HTMLElement {
     sheets = sheets ?? [sheet(css)];
     this.shadowRoot.adoptedStyleSheets = sheets;
     this.value_ = "";
-    this.label = "Kleur";
+    this.label = nt("Kleur");
   }
 
   set value(v) {
@@ -163,20 +164,18 @@ class DacTonePicker extends HTMLElement {
       <div class="label"></div>
       <div class="box">
         <div class="rij">
-          <span class="sw eigen leeg" role="button" tabindex="-1" title="Kleur kiezen"
+          <span class="sw eigen leeg" role="button" tabindex="-1" title="${t("Kleur kiezen")}"
                 aria-pressed="false">
             ${icons.check}
-            <input type="color" aria-label="Kleur kiezen" />
+            <input type="color" aria-label="${t("Kleur kiezen")}" />
           </span>
           <input id="vrij" type="text" spellcheck="false"
-                 aria-label="Kleur als tekst"
-                 placeholder="#198fd9 of var(--primary-color)" />
-          <button type="button" class="wissen">Wissen</button>
+                 aria-label="${t("Kleur als tekst")}"
+                 placeholder="${t("#198fd9 of var(--primary-color)")}" />
+          <button type="button" class="wissen">${t("Wissen")}</button>
         </div>
         <p class="note">
-          Leeg laten betekent dat de kaart de kleur zelf kiest. Een eigen kleur
-          mag een hexwaarde zijn of een variabele uit je thema:
-          <b>var(--primary-color)</b> volgt je thema mee, een hexwaarde staat vast.
+          ${t("Leeg laten betekent dat de kaart de kleur zelf kiest. Een eigen kleur mag een hexwaarde zijn of een variabele uit je thema: <b>var(--primary-color)</b> volgt je thema mee, een hexwaarde staat vast.")}
         </p>
       </div>`;
 
@@ -204,7 +203,7 @@ class DacTonePicker extends HTMLElement {
 
   paint_() {
     if (!this.shadowRoot.firstElementChild) return;
-    this.$(".label").textContent = this.label ?? "Kleur";
+    this.$(".label").textContent = t(this.label ?? "Kleur");
 
     const gekozen = Boolean(this.value_);
     const sw = this.$(".sw");
@@ -212,8 +211,8 @@ class DacTonePicker extends HTMLElement {
     sw.classList.toggle("leeg", !gekozen);
     sw.style.setProperty("--c", gekozen ? this.kleur_() : "transparent");
     sw.title = gekozen
-      ? `Kleur: ${TONE_LABELS[this.value_] ?? this.value_}`
-      : "Kleur kiezen";
+      ? t("Kleur: {kleur}", { kleur: TONE_LABELS[this.value_] ? t(TONE_LABELS[this.value_]) : this.value_ })
+      : t("Kleur kiezen");
     if (/^#[0-9a-f]{6}$/i.test(this.kleur_())) this.$('input[type="color"]').value = this.kleur_();
     this.$(".wissen").hidden = !gekozen;
 

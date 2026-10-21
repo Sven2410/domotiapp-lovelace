@@ -34,6 +34,7 @@
 import { energiePunten, energieReeks, verdunReeks, vloeiendPad } from "./infoscherm-logica.js";
 import { merkKeuzes as merken, productAfbeelding, typeBijApparaat as typeBij, typeKeuzes as types } from "./productfoto.js";
 import { isVertaald } from "./programmanaam.js";
+import { locale, nt, t } from "../taal.js";
 
 const domeinVan = (id) => String(id ?? "").split(".")[0];
 
@@ -48,9 +49,9 @@ function getal(x) {
   return Number.isFinite(n) ? n : null;
 }
 
-const NL = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 });
-/** Een temperatuur als tekst, zonder eenheid: "58", "57,5". */
-export const graden = (n) => (n == null ? "" : NL.format(Math.round(n * 10) / 10));
+/** Een temperatuur als tekst, zonder eenheid: "58", "57,5" (in het Engels "57.5"). */
+export const graden = (n) =>
+  n == null ? "" : new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(Math.round(n * 10) / 10);
 
 /* ---------------------------------------------------- de rest van het apparaat */
 
@@ -107,7 +108,7 @@ export function naamVan(hass, id, ingevuld) {
     const n = String(k ?? "").replace(/\s+/g, " ").trim();
     if (n && !STANDAARDNAMEN.has(n.toLowerCase())) return n;
   }
-  return "Boiler";
+  return t("Boiler");
 }
 
 /* -------------------------------------------------------------- de standen */
@@ -121,18 +122,18 @@ export function naamVan(hass, id, ingevuld) {
  * voor de stand die gekozen is.
  */
 export const STANDEN = [
-  { waarde: "heat_pump", label: "Warmtepomp", uitleg: "Zuinig: alleen de warmtepomp." },
-  { waarde: "eco", label: "Auto", uitleg: "Kiest zelf tussen de warmtepomp en het element." },
-  { waarde: "performance", label: "Turbo", uitleg: "Snel: de warmtepomp en het element samen." },
-  { waarde: "vacation", label: "Vakantie", uitleg: "Houdt het water warm op een laag pitje." },
+  { waarde: "heat_pump", label: nt("Warmtepomp"), uitleg: nt("Zuinig: alleen de warmtepomp.") },
+  { waarde: "eco", label: nt("Auto"), uitleg: nt("Kiest zelf tussen de warmtepomp en het element.") },
+  { waarde: "performance", label: nt("Turbo"), uitleg: nt("Snel: de warmtepomp en het element samen.") },
+  { waarde: "vacation", label: nt("Vakantie"), uitleg: nt("Houdt het water warm op een laag pitje.") },
 ];
 
 /** Standen die LG niet heeft, maar Home Assistant wel kent. Zelfde rij, achteraan. */
 const ANDERE_STANDEN = {
-  off: "Uit",
-  electric: "Elektrisch",
-  high_demand: "Veel vraag",
-  gas: "Gas",
+  off: nt("Uit"),
+  electric: nt("Elektrisch"),
+  high_demand: nt("Veel vraag"),
+  gas: nt("Gas"),
 };
 
 /**
@@ -145,12 +146,12 @@ export function standKnoppen(st, vertaal) {
   const lijst = Array.isArray(st?.attributes?.operation_list) ? st.attributes.operation_list.map(String) : [];
   if (lijst.length < 2) return [];
   const nu = String(st?.attributes?.operation_mode ?? st?.state ?? "");
-  const bekend = STANDEN.filter((s) => lijst.includes(s.waarde));
+  const bekend = STANDEN.filter((s) => lijst.includes(s.waarde)).map((s) => ({ ...s, label: t(s.label), uitleg: t(s.uitleg) }));
   const rest = lijst
     .filter((w) => !STANDEN.some((s) => s.waarde === w))
     .map((w) => {
       const ha = vertaal ? String(vertaal(st, w) ?? "") : "";
-      const label = ANDERE_STANDEN[w] || (isVertaald(w, ha) ? ha : w.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()));
+      const label = ANDERE_STANDEN[w] ? t(ANDERE_STANDEN[w]) : (isVertaald(w, ha) ? ha : w.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()));
       return { waarde: w, label, uitleg: "" };
     });
   return [...bekend, ...rest].map((s) => ({ ...s, gekozen: s.waarde === nu }));
@@ -181,9 +182,10 @@ export function boilerStand(hass, id, delen = {}) {
   const stand = String(a.operation_mode ?? st?.state ?? "");
   const aan = aanSt && heeftWaarde(aanSt) ? aanSt.state === "on" : stand !== "off";
   const def = STANDEN.find((s) => s.waarde === stand);
-  let tekst = def?.label || ANDERE_STANDEN[stand] || "";
-  if (!aan) tekst = "Uit";
-  if (!beschikbaar) tekst = "Niet bereikbaar";
+  const woord = def?.label || ANDERE_STANDEN[stand] || "";
+  let tekst = woord ? t(woord) : "";
+  if (!aan) tekst = t("Uit");
+  if (!beschikbaar) tekst = t("Niet bereikbaar");
 
   let soort = "aan";
   if (!beschikbaar) soort = "dood";

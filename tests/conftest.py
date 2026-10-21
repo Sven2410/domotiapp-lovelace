@@ -28,6 +28,19 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     return
 
 
+@pytest.fixture(autouse=True)
+def nederlandse_installatie(request):
+    """Een Nederlandse Home Assistant, zoals bij de klanten.
+
+    Het testharnas zet `hass.config.language` op "en", en sinds 0.81.0 kiest
+    de keuze Automatisch daarmee Engels voor wat de server schrijft
+    (`taal.py`). De toetsen van vóór die ronde rekenen Nederlands na; die
+    horen dat te blijven doen. `tests/test_taal_server.py` zet zelf Engels.
+    """
+    if "hass" in request.fixturenames:
+        request.getfixturevalue("hass").config.language = "nl"
+
+
 @pytest.fixture
 def lees_opslag(hass_storage: dict[str, Any]):
     """Lees terug wat er weggeschreven is.

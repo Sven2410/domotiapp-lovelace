@@ -49,6 +49,7 @@ from .validatie import (
     valideer_light,
     valideer_persoon,
 )
+from ..taal import taal_van
 from .volgende import eerstvolgende_keer_dat_tijd_voorbijkomt, sorteer, volgende_wekker
 
 _LOGGER = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ def _toestand(hass: HomeAssistant, person_entity_id: str) -> dict[str, Any]:
     store = _store(hass)
     wekkers = sorteer(store.wekkers(registry_id))
     nu = dt_util.now()
-    volgende = volgende_wekker(wekkers, nu)
+    volgende = volgende_wekker(wekkers, nu, taal_van(hass))
     register = abonnement.register_van(hass)
     return {
         "alarms": wekkers,

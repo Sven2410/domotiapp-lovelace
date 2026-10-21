@@ -32,30 +32,33 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass
 
-# Nederlandse namen, want alle zichtbare teksten zijn Nederlands (SPEC 1).
+from ..taal import NL, nt, vertaal
+
+# Nederlandse namen (SPEC 1); sinds 0.81.0 vertaald waar ze getoond worden, in
+# `tekst_voor`. `dagen_tekst` blijft Nederlands: geen kaart toont hem.
 _DAGEN_VOLUIT = (
-    "Maandag",
-    "Dinsdag",
-    "Woensdag",
-    "Donderdag",
-    "Vrijdag",
-    "Zaterdag",
-    "Zondag",
+    nt("Maandag"),
+    nt("Dinsdag"),
+    nt("Woensdag"),
+    nt("Donderdag"),
+    nt("Vrijdag"),
+    nt("Zaterdag"),
+    nt("Zondag"),
 )
-_DAGEN_KORT = ("ma", "di", "wo", "do", "vr", "za", "zo")
+_DAGEN_KORT = (nt("ma"), nt("di"), nt("wo"), nt("do"), nt("vr"), nt("za"), nt("zo"))
 _MAANDEN_KORT = (
-    "jan",
-    "feb",
-    "mrt",
-    "apr",
-    "mei",
-    "jun",
-    "jul",
-    "aug",
-    "sep",
-    "okt",
-    "nov",
-    "dec",
+    nt("jan"),
+    nt("feb"),
+    nt("mrt"),
+    nt("apr"),
+    nt("mei"),
+    nt("jun"),
+    nt("jul"),
+    nt("aug"),
+    nt("sep"),
+    nt("okt"),
+    nt("nov"),
+    nt("dec"),
 )
 
 GEEN_WEKKER_TEKST = "Geen wekker actief"
@@ -191,19 +194,19 @@ def laatste_verstreken_moment(
     return None
 
 
-def tekst_voor(moment: dt.datetime, nu: dt.datetime) -> str:
-    """De regel onderaan de kaart (SPEC 3.3)."""
+def tekst_voor(moment: dt.datetime, nu: dt.datetime, taal: str = NL) -> str:
+    """De regel onderaan de kaart (SPEC 3.3), in de taal van de installatie."""
     klok = f"{moment.hour:02d}:{moment.minute:02d}"
     dagen_verschil = (moment.date() - nu.date()).days
     if dagen_verschil == 0:
-        return f"Vandaag {klok}"
+        return vertaal(taal, "Vandaag {klok}", klok=klok)
     if dagen_verschil == 1:
-        return f"Morgen {klok}"
+        return vertaal(taal, "Morgen {klok}", klok=klok)
     if 2 <= dagen_verschil <= 6:
-        return f"{_DAGEN_VOLUIT[moment.isoweekday() - 1]} {klok}"
+        return f"{vertaal(taal, _DAGEN_VOLUIT[moment.isoweekday() - 1])} {klok}"
     return (
-        f"{_DAGEN_KORT[moment.isoweekday() - 1]} {moment.day} "
-        f"{_MAANDEN_KORT[moment.month - 1]} {klok}"
+        f"{vertaal(taal, _DAGEN_KORT[moment.isoweekday() - 1])} {moment.day} "
+        f"{vertaal(taal, _MAANDEN_KORT[moment.month - 1])} {klok}"
     )
 
 
@@ -254,7 +257,7 @@ def volgend_moment_van_wekker(wekker: dict, nu: dt.datetime) -> dt.datetime | No
     return momenten[0] if momenten else None
 
 
-def volgende_wekker(wekkers: list[dict], nu: dt.datetime) -> VolgendMoment | None:
+def volgende_wekker(wekkers: list[dict], nu: dt.datetime, taal: str = NL) -> VolgendMoment | None:
     """Welke wekker gaat als eerste af, en wanneer (SPEC 15.1 `next_fire`).
 
     Geeft `None` als er geen enkele wekker aan staat. De kaart toont dan
@@ -269,7 +272,7 @@ def volgende_wekker(wekkers: list[dict], nu: dt.datetime) -> VolgendMoment | Non
             beste = (moment, wekker["id"])
     if beste is None:
         return None
-    return VolgendMoment(at=beste[0], text=tekst_voor(beste[0], nu), alarm_id=beste[1])
+    return VolgendMoment(at=beste[0], text=tekst_voor(beste[0], nu, taal), alarm_id=beste[1])
 
 
 def eerstvolgende_keer_dat_tijd_voorbijkomt(nu: dt.datetime, tijd: str) -> dt.datetime:

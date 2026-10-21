@@ -26,8 +26,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve, weatherIcon } from "../icons.js";
 import { bindActions, fmtNumber, isDead, localizeState, moreInfo, nameOf, stateOf } from "../ha.js";
-
-const DAGEN = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+import { locale, nt, t } from "../taal.js";
 
 /** Hoeveel punten er standaard op de rij staan. */
 const AANTAL_STANDAARD = 5;
@@ -109,7 +108,7 @@ class ForecastCard extends DacCard {
 
   validate(config) {
     if (!config.entity) {
-      return { ...config, [INCOMPLETE]: "Kies een weerentiteit." };
+      return { ...config, [INCOMPLETE]: t("Kies een weerentiteit.") };
     }
     const aantal = Math.min(Math.max(1, Number(config.days) || AANTAL_STANDAARD), AANTAL_MAX);
     return { show_current: true, forecast_type: "daily", ...config, days: aantal };
@@ -159,7 +158,7 @@ class ForecastCard extends DacCard {
 
     const verbinding = this.hass?.connection;
     if (!verbinding?.subscribeMessage) {
-      this.forecastFout_ = "Geen verbinding voor de voorspelling.";
+      this.forecastFout_ = t("Geen verbinding voor de voorspelling.");
       this.paintRij_();
       return;
     }
@@ -195,8 +194,8 @@ class ForecastCard extends DacCard {
     } catch (fout) {
       this.forecastFout_ =
         c.forecast_type === "hourly"
-          ? "Deze weerbron geeft geen uurvoorspelling."
-          : "Deze weerbron geeft geen dagvoorspelling.";
+          ? t("Deze weerbron geeft geen uurvoorspelling.")
+          : t("Deze weerbron geeft geen dagvoorspelling.");
       this.paintRij_();
     }
   }
@@ -217,13 +216,13 @@ class ForecastCard extends DacCard {
     }
 
     this.text(".nm", nameOf(this.hass, c.entity, c.name));
-    this.text(".st", dood ? "Niet bereikbaar" : localizeState(this.hass, st));
+    this.text(".st", dood ? t("Niet bereikbaar") : localizeState(this.hass, st));
 
     const graden = this.$(".graden");
-    const t = st?.attributes?.temperature;
+    const temp = st?.attributes?.temperature;
     const eenheid = st?.attributes?.temperature_unit ?? "°C";
     graden.innerHTML =
-      t == null ? "" : `${fmtNumber(this.hass, t, Number.isInteger(t) ? 0 : 1)}<small>${eenheid}</small>`;
+      temp == null ? "" : `${fmtNumber(this.hass, temp, Number.isInteger(temp) ? 0 : 1)}<small>${eenheid}</small>`;
 
     this.paintRij_();
 
@@ -247,7 +246,7 @@ class ForecastCard extends DacCard {
     const punten = (this.forecast_ ?? []).slice(0, c.days);
     if (!punten.length) {
       rij.style.setProperty("--n", 1);
-      rij.innerHTML = `<div class="leeg">Nog geen voorspelling ontvangen…</div>`;
+      rij.innerHTML = `<div class="leeg">${t("Nog geen voorspelling ontvangen…")}</div>`;
       return;
     }
 
@@ -292,7 +291,8 @@ class ForecastCard extends DacCard {
       d.getDate() === vandaag.getDate() &&
       d.getMonth() === vandaag.getMonth() &&
       d.getFullYear() === vandaag.getFullYear();
-    return index === 0 && zelfdeDag ? "vandaag" : DAGEN[d.getDay()];
+    // De korte dagnaam van de taal: "ma" of "Mon".
+    return index === 0 && zelfdeDag ? t("vandaag") : d.toLocaleDateString(locale(), { weekday: "short" });
   }
 
   regels_() {
@@ -330,7 +330,7 @@ class ForecastEditor extends DacEditor {
   }
 
   pickers() {
-    return [{ key: "icon", kind: "icon", label: "Icoon", fallback: "cloudSun" }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "cloudSun" }];
   }
 
   schema() {
@@ -340,8 +340,8 @@ class ForecastEditor extends DacEditor {
       {
         name: "forecast_type",
         selector: sel.select([
-          { value: "daily", label: "Per dag" },
-          { value: "hourly", label: "Per uur" },
+          { value: "daily", label: t("Per dag") },
+          { value: "hourly", label: t("Per uur") },
         ]),
       },
       { name: "days", selector: sel.number(1, AANTAL_MAX) },
@@ -352,26 +352,26 @@ class ForecastEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Weerentiteit",
-        name: "Naam (overschrijft die van de weerbron)",
-        forecast_type: "Voorspelling",
-        days: "Hoeveel punten",
-        show_current: "Nu-regel tonen",
+        entity: t("Weerentiteit"),
+        name: t("Naam (overschrijft die van de weerbron)"),
+        forecast_type: t("Voorspelling"),
+        days: t("Hoeveel punten"),
+        show_current: t("Nu-regel tonen"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "entity")
-      return "Meer hoeft er niet ingevuld te worden: de kaart leest zelf uit wat je weerbron levert.";
+      return t("Meer hoeft er niet ingevuld te worden: de kaart leest zelf uit wat je weerbron levert.");
     if (s.name === "forecast_type")
-      return "Niet elke weerbron kan allebei. Kan hij het niet, dan zegt de kaart dat in plaats van leeg te blijven.";
+      return t("Niet elke weerbron kan allebei. Kan hij het niet, dan zegt de kaart dat in plaats van leeg te blijven.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-forecast-card-editor", ForecastEditor);
 registerCard("domotiapp-forecast-card", ForecastCard, {
-  name: "DomotiApp Weersvoorspelling",
-  description: "Vandaag groot, de dagen erna op een rij. Eén entiteit invullen.",
+  name: nt("DomotiApp Weersvoorspelling"),
+  description: nt("Vandaag groot, de dagen erna op een rij. Eén entiteit invullen."),
 });

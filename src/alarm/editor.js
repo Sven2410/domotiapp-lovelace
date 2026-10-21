@@ -47,25 +47,20 @@ import {
   zomertijdWaarschuwing,
 } from "./editorlogica.js";
 import { MetThema, vormtaal } from "../scene/vormtaal.js";
+import { nt, t } from "../taal.js";
+import { dagKort } from "./weergave.js";
 
-const DAGEN = [
-  [1, "ma"],
-  [2, "di"],
-  [3, "wo"],
-  [4, "do"],
-  [5, "vr"],
-  [6, "za"],
-  [7, "zo"],
-];
+/** De dagen zoals de opslag ze kent: 1 = maandag. De naam komt uit `dagKort`. */
+const DAGEN = [1, 2, 3, 4, 5, 6, 7];
 
 const SOORTEN = [
-  ["", "Alles"],
-  ["playlist", "Afspeellijsten"],
-  ["radio", "Radio"],
-  ["artist", "Artiesten"],
-  ["album", "Albums"],
-  ["track", "Nummers"],
-  ["podcast", "Podcasts"],
+  ["", nt("Alles")],
+  ["playlist", nt("Afspeellijsten")],
+  ["radio", nt("Radio")],
+  ["artist", nt("Artiesten")],
+  ["album", nt("Albums")],
+  ["track", nt("Nummers")],
+  ["podcast", nt("Podcasts")],
 ];
 
 const ICOON_INFO =
@@ -172,7 +167,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
       return;
     }
     if (!this._concept.speaker || !this._concept.sound) {
-      this._melding = { tekst: "Kies eerst een speaker en een geluid.", fout: true };
+      this._melding = { tekst: t("Kies eerst een speaker en een geluid."), fout: true };
       return;
     }
     this._melding = null;
@@ -192,7 +187,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
       // De noodrem zit hierachter (SPEC 11.1): dit is precies het moment waarop
       // de klant wil weten dat zijn speaker onbereikbaar is.
       this._melding = {
-        tekst: fout?.message ?? "Het voorbeeld kon niet starten.",
+        tekst: fout?.message ?? t("Het voorbeeld kon niet starten."),
         fout: true,
       };
     }
@@ -230,7 +225,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
       // De time-out van 10 s komt hier binnen met de tekst uit SPEC 15.6; die
       // wordt server-side gezet zodat hij niet van de versie van de kaart afhangt.
       this._treffers = [];
-      this._melding = { tekst: fout?.message ?? "Zoeken is mislukt.", fout: true };
+      this._melding = { tekst: fout?.message ?? t("Zoeken is mislukt."), fout: true };
     } finally {
       this._zoekt = false;
     }
@@ -257,7 +252,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
     const oordeel = magOpslaan(this._concept);
     if (!oordeel.ok) {
       this._melding = {
-        tekst: `Er ontbreekt nog ${oordeel.ontbreekt.join(", ")}.`,
+        tekst: t("Er ontbreekt nog {wat}.", { wat: oordeel.ontbreekt.map((wat) => t(wat)).join(", ") }),
         fout: true,
       };
       return;
@@ -279,7 +274,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
         }),
       );
     } catch (fout) {
-      this._melding = { tekst: fout?.message ?? "Opslaan is mislukt.", fout: true };
+      this._melding = { tekst: fout?.message ?? t("Opslaan is mislukt."), fout: true };
     } finally {
       this._bezig = false;
     }
@@ -792,7 +787,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
                   </button>`
                 : nothing}
               ${treffers.length === 0
-                ? html`<div class="treffer">Niets gevonden.</div>`
+                ? html`<div class="treffer">${t("Niets gevonden.")}</div>`
                 : treffers.map(
                     (e) => html`<button
                       class="treffer"
@@ -830,11 +825,11 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
 
     return html`
       <div class="kop">
-        <h2>${c.id ? "Wekker bewerken" : "Nieuwe wekker"}</h2>
+        <h2>${c.id ? t("Wekker bewerken") : t("Nieuwe wekker")}</h2>
       </div>
 
       <div class="blok">
-        <label class="veld" for="tijd">Tijd</label>
+        <label class="veld" for="tijd">${t("Tijd")}</label>
         <div class="vak tijd">
           <input
             id="tijd"
@@ -852,41 +847,42 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
       </div>
 
       <div class="blok">
-        <label class="veld">Herhaling</label>
+        <label class="veld">${t("Herhaling")}</label>
         <div class="dagen">
-          ${DAGEN.map(
-            ([nummer, kort]) => html`<button
+          ${DAGEN.map((nummer) => {
+            const kort = dagKort(nummer);
+            return html`<button
               type="button"
               aria-pressed=${c.days.includes(nummer) ? "true" : "false"}
               aria-label=${kort}
               @click=${() => this._zet({ days: wisselDag(c.days, nummer) })}
             >
               ${kort}
-            </button>`,
-          )}
+            </button>`;
+          })}
         </div>
         <div class="uitleg">
           ${c.days.length === 0
-            ? "Geen dag aangevinkt: deze wekker gaat één keer af, de eerstvolgende keer dat die tijd voorbijkomt."
-            : "Deze wekker herhaalt zich op de aangevinkte dagen."}
+            ? t("Geen dag aangevinkt: deze wekker gaat één keer af, de eerstvolgende keer dat die tijd voorbijkomt.")
+            : t("Deze wekker herhaalt zich op de aangevinkte dagen.")}
         </div>
       </div>
 
       <div class="blok">
-        <label class="veld" for="naam">Naam</label>
+        <label class="veld" for="naam">${t("Naam")}</label>
         <div class="vak">
           <input
             id="naam"
             type="text"
             .value=${c.name}
-            placeholder="Bijvoorbeeld: Werk"
+            placeholder=${t("Bijvoorbeeld: Werk")}
             @input=${(e) => this._zet({ name: e.target.value })}
           />
         </div>
       </div>
 
       <div class="blok">
-        <label class="veld" for="speaker">Speaker</label>
+        <label class="veld" for="speaker">${t("Speaker")}</label>
         ${speakerMelding
           ? html`<div class="uitleg">${this._svg(ICOON_INFO)}<span>${speakerMelding}</span></div>`
           : this._kiezer({
@@ -894,14 +890,14 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
               id: "speaker",
               lijst: speakers?.entities ?? [],
               gekozen: c.speaker,
-              leeg: "Kies een speaker…",
-              zoektekst: "Zoek een speaker op naam",
+              leeg: t("Kies een speaker…"),
+              zoektekst: t("Zoek een speaker op naam"),
               kies: (waarde) => this._zet({ speaker: waarde }),
             })}
       </div>
 
       <div class="blok">
-        <label class="veld" for="zoek">Geluid</label>
+        <label class="veld" for="zoek">${t("Geluid")}</label>
         ${c.sound
           ? html`<div class="gekozen">
               ${c.sound.image
@@ -917,7 +913,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
               id="zoek"
               type="text"
               .value=${this._zoekterm}
-              placeholder="Zoek media"
+              placeholder=${t("Zoek media")}
               @input=${(e) => {
                 this._zoekterm = e.target.value;
               }}
@@ -931,21 +927,21 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
           </div>
           <div class="vak auto">
             <select
-              aria-label="Soort"
+              aria-label=${t("Soort")}
               @change=${(e) => {
                 this._soort = e.target.value;
               }}
             >
               ${SOORTEN.map(
-                ([waarde, naam]) => html`<option value=${waarde}>${naam}</option>`,
+                ([waarde, naam]) => html`<option value=${waarde}>${t(naam)}</option>`,
               )}
             </select>
           </div>
           <button
             class="knop zoekknop"
             type="button"
-            title="Zoeken"
-            aria-label="Zoeken"
+            title=${t("Zoeken")}
+            aria-label=${t("Zoeken")}
             ?disabled=${this._zoekt}
             @click=${() => this._zoek()}
           >
@@ -955,16 +951,16 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
         ${this._treffers
           ? html`<div class="treffers">
               ${this._treffers.length === 0
-                ? html`<div class="treffer">Niets gevonden.</div>`
+                ? html`<div class="treffer">${t("Niets gevonden.")}</div>`
                 : this._treffers.map(
-                    (t) => html`<button
+                    (treffer) => html`<button
                       class="treffer"
                       type="button"
-                      @click=${() => this._kiesGeluid(t)}
+                      @click=${() => this._kiesGeluid(treffer)}
                     >
-                      ${t.image ? html`<img src=${t.image} alt="" />` : nothing}
-                      <span>${t.name}</span>
-                      <span class="soort">${t.media_type ?? ""}</span>
+                      ${treffer.image ? html`<img src=${treffer.image} alt="" />` : nothing}
+                      <span>${treffer.name}</span>
+                      <span class="soort">${treffer.media_type ?? ""}</span>
                     </button>`,
                   )}
             </div>`
@@ -975,7 +971,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
       </div>
 
       <div class="blok">
-        <label class="veld" for="volume">Volume: ${c.volume_pct}%</label>
+        <label class="veld" for="volume">${t("Volume: {pct}%", { pct: c.volume_pct })}</label>
         <input
           id="volume"
           type="range"
@@ -984,13 +980,11 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
           .value=${String(c.volume_pct)}
           @input=${(e) => this._zet({ volume_pct: Number(e.target.value) })}
         />
-        <div class="uitleg">
-          Het niveau waar de wekker in twintig seconden naartoe groeit.
-        </div>
+        <div class="uitleg">${t("Het niveau waar de wekker in twintig seconden naartoe groeit.")}</div>
       </div>
 
       <div class="blok">
-        <label class="veld" for="lamp">Wake-up light (optioneel)</label>
+        <label class="veld" for="lamp">${t("Wake-up light (optioneel)")}</label>
         ${lampMelding
           ? html`<div class="uitleg">${this._svg(ICOON_INFO)}<span>${lampMelding}</span></div>`
           : html`
@@ -999,9 +993,9 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
                 id: "lamp",
                 lijst: lampen?.entities ?? [],
                 gekozen: c.light?.entity_id ?? "",
-                leeg: "Geen lamp",
-                zoektekst: "Zoek een lamp op naam",
-                geen: "Geen lamp",
+                leeg: t("Geen lamp"),
+                zoektekst: t("Zoek een lamp op naam"),
+                geen: t("Geen lamp"),
                 kies: (waarde) =>
                   this._zet({
                     light: waarde
@@ -1014,7 +1008,7 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
               })}
               ${c.light
                 ? html`<label class="veld" style="margin-top:10px" for="helderheid">
-                      Helderheid: ${c.light.brightness_pct}%
+                      ${t("Helderheid: {pct}%", { pct: c.light.brightness_pct })}
                     </label>
                     <input
                       id="helderheid"
@@ -1045,16 +1039,16 @@ export class DomotiappAlarmEditor extends MetThema(LitElement) {
           type="button"
           @click=${() => (this._speelt ? this._stopVoorbeeld() : this._startVoorbeeld())}
         >
-          ${this._speelt ? "Voorbeeld stoppen" : "Voorbeeld"}
+          ${this._speelt ? t("Voorbeeld stoppen") : t("Voorbeeld")}
         </button>
-        <button class="knop" type="button" @click=${() => this._annuleren()}>Annuleren</button>
+        <button class="knop" type="button" @click=${() => this._annuleren()}>${t("Annuleren")}</button>
         <button
           class="knop primair"
           type="button"
           ?disabled=${!kanOpslaan || this._bezig}
           @click=${() => this._opslaan()}
         >
-          Opslaan
+          ${t("Opslaan")}
         </button>
       </div>
     `;

@@ -89,18 +89,19 @@ import { toonBronkiezer } from "../media/bronkiezer.js";
 import { toonSpelerKiezer } from "../media/spelerkiezer.js";
 import { toonSleepTimer } from "../media/sleeptimer.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { nt, t } from "../taal.js";
 
 /** Het icoon en het voorleeslabel per knop. */
 const KNOPPEN = {
-  power: { icon: "power", label: "Aan of uit" },
-  prev: { icon: "prev", label: "Vorige" },
-  play: { icon: "play", label: "Afspelen of pauzeren" },
-  stop: { icon: "stop", label: "Stoppen" },
-  next: { icon: "next", label: "Volgende" },
-  shuffle: { icon: "shuffle", label: "Willekeurig afspelen" },
-  repeat: { icon: "repeat", label: "Herhalen" },
-  search: { icon: "search", label: "Zoeken in Music Assistant" },
-  sleep: { icon: "sleep", label: "Sleeptimer" },
+  power: { icon: "power", label: nt("Aan of uit") },
+  prev: { icon: "prev", label: nt("Vorige") },
+  play: { icon: "play", label: nt("Afspelen of pauzeren") },
+  stop: { icon: "stop", label: nt("Stoppen") },
+  next: { icon: "next", label: nt("Volgende") },
+  shuffle: { icon: "shuffle", label: nt("Willekeurig afspelen") },
+  repeat: { icon: "repeat", label: nt("Herhalen") },
+  search: { icon: "search", label: nt("Zoeken in Music Assistant") },
+  sleep: { icon: "sleep", label: nt("Sleeptimer") },
 };
 
 class MediaCard extends DacCard {
@@ -371,8 +372,8 @@ class MediaCard extends DacCard {
       return {
         ...config,
         [INCOMPLETE]: config.speaker_select
-          ? "Zet er een mediaspeler in, of wacht tot Home Assistant er een meldt."
-          : "Kies een mediaspeler.",
+          ? t("Zet er een mediaspeler in, of wacht tot Home Assistant er een meldt.")
+          : t("Kies een mediaspeler."),
       };
     }
     return {
@@ -601,12 +602,12 @@ class MediaCard extends DacCard {
     if (balk) {
       const waar = nameOf(this.hass, c.entity);
       this.text(".spelers .waar", waar);
-      balk.setAttribute("aria-label", `Speaker kiezen. Nu: ${waar}`);
+      balk.setAttribute("aria-label", t("Speaker kiezen. Nu: {naam}", { naam: waar }));
     }
     this.text(".nm", naam);
     this.text(".st", speelt);
-    chip.setAttribute("aria-label", `${naam} afspelen of pauzeren`);
-    this.$(".hoesgroot")?.setAttribute("aria-label", `${naam} afspelen of pauzeren`);
+    chip.setAttribute("aria-label", t("{naam} afspelen of pauzeren", { naam }));
+    this.$(".hoesgroot")?.setAttribute("aria-label", t("{naam} afspelen of pauzeren", { naam }));
     top.setAttribute("aria-label", `${naam}, ${speelt}`);
 
     this.paintKnoppen_(st, dood);
@@ -629,7 +630,7 @@ class MediaCard extends DacCard {
         .map(
           (s) =>
             `<button class="k ${s === "play" || s === "stop" ? "hoofd" : ""}" type="button"` +
-            ` data-k="${s}" aria-label="${KNOPPEN[s].label}">${resolve(KNOPPEN[s].icon)}</button>`
+            ` data-k="${s}" aria-label="${t(KNOPPEN[s].label)}">${resolve(KNOPPEN[s].icon)}</button>`
         )
         .join("");
     }
@@ -673,12 +674,12 @@ class MediaCard extends DacCard {
       box.dataset.sig = sig;
       box.innerHTML =
         (delen.includes("mute")
-          ? `<button class="k" type="button" data-k="mute" aria-label="Dempen">${resolve("volume")}</button>`
+          ? `<button class="k" type="button" data-k="mute" aria-label="${t("Dempen")}">${resolve("volume")}</button>`
           : "") +
         (delen.includes("slider") ? sliderHtml("volume") : "") +
         (delen.includes("steps")
-          ? `<button class="k" type="button" data-k="vol-" aria-label="Zachter">${resolve("minus")}</button>` +
-            `<button class="k" type="button" data-k="vol+" aria-label="Harder">${resolve("plus")}</button>`
+          ? `<button class="k" type="button" data-k="vol-" aria-label="${t("Zachter")}">${resolve("minus")}</button>` +
+            `<button class="k" type="button" data-k="vol+" aria-label="${t("Harder")}">${resolve("plus")}</button>`
           : "") +
         // Het percentage alleen als de speler zijn volume ook echt kent. Een
         // tv-ontvanger zonder eigen geluid meldde anders "0%" terwijl de
@@ -688,15 +689,15 @@ class MediaCard extends DacCard {
           ? `<button class="bronknop" type="button" data-k="bron">${resolve("tv")}<b></b></button>`
           : "");
       this.sliders_?.delete("volume");
-      box.querySelector(".slider")?.setAttribute("aria-label", "Volume");
+      box.querySelector(".slider")?.setAttribute("aria-label", t("Volume"));
     }
 
     const bronknop = box.querySelector(".bronknop");
     if (bronknop) {
-      const naam = bron.nu || "Bron";
+      const naam = bron.nu || t("Bron");
       this.text(bronknop.querySelector("b"), naam);
-      bronknop.setAttribute("aria-label", `Bron kiezen, nu ${naam}`);
-      bronknop.title = `Kies uit ${bron.aantal} bronnen`;
+      bronknop.setAttribute("aria-label", t("Bron kiezen, nu {naam}", { naam }));
+      bronknop.title = t("Kies uit {n} bronnen", { n: bron.aantal });
     }
 
     const gedempt = isGedempt(gst);
@@ -732,7 +733,7 @@ class MediaCard extends DacCard {
     }
     // Gedempt is geen volume van 0: de schuif blijft staan waar hij stond, en
     // de tekst zegt wat er aan de hand is.
-    if (toonPct) this.text(".pct", gedempt ? "Gedempt" : `${pct}%`);
+    if (toonPct) this.text(".pct", gedempt ? t("Gedempt") : `${pct}%`);
   }
 
   paintExtra_(st, dood) {
@@ -754,7 +755,7 @@ class MediaCard extends DacCard {
           // herhalen: instellen links, iets nieuws kiezen rechts.
           `${soort === "search" && i > 0 ? `<span class="rek"></span>` : ""}` +
           `<button class="k" type="button" data-k="${soort}"` +
-          ` aria-label="${KNOPPEN[soort].label}">${resolve(KNOPPEN[soort].icon)}</button>`
+          ` aria-label="${t(KNOPPEN[soort].label)}">${resolve(KNOPPEN[soort].icon)}</button>`
         )
         .join("");
     }
@@ -774,7 +775,7 @@ class MediaCard extends DacCard {
       herhaalKnop.setAttribute("aria-pressed", String(stand !== "off"));
       herhaalKnop.setAttribute(
         "aria-label",
-        { off: "Herhalen: uit", all: "Herhalen: alles", one: "Herhalen: dit nummer" }[stand]
+        { off: t("Herhalen: uit"), all: t("Herhalen: alles"), one: t("Herhalen: dit nummer") }[stand]
       );
     }
 
@@ -855,7 +856,7 @@ class MediaEditor extends DacEditor {
 
   pickers() {
     return [
-      { key: "icon", kind: "icon", label: "Icoon", fallback: "speaker" },
+      { key: "icon", kind: "icon", label: t("Icoon"), fallback: "speaker" },
     ];
   }
 
@@ -871,8 +872,8 @@ class MediaEditor extends DacEditor {
       {
         name: "layout",
         selector: sel.select([
-          { value: "row", label: "Rij (één rasterrij hoog)" },
-          { value: "groot", label: "Groot (telefoonformaat, grote knoppen)" },
+          { value: "row", label: t("Rij (één rasterrij hoog)") },
+          { value: "groot", label: t("Groot (telefoonformaat, grote knoppen)") },
         ]),
       },
       { name: "volume_entity", selector: sel.entity("media_player") },
@@ -899,59 +900,59 @@ class MediaEditor extends DacEditor {
   label(s) {
     return (
       {
-        entity: "Mediaspeler",
-        name: "Naam (overschrijft die van de speler)",
-        speaker_select: "Algemene mediaspeler",
-        players: "Welke speakers je mag kiezen",
-        layout: "Vorm",
-        volume_entity: "Geluid van (optioneel)",
-        show_artwork: "Albumhoes tonen",
-        show_controls: "Knoppen tonen",
-        show_volume: "Volume tonen",
-        show_source: "Bronknop tonen",
-        radio_mode: "Doorspelen na een nummer",
-        speakers: "Speakers om mee te groeperen",
-        show_search: "Zoeken en groeperen tonen",
-        sleep_timer: "Sleeptimer tonen",
-        icon_tap_action: "Tikken op het icoon",
-        icon_hold_action: "Vasthouden op het icoon",
-        tap_action: "Tikken op de kaart",
-        hold_action: "Vasthouden op de kaart",
+        entity: t("Mediaspeler"),
+        name: t("Naam (overschrijft die van de speler)"),
+        speaker_select: t("Algemene mediaspeler"),
+        players: t("Welke speakers je mag kiezen"),
+        layout: t("Vorm"),
+        volume_entity: t("Geluid van (optioneel)"),
+        show_artwork: t("Albumhoes tonen"),
+        show_controls: t("Knoppen tonen"),
+        show_volume: t("Volume tonen"),
+        show_source: t("Bronknop tonen"),
+        radio_mode: t("Doorspelen na een nummer"),
+        speakers: t("Speakers om mee te groeperen"),
+        show_search: t("Zoeken en groeperen tonen"),
+        sleep_timer: t("Sleeptimer tonen"),
+        icon_tap_action: t("Tikken op het icoon"),
+        icon_hold_action: t("Vasthouden op het icoon"),
+        tap_action: t("Tikken op de kaart"),
+        hold_action: t("Vasthouden op de kaart"),
       }[s.name] ?? super.label(s)
     );
   }
 
   helper(s) {
     if (s.name === "entity")
-      return "Welke knoppen er verschijnen leest de kaart uit de speler zelf: wat hij niet kan, komt er niet op.";
+      return t("Welke knoppen er verschijnen leest de kaart uit de speler zelf: wat hij niet kan, komt er niet op.");
     if (s.name === "speaker_select")
-      return "De kaart krijgt er een balk bij waarmee je kiest waar de muziek heen gaat. De speler hierboven is de standaard; de keuze wordt per apparaat onthouden, dus je telefoon en de tablet in de gang kunnen op iets anders staan.";
+      return t("De kaart krijgt er een balk bij waarmee je kiest waar de muziek heen gaat. De speler hierboven is de standaard; de keuze wordt per apparaat onthouden, dus je telefoon en de tablet in de gang kunnen op iets anders staan.");
     if (s.name === "players")
-      return "Laat je dit leeg, dan staan de speakers van Music Assistant in de lijst -- geen televisies of streamers, want daar stuur je geen muziek naartoe. Vul je er zelf een paar in, dan is dat de lijst, wat er ook in staat.";
+      return t("Laat je dit leeg, dan staan de speakers van Music Assistant in de lijst -- geen televisies of streamers, want daar stuur je geen muziek naartoe. Vul je er zelf een paar in, dan is dat de lijst, wat er ook in staat.");
     if (s.name === "layout")
-      return "Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.";
+      return t("Groot is bedoeld voor een pop-up of een kolom waar de kaart alle ruimte krijgt: grote hoes, grote knoppen.");
     if (s.name === "volume_entity")
-      return "Zit het geluid ergens anders dan het beeld — een tv met een soundbar eronder — kies dan hier de speler die het volume regelt. Leeg laten betekent: de speler zelf.";
+      return t("Zit het geluid ergens anders dan het beeld — een tv met een soundbar eronder — kies dan hier de speler die het volume regelt. Leeg laten betekent: de speler zelf.");
     if (s.name === "show_artwork")
-      return "Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.";
+      return t("Speelt er iets met een hoes, dan vult die de chip. Een eigen icoon gaat voor.");
     if (s.name === "show_volume")
-      return "De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.";
+      return t("De volumeregel verschijnt zodra er iets speelt en verdwijnt als de speler uit gaat.");
     if (s.name === "sleep_timer")
-      return "Zet er een knop bij waarmee je instelt hoe lang de muziek nog mag doorspelen. De laatste seconden zakt het volume weg, daarna pauzeert de speler en gaat het volume terug naar waar het stond. De timer loopt in Home Assistant zelf, dus hij telt gewoon door als je je telefoon weglegt.";
+      return t("Zet er een knop bij waarmee je instelt hoe lang de muziek nog mag doorspelen. De laatste seconden zakt het volume weg, daarna pauzeert de speler en gaat het volume terug naar waar het stond. De timer loopt in Home Assistant zelf, dus hij telt gewoon door als je je telefoon weglegt.");
     if (s.name === "speakers")
-      return "De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg op een algemene mediaspeler, dan zijn dat dezelfde speakers als in de keuzelijst; op een gewone kaart valt hij terug op het label \"Music Assistant Media\" in Home Assistant.";
+      return t("De speakers die onderin het zoekscherm staan om samen te laten spelen. Laat je dit leeg op een algemene mediaspeler, dan zijn dat dezelfde speakers als in de keuzelijst; op een gewone kaart valt hij terug op het label \"Music Assistant Media\" in Home Assistant.");
     if (s.name === "radio_mode")
-      return "Zoals Spotify: is het gekozen nummer klaar, dan zoekt Music Assistant er zelf muziek bij in plaats van te stoppen. Staat dit uit, dan kan het nog steeds per keer via het menu bij een treffer.";
+      return t("Zoals Spotify: is het gekozen nummer klaar, dan zoekt Music Assistant er zelf muziek bij in plaats van te stoppen. Staat dit uit, dan kan het nog steeds per keer via het menu bij een treffer.");
     if (s.name === "show_source")
-      return "Voor een tv-ontvanger of een versterker met ingangen: een knop met de zender die nu aanstaat, die een zoekbaar overzicht opent. Kan de speler geen bron kiezen, dan verschijnt hij niet.";
+      return t("Voor een tv-ontvanger of een versterker met ingangen: een knop met de zender die nu aanstaat, die een zoekbaar overzicht opent. Kan de speler geen bron kiezen, dan verschijnt hij niet.");
     if (s.name === "show_search")
-      return "De zoekknop opent Music Assistant over het hele scherm. Alleen bij een speler van Music Assistant; groeperen komt erbij als de speler dat aankan.";
+      return t("De zoekknop opent Music Assistant over het hele scherm. Alleen bij een speler van Music Assistant; groeperen komt erbij als de speler dat aankan.");
     return undefined;
   }
 }
 
 registerEditor("domotiapp-media-card-editor", MediaEditor);
 registerCard("domotiapp-media-card", MediaCard, {
-  name: "DomotiApp Mediaspeler",
-  description: "Wat er speelt, de knoppen die de speler aankan, en het volume.",
+  name: nt("DomotiApp Mediaspeler"),
+  description: nt("Wat er speelt, de knoppen die de speler aankan, en het volume."),
 });

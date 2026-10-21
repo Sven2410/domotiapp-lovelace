@@ -13,6 +13,8 @@
  * gaat één op één de opslag in.
  */
 
+import { nt, t } from "../taal.js";
+
 /** De standaarden voor een nieuwe wekker (SPEC 14.3). */
 export const STANDAARD_TIJD = "07:00";
 export const STANDAARD_VOLUME_PCT = 40;
@@ -21,20 +23,19 @@ export const STANDAARD_HELDERHEID_PCT = 60;
 /** Wat een `sound`-object mag bevatten (SPEC 8.2). */
 const GELUIDVELDEN = ["uri", "name", "media_type", "image"];
 
-export const TEKST_ZOMERTIJD =
-  "Let op: deze tijd bestaat twee nachten per jaar niet, of twee keer. " +
-  "Bij de overgang naar zomertijd wordt het uur van 02:00 tot 03:00 overgeslagen; " +
-  "die nacht gaat deze wekker niet af. Bij de overgang naar wintertijd komt dat uur " +
-  "twee keer voorbij; die nacht gaat hij twee keer af. Kies een tijd vóór 02:00 of " +
-  "ná 03:00 als dat een probleem is.";
+// Nederlands, gemerkt met `nt`: vertaald wordt waar ze getoond worden.
+export const TEKST_ZOMERTIJD = nt(
+  "Let op: deze tijd bestaat twee nachten per jaar niet, of twee keer. Bij de overgang naar zomertijd wordt het uur van 02:00 tot 03:00 overgeslagen; die nacht gaat deze wekker niet af. Bij de overgang naar wintertijd komt dat uur twee keer voorbij; die nacht gaat hij twee keer af. Kies een tijd vóór 02:00 of ná 03:00 als dat een probleem is.",
+);
 
-export const TEKST_EINDIGE_DUUR =
-  "Dit geluid stopt van zichzelf. Een los nummer is na een paar minuten voorbij; " +
-  "daarna is het stil. Kies een afspeellijst of een radiostation als de wekker moet " +
-  "blijven spelen tot je hem uitzet.";
+export const TEKST_EINDIGE_DUUR = nt(
+  "Dit geluid stopt van zichzelf. Een los nummer is na een paar minuten voorbij; daarna is het stil. Kies een afspeellijst of een radiostation als de wekker moet blijven spelen tot je hem uitzet.",
+);
 
-export const TEKST_ZOEKEN_TRAAG = "Zoeken duurt te lang. Probeer het opnieuw.";
+export const TEKST_ZOEKEN_TRAAG = nt("Zoeken duurt te lang. Probeer het opnieuw.");
 
+// De namen van de labels in Home Assistant: de integratie zoekt op die naam,
+// dus ze worden nooit vertaald.
 export const LABEL_SPEAKER = "Music Assistant Wekker";
 export const LABEL_LAMP = "Verlichting Wekker";
 
@@ -154,22 +155,23 @@ export function geldigeTijd(tijd) {
 export function magOpslaan(concept) {
   const ontbreekt = [];
   if (!concept || typeof concept !== "object") {
-    return { ok: false, ontbreekt: ["alles"] };
+    return { ok: false, ontbreekt: [nt("alles")] };
   }
+  // Nederlands in de lijst; de editor vertaalt bij het tonen (`t(wat)`).
   if (typeof concept.name !== "string" || !concept.name.trim()) {
-    ontbreekt.push("een naam");
+    ontbreekt.push(nt("een naam"));
   }
   if (!geldigeTijd(concept.time)) {
-    ontbreekt.push("een geldige tijd");
+    ontbreekt.push(nt("een geldige tijd"));
   }
   if (!concept.speaker) {
-    ontbreekt.push("een speaker");
+    ontbreekt.push(nt("een speaker"));
   }
   if (!concept.sound || !concept.sound.uri) {
-    ontbreekt.push("een geluid");
+    ontbreekt.push(nt("een geluid"));
   }
   if (!Number.isInteger(concept.volume_pct) || concept.volume_pct < 1 || concept.volume_pct > 100) {
-    ontbreekt.push("een volume tussen 1 en 100");
+    ontbreekt.push(nt("een volume tussen 1 en 100"));
   }
   return { ok: ontbreekt.length === 0, ontbreekt };
 }
@@ -249,7 +251,7 @@ export function zomertijdWaarschuwing(tijd) {
   if (!geldigeTijd(tijd)) {
     return null;
   }
-  return tijd.slice(0, 2) === "02" ? TEKST_ZOMERTIJD : null;
+  return tijd.slice(0, 2) === "02" ? t(TEKST_ZOMERTIJD) : null;
 }
 
 /**
@@ -275,7 +277,7 @@ export function zomertijdWaarschuwing(tijd) {
  * **kiezen** van een geluid, en daar is het veld er wel.
  */
 export function eindigeDuurWaarschuwing(endless) {
-  return endless === false ? TEKST_EINDIGE_DUUR : null;
+  return endless === false ? t(TEKST_EINDIGE_DUUR) : null;
 }
 
 /**
@@ -323,26 +325,33 @@ export function endlessVan(treffer) {
 export function labelMelding(selectie, soort) {
   const lamp = soort === "lamp";
   const label = lamp ? LABEL_LAMP : LABEL_SPEAKER;
-  const meervoud = lamp ? "lampen" : "speakers";
+  // Elke zin twee keer, voor lampen en voor speakers: een los meervoud als
+  // waarde laat zich niet in elke taal invullen.
   if (!selectie || typeof selectie !== "object") {
-    return `De lijst met ${meervoud} is niet op te halen.`;
+    return lamp ? t("De lijst met lampen is niet op te halen.") : t("De lijst met speakers is niet op te halen.");
   }
   if (selectie.label_exists === false) {
-    return (
-      `Het label '${label}' bestaat nog niet. De beheerder moet dat label aanmaken ` +
-      `en op de ${meervoud} zetten die als wekker mogen dienen.`
-    );
+    return lamp
+      ? t(
+          "Het label '{label}' bestaat nog niet. De beheerder moet dat label aanmaken en op de lampen zetten die als wekker mogen dienen.",
+          { label },
+        )
+      : t(
+          "Het label '{label}' bestaat nog niet. De beheerder moet dat label aanmaken en op de speakers zetten die als wekker mogen dienen.",
+          { label },
+        );
   }
   if (Array.isArray(selectie.entities) && selectie.entities.length > 0) {
     return null;
   }
   if (Number(selectie.filtered_out) > 0) {
     return lamp
-      ? `De entiteiten met het label '${label}' zijn geen lampen.`
-      : "De gelabelde speakers zijn geen Music Assistant-speakers, of ze kunnen " +
-          "geen volume instellen.";
+      ? t("De entiteiten met het label '{label}' zijn geen lampen.", { label })
+      : t("De gelabelde speakers zijn geen Music Assistant-speakers, of ze kunnen geen volume instellen.");
   }
-  return `Er zijn nog geen ${meervoud} met het label '${label}'.`;
+  return lamp
+    ? t("Er zijn nog geen lampen met het label '{label}'.", { label })
+    : t("Er zijn nog geen speakers met het label '{label}'.", { label });
 }
 
 /**

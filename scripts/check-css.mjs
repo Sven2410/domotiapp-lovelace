@@ -166,6 +166,14 @@ function sjabloonFouten(bron, naam) {
           j += 2;
           continue;
         }
+        // Binnen een ${...} telt ook een gewone accolade: t("...", { n }) heeft
+        // er een, en die sloot het sjabloon voor deze scanner te vroeg af
+        // (sinds de kaarten Engels werden, 0.82.0).
+        if (diepte > 0 && bron[j] === "{") {
+          diepte++;
+          j++;
+          continue;
+        }
         if (diepte > 0 && bron[j] === "}") {
           diepte--;
           j++;
