@@ -325,7 +325,8 @@ function wanneer(d, nu) {
   if (verschil <= 0) return klok(d);
   if (verschil === 1) return t("gisteren {klok}", { klok: klok(d) });
   if (verschil < 7) return `${d.toLocaleDateString(locale(), { weekday: "long" })} ${klok(d)}`;
-  return `${d.getDate()}-${d.getMonth() + 1} ${klok(d)}`;
+  // 11-10 in het Nederlands, 11/10 in het Engels.
+  return `${d.toLocaleDateString(locale(), { day: "numeric", month: "numeric" })} ${klok(d)}`;
 }
 
 /**
