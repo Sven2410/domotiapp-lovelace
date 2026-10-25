@@ -177,4 +177,13 @@ export const MELDINGEN = {
   "onderhoud": "maintenance",
   "Nog geen stofzuiger gekozen": "No vacuum chosen yet",
   "Niets gekozen om te melden": "Nothing chosen to notify about",
+
+  // Afval per persoon (0.87.0)
+  "Wanneer": "When",
+  "Welke bakken": "Which bins",
+  "Bakken om uit te kiezen": "Bins to choose from",
+  "Ieder kiest in zijn pop-up zelf wanneer en welke bakken. De bakken leert de kaart vanzelf zodra de sensor ze noemt; vul ze hier in om ze meteen te kunnen kiezen.":
+    "Each person picks when and which bins in their own pop-up. The card learns the bins as soon as the sensor mentions them; fill them in here to be able to pick them right away.",
+  "De avond ervoor": "The evening before",
+  "De ochtend zelf": "That morning",
 };

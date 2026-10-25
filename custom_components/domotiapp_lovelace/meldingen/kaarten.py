@@ -65,7 +65,7 @@ from homeassistant.core import HomeAssistant
 # zelf kiest. `""` is `None` in `dashboards`; zie de kop van dit bestand.
 STANDAARD = ("lovelace", "")
 
-from .afval import tijd_geldig
+from .afval import soorten as afval_soorten, tijd_geldig
 from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, SOORT_STOFZUIGER, STANDAARD_TIJD
 from .stofzuiger import GEBEURTENISSEN
 
@@ -91,6 +91,9 @@ class Melding:
     # Alleen bij de robotstofzuiger (sinds 0.85.0): welke robots, en waarover.
     stofzuigers: list[str] = field(default_factory=list)
     gebeurtenissen: list[str] = field(default_factory=list)
+    # Alleen bij afval (sinds 0.87.0): de bakken die in de editor vooraf zijn
+    # ingevuld, zodat ze in de pop-up te kiezen zijn voordat ze voorbijkomen.
+    bakken: list[str] = field(default_factory=list)
 
     def vergelijkbaar(self) -> tuple[Any, ...]:
         """Wat twee kaarten gelijk moeten hebben om hetzelfde te doen."""
@@ -156,6 +159,13 @@ def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     for moment, sleutel in ((MOMENT_VANDAAG, "tijd_vandaag"), (MOMENT_MORGEN, "tijd_morgen")):
         tijden[moment] = tijd_geldig(kaart.get(sleutel)) or STANDAARD_TIJD[moment]
 
+    bakken: list[str] = []
+    rauw = kaart.get("afval_bakken")
+    for b in [rauw] if isinstance(rauw, str) else rauw or []:
+        for naam in afval_soorten(str(b)):
+            if naam not in bakken:
+                bakken.append(naam)
+
     return Melding(
         id=ident,
         soort=soort,
@@ -165,6 +175,7 @@ def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
         personen=_personen(kaart),
         diensten=_diensten(kaart),
         dashboards=[dashboard],
+        bakken=bakken,
     )
 
 

@@ -9,7 +9,8 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `buiten` | per melding: voor welke ophaaldag iemand "Staat buiten" tikte, en wie |
 | `verstuurd` | per melding, per moment: op welke dag hij al is uitgegaan |
 | `leidend` | per melding: van welk dashboard de instellingen gelden |
-| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger) |
+| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval) |
+| `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
 
 `keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
 gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger wilt
@@ -47,7 +48,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -65,6 +66,8 @@ class MeldingOpslag:
         # Sinds 0.86.0, idem.
         if isinstance(rauw.get("keuzes"), dict):
             self._data["keuzes"] = rauw["keuzes"]
+        if isinstance(rauw.get("gezien"), dict):
+            self._data["gezien"] = rauw["gezien"]
 
     @callback
     def _bewaar(self) -> None:
@@ -146,3 +149,22 @@ class MeldingOpslag:
         else:
             per[soort] = [str(w) for w in dict.fromkeys(waarden)]
         self._bewaar()
+
+    # ----------------------------------------------------------------- gezien
+
+    @callback
+    def gezien(self, melding: str) -> list[str]:
+        """Elke bak die de sensor van deze melding ooit noemde, in volgorde van eerst gezien."""
+        waarde = self._data["gezien"].get(melding)
+        return [str(x) for x in waarde] if isinstance(waarde, list) else []
+
+    @callback
+    def voeg_gezien(self, melding: str, namen: list[str]) -> bool:
+        """Onthoud nieuwe bakken. True als er een bij kwam."""
+        lijst = self._data["gezien"].setdefault(melding, [])
+        nieuw = [n for n in namen if n not in lijst]
+        if not nieuw:
+            return False
+        lijst.extend(nieuw)
+        self._bewaar()
+        return True

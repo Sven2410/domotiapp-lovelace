@@ -274,23 +274,91 @@ export function krijgtIets(standen, soorten, persoon) {
  * komt. Kent de server de kaart nog niet, dan staat dat er: in de editor is dat
  * het eerste wat je wilt weten.
  */
-export function afvalRegel({ config, stand, vandaag, morgen, door, nu = new Date() } = {}) {
+export function afvalRegel({ config, stand, vandaag, morgen, door, persoon, nu = new Date() } = {}) {
   if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
   if (!config?.afval_vandaag && !config?.afval_morgen) return t("Nog geen afvalsensor gekozen");
+  // Met een persoon (0.87.0): alleen de momenten die hij koos, en geen "melding
+  // om" als hij voor de bakken van morgen niets krijgt.
+  const keuze = persoon ? afvalKeuze(config, stand, persoon) : null;
+  if (keuze && !keuze.momenten.length) return t("Niets gekozen om te melden");
+  const wil = (m) => !keuze || keuze.momenten.includes(m);
+  const niet = new Set((keuze?.bakkenNiet ?? []).map((b) => b.toLowerCase()));
+  const krijgtMorgen = wil("morgen") && afvalSoorten(morgen).some((b) => !niet.has(b.toLowerCase()));
   // De tijden die de SERVER gebruikt gaan voor die van deze kaart. Staat
   // dezelfde kaart op twee dashboards met andere tijden, dan geldt er één, en
   // de andere kaart hoort niet te beweren dat zijn tijd geldt.
   const tijdMorgen = tijdKort(stand?.tijden?.morgen) || tijdKort(config.tijd_morgen) || "19:30";
   const tijdVandaag = tijdKort(stand?.tijden?.vandaag) || tijdKort(config.tijd_vandaag) || "07:30";
   const verstuurd = stand?.verstuurd?.morgen === isoDag(nu);
-  const wat = kopRegel({ vandaag, morgen, tijdMorgen, buiten: stand?.buiten, door, verstuurd, nu });
+  const wat = kopRegel({
+    vandaag, morgen, tijdMorgen: krijgtMorgen ? tijdMorgen : "", buiten: stand?.buiten, door, verstuurd: verstuurd && krijgtMorgen, nu,
+  });
   if (wat) return wat;
   const momenten = [
-    config.afval_morgen ? t("de avond ervoor om {tijd}", { tijd: tijdMorgen }) : "",
-    config.afval_vandaag ? t("de ochtend zelf om {tijd}", { tijd: tijdVandaag }) : "",
+    config.afval_morgen && wil("morgen") ? t("de avond ervoor om {tijd}", { tijd: tijdMorgen }) : "",
+    config.afval_vandaag && wil("vandaag") ? t("de ochtend zelf om {tijd}", { tijd: tijdVandaag }) : "",
   ].filter(Boolean);
   const zin = momenten.join(` ${t("en")} `);
   return zin[0].toUpperCase() + zin.slice(1);
+}
+
+/* ------------------------------------------------- afval per persoon (0.87.0) */
+
+/** De twee momenten van afval, in de volgorde van de pop-up. */
+export const AFVAL_MOMENTEN = [
+  { id: "morgen", naam: nt("De avond ervoor") },
+  { id: "vandaag", naam: nt("De ochtend zelf") },
+];
+
+/** De momenten die op deze kaart een sensor hebben. */
+export const afvalMomenten = (config) =>
+  AFVAL_MOMENTEN.map((m) => m.id).filter((id) => (id === "morgen" ? config?.afval_morgen : config?.afval_vandaag));
+
+/**
+ * De bakken om uit te kiezen: eerst wat in de editor staat (`afval_bakken`),
+ * dan wat de server de sensor ooit zag noemen (`stand.bakken`). Netjes
+ * geschreven, zoals in de melding.
+ */
+export function afvalBakken(config, stand) {
+  const rauw = config?.afval_bakken;
+  const lijst = Array.isArray(rauw) ? rauw : typeof rauw === "string" ? [rauw] : [];
+  const uit = [];
+  for (const naam of [...lijst.flatMap((b) => afvalSoorten(b)), ...(stand?.bakken ?? [])]) {
+    if (!uit.some((x) => x.toLowerCase() === String(naam).toLowerCase())) uit.push(String(naam));
+  }
+  return uit;
+}
+
+/**
+ * Wat deze persoon van afval wil. Gevraagd op 25 oktober 2026, na hetzelfde
+ * voor de stofzuiger: *"ja doe dat ook voor afval"*.
+ *
+ * `momenten` is wat hij krijgt (niets gekozen: allebei). Bij de bakken wordt
+ * bewaard wat hij NIET wil (`bakken_niet`): een bak die later opduikt, krijgt
+ * hij gewoon. Zo filtert de server ook (`async_verstuur` in meldingen/motor.py).
+ *
+ * @returns {{momenten: string[], bakkenNiet: string[]}}
+ */
+export function afvalKeuze(config, stand, persoon) {
+  const keuze = stand?.keuzes?.[persoon] ?? {};
+  const alle = afvalMomenten(config);
+  return {
+    momenten: Array.isArray(keuze.momenten) ? alle.filter((m) => keuze.momenten.includes(m)) : alle,
+    bakkenNiet: Array.isArray(keuze.bakken_niet) ? keuze.bakken_niet.map(String) : [],
+  };
+}
+
+/**
+ * De nieuwe lijst "niet" na een tik op een bak, of `null` als hij weer alles wil.
+ *
+ * @param {string[]} niet wat hij nu niet wil
+ * @param {string} bak
+ * @param {boolean} aan wil hij hem nu wel?
+ */
+export function nieuwNiet(niet, bak, aan) {
+  const zonder = niet.filter((b) => b.toLowerCase() !== bak.toLowerCase());
+  const nieuw = aan ? zonder : [...zonder, bak];
+  return nieuw.length ? nieuw : null;
 }
 
 /**

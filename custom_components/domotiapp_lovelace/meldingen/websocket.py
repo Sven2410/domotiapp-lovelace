@@ -68,6 +68,9 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
         "bekend": melding is not None,
         "aan": opslag.alle_aan(ident) if opslag else {},
         "keuzes": opslag.alle_keuzes(ident) if opslag else {},
+        # De bakken om uit te kiezen: eerst wat in de editor staat, dan wat de
+        # sensor ooit noemde.
+        "bakken": list(dict.fromkeys([*(melding.bakken if melding else []), *(opslag.gezien(ident) if opslag else [])])),
         "buiten": buiten,
         "verstuurd": {m: opslag.verstuurd(ident, m) for m in MOMENTEN} if opslag else {},
         "tijden": dict(melding.tijden) if melding else None,
@@ -139,7 +142,8 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         vol.Required("type"): f"{DOMAIN}/meldingen/keuze",
         vol.Required("melding"): cv.string,
         vol.Required("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
-        vol.Required("soort"): vol.In(("gebeurtenissen", "robots")),
+        # gebeurtenissen/robots: de stofzuiger; momenten/bakken_niet: afval (0.87.0).
+        vol.Required("soort"): vol.In(("gebeurtenissen", "robots", "momenten", "bakken_niet")),
         # None: alles (weer de standaard).
         vol.Required("waarden"): vol.Any(None, [cv.string]),
     }
