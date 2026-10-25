@@ -48,7 +48,12 @@ import { nameOf, pictureOf, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
+  AFVAL_MOMENTEN,
+  afvalBakken,
+  afvalKeuze,
+  afvalMomenten,
   afvalRegel,
+  nieuwNiet,
   krijgtIets,
   meldingId,
   personenUit,
@@ -285,9 +290,9 @@ class MeldingenCard extends DacCard {
    * robot aan of uit (sinds 0.86.0). De pop-up roept dit aan; net als `zet`
    * meteen bewaard, zonder Opslaan.
    *
-   * @param {string} soort  "stofzuiger"
+   * @param {string} soort  "stofzuiger" of "afval"
    * @param {string} persoon
-   * @param {"gebeurtenissen"|"robots"} groep
+   * @param {"gebeurtenissen"|"robots"|"momenten"|"bakken_niet"} groep
    * @param {string} waarde
    * @param {boolean} aan
    */
@@ -295,8 +300,15 @@ class MeldingenCard extends DacCard {
     const vorig = this.standen_[soort];
     if (!vorig || !this.hass?.connection) return;
     const c = this.config;
-    const alle = groep === "robots" ? stofzuigersUit(c) : stofzuigerGebeurtenissen(c);
-    const waarden = nieuweKeuze(alle, persoonKeuze(c, vorig, persoon)[groep], waarde, aan);
+    let waarden;
+    if (groep === "bakken_niet") {
+      waarden = nieuwNiet(afvalKeuze(c, vorig, persoon).bakkenNiet, waarde, aan);
+    } else if (groep === "momenten") {
+      waarden = nieuweKeuze(afvalMomenten(c), afvalKeuze(c, vorig, persoon).momenten, waarde, aan);
+    } else {
+      const alle = groep === "robots" ? stofzuigersUit(c) : stofzuigerGebeurtenissen(c);
+      waarden = nieuweKeuze(alle, persoonKeuze(c, vorig, persoon)[groep], waarde, aan);
+    }
     const eigen = { ...(vorig.keuzes?.[persoon] ?? {}) };
     if (waarden === null) delete eigen[groep];
     else eigen[groep] = waarden;
@@ -322,8 +334,9 @@ class MeldingenCard extends DacCard {
    * één robot) van welke. Een groep met één keuze staat er niet: die zegt
    * hetzelfde als het vinkje erboven.
    */
-  keuzes_(stand, persoon) {
+  keuzes_(soort, stand, persoon) {
     const c = this.config;
+    if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
     const nu = persoonKeuze(c, stand, persoon);
     const groepen = [];
     const aangeboden = stofzuigerGebeurtenissen(c);
@@ -344,6 +357,39 @@ class MeldingenCard extends DacCard {
         groep: "robots",
         kop: t("Van welke robot"),
         opties: robots.map((id) => ({ id, naam: naamVan(this.hass, id), aan: nu.robots.includes(id) })),
+      });
+    }
+    return groepen;
+  }
+
+  /**
+   * De keuzes onder afval (0.87.0): wanneer, en welke bakken. De bakken kent de
+   * kaart uit de editor en uit wat de server de sensor zag noemen; zolang dat
+   * er minder dan twee zijn, staat de groep er niet.
+   */
+  afvalKeuzes_(stand, persoon) {
+    const c = this.config;
+    const nu = afvalKeuze(c, stand, persoon);
+    const groepen = [];
+    const momenten = afvalMomenten(c);
+    if (momenten.length > 1) {
+      groepen.push({
+        groep: "momenten",
+        kop: t("Wanneer"),
+        opties: AFVAL_MOMENTEN.filter((m) => momenten.includes(m.id)).map((m) => ({
+          id: m.id,
+          naam: t(m.naam),
+          aan: nu.momenten.includes(m.id),
+        })),
+      });
+    }
+    const bakken = afvalBakken(c, stand);
+    if (bakken.length > 1) {
+      const niet = new Set(nu.bakkenNiet.map((b) => b.toLowerCase()));
+      groepen.push({
+        groep: "bakken_niet",
+        kop: t("Welke bakken"),
+        opties: bakken.map((b) => ({ id: b, naam: b, aan: !niet.has(b.toLowerCase()) })),
       });
     }
     return groepen;
@@ -377,8 +423,8 @@ class MeldingenCard extends DacCard {
           ...soort,
           aan: staatAan(stand, persoon),
           laden: !stand,
-          regel: soort.id === "afval" ? this.afvalRegel_(stand) : this.stofzuigerRegel_(stand, persoon),
-          keuzes: soort.id === "stofzuiger" && stand?.bekend ? this.keuzes_(stand, persoon) : [],
+          regel: soort.id === "afval" ? this.afvalRegel_(stand, persoon) : this.stofzuigerRegel_(stand, persoon),
+          keuzes: stand?.bekend ? this.keuzes_(soort.id, stand, persoon) : [],
         };
       }),
     };
@@ -418,12 +464,13 @@ class MeldingenCard extends DacCard {
     return stofzuigerRegel({ config: c, stand, persoon, namen: robots.map((id) => naamVan(this.hass, id)) });
   }
 
-  afvalRegel_(stand) {
+  afvalRegel_(stand, persoon) {
     const c = this.config;
     const door = stand?.buiten?.door;
     return afvalRegel({
       config: c,
       stand,
+      persoon,
       vandaag: stateOf(this.hass, c.afval_vandaag)?.state,
       morgen: stateOf(this.hass, c.afval_morgen)?.state,
       door: door ? voornaam(nameOf(this.hass, door)) : "",
@@ -554,6 +601,17 @@ class MeldingenEditor extends DacEditor {
                 { name: "tijd_morgen", selector: { time: {} } },
                 { name: "afval_vandaag", selector: sel.entity(["sensor"]) },
                 { name: "tijd_vandaag", selector: { time: {} } },
+                {
+                  name: "afval_bakken",
+                  selector: {
+                    select: {
+                      multiple: true,
+                      custom_value: true,
+                      mode: "dropdown",
+                      options: ["GFT", "PMD", "Papier", "Restafval", "Glas", "Textiel", "KCA", "Plastic"],
+                    },
+                  },
+                },
               ],
               true
             ),
@@ -594,6 +652,7 @@ class MeldingenEditor extends DacEditor {
         tijd_morgen: t("Melding de avond ervoor"),
         afval_vandaag: t("Afval vandaag"),
         tijd_vandaag: t("Melding op de dag zelf"),
+        afval_bakken: t("Bakken om uit te kiezen"),
         stofzuiger: t("Robotstofzuiger"),
         stofzuigers: t("Robots"),
         stofzuiger_meldingen: t("Te kiezen"),
@@ -617,6 +676,9 @@ class MeldingenEditor extends DacEditor {
         "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf."
       ),
       tijd_vandaag: t("Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte."),
+      afval_bakken: t(
+        "Ieder kiest in zijn pop-up zelf wanneer en welke bakken. De bakken leert de kaart vanzelf zodra de sensor ze noemt; vul ze hier in om ze meteen te kunnen kiezen."
+      ),
       stofzuiger: t(
         "Een melding als de robot klaar is, een storing heeft, water of een lege tank nodig heeft, of als een onderdeel aan de beurt is."
       ),

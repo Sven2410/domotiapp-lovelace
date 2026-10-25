@@ -157,8 +157,23 @@ class Motor:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
         self._onthoud_wijzigingen(gelezen)
         self.meldingen = kaarten.voeg_samen(gelezen, self.opslag.alle_leidend())
+        self._onthoud_bakken()
         self._volg_stofzuigers()
         self._meld(None)
+
+    @callback
+    def _onthoud_bakken(self) -> None:
+        """Welke bakken de afvalsensoren nu noemen: zo leert de pop-up ze kennen.
+
+        Er wordt elk uur gelezen, en de sensor van morgen noemt een hele dag de
+        bak van morgen; na een paar weken staan ze er dus allemaal (0.87.0).
+        """
+        for melding in self.meldingen.values():
+            if melding.soort != SOORT_AFVAL:
+                continue
+            for sensor in melding.sensoren.values():
+                if (st := self.hass.states.get(sensor)) is not None:
+                    self.opslag.voeg_gezien(melding.id, afval.soorten(st.state))
 
     @callback
     def _onthoud_wijzigingen(self, gelezen: list[tuple[str, dict[str, Any]]]) -> None:
@@ -261,21 +276,44 @@ class Motor:
             "actions": [{"action": actie_voor(ident, sleutel), "title": t(self.hass, "Staat buiten")}],
         }
 
+        if namen:
+            self.opslag.voeg_gezien(ident, namen)
         if alleen is not None:
             # Wie de proef vraagt, wil hem krijgen, ook met het vinkje uit.
-            ontvangers = [alleen]
+            ontvangers = [(alleen, titel, tekst)]
         else:
-            ontvangers = [p for p in melding.personen if self.opslag.aan(ident, p)]
+            ontvangers = []
+            for p in melding.personen:
+                if not self.opslag.aan(ident, p):
+                    continue
+                # Sinds 0.87.0 kiest ieder zelf wanneer en welke bakken. De
+                # melding noemt dan alleen zijn bakken; zijn er geen, niets.
+                if proef:
+                    # Een proef laat zien of de telefoon gevonden wordt, niet
+                    # wat iemand koos.
+                    ontvangers.append((p, titel, tekst))
+                    continue
+                keuze = self.opslag.keuze(ident, p)
+                if "momenten" in keuze and moment not in keuze["momenten"]:
+                    continue
+                niet = {b.lower() for b in keuze.get("bakken_niet", [])}
+                eigen = [n for n in namen if n.lower() not in niet]
+                if not eigen:
+                    continue
+                if len(eigen) == len(namen):
+                    ontvangers.append((p, titel, tekst))
+                else:
+                    ontvangers.append((p, *afval.bericht(moment, eigen, taal_van(self.hass))))
         gelukt: list[str] = []
         zonder: list[str] = []
-        for persoon in ontvangers:
+        for persoon, titel_p, tekst_p in ontvangers:
             dienst = melding.diensten.get(persoon) or telefoons.dienst_voor(self.hass, persoon)
             if not dienst:
                 zonder.append(persoon)
                 continue
             try:
                 await self.hass.services.async_call(
-                    "notify", dienst, {"title": titel, "message": tekst, "data": data}, blocking=True
+                    "notify", dienst, {"title": titel_p, "message": tekst_p, "data": data}, blocking=True
                 )
             except Exception as fout:  # noqa: BLE001 - één telefoon houdt de rest niet tegen
                 _LOGGER.warning("Afvalmelding naar %s (%s) mislukte: %s", persoon, dienst, fout)

@@ -854,7 +854,7 @@ andersom:
 | welke kaarten één melding zijn | gelijke `id`, standaard de soort (`afval`); personen worden samengevoegd |
 | welke kaart de tijden bepaalt | die het LAATST is aangepast (`leidend` in de opslag), anders het standaarddashboard: eerst een opgeslagen dashboard `lovelace` (zo kan Overview sinds 2026.8 heten, en dan kiest Home Assistant zelf dat), dan het oude zonder naam (`None`). Tot 0.55.0 was het de eerste die Home Assistant teruggaf, en dan deed een wijziging op het ene dashboard niets als er een kopie op een ander stond. Een NIEUWE kaart (een gekopieerd dashboard) gaat niet voor |
 | welke soorten er op een kaart aan staan | `afval: true/false`; zonder die sleutel is de kaart van vóór 0.50.0 en wint `soort` (standaard afval). **Deze regel staat twee keer**, als `soortAan` in `meldingen-logica.js` en `soort_aan` in `kaarten.py`, en ze moeten gelijk blijven: wat de kaart als aan toont, hoort de server te versturen |
-| wat de server zelf bewaart | wie er aan staat, "staat buiten", "vandaag al verstuurd" en het leidende dashboard |
+| wat de server zelf bewaart | wie er aan staat, "staat buiten", "vandaag al verstuurd", het leidende dashboard, en sinds 0.86.0/0.87.0 per persoon zijn KEUZES (stofzuiger: waarover en welke robot; afval: wanneer en welke bakken NIET) en de bakken die de afvalsensor ooit noemde (`gezien`) |
 | een latere tijd op dezelfde dag | levert GEEN tweede melding op als die van vanavond al uit is; met opzet. Testen gaat met de knop **Stuur een proefmelding** in de pop-up van een persoon (alleen voor beheerders): alleen naar die persoon, eigen tag, "Staat buiten" doet daar niets |
 
 `LOVELACE_DATA` is interne Home Assistant. `tests/meldingen/test_kaarten.py`
