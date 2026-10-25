@@ -136,7 +136,8 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     {
         vol.Required("type"): f"{DOMAIN}/meldingen/proef",
         vol.Required("melding"): cv.string,
-        vol.Required("moment"): vol.In(MOMENTEN),
+        # Alleen voor afval; de stofzuiger heeft geen moment (sinds 0.85.0).
+        vol.Optional("moment", default="morgen"): vol.In(MOMENTEN),
         # Niet `id` noemen: dat is het berichtnummer (valkuil 41).
         vol.Optional("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
     }

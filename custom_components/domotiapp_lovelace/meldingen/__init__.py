@@ -1,13 +1,16 @@
 """Meldingen: herinneringen naar de telefoon, met per persoon een schakelaar.
 
-Voorlopig één soort, **afval**: de avond ervoor en de ochtend zelf een melding
-over wat er opgehaald wordt, naar iedereen die op de kaart aan staat. Het
-vervangt de automatisering "Afval Notificaties" die de eigenaar zelf draaide.
+Twee soorten. **Afval**: de avond ervoor en de ochtend zelf een melding over
+wat er opgehaald wordt, naar iedereen die op de kaart aan staat. Het vervangt de
+automatisering "Afval Notificaties" die de eigenaar zelf draaide. En sinds
+0.85.0 de **robotstofzuiger**: klaar, storing, tanks en onderhoud, op het moment
+dat het gebeurt.
 
 | bestand | wat |
 |---|---|
 | `const.py` | de getallen, en waarom dit in de integratie zit |
 | `afval.py` | wat er in de melding staat (pure functies, met tests) |
+| `stofzuiger.py` | wat een robotstofzuiger meldt (pure functies, met tests) |
 | `kaarten.py` | de kaarten uit de opgeslagen dashboards halen |
 | `store.py` | wie er aan staat, en wat er al gebeurd is |
 | `motor.py` | de klok, het versturen, en de knop "Staat buiten" |

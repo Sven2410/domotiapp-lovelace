@@ -66,7 +66,8 @@ from homeassistant.core import HomeAssistant
 STANDAARD = ("lovelace", "")
 
 from .afval import tijd_geldig
-from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, STANDAARD_TIJD
+from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, SOORT_STOFZUIGER, STANDAARD_TIJD
+from .stofzuiger import GEBEURTENISSEN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,10 +88,19 @@ class Melding:
     diensten: dict[str, str] = field(default_factory=dict)
     # Waar hij staat, voor het logboek.
     dashboards: list[str] = field(default_factory=list)
+    # Alleen bij de robotstofzuiger (sinds 0.85.0): welke robots, en waarover.
+    stofzuigers: list[str] = field(default_factory=list)
+    gebeurtenissen: list[str] = field(default_factory=list)
 
     def vergelijkbaar(self) -> tuple[Any, ...]:
         """Wat twee kaarten gelijk moeten hebben om hetzelfde te doen."""
-        return (self.soort, tuple(sorted(self.sensoren.items())), tuple(sorted(self.tijden.items())))
+        return (
+            self.soort,
+            tuple(sorted(self.sensoren.items())),
+            tuple(sorted(self.tijden.items())),
+            tuple(self.stofzuigers),
+            tuple(self.gebeurtenissen),
+        )
 
 
 def zoek_kaarten(knoop: Any) -> list[dict[str, Any]]:
@@ -146,11 +156,63 @@ def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     for moment, sleutel in ((MOMENT_VANDAAG, "tijd_vandaag"), (MOMENT_MORGEN, "tijd_morgen")):
         tijden[moment] = tijd_geldig(kaart.get(sleutel)) or STANDAARD_TIJD[moment]
 
+    return Melding(
+        id=ident,
+        soort=soort,
+        titel=str(kaart.get("name") or ""),
+        sensoren=sensoren,
+        tijden=tijden,
+        personen=_personen(kaart),
+        diensten=_diensten(kaart),
+        dashboards=[dashboard],
+    )
+
+
+def stofzuiger_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
+    """De stofzuigermelding uit één kaartconfig, of None als die daar niet aan staat.
+
+    `stofzuiger: true` zet hem aan, `stofzuigers` zijn de robots, en
+    `stofzuiger_meldingen` zegt waarover (zonder die sleutel: alles). Het id is
+    altijd `stofzuiger`, net als `meldingId` op de kaart: één melding per huis,
+    met de robots van alle kaarten. Een robot die op een kaart staat telt; een
+    kaart zonder robots doet niets, maar bestaat wel (de pop-up zegt dan wat
+    er ontbreekt).
+    """
+    if kaart.get(SOORT_STOFZUIGER) is not True:
+        return None
+    stofzuigers: list[str] = []
+    rauw = kaart.get("stofzuigers")
+    if isinstance(rauw, str):
+        rauw = [rauw]
+    for s in rauw or []:
+        if isinstance(s, str) and s.startswith("vacuum.") and s not in stofzuigers:
+            stofzuigers.append(s)
+    gekozen = kaart.get("stofzuiger_meldingen")
+    if isinstance(gekozen, list):
+        gebeurtenissen = [g for g in GEBEURTENISSEN if g in gekozen]
+    else:
+        gebeurtenissen = list(GEBEURTENISSEN)
+    return Melding(
+        id=SOORT_STOFZUIGER,
+        soort=SOORT_STOFZUIGER,
+        titel=str(kaart.get("name") or ""),
+        personen=_personen(kaart),
+        diensten=_diensten(kaart),
+        dashboards=[dashboard],
+        stofzuigers=stofzuigers,
+        gebeurtenissen=gebeurtenissen,
+    )
+
+
+def _personen(kaart: dict[str, Any]) -> list[str]:
     personen: list[str] = []
     for p in kaart.get("personen") or []:
         if isinstance(p, str) and p.startswith("person.") and p not in personen:
             personen.append(p)
+    return personen
 
+
+def _diensten(kaart: dict[str, Any]) -> dict[str, str]:
     diensten: dict[str, str] = {}
     rauw = kaart.get("diensten")
     if isinstance(rauw, dict):
@@ -158,22 +220,17 @@ def melding_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
             if isinstance(dienst, str) and dienst.strip():
                 # "notify.x" en "x" allebei; de dienst zelf heet "x".
                 diensten[str(persoon)] = dienst.strip().removeprefix("notify.")
-
-    return Melding(
-        id=ident,
-        soort=soort,
-        titel=str(kaart.get("name") or ""),
-        sensoren=sensoren,
-        tijden=tijden,
-        personen=personen,
-        diensten=diensten,
-        dashboards=[dashboard],
-    )
+    return diensten
 
 
 def meldingen_per_kaart(kaarten: list[tuple[str, dict[str, Any]]]) -> list[Melding]:
-    """Elke kaart als melding, in de volgorde waarin ze staan. Zonder afval: weg."""
-    return [m for dashboard, kaart in kaarten if (m := melding_uit(kaart, dashboard)) is not None]
+    """Elke soort op elke kaart als melding, in de volgorde waarin ze staan."""
+    uit: list[Melding] = []
+    for dashboard, kaart in kaarten:
+        for lees in (melding_uit, stofzuiger_uit):
+            if (m := lees(kaart, dashboard)) is not None:
+                uit.append(m)
+    return uit
 
 
 def voeg_samen(
@@ -222,6 +279,11 @@ def voeg_samen(
                 bestaand.personen.append(p)
         for p, d in melding.diensten.items():
             bestaand.diensten.setdefault(p, d)
+        # De robots tellen allemaal, net als de personen: wie een robot op de
+        # tablet toevoegt, wil daar meldingen van.
+        for s in melding.stofzuigers:
+            if s not in bestaand.stofzuigers:
+                bestaand.stofzuigers.append(s)
         bestaand.dashboards.append(dashboard)
     return uit
 

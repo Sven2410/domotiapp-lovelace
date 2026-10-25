@@ -121,13 +121,65 @@ export function personenUit(config) {
 /**
  * De soorten meldingen, in de volgorde waarin ze in de pop-up staan.
  *
- * Voorlopig één. De kaart is sinds 0.50.0 ALGEMEEN: hij toont de personen, en
+ * Afval, en sinds 0.85.0 de robotstofzuiger. De kaart is sinds 0.50.0 ALGEMEEN: hij toont de personen, en
  * wat iemand kan krijgen staat in de pop-up achter het potlood. Gevraagd op
  * 26 september 2026: *"Nu staat daar alleen afval meldingen dan maar in de
  * toekomst moeten er meerdere dingen bij komen."* Een nieuwe soort is een regel
  * hier, een schakelaar in de editor, en de serverkant die hem verstuurt.
  */
-export const SOORTEN = [{ id: "afval", naam: nt("Afvalmeldingen"), icoon: "bin" }];
+export const SOORTEN = [
+  { id: "afval", naam: nt("Afvalmeldingen"), icoon: "bin" },
+  // Sinds 0.85.0. Wat er gemeld wordt staat in meldingen/stofzuiger.py.
+  { id: "stofzuiger", naam: nt("Robotstofzuiger"), icoon: "stofzuiger" },
+];
+
+/**
+ * Waarover de robotstofzuiger meldt, in de volgorde van de editor. Dezelfde
+ * sleutels als `GEBEURTENISSEN` in meldingen/stofzuiger.py. `kort` is het
+ * woord in de regel onder de soort in de pop-up.
+ */
+export const STOFZUIGER_GEBEURTENISSEN = [
+  { id: "klaar", naam: nt("Klaar met schoonmaken"), kort: nt("klaar") },
+  { id: "storing", naam: nt("Storing"), kort: nt("storing") },
+  { id: "station", naam: nt("Water en stofzak"), kort: nt("tanks") },
+  { id: "onderhoud", naam: nt("Onderhoud"), kort: nt("onderhoud") },
+];
+
+/** De gekozen gebeurtenissen; zonder keuze alle, net als `stofzuiger_uit` in kaarten.py. */
+export function stofzuigerGebeurtenissen(config) {
+  const gekozen = config?.stofzuiger_meldingen;
+  if (!Array.isArray(gekozen)) return STOFZUIGER_GEBEURTENISSEN.map((g) => g.id);
+  return STOFZUIGER_GEBEURTENISSEN.map((g) => g.id).filter((id) => gekozen.includes(id));
+}
+
+/** De robots op de kaart: alleen `vacuum.*`, zonder dubbelen. */
+export function stofzuigersUit(config) {
+  const r = config?.stofzuigers;
+  const lijst = Array.isArray(r) ? r : typeof r === "string" ? [r] : [];
+  return [...new Set(lijst.filter((s) => typeof s === "string" && s.startsWith("vacuum.")))];
+}
+
+/**
+ * De regel onder de robotstofzuiger in de pop-up: waarover, en van welke robot.
+ *
+ * "Klaar, storing en onderhoud · X50 Ultra Complete en dreame boven". Er is
+ * geen tijd: deze melding komt als er iets gebeurt.
+ *
+ * @param {object} p
+ * @param {object} p.config
+ * @param {object} [p.stand] van de server
+ * @param {string[]} [p.namen] de namen van de robots, in de volgorde van de config
+ */
+export function stofzuigerRegel({ config, stand, namen = [] } = {}) {
+  if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
+  if (!stofzuigersUit(config).length) return t("Nog geen stofzuiger gekozen");
+  const ids = stofzuigerGebeurtenissen(config);
+  if (!ids.length) return t("Niets gekozen om te melden");
+  const woorden = STOFZUIGER_GEBEURTENISSEN.filter((g) => ids.includes(g.id)).map((g) => t(g.kort));
+  const wat = opsomming(woorden);
+  const zin = wat[0].toUpperCase() + wat.slice(1);
+  return namen.length ? `${zin} · ${opsomming(namen)}` : zin;
+}
 
 /**
  * Staat deze soort aan op deze kaart?
