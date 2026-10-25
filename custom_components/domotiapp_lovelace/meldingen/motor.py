@@ -504,10 +504,25 @@ class Motor:
 
         self._uit.append(async_call_later(self.hass, 10, nu))
 
-    def _ontvangers(self, melding: kaarten.Melding, soort: str | None) -> list[str]:
+    def _ontvangers(self, melding: kaarten.Melding, soort: str | None, robot: str | None = None) -> list[str]:
+        """Wie deze melding krijgt: aan, en (sinds 0.86.0) zelf gekozen.
+
+        De kaart zegt wat er te kiezen is (`gebeurtenissen`); ieder kiest daar
+        zelf uit, en uit de robots. Wie niets koos, krijgt alles.
+        """
         if soort is not None and soort not in melding.gebeurtenissen:
             return []
-        return [p for p in melding.personen if self.opslag.aan(melding.id, p)]
+        uit: list[str] = []
+        for p in melding.personen:
+            if not self.opslag.aan(melding.id, p):
+                continue
+            keuze = self.opslag.keuze(melding.id, p)
+            if soort is not None and "gebeurtenissen" in keuze and soort not in keuze["gebeurtenissen"]:
+                continue
+            if robot is not None and "robots" in keuze and robot not in keuze["robots"]:
+                continue
+            uit.append(p)
+        return uit
 
     async def _stuur_robot(
         self, robot: str, soort: str, sleutel: str, tekst: str, *, alleen: str | None = None, proef: bool = False
@@ -522,7 +537,7 @@ class Motor:
             "tag": robot_tag(robot, "proef" if proef else sleutel),
             "group": "domotiapp-stofzuiger",
         }
-        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, soort)
+        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, soort, robot)
         gelukt, zonder = await self._stuur(melding, ontvangers, {"title": titel, "message": tekst, "data": data})
         if ontvangers:
             _LOGGER.info("Stofzuigermelding %s (%s): %s", robot, sleutel, tekst)

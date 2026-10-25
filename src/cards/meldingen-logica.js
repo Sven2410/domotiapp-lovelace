@@ -160,20 +160,62 @@ export function stofzuigersUit(config) {
 }
 
 /**
+ * Wat deze persoon van de robotstofzuiger wil (sinds 0.86.0).
+ *
+ * De kaart zegt wat er te KIEZEN is (`stofzuiger_meldingen` en `stofzuigers`);
+ * ieder kiest daar zelf uit in de pop-up. Gevraagd op 25 oktober 2026: *"ik wil
+ * dat de gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger
+ * wilt ontvangen."* Een lijst die de persoon nooit aanraakte is alles, net als
+ * `_ontvangers` in meldingen/motor.py.
+ *
+ * @returns {{gebeurtenissen: string[], robots: string[]}} wat hij krijgt,
+ *   binnen wat de kaart aanbiedt, in de volgorde van de kaart
+ */
+export function persoonKeuze(config, stand, persoon) {
+  const keuze = stand?.keuzes?.[persoon] ?? {};
+  const aangeboden = stofzuigerGebeurtenissen(config);
+  const robots = stofzuigersUit(config);
+  return {
+    gebeurtenissen: Array.isArray(keuze.gebeurtenissen)
+      ? aangeboden.filter((g) => keuze.gebeurtenissen.includes(g))
+      : aangeboden,
+    robots: Array.isArray(keuze.robots) ? robots.filter((r) => keuze.robots.includes(r)) : robots,
+  };
+}
+
+/**
+ * De nieuwe lijst na één tik op een keuze, of `null` als dat weer "alles" is.
+ *
+ * `null` en niet de volle lijst: komt er later een robot of een soort bij op de
+ * kaart, dan krijgt wie alles had die er vanzelf bij.
+ *
+ * @param {string[]} alle wat er te kiezen is
+ * @param {string[]} nu wat er nu gekozen is
+ * @param {string} waarde waarop getikt is
+ * @param {boolean} aan
+ */
+export function nieuweKeuze(alle, nu, waarde, aan) {
+  const nieuw = alle.filter((x) => (x === waarde ? aan : nu.includes(x)));
+  return nieuw.length === alle.length ? null : nieuw;
+}
+
+/**
  * De regel onder de robotstofzuiger in de pop-up: waarover, en van welke robot.
  *
  * "Klaar, storing en onderhoud · X50 Ultra Complete en dreame boven". Er is
- * geen tijd: deze melding komt als er iets gebeurt.
+ * geen tijd: deze melding komt als er iets gebeurt. Met `persoon` (sinds
+ * 0.86.0) wat die persoon zelf koos.
  *
  * @param {object} p
  * @param {object} p.config
  * @param {object} [p.stand] van de server
  * @param {string[]} [p.namen] de namen van de robots, in de volgorde van de config
  */
-export function stofzuigerRegel({ config, stand, namen = [] } = {}) {
+export function stofzuigerRegel({ config, stand, namen = [], persoon } = {}) {
   if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
   if (!stofzuigersUit(config).length) return t("Nog geen stofzuiger gekozen");
-  const ids = stofzuigerGebeurtenissen(config);
+  // Met een persoon: wat HIJ gekozen heeft. `namen` horen dan bij zijn robots.
+  const ids = persoon ? persoonKeuze(config, stand, persoon).gebeurtenissen : stofzuigerGebeurtenissen(config);
   if (!ids.length) return t("Niets gekozen om te melden");
   const woorden = STOFZUIGER_GEBEURTENISSEN.filter((g) => ids.includes(g.id)).map((g) => t(g.kort));
   const wat = opsomming(woorden);

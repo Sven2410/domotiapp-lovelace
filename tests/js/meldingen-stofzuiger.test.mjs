@@ -86,3 +86,42 @@ describe("stofzuigersUit()", () => {
     assert.deepEqual(fn("stofzuigersUit")({}), []);
   });
 });
+
+describe("per persoon kiezen (0.86.0) — NIEUW GEDRAG", () => {
+  const TWEE = { ...KAART, stofzuigers: ["vacuum.x50", "vacuum.dreame_boven"] };
+
+  it("niets gekozen is alles wat de kaart aanbiedt", () => {
+    assert.deepEqual(fn("persoonKeuze")(TWEE, { keuzes: {} }, "person.anna"), {
+      gebeurtenissen: ["klaar", "storing", "station", "onderhoud"],
+      robots: ["vacuum.x50", "vacuum.dreame_boven"],
+    });
+  });
+
+  it("een keuze binnen wat de kaart aanbiedt, in de volgorde van de kaart", () => {
+    const stand = { keuzes: { "person.anna": { gebeurtenissen: ["onderhoud", "storing"], robots: ["vacuum.dreame_boven"] } } };
+    const kaart = { ...TWEE, stofzuiger_meldingen: ["klaar", "storing"] };
+    assert.deepEqual(fn("persoonKeuze")(kaart, stand, "person.anna"), {
+      gebeurtenissen: ["storing"],
+      robots: ["vacuum.dreame_boven"],
+    });
+  });
+
+  it("een tik maakt een lijst, en alles weer aan is null", () => {
+    const alle = ["klaar", "storing", "station", "onderhoud"];
+    assert.deepEqual(fn("nieuweKeuze")(alle, alle, "storing", false), ["klaar", "station", "onderhoud"]);
+    assert.equal(fn("nieuweKeuze")(alle, ["klaar", "station", "onderhoud"], "storing", true), null);
+    assert.deepEqual(fn("nieuweKeuze")(alle, ["klaar"], "klaar", false), []);
+  });
+
+  it("de regel zegt wat deze persoon krijgt", () => {
+    const stand = { bekend: true, keuzes: { "person.anna": { gebeurtenissen: ["klaar"] } } };
+    assert.equal(
+      fn("stofzuigerRegel")({ config: TWEE, stand, persoon: "person.anna", namen: ["dreame boven"] }),
+      "Klaar · dreame boven"
+    );
+    assert.equal(
+      fn("stofzuigerRegel")({ config: TWEE, stand: { bekend: true, keuzes: { "person.anna": { gebeurtenissen: [] } } }, persoon: "person.anna" }),
+      "Niets gekozen om te melden"
+    );
+  });
+});

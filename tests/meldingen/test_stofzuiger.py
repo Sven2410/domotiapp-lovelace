@@ -385,3 +385,70 @@ def test_geen_fout_is_geen_storing() -> None:
     assert stofzuiger.fout_tekst("unavailable") == ""
     assert stofzuiger.fout_tekst("bumper_stuck") == "Bumper stuck"
     assert stofzuiger.fout_tekst("x", "Wiel vast\nTil de robot op") == "Wiel vast"
+
+
+# ------------------------------------------------- per persoon (0.86.0)
+
+
+async def test_ieder_kiest_zelf_waarover(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.86.0. Anna wil alleen horen dat hij klaar is."""
+    motor.opslag.zet_keuze("stofzuiger", ANNA, "gebeurtenissen", ["klaar"])
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    assert [d for d, _ in telefoons] == ["test_bram"]
+
+    telefoons.clear()
+    zet(hass, "sensor.dreame_boven_task_status", "cleaning")
+    await hass.async_block_till_done()
+    zet(hass, "sensor.dreame_boven_task_status", "completed")
+    await wacht_klaar(hass)
+    assert [d for d, _ in telefoons] == ["test_bram", "test_anna"]
+
+
+async def test_ieder_kiest_zelf_van_welke_robot(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.86.0. Bram wil niets van de robot boven."""
+    motor.opslag.zet_keuze("stofzuiger", BRAM, "robots", ["vacuum.x50_ultra_complete"])
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    assert [d for d, _ in telefoons] == ["test_anna"]
+
+
+async def test_niets_gekozen_is_alles_en_leeg_is_niets(hass: HomeAssistant, motor, telefoons) -> None:
+    motor.opslag.zet_keuze("stofzuiger", ANNA, "gebeurtenissen", [])
+    motor.opslag.zet_keuze("stofzuiger", BRAM, "gebeurtenissen", ["storing"])
+    motor.opslag.zet_keuze("stofzuiger", BRAM, "gebeurtenissen", None)
+    assert motor.opslag.keuze("stofzuiger", BRAM) == {}
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    assert [d for d, _ in telefoons] == ["test_bram"]
+
+
+async def test_de_kaart_beperkt_wat_er_te_kiezen_is(hass: HomeAssistant, motor, telefoons) -> None:
+    """Wie storing koos, krijgt hem niet als de kaart hem niet meer aanbiedt."""
+    motor.opslag.zet_keuze("stofzuiger", BRAM, "gebeurtenissen", ["storing"])
+    await zet_dashboard(hass, [{**STOFZUIGERKAART, "stofzuiger_meldingen": ["klaar"]}])
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    assert telefoons == []
+
+
+async def test_keuze_via_de_websocket(hass: HomeAssistant, motor, hass_ws_client) -> None:
+    """Iedereen mag het, net als aan/uit: Anna op de tablet kiest voor zichzelf."""
+    ws = await hass_ws_client(hass)
+    await ws.send_json(
+        {"id": 1, "type": "domotiapp_lovelace/meldingen/subscribe", "melding": "stofzuiger"}
+    )
+    assert (await ws.receive_json())["success"]
+    eerste = await ws.receive_json()
+    assert eerste["event"]["keuzes"] == {}
+
+    await ws.send_json({
+        "id": 2, "type": "domotiapp_lovelace/meldingen/keuze", "melding": "stofzuiger",
+        "persoon": ANNA, "soort": "gebeurtenissen", "waarden": ["klaar", "onderhoud"],
+    })
+    bericht = await ws.receive_json()
+    if bericht.get("type") == "event":
+        assert bericht["event"]["keuzes"] == {ANNA: {"gebeurtenissen": ["klaar", "onderhoud"]}}
+        bericht = await ws.receive_json()
+    assert bericht["success"] and bericht["result"] == {"keuze": {"gebeurtenissen": ["klaar", "onderhoud"]}}
+    assert motor.opslag.keuze("stofzuiger", ANNA) == {"gebeurtenissen": ["klaar", "onderhoud"]}
