@@ -450,6 +450,53 @@ Drie dingen die daarbij tijd hebben gekost:
 Op macOS is de omweg via Docker uit *Commando's* dus niet nodig; die geldt
 alleen voor Windows, waar Home Assistant `fcntl` importeert.
 
+### Een testinstance op de mini-pc (Linux)
+
+Sinds 25 oktober 2026 draait er ook een op de mini-pc, zonder Docker, onder
+**pm2** (zoals de andere diensten daar). `pm2 ls` toont hem als `ha-lovelace`;
+`pm2 restart ha-lovelace` is daar wat `docker restart ha-lovelace` op de pc is.
+
+| Wat | Waar |
+|---|---|
+| Python 3.14 en Home Assistant 2026.8.1 | `~/ha-lovelace-test/venv` (Debian heeft 3.13, en 2026.8 wil `>=3.14.2`; 3.14 komt van `uv`, in `~/ha-lovelace-test/uv-env`) |
+| de config | `.ha-dev-config/` in de repo, net als op de pc |
+| onze integratie | een symlink in `.ha-dev-config/custom_components/`, net als de mount van de container |
+| het log | `.ha-dev-config/home-assistant.log`, of `pm2 logs ha-lovelace` |
+
+`.ha-dev-config` kwam uit de back-up van de pc op de NAS
+(`/mnt/DomotiApp/pc-sven/dev/domotiapp-lovelace/.ha-dev-config`), zonder
+`deps`, `.cache` en logboeken: alle nagebootste apparaten, accounts en het
+dashboard `kaart-test` kwamen zo mee.
+
+Twee dingen die tijd kostten:
+
+- **De poort staat sinds 2026.8 in `.storage/http`, niet in de YAML.** Een
+  `http: server_port:` in `configuration.yaml` wordt na de overstap
+  (`yaml_migration_done`) stil genegeerd. Zonder Docker vertaalt niemand 8123
+  naar 8127, dus de eerste start stond op **8123** -- een poort die niet van
+  ons is. Zet `server_port` in `.storage/http` terwijl hij stilstaat.
+- **`segno` hoort in de venv** (voor de nagebootste UniFi). In de container
+  stond hij in `deps`; zonder hem start de entry Nep-UniFi niet.
+
+Er is geen `ffmpeg` en geen `libturbojpeg`: de demo-camera's starten wel, maar
+met een fout in het log. Dat raakt geen kaart.
+
+**De Python-tests draaien hier rechtstreeks**, in dezelfde venv (de
+testpakketten pinnen dezelfde Home Assistant): 903 groen in 16 seconden op
+25 oktober 2026.
+
+```bash
+~/ha-lovelace-test/venv/bin/python -m pytest -q -n 4
+```
+
+De melding "Unable to locate turbojpeg library" in die uitvoer is een
+waarschuwing, geen fout.
+
+Meten zonder Chrome van de eigenaar kan met Playwright headless, met een token
+uit de inlogstroom van de API in `localStorage.hassTokens` (`addInitScript`).
+Het wachtwoord staat in `INLOG.md` en wordt door het script gelezen, nooit
+getoond.
+
 ### Testmateriaal in `.ha-dev-config`
 
 Vier testlampen die samen de vier lampsoorten uit SPEC 6 dekken, plus één
