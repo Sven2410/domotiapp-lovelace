@@ -4,6 +4,7 @@
 |---|---|
 | `meldingen/subscribe` | iedere ingelogde gebruiker |
 | `meldingen/aan` | iedere ingelogde gebruiker |
+| `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0) |
 | `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
 
 Omzetten mag iedereen: de kaart hangt op een tablet met een kioskaccount, en
@@ -39,6 +40,7 @@ def async_register(hass: HomeAssistant) -> None:
         return
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_aan)
+    websocket_api.async_register_command(hass, ws_keuze)
     websocket_api.async_register_command(hass, ws_proef)
     data[DATA_WS_REGISTERED] = True
 
@@ -65,6 +67,7 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
         "id": ident,
         "bekend": melding is not None,
         "aan": opslag.alle_aan(ident) if opslag else {},
+        "keuzes": opslag.alle_keuzes(ident) if opslag else {},
         "buiten": buiten,
         "verstuurd": {m: opslag.verstuurd(ident, m) for m in MOMENTEN} if opslag else {},
         "tijden": dict(melding.tijden) if melding else None,
@@ -129,6 +132,28 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     opslag.zet_aan(msg["melding"], msg["persoon"], msg["aan"])
     async_meld_aan_abonnees(hass, msg["melding"])
     connection.send_result(msg["id"], {"aan": msg["aan"]})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/meldingen/keuze",
+        vol.Required("melding"): cv.string,
+        vol.Required("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
+        vol.Required("soort"): vol.In(("gebeurtenissen", "robots")),
+        # None: alles (weer de standaard).
+        vol.Required("waarden"): vol.Any(None, [cv.string]),
+    }
+)
+@callback
+def ws_keuze(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Wat iemand van een melding wil. Net als `aan` mag iedereen dit."""
+    opslag = hass.data.get(DOMAIN, {}).get(DATA_OPSLAG)
+    if opslag is None:
+        connection.send_error(msg["id"], "not_allowed", t(hass, "De meldingen zijn nog niet geladen"))
+        return
+    opslag.zet_keuze(msg["melding"], msg["persoon"], msg["soort"], msg["waarden"])
+    async_meld_aan_abonnees(hass, msg["melding"])
+    connection.send_result(msg["id"], {"keuze": opslag.keuze(msg["melding"], msg["persoon"])})
 
 
 @websocket_api.require_admin

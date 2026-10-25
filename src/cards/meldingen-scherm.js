@@ -9,9 +9,10 @@
  *
  * ## Wat er WEL en NIET in staat
  *
- * Alleen wat deze persoon zelf beslist: aan of uit. De instellingen van een
- * soort -- welke sensor, hoe laat -- staan in de editor van de kaart, want die
- * gelden voor iedereen. Onder elke soort staat wel wat er komt ("Morgen GFT ·
+ * Alleen wat deze persoon zelf beslist: aan of uit, en sinds 0.86.0 bij de
+ * robotstofzuiger ook waarover en van welke robot (de keuzes onder het vinkje).
+ * De instellingen van een soort -- welke sensor, hoe laat, wat er te kiezen
+ * valt -- staan in de editor van de kaart, want die gelden voor iedereen. Onder elke soort staat wel wat er komt ("Morgen GFT ·
  * melding om 19:30"): dat stond eerst in de kop van de kaart, en die kop is
  * weg.
  *
@@ -163,6 +164,33 @@ const css = /* css */ `
     background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi);
   }
 
+  /* De keuzes onder een soort (sinds 0.86.0): alleen als die soort aan staat.
+     Rondjes met een eigen vinkje; dat vinkje draagt de toestand, de tekst niet. */
+  .blok { display: flex; flex-direction: column; gap: 8px; }
+  .keuzes { display: flex; flex-direction: column; gap: 8px; padding: 0 4px 4px 12px; }
+  .groep { display: flex; flex-direction: column; gap: 6px; }
+  .groep .kop { font-size: 11.5px; color: var(--dac-ink-3); }
+  .opties { display: flex; flex-wrap: wrap; gap: 6px; }
+  .keus {
+    display: inline-flex; align-items: center; gap: 7px; min-height: 34px; max-width: 100%;
+    padding: 0 12px 0 7px; cursor: pointer; font-size: 13px; color: var(--dac-ink-2);
+    border-radius: var(--dac-radius-pill); background: var(--dac-surface); border: 1px solid var(--dac-border);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  @media (hover: hover) { .keus:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
+  .keus .tk { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .keus .v {
+    width: 20px; height: 20px; flex: 0 0 auto; display: grid; place-items: center;
+    border-radius: 50%; border: 1.5px solid var(--dac-ink-3); color: transparent;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .keus .v .icon { width: 13px; height: 13px; }
+  .keus[aria-checked="true"] { color: var(--dac-ink); }
+  .keus[aria-checked="true"] .v {
+    background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi);
+  }
+
   .leeg { font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); padding: 4px 2px; }
 
   /* De proef: een gewone knop, rustiger dan een vinkje, want hij verandert
@@ -244,13 +272,17 @@ class MeldingenScherm extends HTMLElement {
     this.$(".proef button").addEventListener("click", () => this.proef_());
 
     const lijst = this.$(".lijst");
-    lijst.addEventListener("click", (e) => this.vink_(e.target.closest(".soort")));
+    const tik = (doel) => {
+      const keus = doel.closest(".keus");
+      if (keus) return this.kies_(keus);
+      return this.vink_(doel.closest(".soort"));
+    };
+    lijst.addEventListener("click", (e) => tik(e.target));
     lijst.addEventListener("keydown", (e) => {
       if (e.key !== " " && e.key !== "Enter") return;
-      const regel = e.target.closest(".soort");
-      if (!regel) return;
+      if (!e.target.closest(".soort, .keus")) return;
       e.preventDefault();
-      this.vink_(regel);
+      tik(e.target);
     });
   }
 
@@ -327,16 +359,34 @@ class MeldingenScherm extends HTMLElement {
 
     // De regels één keer bouwen en daarna alleen bijwerken: een vinkje dat
     // opnieuw getekend wordt terwijl je erop tikt, verliest zijn focus.
-    const sig = inhoud.soorten.map((s) => s.id).join(",");
+    // In de handtekening ook de keuzes: komt er een robot bij, dan andere rondjes.
+    const sig = inhoud.soorten
+      .map((s) => [s.id, ...(s.keuzes ?? []).map((g) => `${g.groep}:${g.opties.map((o) => o.id).join("+")}`)].join("|"))
+      .join(",");
     if (lijst.dataset.sig !== sig) {
       lijst.dataset.sig = sig;
       lijst.innerHTML = inhoud.soorten
         .map(
           (s) => `
-          <div class="soort" role="checkbox" tabindex="0" data-soort="${veilig(s.id)}" aria-checked="false">
-            <span class="ico">${resolve(s.icoon)}</span>
-            <span class="txt"><span class="nm">${veilig(t(s.naam))}</span><span class="rg"></span></span>
-            <span class="vink">${resolve("check")}</span>
+          <div class="blok">
+            <div class="soort" role="checkbox" tabindex="0" data-soort="${veilig(s.id)}" aria-checked="false">
+              <span class="ico">${resolve(s.icoon)}</span>
+              <span class="txt"><span class="nm">${veilig(t(s.naam))}</span><span class="rg"></span></span>
+              <span class="vink">${resolve("check")}</span>
+            </div>
+            <div class="keuzes" data-voor="${veilig(s.id)}" hidden>${(s.keuzes ?? [])
+              .map(
+                (g) => `
+              <div class="groep" role="group" aria-label="${veilig(g.kop)}">
+                <span class="kop">${veilig(g.kop)}</span>
+                <div class="opties">${g.opties
+                  .map(
+                    (o) => `<div class="keus" role="checkbox" tabindex="0" aria-checked="false" data-soort="${veilig(s.id)}" data-groep="${veilig(g.groep)}" data-waarde="${veilig(o.id)}"><span class="v">${resolve("check")}</span><span class="tk">${veilig(o.naam)}</span></div>`
+                  )
+                  .join("")}</div>
+              </div>`
+              )
+              .join("")}</div>
           </div>`
         )
         .join("");
@@ -355,6 +405,22 @@ class MeldingenScherm extends HTMLElement {
         "aria-label",
         `${s.aan ? t("{soort} voor {naam}: aan", waarden) : t("{soort} voor {naam}: uit", waarden)}${s.regel ? `. ${s.regel}` : ""}`
       );
+
+      // De keuzes alleen als de soort aan staat: wie hem uit heeft, krijgt toch niets.
+      const keuzes = lijst.querySelector(`.keuzes[data-voor="${CSS.escape(s.id)}"]`);
+      if (!keuzes) continue;
+      keuzes.hidden = !s.aan || s.laden || !(s.keuzes ?? []).length;
+      for (const g of s.keuzes ?? []) {
+        for (const o of g.opties) {
+          const keus = keuzes.querySelector(
+            `.keus[data-groep="${CSS.escape(g.groep)}"][data-waarde="${CSS.escape(o.id)}"]`
+          );
+          if (!keus) continue;
+          keus.setAttribute("aria-checked", String(o.aan));
+          const tk = keus.querySelector(".tk");
+          if (tk.textContent !== o.naam) tk.textContent = o.naam;
+        }
+      }
     }
   }
 
@@ -373,6 +439,12 @@ class MeldingenScherm extends HTMLElement {
     knop.disabled = false;
     uit.dataset.soort = fout ? "fout" : "";
     uit.textContent = tekst;
+  }
+
+  kies_(keus) {
+    if (!keus || !this.bron?.kies) return;
+    const aan = keus.getAttribute("aria-checked") !== "true";
+    this.bron.kies(keus.dataset.soort, this.persoon, keus.dataset.groep, keus.dataset.waarde, aan);
   }
 
   vink_(regel) {

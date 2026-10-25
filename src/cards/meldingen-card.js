@@ -57,6 +57,9 @@ import {
   soortenVan,
   staatAan,
   STOFZUIGER_GEBEURTENISSEN,
+  nieuweKeuze,
+  persoonKeuze,
+  stofzuigerGebeurtenissen,
   stofzuigerRegel,
   stofzuigersUit,
 } from "./meldingen-logica.js";
@@ -277,6 +280,75 @@ class MeldingenCard extends DacCard {
       });
   }
 
+  /**
+   * Eén keuze binnen een soort, voor één persoon: een soort melding of een
+   * robot aan of uit (sinds 0.86.0). De pop-up roept dit aan; net als `zet`
+   * meteen bewaard, zonder Opslaan.
+   *
+   * @param {string} soort  "stofzuiger"
+   * @param {string} persoon
+   * @param {"gebeurtenissen"|"robots"} groep
+   * @param {string} waarde
+   * @param {boolean} aan
+   */
+  kies(soort, persoon, groep, waarde, aan) {
+    const vorig = this.standen_[soort];
+    if (!vorig || !this.hass?.connection) return;
+    const c = this.config;
+    const alle = groep === "robots" ? stofzuigersUit(c) : stofzuigerGebeurtenissen(c);
+    const waarden = nieuweKeuze(alle, persoonKeuze(c, vorig, persoon)[groep], waarde, aan);
+    const eigen = { ...(vorig.keuzes?.[persoon] ?? {}) };
+    if (waarden === null) delete eigen[groep];
+    else eigen[groep] = waarden;
+    this.standen_ = { ...this.standen_, [soort]: { ...vorig, keuzes: { ...(vorig.keuzes ?? {}), [persoon]: eigen } } };
+    this.paint();
+    this.hass.connection
+      .sendMessagePromise({
+        type: "domotiapp_lovelace/meldingen/keuze",
+        melding: meldingId(c, soort),
+        persoon,
+        soort: groep,
+        waarden,
+      })
+      .catch((fout) => {
+        console.warn("DomotiApp Meldingen: kiezen mislukte", fout);
+        this.standen_ = { ...this.standen_, [soort]: vorig };
+        this.paint();
+      });
+  }
+
+  /**
+   * De keuzes onder de robotstofzuiger in de pop-up: waarover, en (bij meer dan
+   * één robot) van welke. Een groep met één keuze staat er niet: die zegt
+   * hetzelfde als het vinkje erboven.
+   */
+  keuzes_(stand, persoon) {
+    const c = this.config;
+    const nu = persoonKeuze(c, stand, persoon);
+    const groepen = [];
+    const aangeboden = stofzuigerGebeurtenissen(c);
+    if (aangeboden.length > 1) {
+      groepen.push({
+        groep: "gebeurtenissen",
+        kop: t("Waarover"),
+        opties: STOFZUIGER_GEBEURTENISSEN.filter((g) => aangeboden.includes(g.id)).map((g) => ({
+          id: g.id,
+          naam: t(g.naam),
+          aan: nu.gebeurtenissen.includes(g.id),
+        })),
+      });
+    }
+    const robots = stofzuigersUit(c);
+    if (robots.length > 1) {
+      groepen.push({
+        groep: "robots",
+        kop: t("Van welke robot"),
+        opties: robots.map((id) => ({ id, naam: naamVan(this.hass, id), aan: nu.robots.includes(id) })),
+      });
+    }
+    return groepen;
+  }
+
   /** Heeft deze persoon GEEN telefoon, volgens de server? Null = onbekend. */
   zonderTelefoon_(persoon) {
     const stand = Object.values(this.standen_).find((s) => s?.telefoons);
@@ -305,7 +377,8 @@ class MeldingenCard extends DacCard {
           ...soort,
           aan: staatAan(stand, persoon),
           laden: !stand,
-          regel: soort.id === "afval" ? this.afvalRegel_(stand) : this.stofzuigerRegel_(stand),
+          regel: soort.id === "afval" ? this.afvalRegel_(stand) : this.stofzuigerRegel_(stand, persoon),
+          keuzes: soort.id === "stofzuiger" && stand?.bekend ? this.keuzes_(stand, persoon) : [],
         };
       }),
     };
@@ -339,9 +412,10 @@ class MeldingenCard extends DacCard {
     return { tekst: uit.map((u) => u.tekst).join(" "), fout: uit.every((u) => u.fout) };
   }
 
-  stofzuigerRegel_(stand) {
+  stofzuigerRegel_(stand, persoon) {
     const c = this.config;
-    return stofzuigerRegel({ config: c, stand, namen: stofzuigersUit(c).map((id) => naamVan(this.hass, id)) });
+    const robots = persoonKeuze(c, stand, persoon).robots;
+    return stofzuigerRegel({ config: c, stand, persoon, namen: robots.map((id) => naamVan(this.hass, id)) });
   }
 
   afvalRegel_(stand) {
@@ -522,7 +596,7 @@ class MeldingenEditor extends DacEditor {
         tijd_vandaag: t("Melding op de dag zelf"),
         stofzuiger: t("Robotstofzuiger"),
         stofzuigers: t("Robots"),
-        stofzuiger_meldingen: t("Waarover"),
+        stofzuiger_meldingen: t("Te kiezen"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -548,7 +622,7 @@ class MeldingenEditor extends DacEditor {
       ),
       stofzuigers: t("De robots waarover gemeld wordt. Werkt met Dreame (dreame_vacuum)."),
       stofzuiger_meldingen: t(
-        "Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
+        "Wat iedereen in zijn pop-up kan kiezen. Ieder kiest daar zelf waarover en van welke robot; wie niets kiest krijgt alles wat hier aan staat. Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
       ),
     }[s.name];
   }

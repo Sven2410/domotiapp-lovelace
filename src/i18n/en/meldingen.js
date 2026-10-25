@@ -160,12 +160,14 @@ export const MELDINGEN = {
   // De robotstofzuiger (0.85.0)
   "Robots en meldingen": "Robots and notifications",
   "Robots": "Robots",
-  "Waarover": "About",
+  "Waarover": "Notify about",
   "Een melding als de robot klaar is, een storing heeft, water of een lege tank nodig heeft, of als een onderdeel aan de beurt is.":
     "A notification when the robot has finished, has a fault, needs water or an empty tank, or when a part is due.",
   "De robots waarover gemeld wordt. Werkt met Dreame (dreame_vacuum).": "The robots to notify about. Works with Dreame (dreame_vacuum).",
-  "Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over.":
-    "Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
+  "Wat iedereen in zijn pop-up kan kiezen. Ieder kiest daar zelf waarover en van welke robot; wie niets kiest krijgt alles wat hier aan staat. Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over.":
+    "What everyone can choose in their pop-up. Each person picks what about and which robot there; whoever picks nothing gets everything switched on here. Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
+  "Te kiezen": "To choose from",
+  "Van welke robot": "Which robot",
   "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval en de robotstofzuiger.":
     "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste and the robot vacuum.",
   "Klaar met schoonmaken": "Finished cleaning",

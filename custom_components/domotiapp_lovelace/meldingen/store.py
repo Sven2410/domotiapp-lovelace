@@ -9,6 +9,13 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `buiten` | per melding: voor welke ophaaldag iemand "Staat buiten" tikte, en wie |
 | `verstuurd` | per melding, per moment: op welke dag hij al is uitgegaan |
 | `leidend` | per melding: van welk dashboard de instellingen gelden |
+| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger) |
+
+`keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
+gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger wilt
+ontvangen. (...) Het moet zo instelbaar mogelijk zijn voor de gebruiker."*
+Per persoon een lijst `gebeurtenissen` en een lijst `robots`. Ontbreekt een
+lijst, dan wil hij alles; een lege lijst is niets.
 
 `verstuurd` is er zodat een herstart om 19:30:10 geen tweede melding oplevert.
 
@@ -40,7 +47,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -55,6 +62,9 @@ class MeldingOpslag:
         # Sinds 0.55.0. Een opslag van daarvoor heeft hem niet, en dat is geen fout.
         if isinstance(rauw.get("leidend"), dict):
             self._data["leidend"] = rauw["leidend"]
+        # Sinds 0.86.0, idem.
+        if isinstance(rauw.get("keuzes"), dict):
+            self._data["keuzes"] = rauw["keuzes"]
 
     @callback
     def _bewaar(self) -> None:
@@ -111,4 +121,28 @@ class MeldingOpslag:
         if self._data["leidend"].get(melding) == dashboard:
             return
         self._data["leidend"][melding] = dashboard
+        self._bewaar()
+
+    # ----------------------------------------------------------------- keuzes
+
+    @callback
+    def keuze(self, melding: str, persoon: str) -> dict[str, list[str]]:
+        """Wat deze persoon van deze melding wil. Een ontbrekende lijst: alles."""
+        waarde = self._data["keuzes"].get(melding, {}).get(persoon)
+        if not isinstance(waarde, dict):
+            return {}
+        return {k: list(v) for k, v in waarde.items() if isinstance(v, list)}
+
+    @callback
+    def alle_keuzes(self, melding: str) -> dict[str, dict[str, list[str]]]:
+        return {p: self.keuze(melding, p) for p in self._data["keuzes"].get(melding, {})}
+
+    @callback
+    def zet_keuze(self, melding: str, persoon: str, soort: str, waarden: list[str] | None) -> None:
+        """Eén lijst (`gebeurtenissen` of `robots`); None haalt hem weg: dan alles."""
+        per = self._data["keuzes"].setdefault(melding, {}).setdefault(persoon, {})
+        if waarden is None:
+            per.pop(soort, None)
+        else:
+            per[soort] = [str(w) for w in dict.fromkeys(waarden)]
         self._bewaar()
