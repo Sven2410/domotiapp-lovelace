@@ -128,6 +128,10 @@ class Motor:
         self._robot_uit: CALLBACK_TYPE | None = None
         self._bezig: set[str] = set()
         self._meldt: dict[tuple[str, str], dict[str, str]] = {}
+        # Wat er echt naar de telefoons ging (alleen dat wordt gewist), en wat
+        # nog wacht: een tank die bij het bijvullen even uit staat (0.85.1).
+        self._gemeld: set[tuple[str, str]] = set()
+        self._wacht: dict[tuple[str, str], CALLBACK_TYPE] = {}
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -145,6 +149,9 @@ class Motor:
         if self._robot_uit is not None:
             self._robot_uit()
             self._robot_uit = None
+        for weg in self._wacht.values():
+            weg()
+        self._wacht.clear()
 
     async def async_herlees(self) -> None:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
@@ -362,6 +369,10 @@ class Motor:
         oud = event.data.get("old_state")
         ov = oud.state if oud is not None else None
         nv = nieuw.state
+        # NAAR `unavailable` is een herstart of een wegvallende verbinding: dat
+        # zegt niets over de robot, en mag een lopende melding niet wissen.
+        if not stofzuiger.heeft_waarde(nv):
+            return
         # Uit `unavailable` of `unknown` is een robot die (weer) verbindt: wat
         # er dan staat, wordt onthouden maar niet gemeld.
         melden = stofzuiger.heeft_waarde(ov)
@@ -370,10 +381,10 @@ class Motor:
         if rol == "stofzuiger":
             if nv in stofzuiger.STOFZUIGER_BEZIG:
                 self._bezig.add(robot)
-            elif nv == "docked" and robot in self._bezig:
-                self._bezig.discard(robot)
-                if not self._rol_van(robot, "taak"):
-                    self._klaar_straks(robot)
+                self._stop_wacht((robot, "klaar"))
+            elif nv == "docked" and robot in self._bezig and not self._rol_van(robot, "taak"):
+                # Zonder taaksensor: pas klaar als hij in het station BLIJFT.
+                self._later((robot, "klaar"), stofzuiger.KLAAR_ZONDER_TAAK, lambda: self._klaar_zonder_taak(robot))
             if not self._rol_van(robot, "fout"):
                 tekst = t(self.hass, "Storing") if nv == "error" else ""
                 self._toestand(robot, stofzuiger.SOORT_STORING, "storing", eid, tekst, melden)
@@ -387,7 +398,9 @@ class Motor:
         elif rol in stofzuiger.STATION_SLEUTEL:
             tekst = stofzuiger.station_tekst(rol, nv, taal)
             sleutel = stofzuiger.STATION_SLEUTEL[rol]
-            self._toestand(robot, stofzuiger.SOORT_STATION, sleutel, eid, tekst, melden)
+            self._toestand(
+                robot, stofzuiger.SOORT_STATION, sleutel, eid, tekst, melden, wacht=stofzuiger.STATION_WACHT
+            )
         elif rol == "onderhoud":
             pct = stofzuiger.onderhoud_procent(nv)
             naam = str(nieuw.attributes.get("friendly_name") or "")
@@ -415,6 +428,7 @@ class Motor:
         melden: bool,
         *,
         opnieuw: bool = True,
+        wacht: int = 0,
     ) -> None:
         """Een toestand die begint, verandert of ophoudt.
 
@@ -422,15 +436,59 @@ class Motor:
         waterwaarschuwing): de melding staat aan zolang een van beide iets zegt.
         `opnieuw` is of een ANDERE tekst bij een toestand die al liep een nieuwe
         melding is (een andere storing wel, een onderdeel van 8 naar 7 % niet).
+        `wacht` is hoeveel seconden de toestand moet blijven voor hij gemeld
+        wordt; is hij eerder voorbij, dan gaat er niets uit.
         """
-        bron = self._meldt.setdefault((robot, sleutel), {})
+        sl = (robot, sleutel)
+        bron = self._meldt.setdefault(sl, {})
         voor = next((x for x in bron.values() if x), "")
         bron[entiteit] = tekst
         na = next((x for x in bron.values() if x), "")
         if na and na != voor and melden and (opnieuw or not voor):
-            self.hass.async_create_task(self._stuur_robot(robot, soort, sleutel, na))
+            if wacht:
+                self._later(sl, wacht, lambda: self._meld_als_nog(robot, soort, sleutel, na))
+            else:
+                self._meld_robot(robot, soort, sleutel, na)
         elif voor and not na:
-            self.hass.async_create_task(self._wis_robot(robot, sleutel))
+            self._stop_wacht(sl)
+            if sl in self._gemeld:
+                self._gemeld.discard(sl)
+                self.hass.async_create_task(self._wis_robot(robot, sleutel))
+
+    @callback
+    def _meld_robot(self, robot: str, soort: str, sleutel: str, tekst: str) -> None:
+        self._gemeld.add((robot, sleutel))
+        self.hass.async_create_task(self._stuur_robot(robot, soort, sleutel, tekst))
+
+    @callback
+    def _meld_als_nog(self, robot: str, soort: str, sleutel: str, tekst: str) -> None:
+        """Na het wachten: alleen als de toestand nog precies zo is."""
+        nu = next((x for x in self._meldt.get((robot, sleutel), {}).values() if x), "")
+        if nu == tekst:
+            self._meld_robot(robot, soort, sleutel, tekst)
+
+    @callback
+    def _later(self, sl: tuple[str, str], seconden: int, doe: Callable[[], None]) -> None:
+        self._stop_wacht(sl)
+
+        @callback
+        def nu(_: Any) -> None:
+            self._wacht.pop(sl, None)
+            doe()
+
+        self._wacht[sl] = async_call_later(self.hass, seconden, nu)
+
+    @callback
+    def _stop_wacht(self, sl: tuple[str, str]) -> None:
+        if (weg := self._wacht.pop(sl, None)) is not None:
+            weg()
+
+    @callback
+    def _klaar_zonder_taak(self, robot: str) -> None:
+        st = self.hass.states.get(robot)
+        if st is not None and st.state == "docked" and robot in self._bezig:
+            self._bezig.discard(robot)
+            self._klaar_straks(robot)
 
     @callback
     def _klaar_straks(self, robot: str) -> None:
