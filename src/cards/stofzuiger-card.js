@@ -126,15 +126,25 @@ class StofzuigerCard extends DacCard {
       font-size: 14px; font-weight: 500; line-height: 1.25; color: var(--dac-ink);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* De status mag over twee regels: op een telefoon past "Adding water ·
+       Living Room · 12 %" niet op een, en twee afgekapte stukken naast elkaar
+       zeggen niets. Woord en detail lopen als gewone tekst door en breken op
+       een woordgrens; pas na twee regels komt er een beletselteken. Het
+       puntje hangt aan wat ervoor staat en een getal aan zijn eenheid (zie
+       paint), zodat geen regel met een puntje begint of met "%" alleen.
+       Naast de foto (72 hoog) kost dat geen hoogte. */
     .st {
-      display: flex; align-items: center; gap: 6px; min-width: 0;
+      display: flex; align-items: flex-start; gap: 6px; min-width: 0;
       font-size: 12px; line-height: 1.3; color: var(--dac-ink-2);
     }
-    .st .stip { flex: 0 0 auto; width: 14px; height: 14px; color: var(--tone); display: grid; }
+    .st .stip { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 1px; color: var(--tone); display: grid; }
     .st .stip .icon { width: 14px; height: 14px; --mdc-icon-size: 14px; }
-    .st .woord { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .st .detail { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dac-ink-3); }
-    .st .detail::before { content: "·"; margin-right: 6px; }
+    .st .regel {
+      flex: 1 1 auto; min-width: 0; overflow: hidden; overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    }
+    .st .detail { color: var(--dac-ink-3); }
+    .st .detail::before { content: "\\00a0· "; }
     /* Een storing blijft altijd staan, en is rood: dat is status. */
     .fout { font-size: 12px; line-height: 1.3; font-weight: 600; color: var(--dac-bad); }
 
@@ -374,7 +384,7 @@ class StofzuigerCard extends DacCard {
           </button>
           <span class="txt">
             <span class="nm"></span>
-            <span class="st"><span class="stip" hidden></span><span class="woord"></span><span class="detail" hidden></span></span>
+            <span class="st"><span class="stip" hidden></span><span class="regel"><span class="woord"></span><span class="detail" hidden></span></span></span>
             <span class="fout" hidden></span>
           </span>
           <span class="accu" hidden><span class="pct"></span><span class="onder"></span></span>
@@ -525,7 +535,8 @@ class StofzuigerCard extends DacCard {
     this.text(".woord", s.tekst);
     const detail = this.$(".detail");
     detail.hidden = !s.detail;
-    this.text(detail, s.detail);
+    // Een harde spatie vóór elk puntje en elke eenheid: zie .st in de CSS.
+    this.text(detail, s.detail.replace(/ (·|%)/g, "\u00a0$1"));
     const fout = this.$(".fout");
     fout.hidden = !s.fout;
     this.text(fout, s.fout);

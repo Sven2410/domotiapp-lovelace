@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stofzuiger &mdash; proefopstelling</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 8px 16px 40px;
+    background: #0c0c0a; color: #e8e4de;
+    font-family: Roboto, "Noto Sans", "Segoe UI", system-ui, sans-serif;
+    --primary-text-color: #e8e4de;
+  }
+  h2 { font-size: 12px; font-weight: 600; opacity: .55; margin: 18px 0 6px; }
+  .rij { display: flex; gap: 20px; align-items: flex-start; }
+  .vak { flex: 0 0 auto; }
+  .vak small { display: block; font-size: 10px; opacity: .45; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<!--
+  De kop van de stofzuigerkaart op telefoonbreedte, zonder Home Assistant.
+  Gemaakt op 25 oktober 2026, toen de statusregel op een iPhone in twee
+  afgekapte stukken stond ("Adding w... · Living Room · ...").
+
+  Serveer de repo-map (niet dev/), bijvoorbeeld:
+    python3 -m http.server 8793 --bind 127.0.0.1
+  en open http://127.0.0.1:8793/dev/stofzuiger.html
+  Met ?taal=en in het Engels, met ?bundel=<pad> een andere bundel (de oude
+  om te vergelijken).
+
+  De situaties komen uit de dump van de L40s Pro Ultra (r9419h), met de
+  toestand aangepast. De foto staat op /domotiapp_lovelace/afbeeldingen/, en die
+  is er hier niet; zonder foto staat de chip er.
+  1. aan het schoonmaken, vult water bij, in een kamer, met voortgang;
+  2. hetzelfde met een lange kamernaam;
+  3. droogt de dweilpads;
+  4. hetzelfde als 1, met een storing erbij.
+-->
+<div id="situaties"></div>
+<script type="module">
+const q = new URLSearchParams(location.search);
+const taal = q.get("taal") || "nl";
+if (!customElements.get("home-assistant")) customElements.define("home-assistant", class extends HTMLElement {});
+if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement {});
+
+await import(`${q.get("bundel") || "../custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js"}?t=${Date.now()}`);
+
+const dump = await (await fetch(`../tests/js/vaste-invoer/dreame-r9419h.json?t=${Date.now()}`)).json();
+const ID = "vacuum.dreame_boven";
+
+function met(wijzigingen) {
+  const states = structuredClone(dump.states);
+  for (const [id, w] of Object.entries(wijzigingen)) states[id] = { ...states[id], ...w };
+  return {
+    states, entities: dump.entities, devices: dump.devices, services: dump.services,
+    language: taal, locale: { language: taal }, user: { name: "proef", is_admin: true },
+    config: { unit_system: { temperature: "°C" } }, themes: {},
+    callService: async () => {}, callWS: async () => null,
+  };
+}
+
+const bezig = (kamer) => ({
+  [ID]: { state: "cleaning" },
+  "sensor.dreame_boven_state": { state: "clean_add_water" },
+  "sensor.dreame_boven_current_room": { state: kamer },
+  "sensor.dreame_boven_cleaning_progress": { state: "12" },
+});
+const SITUATIES = [
+  ["1. vult water bij, in een kamer", bezig("Living Room")],
+  ["2. lange kamernaam", bezig("Slaapkamer achter de garage")],
+  ["3. droogt de dweilpads", { "sensor.dreame_boven_state": { state: "drying" } }],
+  ["4. met een storing", { ...bezig("Living Room"), "sensor.dreame_boven_error": { state: "mop_removed", attributes: { description: "Dweilpad verwijderd" } } }],
+];
+
+const doel = document.getElementById("situaties");
+for (const [titel, wijzigingen] of SITUATIES) {
+  doel.insertAdjacentHTML("beforeend", `<h2>${titel}</h2>`);
+  const rij = document.createElement("div");
+  rij.className = "rij";
+  doel.appendChild(rij);
+  for (const breed of [380, 338, 280]) {
+    const vak = document.createElement("div");
+    vak.className = "vak";
+    vak.style.width = `${breed}px`;
+    vak.innerHTML = `<small>${breed}px</small>`;
+    const kaart = document.createElement("domotiapp-stofzuiger-card");
+    kaart.dataset.breed = String(breed);
+    kaart.dataset.situatie = titel.split(".")[0];
+    kaart.setConfig({ type: "custom:domotiapp-stofzuiger-card", entity: ID });
+    kaart.hass = met(wijzigingen);
+    vak.appendChild(kaart);
+    rij.appendChild(vak);
+  }
+}
+window.__stofzuiger = { kaarten: [...document.querySelectorAll("domotiapp-stofzuiger-card")] };
+</script>
+</body>
+</html>
