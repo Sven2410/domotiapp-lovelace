@@ -18,7 +18,7 @@
  * - het potlood (of de hele rij) opent `meldingen-scherm.js`: die persoon, met
  *   per soort melding een vinkje;
  * - welke soorten er zijn, staat in de editor: per soort een schakelaar met de
- *   instellingen eronder. Voorlopig is er één, Afval.
+ *   instellingen eronder. Afval, en sinds 0.85.0 de robotstofzuiger.
  *
  * ## Wat de kaart doet en wat niet
  *
@@ -42,6 +42,7 @@
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, section, sel } from "../editor/base.js";
+import { naamVan } from "./stofzuiger-logica.js";
 import { resolve } from "../icons.js";
 import { nameOf, pictureOf, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
@@ -55,6 +56,9 @@ import {
   soortAan,
   soortenVan,
   staatAan,
+  STOFZUIGER_GEBEURTENISSEN,
+  stofzuigerRegel,
+  stofzuigersUit,
 } from "./meldingen-logica.js";
 import { meldingenScherm, toonMeldingenScherm } from "./meldingen-scherm.js";
 import { nt, t } from "../taal.js";
@@ -136,7 +140,11 @@ class MeldingenCard extends DacCard {
 
   watched() {
     const c = this.config;
-    return [...(soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : []), ...c.personen].filter(Boolean);
+    return [
+      ...(soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : []),
+      ...(soortAan(c, "stofzuiger") ? stofzuigersUit(c) : []),
+      ...c.personen,
+    ].filter(Boolean);
   }
 
   template() {
@@ -290,38 +298,50 @@ class MeldingenCard extends DacCard {
       // Alleen voor een beheerder (de server weigert het anders), en pas als de
       // server de kaart kent: een kaart die nog niet is opgeslagen heeft niets
       // om te versturen.
-      proef: Boolean(this.hass?.user?.is_admin) && Boolean(this.standen_.afval?.bekend),
+      proef: Boolean(this.hass?.user?.is_admin) && this.soorten_().some((s) => this.standen_[s.id]?.bekend),
       soorten: this.soorten_().map((soort) => {
         const stand = this.standen_[soort.id];
         return {
           ...soort,
           aan: staatAan(stand, persoon),
           laden: !stand,
-          regel: soort.id === "afval" ? this.afvalRegel_(stand) : "",
+          regel: soort.id === "afval" ? this.afvalRegel_(stand) : this.stofzuigerRegel_(stand),
         };
       }),
     };
   }
 
   /**
-   * Een proefmelding naar deze ene persoon. De pop-up roept dit aan.
+   * Een proefmelding naar deze ene persoon, per soort die de server kent. De
+   * pop-up roept dit aan.
    *
-   * Over het moment van de avond als die er is: dat is de melding die het
-   * vaakst komt, en die met de knop "Staat buiten".
+   * Afval over het moment van de avond als die er is: dat is de melding die het
+   * vaakst komt, en die met de knop "Staat buiten". De robotstofzuiger stuurt
+   * "klaar" van de eerste robot.
    */
   async proef(persoon) {
     const naam = voornaam(nameOf(this.hass, persoon));
-    try {
-      const uitkomst = await this.hass.connection.sendMessagePromise({
-        type: "domotiapp_lovelace/meldingen/proef",
-        melding: meldingId(this.config, "afval"),
-        moment: this.config.afval_morgen ? "morgen" : "vandaag",
-        persoon,
-      });
-      return proefUitkomst(uitkomst, naam);
-    } catch (fout) {
-      return { tekst: t("Proef mislukt: {fout}", { fout: fout?.message ?? fout }), fout: true };
+    const uit = [];
+    for (const soort of this.soorten_().filter((s) => this.standen_[s.id]?.bekend)) {
+      try {
+        const uitkomst = await this.hass.connection.sendMessagePromise({
+          type: "domotiapp_lovelace/meldingen/proef",
+          melding: meldingId(this.config, soort.id),
+          ...(soort.id === "afval" ? { moment: this.config.afval_morgen ? "morgen" : "vandaag" } : {}),
+          persoon,
+        });
+        uit.push(proefUitkomst(uitkomst, naam));
+      } catch (fout) {
+        uit.push({ tekst: t("Proef mislukt: {fout}", { fout: fout?.message ?? fout }), fout: true });
+      }
     }
+    if (!uit.length) return { tekst: t("Niet verstuurd."), fout: true };
+    return { tekst: uit.map((u) => u.tekst).join(" "), fout: uit.every((u) => u.fout) };
+  }
+
+  stofzuigerRegel_(stand) {
+    const c = this.config;
+    return stofzuigerRegel({ config: c, stand, namen: stofzuigersUit(c).map((id) => naamVan(this.hass, id)) });
   }
 
   afvalRegel_(stand) {
@@ -429,11 +449,17 @@ class MeldingenEditor extends DacEditor {
     const c = { ...config };
     if (typeof c.afval !== "boolean") c.afval = soortAan(config, "afval");
     delete c.soort;
+    // Zonder keuze meldt de robot alles (`stofzuigerGebeurtenissen`); dan
+    // horen de vinkjes ook allemaal aan te staan.
+    if (c.stofzuiger && !Array.isArray(c.stofzuiger_meldingen)) {
+      c.stofzuiger_meldingen = STOFZUIGER_GEBEURTENISSEN.map((g) => g.id);
+    }
     super.setConfig(c);
   }
 
   schema() {
     const afval = Boolean(this.config_?.afval);
+    const robot = Boolean(this.config_?.stofzuiger);
     return [
       { name: "personen", selector: { entity: { domain: "person", multiple: true } } },
       // Per soort een schakelaar, en daaronder het blok met zijn instellingen
@@ -459,6 +485,29 @@ class MeldingenEditor extends DacEditor {
             ),
           ]
         : []),
+      { name: "stofzuiger", selector: sel.bool() },
+      ...(robot
+        ? [
+            section(
+              t("Robots en meldingen"),
+              "mdi:robot-vacuum",
+              [
+                { name: "stofzuigers", selector: { entity: { domain: "vacuum", multiple: true } } },
+                {
+                  name: "stofzuiger_meldingen",
+                  selector: {
+                    select: {
+                      multiple: true,
+                      mode: "list",
+                      options: STOFZUIGER_GEBEURTENISSEN.map((g) => ({ value: g.id, label: t(g.naam) })),
+                    },
+                  },
+                },
+              ],
+              true
+            ),
+          ]
+        : []),
     ];
   }
 
@@ -471,6 +520,9 @@ class MeldingenEditor extends DacEditor {
         tijd_morgen: t("Melding de avond ervoor"),
         afval_vandaag: t("Afval vandaag"),
         tijd_vandaag: t("Melding op de dag zelf"),
+        stofzuiger: t("Robotstofzuiger"),
+        stofzuigers: t("Robots"),
+        stofzuiger_meldingen: t("Waarover"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -491,6 +543,13 @@ class MeldingenEditor extends DacEditor {
         "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf."
       ),
       tijd_vandaag: t("Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte."),
+      stofzuiger: t(
+        "Een melding als de robot klaar is, een storing heeft, water of een lege tank nodig heeft, of als een onderdeel aan de beurt is."
+      ),
+      stofzuigers: t("De robots waarover gemeld wordt. Werkt met Dreame (dreame_vacuum)."),
+      stofzuiger_meldingen: t(
+        "Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
+      ),
     }[s.name];
   }
 }
@@ -499,7 +558,7 @@ registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
   name: nt("DomotiApp Meldingen"),
   description: nt(
-    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Voorlopig: afval."
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval en de robotstofzuiger."
   ),
 });
 

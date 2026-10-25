@@ -32,6 +32,17 @@ wil morgen om 22:00 een melding, niet vanavond een tweede aan het hele huis.
 Om te kijken of het werkt is er de PROEF (de knop in de pop-up van een
 persoon): die gaat alleen naar die persoon, telt niet als verstuurd, en heeft
 een eigen tag, zodat hij de echte melding op de telefoon niet vervangt.
+
+## De robotstofzuiger: geen klok maar een verandering
+
+Sinds 0.85.0. Wat er gemeld wordt staat in `stofzuiger.py`; hier staat HOE.
+Na elke lezing van de dashboards volgt de motor de entiteiten van de gekozen
+robots (`async_track_state_change_event`): de stofzuiger zelf en de sensoren
+van hetzelfde apparaat met een rol. Een melding over een TOESTAND (storing,
+station, onderhoud) gaat één keer uit als hij begint, met een tag per robot en
+per ding, en wordt van de telefoons gehaald (`clear_notification`) als het weer
+in orde is. "Klaar" wacht tien tellen: Dreame zet het oppervlak en de duur van
+de beurt soms net na de taak.
 """
 
 from __future__ import annotations
@@ -42,18 +53,26 @@ import logging
 from typing import Any
 
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers.event import async_track_time_change, async_track_time_interval
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_time_change,
+    async_track_time_interval,
+)
 from homeassistant.util import dt as dt_util
 
 from ..bewaking import meldingen as telefoons
 from ..taal import t, taal_van
-from . import afval, kaarten
+from . import afval, kaarten, stofzuiger
 from .const import (
     ACTIE_BUITEN,
     EVENT_ACTIE,
     HERLEES_INTERVAL_MIN,
     MOMENT_VANDAAG,
     MOMENTEN,
+    SOORT_AFVAL,
+    SOORT_STOFZUIGER,
 )
 from .kaarten import Melding
 from .store import MeldingOpslag
@@ -102,6 +121,13 @@ class Motor:
         # Per (dashboard, melding) de instellingen van de vorige keer lezen. None
         # tot de eerste lezing: wat er bij het opstarten staat is geen wijziging.
         self._gezien: dict[tuple[str, str], tuple[Any, ...]] | None = None
+        # De robotstofzuigers: per gevolgde entiteit (robot, rol, translation_key),
+        # het abonnement, de robots die aan het schoonmaken zijn (voor een merk
+        # zonder taak), en per (robot, sleutel) wat elke entiteit nu meldt.
+        self._robot_rollen: dict[str, tuple[str, str, str]] = {}
+        self._robot_uit: CALLBACK_TYPE | None = None
+        self._bezig: set[str] = set()
+        self._meldt: dict[tuple[str, str], dict[str, str]] = {}
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -116,11 +142,15 @@ class Motor:
     def async_stop(self) -> None:
         while self._uit:
             self._uit.pop()()
+        if self._robot_uit is not None:
+            self._robot_uit()
+            self._robot_uit = None
 
     async def async_herlees(self) -> None:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
         self._onthoud_wijzigingen(gelezen)
         self.meldingen = kaarten.voeg_samen(gelezen, self.opslag.alle_leidend())
+        self._volg_stofzuigers()
         self._meld(None)
 
     @callback
@@ -183,6 +213,12 @@ class Motor:
         nu = nu or dt_util.now()
         melding = self.meldingen.get(ident)
         if melding is None:
+            return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
+        if melding.soort == SOORT_STOFZUIGER:
+            if not proef:
+                return {"reden": t(self.hass, "Een stofzuigermelding komt niet op een tijd")}
+            return await self.async_proef_stofzuiger(melding, alleen)
+        if melding.soort != SOORT_AFVAL:
             return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
 
         vandaag = nu.date()
@@ -289,3 +325,252 @@ class Motor:
                 )
             except Exception as fout:  # noqa: BLE001
                 _LOGGER.debug("Wissen bij %s lukte niet: %s", persoon, fout)
+
+    # ------------------------------------------------------- de robotstofzuiger
+
+    @callback
+    def _volg_stofzuigers(self) -> None:
+        """Volg de entiteiten van de robots op de kaarten; opnieuw als dat er andere zijn."""
+        melding = self.meldingen.get(SOORT_STOFZUIGER)
+        rollen: dict[str, tuple[str, str, str]] = {}
+        if melding is not None and melding.soort == SOORT_STOFZUIGER:
+            for robot in melding.stofzuigers:
+                rollen[robot] = (robot, "stofzuiger", "")
+                for entiteit, (rol, tk) in robot_delen(self.hass, robot).items():
+                    rollen.setdefault(entiteit, (robot, rol, tk))
+        if rollen.keys() == self._robot_rollen.keys() and self._robot_uit is not None:
+            self._robot_rollen = rollen
+            return
+        if self._robot_uit is not None:
+            self._robot_uit()
+            self._robot_uit = None
+        self._robot_rollen = rollen
+        if rollen:
+            self._robot_uit = async_track_state_change_event(
+                self.hass, list(rollen), self._robot_verandert
+            )
+            _LOGGER.debug("Stofzuigermeldingen volgen %d entiteiten", len(rollen))
+
+    @callback
+    def _robot_verandert(self, event: Event) -> None:
+        eid = event.data.get("entity_id")
+        info = self._robot_rollen.get(eid)
+        nieuw = event.data.get("new_state")
+        if info is None or nieuw is None:
+            return
+        robot, rol, tk = info
+        oud = event.data.get("old_state")
+        ov = oud.state if oud is not None else None
+        nv = nieuw.state
+        # Uit `unavailable` of `unknown` is een robot die (weer) verbindt: wat
+        # er dan staat, wordt onthouden maar niet gemeld.
+        melden = stofzuiger.heeft_waarde(ov)
+        taal = taal_van(self.hass)
+
+        if rol == "stofzuiger":
+            if nv in stofzuiger.STOFZUIGER_BEZIG:
+                self._bezig.add(robot)
+            elif nv == "docked" and robot in self._bezig:
+                self._bezig.discard(robot)
+                if not self._rol_van(robot, "taak"):
+                    self._klaar_straks(robot)
+            if not self._rol_van(robot, "fout"):
+                tekst = t(self.hass, "Storing") if nv == "error" else ""
+                self._toestand(robot, stofzuiger.SOORT_STORING, "storing", eid, tekst, melden)
+        elif rol == "taak":
+            if stofzuiger.is_klaar("taak", ov, nv):
+                self._klaar_straks(robot)
+        elif rol == "fout":
+            fout = stofzuiger.fout_tekst(nv, nieuw.attributes.get("description"))
+            tekst = stofzuiger.storing_tekst(fout, taal) if fout else ""
+            self._toestand(robot, stofzuiger.SOORT_STORING, "storing", eid, tekst, melden)
+        elif rol in stofzuiger.STATION_SLEUTEL:
+            tekst = stofzuiger.station_tekst(rol, nv, taal)
+            sleutel = stofzuiger.STATION_SLEUTEL[rol]
+            self._toestand(robot, stofzuiger.SOORT_STATION, sleutel, eid, tekst, melden)
+        elif rol == "onderhoud":
+            pct = stofzuiger.onderhoud_procent(nv)
+            naam = str(nieuw.attributes.get("friendly_name") or "")
+            tekst = stofzuiger.onderhoud_tekst(tk, pct, naam, taal) if pct is not None else ""
+            # Een onderdeel dat al onder de grens zat en verder zakt, is geen
+            # nieuwe melding: alleen de overgang telt (zie `_toestand`).
+            melden = melden and stofzuiger.onderhoud_procent(ov) is None
+            self._toestand(robot, stofzuiger.SOORT_ONDERHOUD, f"onderhoud-{tk}", eid, tekst, melden, opnieuw=False)
+
+    @callback
+    def _rol_van(self, robot: str, rol: str) -> str | None:
+        for entiteit, (r, ro, _) in self._robot_rollen.items():
+            if r == robot and ro == rol:
+                return entiteit
+        return None
+
+    @callback
+    def _toestand(
+        self,
+        robot: str,
+        soort: str,
+        sleutel: str,
+        entiteit: str,
+        tekst: str,
+        melden: bool,
+        *,
+        opnieuw: bool = True,
+    ) -> None:
+        """Een toestand die begint, verandert of ophoudt.
+
+        Twee entiteiten kunnen dezelfde sleutel delen (de schoonwatertank en de
+        waterwaarschuwing): de melding staat aan zolang een van beide iets zegt.
+        `opnieuw` is of een ANDERE tekst bij een toestand die al liep een nieuwe
+        melding is (een andere storing wel, een onderdeel van 8 naar 7 % niet).
+        """
+        bron = self._meldt.setdefault((robot, sleutel), {})
+        voor = next((x for x in bron.values() if x), "")
+        bron[entiteit] = tekst
+        na = next((x for x in bron.values() if x), "")
+        if na and na != voor and melden and (opnieuw or not voor):
+            self.hass.async_create_task(self._stuur_robot(robot, soort, sleutel, na))
+        elif voor and not na:
+            self.hass.async_create_task(self._wis_robot(robot, sleutel))
+
+    @callback
+    def _klaar_straks(self, robot: str) -> None:
+        @callback
+        def nu(_: Any) -> None:
+            delen = {ro: e for e, (r, ro, _) in self._robot_rollen.items() if r == robot}
+            oppervlak = self.hass.states.get(delen.get("oppervlak", ""))
+            duur = self.hass.states.get(delen.get("duur", ""))
+            tekst = stofzuiger.klaar_tekst(
+                oppervlak.state if oppervlak else None, duur.state if duur else None, taal_van(self.hass)
+            )
+            self.hass.async_create_task(self._stuur_robot(robot, stofzuiger.SOORT_KLAAR, "klaar", tekst))
+
+        self._uit.append(async_call_later(self.hass, 10, nu))
+
+    def _ontvangers(self, melding: kaarten.Melding, soort: str | None) -> list[str]:
+        if soort is not None and soort not in melding.gebeurtenissen:
+            return []
+        return [p for p in melding.personen if self.opslag.aan(melding.id, p)]
+
+    async def _stuur_robot(
+        self, robot: str, soort: str, sleutel: str, tekst: str, *, alleen: str | None = None, proef: bool = False
+    ) -> dict[str, Any]:
+        melding = self.meldingen.get(SOORT_STOFZUIGER)
+        if melding is None or (robot not in melding.stofzuigers and not proef):
+            return {"verstuurd": [], "zonder_telefoon": []}
+        titel = robot_naam(self.hass, robot)
+        if proef:
+            titel = t(self.hass, "Proef · {titel}", titel=titel)
+        data = {
+            "tag": robot_tag(robot, "proef" if proef else sleutel),
+            "group": "domotiapp-stofzuiger",
+        }
+        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, soort)
+        gelukt, zonder = await self._stuur(melding, ontvangers, {"title": titel, "message": tekst, "data": data})
+        if ontvangers:
+            _LOGGER.info("Stofzuigermelding %s (%s): %s", robot, sleutel, tekst)
+        return {"verstuurd": gelukt, "zonder_telefoon": zonder, "titel": titel, "tekst": tekst}
+
+    async def _wis_robot(self, robot: str, sleutel: str) -> None:
+        melding = self.meldingen.get(SOORT_STOFZUIGER)
+        if melding is None:
+            return
+        # `clear_notification` is een opdracht aan de app van Home Assistant.
+        # De dienst voor proeven zonder telefoon (`notify.persistent_notification`,
+        # zie CLAUDE.md) zou er een melding met die tekst van maken.
+        ontvangers = [
+            p for p in melding.personen if melding.diensten.get(p) != "persistent_notification"
+        ]
+        await self._stuur(
+            melding,
+            ontvangers,
+            {"message": "clear_notification", "data": {"tag": robot_tag(robot, sleutel)}},
+            stil=True,
+        )
+
+    async def _stuur(
+        self, melding: kaarten.Melding, ontvangers: list[str], bericht: dict[str, Any], *, stil: bool = False
+    ) -> tuple[list[str], list[str]]:
+        gelukt: list[str] = []
+        zonder: list[str] = []
+        for persoon in ontvangers:
+            dienst = melding.diensten.get(persoon) or telefoons.dienst_voor(self.hass, persoon)
+            if not dienst:
+                zonder.append(persoon)
+                continue
+            try:
+                await self.hass.services.async_call("notify", dienst, bericht, blocking=True)
+            except Exception as fout:  # noqa: BLE001 - één telefoon houdt de rest niet tegen
+                if not stil:
+                    _LOGGER.warning("Stofzuigermelding naar %s (%s) mislukte: %s", persoon, dienst, fout)
+                zonder.append(persoon)
+                continue
+            gelukt.append(persoon)
+        if zonder and not stil:
+            _LOGGER.warning("Geen telefoon gevonden voor %s; die krijgt geen stofzuigermelding", ", ".join(zonder))
+        return gelukt, zonder
+
+    async def async_proef_stofzuiger(self, melding: kaarten.Melding, alleen: str | None) -> dict[str, Any]:
+        """Een proef: "klaar" van de eerste robot, met de cijfers van zijn laatste beurt.
+
+        Alleen naar `alleen`, net als de proef van afval; zonder persoon gaat er
+        niets uit (de knop zit in de pop-up van een persoon).
+        """
+        if not melding.stofzuigers:
+            return {"reden": t(self.hass, "Nog geen stofzuiger gekozen")}
+        if alleen is None:
+            return {"reden": t(self.hass, "Een proef gaat naar één persoon")}
+        robot = melding.stofzuigers[0]
+        per_rol = {rol: e for e, (rol, _) in robot_delen(self.hass, robot).items()}
+        oppervlak = self.hass.states.get(per_rol.get("oppervlak", ""))
+        duur = self.hass.states.get(per_rol.get("duur", ""))
+        tekst = stofzuiger.klaar_tekst(
+            oppervlak.state if oppervlak else None, duur.state if duur else None, taal_van(self.hass)
+        )
+        return await self._stuur_robot(robot, stofzuiger.SOORT_KLAAR, "klaar", tekst, alleen=alleen, proef=True)
+
+
+def robot_tag(robot: str, sleutel: str) -> str:
+    """Eén regel per robot en per ding: een nieuwe storing vervangt de vorige."""
+    return f"domotiapp-stofzuiger-{robot.split('.', 1)[-1]}-{sleutel}"
+
+
+def robot_naam(hass: HomeAssistant, robot: str) -> str:
+    """De naam van het apparaat, zoals op de stofzuigerkaart (`naamVan`)."""
+    reg = er.async_get(hass).async_get(robot)
+    if reg is not None:
+        if reg.name:
+            return reg.name
+        if reg.device_id and (apparaat := dr.async_get(hass).async_get(reg.device_id)) is not None:
+            naam = (apparaat.name_by_user or apparaat.name or "").strip()
+            if naam:
+                return naam
+    st = hass.states.get(robot)
+    naam = " ".join(str(st.attributes.get("friendly_name") or "").split()) if st else ""
+    return naam or robot
+
+
+def robot_delen(hass: HomeAssistant, robot: str) -> dict[str, tuple[str, str]]:
+    """De sensoren van hetzelfde apparaat met een rol: entiteit -> (rol, translation_key).
+
+    Op APPARAAT en `translation_key`, net als `stofzuigerDelen` op de kaart.
+    Een uitgeschakelde entiteit telt niet. Een onderhoudsonderdeel is een
+    sensor `<onderdeel>_left` in procenten.
+    """
+    reg = er.async_get(hass)
+    eigen = reg.async_get(robot)
+    if eigen is None or not eigen.device_id:
+        return {}
+    uit: dict[str, tuple[str, str]] = {}
+    for e in er.async_entries_for_device(reg, eigen.device_id):
+        if e.entity_id == robot or e.domain != "sensor" or e.disabled_by is not None:
+            continue
+        tk = str(e.translation_key or "")
+        if rol := stofzuiger.ROLLEN.get(tk):
+            uit[e.entity_id] = (rol, tk)
+            continue
+        if stofzuiger.ONDERHOUD.match(tk) and not tk.endswith("_time_left"):
+            st = hass.states.get(e.entity_id)
+            eenheid = (st.attributes.get("unit_of_measurement") if st else None) or e.unit_of_measurement
+            if eenheid == "%":
+                uit[e.entity_id] = ("onderhoud", tk)
+    return uit

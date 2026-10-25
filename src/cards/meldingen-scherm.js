@@ -4,8 +4,8 @@
  *
  * Gevraagd op 26 september 2026: *"als je op het potlootje klikt (...) Dat hij
  * dan een pop up opent van die persoon en dat je dan vinkjes kan aan en uit
- * zetten."* Per soort melding één regel met een vinkje. Voorlopig staat er
- * alleen Afvalmeldingen; een volgende soort is een regel erbij.
+ * zetten."* Per soort melding één regel met een vinkje: Afvalmeldingen, en
+ * sinds 0.85.0 Robotstofzuiger. Een volgende soort is een regel erbij.
  *
  * ## Wat er WEL en NIET in staat
  *

@@ -39,7 +39,9 @@ STORAGE_VERSION = 1
 KAART_TYPE = "custom:domotiapp-meldingen-card"
 
 SOORT_AFVAL = "afval"
-SOORTEN = (SOORT_AFVAL,)
+# Sinds 0.85.0: wat de robotstofzuiger meldt. Zie `stofzuiger.py`.
+SOORT_STOFZUIGER = "stofzuiger"
+SOORTEN = (SOORT_AFVAL, SOORT_STOFZUIGER)
 
 # De twee momenten van een afvalmelding. "morgen" is de avond ervoor, over wat
 # er de volgende dag opgehaald wordt; "vandaag" is de ochtend zelf.

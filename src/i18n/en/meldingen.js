@@ -147,8 +147,6 @@ export const MELDINGEN = {
   "Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte.":
     "Default 07:30. Skipped if someone tapped 'Put out' in the notification the evening before.",
   "DomotiApp Meldingen": "DomotiApp Notifications",
-  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Voorlopig: afval.":
-    "The people of the house, each with a pencil: choose which reminders they get on their phone. For now: waste.",
 
   // meldingen-scherm.js
   "Meldingen op de telefoon": "Notifications on the phone",
@@ -158,4 +156,23 @@ export const MELDINGEN = {
   "{soort} voor {naam}: aan": "{soort} for {naam}: on",
   "{soort} voor {naam}: uit": "{soort} for {naam}: off",
   "Versturen…": "Sending…",
+
+  // De robotstofzuiger (0.85.0)
+  "Robots en meldingen": "Robots and notifications",
+  "Robots": "Robots",
+  "Waarover": "About",
+  "Een melding als de robot klaar is, een storing heeft, water of een lege tank nodig heeft, of als een onderdeel aan de beurt is.":
+    "A notification when the robot has finished, has a fault, needs water or an empty tank, or when a part is due.",
+  "De robots waarover gemeld wordt. Werkt met Dreame (dreame_vacuum).": "The robots to notify about. Works with Dreame (dreame_vacuum).",
+  "Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over.":
+    "Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
+  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval en de robotstofzuiger.":
+    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste and the robot vacuum.",
+  "Klaar met schoonmaken": "Finished cleaning",
+  "klaar": "finished",
+  "Water en stofzak": "Water and dust bag",
+  "tanks": "tanks",
+  "onderhoud": "maintenance",
+  "Nog geen stofzuiger gekozen": "No vacuum chosen yet",
+  "Niets gekozen om te melden": "Nothing chosen to notify about",
 };

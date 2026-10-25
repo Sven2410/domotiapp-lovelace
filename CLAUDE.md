@@ -463,8 +463,8 @@ Sinds 25 oktober 2026 draait er ook een op de mini-pc, zonder Docker, onder
 | onze integratie | een symlink in `.ha-dev-config/custom_components/`, net als de mount van de container |
 | het log | `.ha-dev-config/home-assistant.log`, of `pm2 logs ha-lovelace` |
 
-`.ha-dev-config` kwam uit de back-up van de pc op de NAS
-(`/mnt/DomotiApp/pc-sven/dev/domotiapp-lovelace/.ha-dev-config`), zonder
+`.ha-dev-config` kwam uit de back-up van de pc op de NAS (de share
+`DomotiApp`, gekoppeld op `/mnt/DomotiApp`, de map van de pc), zonder
 `deps`, `.cache` en logboeken: alle nagebootste apparaten, accounts en het
 dashboard `kaart-test` kwamen zo mee.
 
@@ -2038,7 +2038,7 @@ met **dertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
-| Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort; voorlopig alleen afval, en het VERSTUREN doet de integratie) |
+| Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort: afval, en sinds 0.85.0 de robotstofzuiger (klaar, storing, tanks, onderhoud; op de SENSOREN van het apparaat, zie de kop van `meldingen/stofzuiger.py`); het VERSTUREN doet de integratie) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`), **printer** (sinds 0.84.0: een printer voor papier via IPP; je kiest de statussensor, de patronen en tellers zoekt hij zelf; de kleur van een patroon op woorden, zie `kantoorprinter-logica.js`; type `domotiapp-kantoorprinter-card`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.73.0 ook **ruimtes boeken**, met een agenda per ruimte, zie SPEC 20.7 en `ruimtes-logica.js`; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
