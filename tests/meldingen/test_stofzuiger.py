@@ -1,4 +1,5 @@
-"""Meldingen van de robotstofzuiger (0.85.0). Alles **NIEUW GEDRAG**.
+"""Meldingen van de robotstofzuiger (0.85.0). **NIEUW GEDRAG**, op twee
+gelabelde REGRESSIEWACHTEN na. Wat in 0.85.1 is bijgekomen staat erbij.
 
 De robot is de L40s Pro Ultra uit de echte dump
 (`tests/js/vaste-invoer/dreame-r9419h.json`): dezelfde entity_id's,
@@ -90,7 +91,11 @@ def zet(hass: HomeAssistant, entity_id: str, state: str, **extra: Any) -> None:
 
 
 async def wacht_klaar(hass: HomeAssistant) -> None:
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=11))
+    await wacht(hass, 11)
+
+
+async def wacht(hass: HomeAssistant, seconden: float) -> None:
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=seconden))
     await hass.async_block_till_done()
 
 
@@ -126,6 +131,7 @@ def test_de_robots_van_twee_kaarten_tellen_allebei() -> None:
 
 async def test_de_motor_volgt_de_sensoren_van_het_apparaat(hass: HomeAssistant, motor) -> None:
     rollen = {e: r for e, (_, r, _) in motor._robot_rollen.items()}
+    assert "sensor.dreame_boven_low_water_warning" not in rollen
     assert rollen[ROBOT] == "stofzuiger"
     assert rollen["sensor.dreame_boven_task_status"] == "taak"
     assert rollen["sensor.dreame_boven_error"] == "fout"
@@ -186,25 +192,107 @@ async def test_dezelfde_storing_komt_niet_twee_keer(hass: HomeAssistant, motor, 
 async def test_vuilwatertank_vol(hass: HomeAssistant, motor, telefoons) -> None:
     zet(hass, "sensor.dreame_boven_dirty_water_tank_status", "not_installed_or_full")
     await hass.async_block_till_done()
+    assert telefoons == [], "een tank meldt pas na drie minuten"
+    await wacht(hass, 181)
     assert telefoons[0][1]["message"] == "De vuilwatertank is vol of niet geplaatst. Leeg hem."
     assert telefoons[0][1]["data"]["tag"] == "domotiapp-stofzuiger-dreame_boven-vuilwater"
 
 
-async def test_tank_en_waterwaarschuwing_zijn_een_melding(hass: HomeAssistant, motor, telefoons) -> None:
-    zet(hass, "sensor.dreame_boven_low_water_warning", "low_water")
-    await hass.async_block_till_done()
+async def test_bijna_leeg_en_weer_bijgevuld(hass: HomeAssistant, motor, telefoons) -> None:
+    """REGRESSIEWACHT. Zoals bij de klant op 25-10: low_water om 17:35,
+    installed om 18:05. Slaagt ook op 0.85.0, maar nu met het wachten erin."""
     zet(hass, "sensor.dreame_boven_clean_water_tank_status", "low_water")
-    await hass.async_block_till_done()
+    await wacht(hass, 181)
     assert [b["message"] for _, b in telefoons] == ["Het schone water is bijna op. Vul de tank bij."] * 2
-
-    # De tank zegt weer "geplaatst", maar de waarschuwing staat nog: niet wissen.
     telefoons.clear()
     zet(hass, "sensor.dreame_boven_clean_water_tank_status", "installed")
     await hass.async_block_till_done()
-    assert telefoons == []
-    zet(hass, "sensor.dreame_boven_low_water_warning", "no_warning")
-    await hass.async_block_till_done()
     assert {b["message"] for _, b in telefoons} == {"clear_notification"}
+
+
+async def test_een_tank_eruit_halen_is_geen_melding(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.85.1. Bij de klant op 25-10, het legen en bijvullen:
+    schoonwater `not_installed` 18:30 -> `installed` 18:31, vuilwater
+    `not_installed_or_full` 18:31 -> `installed` 18:32."""
+    zet(hass, "sensor.dreame_boven_clean_water_tank_status", "not_installed")
+    await wacht(hass, 60)
+    zet(hass, "sensor.dreame_boven_clean_water_tank_status", "installed")
+    zet(hass, "sensor.dreame_boven_dirty_water_tank_status", "not_installed_or_full")
+    await wacht(hass, 60)
+    zet(hass, "sensor.dreame_boven_dirty_water_tank_status", "installed")
+    await wacht(hass, 400)
+    assert telefoons == []
+
+
+async def test_de_waterwaarschuwing_doet_niet_mee(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.85.1. Bij de klant bleef `no_water_left` staan na het
+    bijvullen; Dreame wist hem pas als iemand de melding in HA wegklikt."""
+    zet(hass, "sensor.dreame_boven_low_water_warning", "no_water_left")
+    await wacht(hass, 400)
+    assert telefoons == []
+
+
+async def test_bijna_lege_batterij_is_geen_storing(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.85.1. Bij de klant twee keer een minuut midden in een
+    beurt: de robot gaat laden en daarna zelf verder."""
+    zet(hass, "sensor.dreame_boven_error", "battery_low", description="Batterij bijna leeg")
+    await hass.async_block_till_done()
+    zet(hass, "sensor.dreame_boven_error", "no_error")
+    await hass.async_block_till_done()
+    assert telefoons == []
+
+
+async def test_een_herstart_wist_geen_storing(hass: HomeAssistant, motor, telefoons) -> None:
+    """NIEUW GEDRAG in 0.85.1. Rond elke herstart staat alles even op unavailable."""
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    telefoons.clear()
+    hass.states.async_set("sensor.dreame_boven_error", "unavailable")
+    await hass.async_block_till_done()
+    zet(hass, "sensor.dreame_boven_error", "mop_removed", description="Dweilpad verwijderd")
+    await hass.async_block_till_done()
+    assert telefoons == []
+
+
+async def test_een_echte_beurt_is_een_melding(hass: HomeAssistant, motor, telefoons) -> None:
+    """REGRESSIEWACHT, slaagt ook op 0.85.0. De beurt van de L40s bij de klant
+    op 25-10, 15:27 tot 17:52: zeven keer
+    terug naar het station om de pads te wassen, een herstart ertussen, en één
+    keer klaar."""
+    reeks = [
+        (ROBOT, "cleaning"), ("sensor.dreame_boven_task_status", "cleaning"),
+        (ROBOT, "returning"), (ROBOT, "cleaning"), (ROBOT, "returning"), (ROBOT, "cleaning"),
+        (ROBOT, "returning"), (ROBOT, "docked"), (ROBOT, "cleaning"),
+        (ROBOT, "unavailable"), ("sensor.dreame_boven_task_status", "unavailable"),
+        (ROBOT, "cleaning"), ("sensor.dreame_boven_task_status", "cleaning"),
+        (ROBOT, "returning"), (ROBOT, "cleaning"), (ROBOT, "returning"), (ROBOT, "docked"),
+        (ROBOT, "cleaning"), (ROBOT, "returning"), (ROBOT, "cleaning"), (ROBOT, "returning"),
+        (ROBOT, "docked"), (ROBOT, "cleaning"), ("sensor.dreame_boven_task_status", "completed"),
+        (ROBOT, "docked"),
+    ]
+    for entiteit, toestand in reeks:
+        if toestand == "unavailable":
+            hass.states.async_set(entiteit, toestand)
+        else:
+            zet(hass, entiteit, toestand)
+        await wacht(hass, 60)
+    await wacht(hass, 400)
+    assert [b["message"] for _, b in telefoons] == ["Klaar met schoonmaken: 51 m² in 52 min."] * 2
+
+
+async def test_zonder_taak_klaar_als_hij_in_het_station_blijft(
+    hass: HomeAssistant, motor, telefoons
+) -> None:
+    """NIEUW GEDRAG in 0.85.1. Een merk zonder `task_status`: even docken om de
+    pads te wassen is niet klaar, vijf minuten in het station wel."""
+    ander = "vacuum.ander_merk"
+    hass.states.async_set(ander, "docked", {"friendly_name": "Ander merk"})
+    await zet_dashboard(hass, [{**STOFZUIGERKAART, "stofzuigers": [ROBOT, ander]}])
+    for toestand, seconden in (("cleaning", 60), ("returning", 60), ("docked", 60), ("cleaning", 60), ("docked", 301)):
+        hass.states.async_set(ander, toestand, {"friendly_name": "Ander merk"})
+        await wacht(hass, seconden)
+    await wacht_klaar(hass)
+    assert [(b["title"], b["message"]) for _, b in telefoons] == [("Ander merk", "Klaar met schoonmaken.")] * 2
 
 
 async def test_een_onderdeel_dat_aan_de_beurt_is(hass: HomeAssistant, motor, telefoons) -> None:
@@ -232,7 +320,7 @@ async def test_na_opnieuw_verbinden_wordt_niets_gemeld(hass: HomeAssistant, moto
 async def test_wie_uit_staat_krijgt_niets(hass: HomeAssistant, motor, telefoons) -> None:
     motor.opslag.zet_aan("stofzuiger", ANNA, False)
     zet(hass, "sensor.dreame_boven_dust_bag_status", "check")
-    await hass.async_block_till_done()
+    await wacht(hass, 181)
     assert [d for d, _ in telefoons] == ["test_bram"]
     assert telefoons[0][1]["message"] == "Controleer de stofzak."
 
@@ -247,7 +335,7 @@ async def test_alleen_wat_op_de_kaart_gekozen_is(hass: HomeAssistant, motor, tel
 async def test_in_het_engels(hass: HomeAssistant, motor, telefoons) -> None:
     hass.config.language = "en"
     zet(hass, "sensor.dreame_boven_dirty_water_tank_status", "not_installed_or_full")
-    await hass.async_block_till_done()
+    await wacht(hass, 181)
     assert telefoons[0][1]["message"] == "The dirty water tank is full or not installed. Empty it."
 
 
@@ -293,6 +381,7 @@ def test_klaar_tekst_zonder_getallen() -> None:
 
 def test_geen_fout_is_geen_storing() -> None:
     assert stofzuiger.fout_tekst("no_error", "Geen fout") == ""
+    assert stofzuiger.fout_tekst("battery_low", "Batterij bijna leeg") == ""
     assert stofzuiger.fout_tekst("unavailable") == ""
     assert stofzuiger.fout_tekst("bumper_stuck") == "Bumper stuck"
     assert stofzuiger.fout_tekst("x", "Wiel vast\nTil de robot op") == "Wiel vast"

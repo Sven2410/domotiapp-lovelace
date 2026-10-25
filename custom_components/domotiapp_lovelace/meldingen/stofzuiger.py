@@ -31,7 +31,30 @@ toch naar de SENSOREN gekeken, om twee redenen:
 hij begint, één keer, en verdwijnt van de telefoon als hij weer in orde is
 (zie `motor.py`). Een waarde uit `unavailable` of `unknown` telt niet als
 begin: dat is een robot die opnieuw verbindt, en die heeft wat er toen al was
-al gemeld.
+al gemeld. En een waarde NAAR `unavailable` telt niet als einde.
+
+## Wat de echte gegevens leerden (0.85.1)
+
+Uitgelezen bij de klant op 25 oktober 2026, 14 dagen geschiedenis van beide
+robots (in de privénotities). Vier dingen die 0.85.0 anders deed:
+
+- **Een tank eruit halen is geen melding.** Wie bijvult of leegt, haalt de
+  tank eruit, en dan zegt de sensor een à twee minuten `not_installed` (of
+  `not_installed_or_full`). Een melding over het station gaat daarom pas uit
+  als hij na `STATION_WACHT` seconden nog zo is.
+- **`low_water_warning` doet niet mee.** Hij ging naar `no_water_left` en
+  bleef daar staan nadat de tank was bijgevuld: Dreame wist hem pas als
+  iemand de melding in Home Assistant wegklikt. De tanksensor ging wél terug
+  van `low_water` naar `installed`.
+- **`battery_low` is geen storing.** Midden in een beurt, een minuut lang: de
+  robot gaat laden en gaat daarna zelf verder.
+- **Rond een herstart staat alles even op `unavailable`.** Dat mag een
+  lopende melding niet van de telefoon halen.
+
+En wat klopte: `task_status` ging van `cleaning` naar `completed` één keer per
+beurt, terwijl de robot zelf zeven keer naar het station reed om de pads te
+wassen (`returning`, `docked`, `cleaning`). Zonder taak (een ander merk) telt
+`docked` daarom pas als hij er `KLAAR_ZONDER_TAAK` seconden staat.
 """
 
 from __future__ import annotations
@@ -56,7 +79,6 @@ ROLLEN = {
     "clean_water_tank_status": "schoonwater",
     "dirty_water_tank_status": "vuilwater",
     "dust_bag_status": "stofzak",
-    "low_water_warning": "water",
     "cleaned_area": "oppervlak",
     "cleaning_time": "duur",
 }
@@ -74,6 +96,20 @@ GEEN_WAARDE = frozenset({"", "unavailable", "unknown", "none"})
 # Wat geen fout is, in de sensor `error`. Zelfde lijst als op de kaart.
 GEEN_FOUT = frozenset({"no_error", "none", "ok", "0"})
 
+# Een fout van Dreame die de robot zelf oplost: hij gaat laden en daarna weer
+# verder. Bij de klant twee keer in tien dagen, telkens een minuut. Op de kaart
+# staat hij wel (dat is wat de robot zegt); een melding is het niet.
+GEEN_STORING = frozenset({"battery_low"})
+
+# Zo lang moet een tank niet in orde zijn voor er een melding komt: wie
+# bijvult, haalt de tank er een à twee minuten uit.
+STATION_WACHT = 180
+
+# Zo lang staat een robot zonder taaksensor in het station voor het "klaar" is.
+# Een Dreame reed binnen een beurt zeven keer heen en weer, en stond daar
+# hooguit een minuut.
+KLAAR_ZONDER_TAAK = 300
+
 # Een taak die schoonmaakt. Tasshack, `DreameVacuumTaskStatus`: auto_cleaning,
 # zone_cleaning, segment_cleaning, spot_cleaning, en hun *_paused,
 # *_mopping_paused en *_docking_paused. Niet fast_mapping (een plattegrond
@@ -86,22 +122,13 @@ STOFZUIGER_BEZIG = frozenset({"cleaning"})
 
 # De sensoren van het station: per rol de waarden die NIET in orde zijn, met
 # de zin voor de telefoon. De waarden zijn die van Tasshack (`types.py`):
-# `DreameVacuumCleanWaterTankStatus`, `DirtyWaterTankStatus`, `DustBagStatus`
-# en `LowWaterWarning`. De waarschuwing over het water hoort bij de
-# schoonwatertank en deelt zijn sleutel: twee sensoren die hetzelfde zeggen
-# geven één melding.
+# `DreameVacuumCleanWaterTankStatus`, `DirtyWaterTankStatus` en
+# `DustBagStatus`. Bij de klant gezien: `low_water`, `not_installed` en
+# `not_installed_or_full`.
 STATION = {
     "schoonwater": {
         "low_water": "Het schone water is bijna op. Vul de tank bij.",
         "not_installed": "De schoonwatertank is niet geplaatst.",
-    },
-    "water": {
-        "no_water_left": "Het schone water is op. Vul de tank bij.",
-        "no_water_left_dismiss": "Het schone water is op. Vul de tank bij.",
-        "no_water_left_after_clean": "Het schone water is op. Vul de tank bij.",
-        "no_water_for_clean": "Er is te weinig schoon water. Vul de tank bij.",
-        "low_water": "Het schone water is bijna op. Vul de tank bij.",
-        "tank_not_installed": "De schoonwatertank is niet geplaatst.",
     },
     "vuilwater": {
         "not_installed_or_full": "De vuilwatertank is vol of niet geplaatst. Leeg hem.",
@@ -115,8 +142,8 @@ STATION = {
     },
 }
 
-# Rol -> sleutel van de melding. De watersensor en de schoonwatertank zijn één.
-STATION_SLEUTEL = {"schoonwater": "schoonwater", "water": "schoonwater", "vuilwater": "vuilwater", "stofzak": "stofzak"}
+# Rol -> sleutel van de melding.
+STATION_SLEUTEL = {"schoonwater": "schoonwater", "vuilwater": "vuilwater", "stofzak": "stofzak"}
 
 # De onderdelen bij naam. Wat hier niet staat krijgt de naam die Home
 # Assistant de sensor geeft (`naam` in `onderhoud_tekst`).
@@ -171,7 +198,8 @@ def fout_tekst(waarde: Any, beschrijving: Any = None) -> str:
     `description` is het attribuut van Tasshack, in de taal van Home Assistant
     ("Geen fout" in de dumps). Zonder dat de waarde zelf, leesbaar gemaakt.
     """
-    if not heeft_waarde(waarde) or str(waarde).strip().lower() in GEEN_FOUT:
+    sleutel = str(waarde).strip().lower() if waarde is not None else ""
+    if not heeft_waarde(waarde) or sleutel in GEEN_FOUT or sleutel in GEEN_STORING:
         return ""
     tekst = str(beschrijving or "").strip()
     if tekst:
