@@ -58,6 +58,11 @@ daarom in git — technische kennis hier, de stand daar.
   **Mergen mag ook** -- de eigenaar heeft dat op 20 augustus 2026 bevestigd toen
   deze regel de vorige tegensprak. De enige voorwaarde staat hierboven: pas
   mergen als alle CI-checks groen zijn.
+- **Klaar en niets te beslissen is uitbrengen, zonder het te vragen.** De eigenaar, 31 oktober 2026: *"ALs je
+  niks van mij moet weten dan mag je het altijd uitbrengen."* Dus: CI groen, mergen, tag, release, en daarna
+  melden wat er uit is. Dat geldt ook voor een wens die via een andere sessie binnenkwam met zijn eigen woorden
+  erbij. Vraag alleen als er echt iets van hem nodig is: een keuze die bij hem ligt, iets dat moeilijk terug te
+  draaien is, of een merk of foto waar nog geen toestemming voor is.
 - **`SPEC.md` is bindend.** Wijkt een opdracht ervan af, dan wint `SPEC.md` en
   meld je dat. Blijkt `SPEC.md` ergens niet uitvoerbaar of feitelijk onjuist,
   dan **wijzig je hem niet zelf**: melden en stoppen. (Uitzondering: een ronde
