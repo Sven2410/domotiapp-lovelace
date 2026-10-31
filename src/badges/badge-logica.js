@@ -295,11 +295,12 @@ export function lampKleur(states, ids, licht = false) {
  * | `lights` | lampenteller (0.49.0) |
  * | `energy` | vermogen met een kleur per band (0.51.0) |
  * | `alarm` | de stand van een alarm met een kleur per stand (0.51.0) |
+ * | `weerstation` | de temperatuur van een gekozen sensor |
  *
  * Een badge uit 0.49.0 heeft `light_counter: true` en geen `mode`; dat is een
  * lampenteller, en dat blijft zo.
  */
-export const BADGE_SOORTEN = ["lights", "energy", "alarm"];
+export const BADGE_SOORTEN = ["lights", "energy", "alarm", "weerstation"];
 
 export function badgeSoort(config) {
   if (BADGE_SOORTEN.includes(config?.mode)) return config.mode;
@@ -325,6 +326,7 @@ export const SOORT_STANDAARD = {
     energy_color_mid: "oranje",
     energy_color_high: "rood",
   },
+  weerstation: { label: nt("Buiten"), icon: "thermo" },
   alarm: {
     label: nt("Alarm"),
     alarm_disarmed: "disarmed",
@@ -361,6 +363,20 @@ export function vermogen(st) {
   const watt = waarde * factor;
   const tekst = Math.abs(watt) >= 1000 ? `${nl(watt / 1000, 1)} kW` : `${nl(Math.round(watt), 0)} W`;
   return { watt, tekst };
+}
+
+/**
+ * De temperatuur zoals hij op de badge staat: "15,6 °C", "22 °C".
+ *
+ * Hoogstens één decimaal; een sensor die 15,62 meldt zegt daarmee niet meer dan
+ * een badge kan laten zien. Null als er geen getal is (een sensor die weg is).
+ */
+export function temperatuurTekst(st) {
+  const waarde = Number.parseFloat(st?.state);
+  if (!Number.isFinite(waarde)) return null;
+  const eenheid = String(st?.attributes?.unit_of_measurement ?? "°C").trim();
+  const rond = Math.round(waarde * 10) / 10;
+  return `${nl(rond, Number.isInteger(rond) ? 0 : 1)} ${eenheid}`;
 }
 
 /**

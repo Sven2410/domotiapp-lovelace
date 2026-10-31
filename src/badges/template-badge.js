@@ -55,6 +55,7 @@ import { nt, t } from "../taal.js";
 import {
   KLEUREN,
   SOORT_STANDAARD,
+  temperatuurTekst,
   alarmKleur,
   alarmStand,
   badgeSoort,
@@ -343,6 +344,9 @@ class DomotiappTemplateBadge extends DacCard {
       if (!v) return { tekst: st ? localizeState(this.hass, st) : t("Geen sensor"), band: null, icoon: "bolt" };
       return { tekst: v.tekst, band: energieBand(v.watt, c), icoon: "bolt" };
     }
+    if (soort === "weerstation") {
+      return { tekst: temperatuurTekst(st) ?? (st ? localizeState(this.hass, st) : t("Geen sensor")), icoon: "thermo" };
+    }
     if (soort === "alarm") {
       if (!st) return { tekst: t("Geen entiteit"), stand: null, icoon: "shield" };
       const { waarde, stand } = alarmStand(st, c);
@@ -372,7 +376,8 @@ class DomotiappTemplateBadge extends DacCard {
     const lampen = this.lampen_();
     const uitkomst = this.uitkomst_();
     if (soort) delete velden.content;
-    if (uitkomst) delete velden.tone;
+    // Het weerstation heeft geen kleur per stand: daar geldt het kleurveld gewoon.
+    if (uitkomst && soort !== "weerstation") delete velden.tone;
     this.sjablonen_.zet(this.hass, velden, {
       entity: c.entity ?? "",
       user: this.hass?.user?.name ?? "",
@@ -464,6 +469,7 @@ const SOORT_KEUZES = [
   { value: "lights", label: nt("Lampenteller") },
   { value: "energy", label: nt("Energie") },
   { value: "alarm", label: nt("Alarm") },
+  { value: "weerstation", label: nt("Weerstation") },
 ];
 
 /** Een kleurlijst, met "Automatisch" erbij waar dat iets betekent. */
@@ -627,6 +633,14 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
           true
         ),
       ],
+      weerstation: [
+        section(
+          t("Weerstation"),
+          "mdi:thermometer",
+          [{ name: "entity", selector: { entity: { domain: "sensor", device_class: "temperature" } } }],
+          true
+        ),
+      ],
       alarm: [
         section(
           t("Alarm"),
@@ -679,7 +693,9 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
           ? t("Vermogen")
           : badgeSoort(this.config_) === "alarm"
             ? t("Alarm")
-            : t("Entiteit (optioneel)"),
+            : badgeSoort(this.config_) === "weerstation"
+              ? t("Temperatuur")
+              : t("Entiteit (optioneel)"),
         energy_green_max: t("Tot en met (W)"),
         energy_color_low: t("Kleur"),
         energy_orange_max: t("Daarna tot en met (W)"),
@@ -707,12 +723,14 @@ class DomotiappTemplateBadgeEditor extends DacEditor {
     const soort = badgeSoort(this.config_);
     return {
       mode:
-        t("Eigen tekst: jij bepaalt wat er staat, met sjablonen. Lampenteller: het aantal lampen dat aan staat. Energie: een vermogen met een kleur per grens. Alarm: de stand van je alarm met een kleur per stand."),
+        t("Eigen tekst: jij bepaalt wat er staat, met sjablonen. Lampenteller: het aantal lampen dat aan staat. Energie: een vermogen met een kleur per grens. Alarm: de stand van je alarm met een kleur per stand. Weerstation: de temperatuur die je kiest."),
       light_exclude:
         t("Bijvoorbeeld een nachtlampje dat altijd brandt. Lichtgroepen telt hij sowieso niet mee, anders telt een lamp in een groep dubbel."),
       entity:
         soort === "energy"
           ? t("De sensor met het vermogen, in W of kW. De grenzen hieronder zijn in watt: tot en met de eerste grens krijgt de eerste kleur (terugleveren ook), tot en met de tweede de tweede, en daarboven de derde.")
+          : soort === "weerstation"
+            ? t("De temperatuursensor van het weerstation.")
           : soort === "alarm"
             ? t("Het alarm. Vul hieronder bij elke stand in welke status daarbij hoort; meerdere mogen, met een komma ertussen. Hoofdletters maken niet uit.")
             : t("Alleen nodig als de badge iets van één ding laat zien. In de sjablonen hieronder is hij beschikbaar als `entity`, zodat je `states(entity)` kunt schrijven."),
