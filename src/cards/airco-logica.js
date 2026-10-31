@@ -19,10 +19,15 @@
  * | MELCloud Home | off heat cool auto dry fan_only | auto, speed_1..5 | position_1..5 + left..right | `temperature` |
  * | demo `climate.hvac` | idem | on_low on_high auto_low auto_high off | 1 2 3 + rangefull | `temperature` |
  * | demo `climate.ecobee` | off cool heat_cool auto dry fan_only | idem | 1 2 3 | bereik 21-24 |
+ * | Cozytouch (Atlantic) | off auto cool heat fan_only dry | low medium high auto quiet | up middle_up middle_down down on | `temperature`, `null` bij uit en fan_only |
  *
  * MELCloud meldt GEEN `hvac_action`: de kaart weet dus niet of de compressor
  * draait, alleen wat er gevraagd is. Is `hvac_action` er wel, dan gaat die
  * voor (zie `aircoStand`).
+ *
+ * Cozytouch meldt die ook niet, en `current_temperature` is er altijd `null`
+ * (zo gebouwd, gezien op 31 oktober 2026 in tien dagen geschiedenis). De
+ * kamertemperatuur komt daar dus uit een sensor die de installateur kiest.
  *
  * DE REST VAN HET APPARAAT
  *
@@ -395,13 +400,32 @@ const LAMEL = {
   rangefull: nt("Breed"),
   split: nt("Gespreid"),
   top: nt("Boven"),
+  up: nt("Boven"),
   highest: nt("Hoogst"),
   high: nt("Hoog"),
+  middle_up: nt("Midden-boven"),
   middle_vertical: nt("Midden"),
+  middle_down: nt("Midden-onder"),
   low: nt("Laag"),
   lowest: nt("Laagst"),
   bottom: nt("Onder"),
+  down: nt("Onder"),
 };
+
+/** De presets die `standLabel` niet kent (Cozytouch); de rest kent hij wel. */
+const PRESET = {
+  none: nt("Geen"),
+  activity: nt("Activiteit"),
+  basic: nt("Basis"),
+  prog: nt("Weekprogramma"),
+  override: nt("Tijdelijk"),
+};
+
+/** Een preset in het Nederlands; wat hier niet staat, doet `standLabel`. */
+export function presetLabel(m) {
+  const kern = String(m ?? "").trim().toLowerCase();
+  return PRESET[kern] ? t(PRESET[kern]) : standLabel(m);
+}
 
 /** Een stand met een nummer: "speed_3", "position_2", "level 4", "3". */
 const genummerd = (s) => {
@@ -459,7 +483,7 @@ export const KEUZES = {
     nu: "preset_mode",
     service: "set_preset_mode",
     veld: "preset_mode",
-    label: (m) => standLabel(m),
+    label: presetLabel,
   },
 };
 
@@ -493,6 +517,12 @@ export function keuzeOproep(st, soort, waarde) {
 
 const BUITEN = /outdoor|outside|exterior|buiten|ambient_out/i;
 const STORING = /error|fault|storing|problem|alarm|defect/i;
+/**
+ * Wel een `temperature`-sensor, maar geen meting van de kamer: een grens of een
+ * doel. `thermostat_temperature_z1` is van Cozytouch en stond op 31 oktober 2026
+ * tien dagen op dezelfde waarde, ook terwijl de airco verwarmde.
+ */
+const GEEN_KAMER = /target|setpoint|temperature_adjustment|minimum|maximum|thermostat_temperature_z\d/i;
 
 /**
  * De andere entiteiten van hetzelfde apparaat die iets over de airco zeggen.
@@ -500,9 +530,10 @@ const STORING = /error|fault|storing|problem|alarm|defect/i;
  * Op APPARAAT en `device_class`, met opzet niet op naam: een kamer-
  * temperatuursensor heet bij MELCloud "room_temperature", bij Daikin "inside"
  * en bij een ander weer anders, maar is altijd een `temperature`-sensor aan
- * hetzelfde apparaat. Alleen BUITEN en STORING kijken naar de sleutel, omdat
- * een buitenvoeler ook een temperatuur is en een storing niet altijd de klasse
- * `problem` draagt (MELCloud: `error`, zonder klasse).
+ * hetzelfde apparaat. Alleen BUITEN, GEEN_KAMER en STORING kijken naar de
+ * sleutel, omdat een buitenvoeler ook een temperatuur is, een ingestelde grens
+ * ook (Cozytouch: `temperature_adjustment_min`), en een storing niet altijd de
+ * klasse `problem` draagt (MELCloud: `error`, zonder klasse).
  *
  * @param {object} hass
  * @param {string} climateId
@@ -523,7 +554,7 @@ export function apparaatDelen(hass, climateId) {
     if (domein === "sensor") {
       if (dc === "temperature") {
         if (BUITEN.test(sleutel)) uit.buiten ??= id;
-        else uit.kamer ??= id;
+        else if (!GEEN_KAMER.test(sleutel)) uit.kamer ??= id;
       } else if (dc === "humidity") uit.vocht ??= id;
       else if (dc === "power") uit.vermogen ??= id;
       else if (dc === "energy") uit.energie ??= id;
@@ -655,20 +686,30 @@ const AFBEELDINGEN_BASIS = "/domotiapp_lovelace/afbeeldingen/";
  * staat een bijgesneden WebP onder `afbeeldingen/aircos/`. Die adressen staan
  * straks in dashboards: alleen aanvullen, nooit hernoemen.
  *
- * `merk` en `model` worden als STUK van de tekst gezocht in de fabrikant en
- * het model van het apparaat (kleine letters). Zonder `model` is het de foto
- * voor dat merk als er geen betere is. Zonder `merk` kiest Automatisch hem
- * NOOIT: dan moet hij in de editor gekozen worden.
+ * `merk` (één naam of een lijst) en `model` worden als STUK van de tekst gezocht
+ * in de fabrikant en het model van het apparaat (kleine letters). Zonder `model`
+ * is het de foto voor dat merk als er geen betere is. Zonder `merk` kiest
+ * Automatisch hem NOOIT: dan moet hij in de editor gekozen worden.
  *
  * De Premium in Onyx Black heeft met opzet geen `merk`. MELCloud Home geeft
  * geen model door, en een Mitsubishi kan ook een witte of zilveren unit zijn.
  * Op merk zou elke Mitsubishi als een zwarte Premium verschijnen. Zijn keuze
  * op 13 oktober 2026: "Alleen als ik hem kies".
+ *
+ * Fujitsu General heeft wel een `merk`, en ook Atlantic: de eigenaar kent de
+ * twee units op 31 oktober 2026 als Fujitsu, maar Cozytouch noemt ze Atlantic
+ * met model "Air Conditioner (<kamer>)", dus op het type is er niets te kiezen.
+ * Een unit die er anders uitziet zet je in de editor op Geen of Eigen.
  */
 export const AIRCO_FOTOS = {
   mitsubishi_premium_onyx: {
     label: "Mitsubishi Electric Premium (Onyx Black)",
     pad: "aircos/mitsubishi-premium-onyx-black.webp",
+  },
+  fujitsu_general: {
+    label: "Fujitsu General",
+    merk: ["fujitsu", "atlantic"],
+    pad: "aircos/fujitsu-general.webp",
   },
 };
 
@@ -684,7 +725,8 @@ export function fotoBijAirco(apparaat, fotos = AIRCO_FOTOS) {
   if (!fabrikant) return null;
   let opMerk = null;
   for (const [sleutel, f] of Object.entries(fotos ?? {})) {
-    if (!f?.merk || !fabrikant.includes(String(f.merk).toLowerCase())) continue;
+    const merken = [f?.merk].flat().filter(Boolean);
+    if (!merken.some((m) => fabrikant.includes(String(m).toLowerCase()))) continue;
     if (f.model) {
       if (model && model.includes(String(f.model).toLowerCase())) return sleutel;
     } else {

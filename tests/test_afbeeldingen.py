@@ -55,6 +55,9 @@ PNG_HANDTEKENING = b"\x89PNG\r\n\x1a\n"
 # (11 oktober 2026). Ook hier: alleen aanvullen, nooit hernoemen of weghalen --
 # een gekozen foto staat als pad in het dashboard.
 VASTE_WEBP = [
+    # Sinds 0.93.0: Fujitsu General op de airco-kaart. Met toestemming van de eigenaar
+    # (31 oktober 2026).
+    "aircos/fujitsu-general.webp",
     # Sinds 0.92.0: de weerstationkaart. Met toestemming van de eigenaar en van Shelly
     # (31 oktober 2026).
     "weerstations/shelly-blu-weather-station.webp",

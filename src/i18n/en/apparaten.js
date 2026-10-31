@@ -34,6 +34,12 @@ export const APPARATEN = {
   "Gespreid": "Split",
   "Boven": "Top",
   "Onder": "Bottom",
+  "Midden-boven": "Upper middle",
+  "Midden-onder": "Lower middle",
+  "Activiteit": "Activity",
+  "Basis": "Basic",
+  "Weekprogramma": "Weekly schedule",
+  "Tijdelijk": "Temporary",
 
   // airco-logica.js: tegels
   "Deze maand": "This month",
@@ -80,8 +86,8 @@ export const APPARATEN = {
   "Leeg laten: de naam van de airco in Home Assistant.": "Leave empty: the name of the air conditioner in Home Assistant.",
   "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit.":
     "Automatic shows a photo for the make and model of the air conditioner if there is one, and otherwise the icon. A tap on the photo or the icon turns the air conditioner on or off.",
-  "Leeg laten: wat de airco zelf meet. Kies een sensor als die beter in de kamer hangt.":
-    "Leave empty: what the air conditioner measures itself. Choose a sensor if it is better placed in the room.",
+  "Een externe temperatuursensor, voor elk merk airco. Die gaat voor wat de airco zelf meet, en is de enige bron bij een airco die geen kamertemperatuur doorgeeft. Leeg laten: wat de airco zelf meet.":
+    "An external temperature sensor, for any brand of air conditioner. It takes priority over what the unit measures itself, and is the only source for a unit that reports no room temperature. Leave empty: what the unit measures itself.",
   "Leeg laten: de energiesensor van hetzelfde apparaat, als die er is.": "Leave empty: the energy sensor of the same device, if there is one.",
   "DomotiApp Airco": "DomotiApp Air Conditioner",
   "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren.":

@@ -1,0 +1,319 @@
+{
+  "_herkomst": "Geanonimiseerde uitlezing van een echte installatie op 31 oktober 2026: Home Assistant 2026.10, de HACS-integratie cozytouch (tag 1.4). Namen, serienummer en id's zijn eruit. Eén van de twee airco's; de andere had dezelfde attributen.",
+  "apparaat": {
+    "manufacturer": "Atlantic",
+    "model": "Air Conditioner (Woonkamer)",
+    "model_id": null,
+    "id": "unit"
+  },
+  "climate": {
+    "entity_id": "climate.airco_woonkamer_air_conditioner",
+    "state": "off",
+    "platform": "cozytouch",
+    "translation_key": "air_conditioner",
+    "attributes": {
+      "hvac_modes": [
+        "off",
+        "auto",
+        "cool",
+        "heat",
+        "fan_only",
+        "dry"
+      ],
+      "min_temp": 16.0,
+      "max_temp": 30.0,
+      "fan_modes": [
+        "low",
+        "medium",
+        "high",
+        "auto",
+        "quiet"
+      ],
+      "preset_modes": [
+        "none",
+        "activity",
+        "eco",
+        "boost",
+        "basic",
+        "prog",
+        "override"
+      ],
+      "swing_modes": [
+        "up",
+        "middle_up",
+        "middle_down",
+        "down",
+        "on"
+      ],
+      "current_temperature": null,
+      "temperature": null,
+      "fan_mode": "auto",
+      "preset_mode": "none",
+      "swing_mode": "up",
+      "icon": "mdi:air-conditioner",
+      "supported_features": 441,
+      "friendly_name": "Airco Woonkamer"
+    }
+  },
+  "entiteiten": [
+    {
+      "entity_id": "binary_sensor.airco_woonkamer_cozytouch",
+      "translation_key": null,
+      "state": "on",
+      "attributes": {
+        "device_class": "connectivity"
+      }
+    },
+    {
+      "entity_id": "number.airco_woonkamer_maximum_temperature",
+      "translation_key": "temperature_adjustment_max",
+      "state": "28",
+      "attributes": {
+        "min": 19,
+        "max": 28,
+        "step": 0.5,
+        "unit_of_measurement": "°C",
+        "device_class": "temperature"
+      }
+    },
+    {
+      "entity_id": "number.airco_woonkamer_override_total_time_z1",
+      "translation_key": "override_total_time_z1",
+      "state": "2.0",
+      "attributes": {
+        "min": 1,
+        "max": 24,
+        "step": 1,
+        "unit_of_measurement": "h"
+      }
+    },
+    {
+      "entity_id": "number.airco_woonkamer_target_cool_temperature",
+      "translation_key": "target_cool_temperature",
+      "state": "24.0",
+      "attributes": {
+        "min": 18.0,
+        "max": 30.0,
+        "step": 0.5,
+        "unit_of_measurement": "°C",
+        "device_class": "temperature"
+      }
+    },
+    {
+      "entity_id": "number.airco_woonkamer_target_temperature",
+      "translation_key": "target_temperature",
+      "state": "20.0",
+      "attributes": {
+        "min": 16.0,
+        "max": 30.0,
+        "step": 0.5,
+        "unit_of_measurement": "°C",
+        "device_class": "temperature"
+      }
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_air_conditioner",
+      "translation_key": "air_conditioner",
+      "state": "0",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_eco_mode",
+      "translation_key": "eco_mode",
+      "state": "off",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_friday_cool_prog",
+      "translation_key": "prog_cool_friday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_friday_heat_prog",
+      "translation_key": "prog_heat_friday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_minimum_temperature",
+      "translation_key": "temperature_adjustment_min",
+      "state": "16.0",
+      "attributes": {
+        "unit_of_measurement": "°C",
+        "device_class": "temperature"
+      }
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_monday_cool_prog",
+      "translation_key": "prog_cool_monday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_monday_heat_prog",
+      "translation_key": "prog_heat_monday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_override_remaining_time_z1",
+      "translation_key": "override_remain_time_z1",
+      "state": "00:00",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_powerful_mode",
+      "translation_key": "powerful_mode",
+      "state": "off",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_presence_mode",
+      "translation_key": "presence_mode",
+      "state": "off",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_prog_mode",
+      "translation_key": "prog_mode",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_quiet_mode",
+      "translation_key": "quiet_mode",
+      "state": "off",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_saturday_cool_prog",
+      "translation_key": "prog_cool_saturday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_saturday_heat_prog",
+      "translation_key": "prog_heat_saturday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_sunday_cool_prog",
+      "translation_key": "prog_cool_sunday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_sunday_heat_prog",
+      "translation_key": "prog_heat_sunday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_swing_mode",
+      "translation_key": "swing_mode",
+      "state": "off",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_thermostat_temperature_z1",
+      "translation_key": "thermostat_temperature_z1",
+      "state": "20.75",
+      "attributes": {
+        "unit_of_measurement": "°C",
+        "device_class": "temperature"
+      }
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_thursday_cool_prog",
+      "translation_key": "prog_cool_thursday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_thursday_heat_prog",
+      "translation_key": "prog_heat_thursday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_tuesday_cool_prog",
+      "translation_key": "prog_cool_tuesday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_tuesday_heat_prog",
+      "translation_key": "prog_heat_tuesday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_wednesday_cool_prog",
+      "translation_key": "prog_cool_wednesday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_wednesday_heat_prog",
+      "translation_key": "prog_heat_wednesday",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {}
+    },
+    {
+      "entity_id": "sensor.airco_woonkamer_zone_1",
+      "translation_key": "zone_1",
+      "state": "Woonkamer",
+      "attributes": {}
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_eco_mode",
+      "translation_key": "eco_mode",
+      "state": "off",
+      "attributes": {
+        "device_class": "switch"
+      }
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_powerful_mode",
+      "translation_key": "powerful_mode",
+      "state": "off",
+      "attributes": {
+        "device_class": "switch"
+      }
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_presence_mode",
+      "translation_key": "presence_mode",
+      "state": "off",
+      "attributes": {
+        "device_class": "switch"
+      }
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_prog_mode",
+      "translation_key": "prog_mode",
+      "state": "06:00  20°C / 22:00  19°C",
+      "attributes": {
+        "device_class": "switch"
+      }
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_quiet_mode",
+      "translation_key": "quiet_mode",
+      "state": "off",
+      "attributes": {
+        "device_class": "switch"
+      }
+    },
+    {
+      "entity_id": "switch.airco_woonkamer_swing_mode",
+      "translation_key": "swing_mode",
+      "state": "off",
+      "attributes": {
+        "device_class": "switch"
+      }
+    }
+  ]
+}
