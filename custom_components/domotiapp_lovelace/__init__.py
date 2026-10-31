@@ -35,7 +35,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import loader, migratie, resource, websocket
-from . import bewaking, infoscherm, meldingen
+from . import automatisering, bewaking, infoscherm, meldingen
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -73,7 +73,7 @@ from .store import SceneStore
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 def _bereken_hash(pad: Path) -> str:
     """SHA-256 van het bundelbestand, afgekapt. Blokkerende I/O."""
@@ -137,6 +137,9 @@ async def _async_zet_commandos_klaar(hass: HomeAssistant, data: dict) -> None:
 
     # De meldingenkaart: wie er aan staat, en een klok die op tijd verstuurt.
     await meldingen.async_zet_op(hass)
+
+    # De automatiseringskaart: de regels van de klant, en een klok die ze uitvoert.
+    await automatisering.async_zet_op(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -346,6 +349,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         bewaking.async_stop(hass)
         infoscherm.async_stop(hass)
         meldingen.async_stop(hass)
+        automatisering.async_stop(hass)
 
         if data.pop(ALARM_DATA_STORE, None) is not None:
             _LOGGER.debug("Wekkeropslag losgelaten")

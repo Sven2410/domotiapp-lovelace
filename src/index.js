@@ -55,6 +55,7 @@ import "./cards/dishwasher-card.js";
 import "./cards/laadpaal-card.js";
 import "./cards/batterij-card.js";
 import "./cards/meldingen-card.js";
+import "./cards/automatisering-card.js";
 import "./cards/printer-card.js";
 import "./cards/auto-card.js";
 import "./cards/camera-card.js";

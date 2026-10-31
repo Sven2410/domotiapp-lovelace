@@ -106,13 +106,13 @@ class Melding:
         )
 
 
-def zoek_kaarten(knoop: Any) -> list[dict[str, Any]]:
-    """Alle meldingenkaarten in deze boom, in de volgorde waarin ze staan."""
+def zoek_kaarten(knoop: Any, kaart_type: str = KAART_TYPE) -> list[dict[str, Any]]:
+    """Alle kaarten van dit type in deze boom, in de volgorde waarin ze staan."""
     gevonden: list[dict[str, Any]] = []
 
     def loop(k: Any) -> None:
         if isinstance(k, dict):
-            if k.get("type") == KAART_TYPE:
+            if k.get("type") == kaart_type:
                 gevonden.append(k)
                 return
             for waarde in k.values():
@@ -304,8 +304,10 @@ async def async_lees(hass: HomeAssistant, leidend: dict[str, str] | None = None)
     return voeg_samen(await async_lees_kaarten(hass), leidend)
 
 
-async def async_lees_kaarten(hass: HomeAssistant) -> list[tuple[str, dict[str, Any]]]:
-    """Alle meldingenkaarten uit alle dashboards, met het dashboard erbij.
+async def async_lees_kaarten(
+    hass: HomeAssistant, kaart_type: str = KAART_TYPE
+) -> list[tuple[str, dict[str, Any]]]:
+    """Alle kaarten van dit type uit alle dashboards, met het dashboard erbij.
 
     Faalt het lezen van één dashboard, dan tellen de andere gewoon mee. Faalt
     het geheel (Lovelace anders dan verwacht), dan zijn er geen kaarten, met
@@ -333,6 +335,6 @@ async def async_lees_kaarten(hass: HomeAssistant) -> list[tuple[str, dict[str, A
         except Exception as fout:  # noqa: BLE001 - één kapot dashboard houdt de rest niet tegen
             _LOGGER.warning("Dashboard %s niet te lezen: %s", url_path or "standaard", fout)
             continue
-        for kaart in zoek_kaarten(config):
+        for kaart in zoek_kaarten(config, kaart_type):
             kaarten.append((url_path or "", kaart))
     return kaarten
