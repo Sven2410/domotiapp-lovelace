@@ -39,6 +39,7 @@ import {
   nieuweGroep,
   niveauTekst,
   ruimtesVan,
+  sjabloonUitleg,
   sjablonenVoor,
   startHelderheden,
   stapVerschil,
@@ -416,18 +417,15 @@ class AutomatiseringScherm extends HTMLElement {
   sjablonenHtml_() {
     const lampen = this.bron.lampen_();
     const buiten = (id) => this.buiten_(id);
-    const naamVan = (id) => this.bron.naamVanLamp_(id);
     const rijen = sjablonenVoor(lampen, buiten)
       .map((s) => {
-        const f = favorietUitSjabloon(s, lampen, buiten);
-        const wat = favorietVinkjes(f, lampen, buiten, naamVan).filter((v) => v.aan).map((v) => v.label).join(" · ");
-        return `<button type="button" class="sjabloon" data-k="sjabloon:${veilig(s.sleutel)}">${resolve(s.icoon)}<span class="vt"><b>${veilig(f.naam)}</b><small>${veilig(wat)}</small></span></button>`;
+        return `<button type="button" class="sjabloon" data-k="sjabloon:${veilig(s.sleutel)}">${resolve(s.icoon)}<span class="vt"><b>${veilig(t(s.naam))}</b><small>${veilig(sjabloonUitleg(s, lampen, buiten))}</small></span></button>`;
       })
       .join("");
-    return `<div class="groep">
+    return `${rijen ? `<div class="groep">
       ${this.kop_("check", t("Kies een kant-en-klare favoriet"))}
       <div class="sjablonen">${rijen}</div>
-    </div>
+    </div>` : ""}
     <div class="groep">
       ${this.kop_("pencil", t("Of maak je eigen favoriet"))}
       <div class="sjablonen"><button type="button" class="sjabloon" data-k="sjabloon:">${resolve("plus")}<span class="vt"><b>${veilig(t("Zelf maken"))}</b><small>${veilig(t("Kies zelf de lampen en standen."))}</small></span></button></div>
