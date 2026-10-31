@@ -403,6 +403,133 @@ export const nieuweFavoriet = (lampen) => ({
   helderheden: lampen.length === 1 ? { [lampen[0].entity]: 100 } : {},
 });
 
+/**
+ * Kant-en-klare favorieten met vinkjes. De eigenaar, 31 oktober 2026: "Ik wil dat je ook al voor
+ * gedefineerde favorieten hebt en dat je dingen kan aanvinken etc. Zoals Woning verlaten. En dan een
+ * vinkje alles uit behalve buitenverlichting bijvoorbeeld." En: "de klant moet zelf ook gewoon een
+ * favoriet kunnen maken."
+ *
+ * Een vinkje is geen eigen gegeven: of hij aan staat, volgt uit de lampen en standen van de favoriet.
+ * De server kent dus alleen lampen en standen, een favoriet die de klant met de hand zo zette krijgt
+ * dezelfde vinkjes, en wat je na het aanvinken nog zelf aanpast, gaat nooit verloren in een tweede waarheid.
+ */
+
+/** Woorden die buiten betekenen, ook midden in een naam: "Buitenlamp", "Achtertuin". */
+const BUITEN = /buiten|tuin|terras|oprit|balkon|veranda|carport|gevel|pergola|outside|outdoor|exterior|garden|terrace|driveway|balcony|porch|patio|yard|facade/;
+
+/**
+ * Is dit buitenverlichting? De verdieping, de ruimte en de naam tellen alle drie: de ene klant heeft
+ * een verdieping Buiten, de andere een ruimte Tuin en een derde alleen een lamp die Buitenlamp heet.
+ * Geen vinkje om in te stellen: wat hij vond staat op het scherm, en de klant kan het aanpassen.
+ */
+export function isBuiten(entity, hass, naam = "") {
+  const ruimte = hass?.areas?.[ruimteVan(hass, entity)];
+  const verdieping = hass?.floors?.[ruimte?.floor_id];
+  return [verdieping?.name, verdieping?.floor_id, ruimte?.name, naam].some((tekst) => BUITEN.test(plat(tekst)));
+}
+
+/** De drie delen waar de vinkjes over gaan. */
+function delenVan(lampen, buiten) {
+  const lichten = lampen.filter((l) => !l.rolluik).map((l) => l.entity);
+  return {
+    binnen: lichten.filter((id) => !buiten(id)),
+    buiten: lichten.filter((id) => buiten(id)),
+    rolluiken: lampen.filter((l) => l.rolluik).map((l) => l.entity),
+  };
+}
+
+/**
+ * De vinkjes van deze favoriet, op volgorde. Wat op deze kaart niets kan, staat er niet.
+ *
+ * @param {object} favoriet `lampen` en `helderheden`
+ * @param {Array} lampen de lijst van de kaart, uit `lampenUit`
+ * @param {(entity: string) => boolean} buiten
+ * @param {(entity: string) => string} naamVan
+ * @returns {Array<{sleutel: string, label: string, tekst: string, aan: boolean, onder: boolean}>}
+ */
+export function favorietVinkjes(favoriet, lampen, buiten, naamVan = (id) => id) {
+  const d = delenVan(lampen, buiten);
+  const gekozen = new Set(favoriet.lampen ?? []);
+  const stand = (id) => favoriet.helderheden?.[id] ?? 100;
+  const allemaal = (ids, past) => ids.length > 0 && ids.every((id) => gekozen.has(id) && past(stand(id)));
+  const uit = (pct) => pct === 0;
+  const kort = (ids) => lampenKort({ lampen: ids }, lampen, naamVan);
+  const lichten = [...d.binnen, ...d.buiten];
+  const alleUit = allemaal(d.binnen.length ? d.binnen : d.buiten, uit);
+  const behalve = alleUit && d.binnen.length > 0 && d.buiten.length > 0 && !d.buiten.some((id) => gekozen.has(id) && uit(stand(id)));
+  const vinkje = (sleutel, label, tekst, aan, onder = false) => ({ sleutel, label, tekst, aan, onder });
+  const rij = [];
+  if (lichten.length) rij.push(vinkje("alleUit", t("Alle lampen uit"), tn(behalve ? d.binnen.length : lichten.length, "{n} lamp", "{n} lampen"), alleUit));
+  if (alleUit && d.binnen.length && d.buiten.length) {
+    rij.push(vinkje("behalveBuiten", t("Behalve de buitenverlichting"), kort(d.buiten), behalve, true));
+  }
+  if (d.buiten.length && (!alleUit || behalve || !d.binnen.length)) {
+    rij.push(vinkje("buitenAan", t("Buitenverlichting aan"), kort(d.buiten), allemaal(d.buiten, (pct) => pct > 0)));
+  }
+  if (d.buiten.length && d.binnen.length && !alleUit) {
+    rij.push(vinkje("buitenUit", t("Buitenverlichting uit"), kort(d.buiten), allemaal(d.buiten, uit)));
+  }
+  if (d.rolluiken.length) {
+    const aantal = tn(d.rolluiken.length, "{n} rolluik", "{n} rolluiken");
+    rij.push(vinkje("rolluikenDicht", t("Rolluiken dicht"), aantal, allemaal(d.rolluiken, uit)));
+    rij.push(vinkje("rolluikenOpen", t("Rolluiken open"), aantal, allemaal(d.rolluiken, (pct) => pct === 100)));
+  }
+  return rij;
+}
+
+/**
+ * De favoriet na een tik op een vinkje. Alleen wat bij dat vinkje hoort verandert: een lamp die de klant
+ * zelf op 40% zette, blijft daar staan als hij de rolluiken aanvinkt.
+ */
+export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
+  const d = delenVan(lampen, buiten);
+  const per = { ...(favoriet.helderheden ?? {}) };
+  let lijst = [...(favoriet.lampen ?? [])];
+  const zet = (ids, pct) => {
+    for (const id of ids) {
+      if (!lijst.includes(id)) lijst.push(id);
+      per[id] = pct;
+    }
+  };
+  const weg = (ids) => {
+    lijst = lijst.filter((id) => !ids.includes(id));
+    for (const id of ids) delete per[id];
+  };
+  if (sleutel === "alleUit") {
+    if (aan) zet([...d.binnen, ...d.buiten], 0);
+    else weg([...d.binnen, ...d.buiten.filter((id) => (per[id] ?? 100) === 0)]);
+  } else if (sleutel === "behalveBuiten") {
+    if (aan) weg(d.buiten);
+    else zet(d.buiten, 0);
+  } else if (sleutel === "buitenAan" || sleutel === "buitenUit") {
+    if (aan) zet(d.buiten, sleutel === "buitenAan" ? 100 : 0);
+    else weg(d.buiten);
+  } else if (sleutel === "rolluikenDicht" || sleutel === "rolluikenOpen") {
+    if (aan) zet(d.rolluiken, sleutel === "rolluikenOpen" ? 100 : 0);
+    else weg(d.rolluiken);
+  }
+  return { ...favoriet, lampen: lijst, helderheden: per };
+}
+
+/** De sjablonen: een naam, een icoon en de vinkjes die alvast aan staan. De klant kan alles nog wijzigen. */
+export const FAVORIET_SJABLONEN = [
+  { sleutel: "verlaten", naam: nt("Woning verlaten"), icoon: "homeLeave", vinkjes: ["alleUit", "behalveBuiten"] },
+  { sleutel: "slapen", naam: nt("Slapen"), icoon: "sleep", vinkjes: ["alleUit", "rolluikenDicht"] },
+  { sleutel: "thuis", naam: nt("Thuiskomen"), icoon: "house", vinkjes: ["buitenAan", "rolluikenOpen"] },
+  { sleutel: "ochtend", naam: nt("Goedemorgen"), icoon: "sun", vinkjes: ["buitenUit", "rolluikenOpen"] },
+  { sleutel: "allesuit", naam: nt("Alles uit"), icoon: "power", vinkjes: ["alleUit"] },
+];
+
+/** Een favoriet uit een sjabloon. Een vinkje dat op deze kaart niets kan, doet niets. */
+export function favorietUitSjabloon(sjabloon, lampen, buiten) {
+  const start = { favoriet: true, naam: t(sjabloon.naam), icoon: sjabloon.icoon, lampen: [], helderheden: {} };
+  return sjabloon.vinkjes.reduce((f, sleutel) => metVinkje(f, lampen, buiten, sleutel, true), start);
+}
+
+/** De sjablonen die hier iets doen: zonder buitenlampen en rolluiken is er niets om thuis te komen. */
+export const sjablonenVoor = (lampen, buiten) =>
+  FAVORIET_SJABLONEN.filter((s) => favorietUitSjabloon(s, lampen, buiten).lampen.length > 0);
+
 /** Wat er naar de server gaat. 0 is uit of dicht; iets zonder schuif op een andere stand is gewoon aan. */
 export function favorietNaarServer(favoriet, dimt = () => true) {
   const per = favoriet.helderheden ?? {};

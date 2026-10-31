@@ -57,8 +57,12 @@ class AutomatiseringCard extends DacCard {
     :host([bare]) .card { background: none; box-shadow: none; }
 
     .kop { display: flex; align-items: center; gap: 10px; min-height: 34px; }
-    .titel { flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 500; }
-    .vkop { font-size: 12px; color: var(--dac-ink-2); font-weight: 400; }
+    /* Elke titel is vet en heeft een icoon, allemaal gelijk. De eigenaar, 31 oktober 2026: "Alle
+       titels moeten vet gedrukt zijn en een icon hebben." Het icoon is even breed als dat van een
+       rij, zodat de tekst eronder op dezelfde lijn begint. */
+    .titel { flex: 1 1 auto; min-width: 0; font-size: 14px; font-weight: 700; letter-spacing: -.01em; color: var(--dac-ink); }
+    .kico { width: 36px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; color: var(--dac-accent-hi); }
+    .kico .icon { width: 19px; height: 19px; }
 
     .plus, .weg {
       width: 34px; height: 34px; flex: 0 0 auto; padding: 0; cursor: pointer;
@@ -90,7 +94,7 @@ class AutomatiseringCard extends DacCard {
       background: var(--dac-surface); border: 1px solid var(--dac-border);
       transition: color 160ms ease, border-color 160ms ease;
     }
-    .ico .icon { width: 18px; height: 18px; }
+    .ico .icon { width: 18px; height: 18px; --mdc-icon-size: 18px; }
     /* Alleen het icoon draagt de toestand. */
     .rij[data-aan="true"] .ico {
       color: var(--dac-accent-hi);
@@ -151,10 +155,11 @@ class AutomatiseringCard extends DacCard {
     this.toggleAttribute("bare", Boolean(this.config.bare));
     const plus = (groep, label) =>
       `<button class="plus" type="button" data-groep="${groep}" aria-label="${escapeHtml(label)}">${resolve("plus")}</button>`;
+    const titel = (icoon, tekst) => `<span class="kico">${resolve(icoon)}</span><span class="titel">${escapeHtml(tekst)}</span>`;
     return `
       <div class="card surface" style="--tone:${TONES.accent}">
         <div class="kop">
-          <span class="titel">${escapeHtml(this.config.name || t("Automatiseringen"))}</span>
+          ${titel("clock", this.config.name || t("Automatiseringen"))}
           ${plus("gewoon", t("Nieuwe automatisering"))}
         </div>
         <div class="pauze" hidden>${escapeHtml(t("Gepauzeerd: de vakantiemodus staat aan."))}</div>
@@ -164,7 +169,7 @@ class AutomatiseringCard extends DacCard {
           this.metFavorieten_()
             ? `<div class="favorieten">
                 <div class="kop">
-                  <span class="titel vkop">${escapeHtml(t("Favorieten"))}</span>
+                  ${titel("star", t("Favorieten"))}
                   ${plus("favoriet", t("Nieuwe favoriet"))}
                 </div>
                 <div class="leeg" data-groep="favoriet" hidden>${escapeHtml(t("Knoppen voor de favorietenkaart: één tik zet alles zoals je het hier kiest."))}</div>
@@ -175,13 +180,12 @@ class AutomatiseringCard extends DacCard {
         ${
           this.metVakantie_()
             ? `<div class="vakantie">
-                <div class="rij vrij" data-aan="false">
-                  <span class="ico">${resolve("beach")}</span>
-                  <span class="txt"><span class="nm">${escapeHtml(t("Vakantiemodus"))}</span></span>
+                <div class="kop vrij" data-aan="false">
+                  ${titel("beach", t("Vakantiemodus"))}
                   ${toggleHtml({ label: t("Vakantiemodus") })}
                 </div>
                 <div class="kop">
-                  <span class="titel vkop">${escapeHtml(t("Vakantieregels"))}</span>
+                  ${titel("calendar", t("Vakantieregels"))}
                   ${plus("vakantie", t("Nieuwe vakantieregel"))}
                 </div>
                 <div class="lijst" data-groep="vakantie"></div>
@@ -197,7 +201,7 @@ class AutomatiseringCard extends DacCard {
       this.on(plus, "click", () =>
         toonAutomatiseringScherm(
           this,
-          plus.dataset.groep === "favoriet" ? nieuweFavoriet(this.lampen_()) : nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")
+          plus.dataset.groep === "favoriet" ? { ...nieuweFavoriet(this.lampen_()), kiezen: true } : nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")
         )
       );
     }

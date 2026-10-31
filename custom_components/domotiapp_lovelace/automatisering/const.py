@@ -49,6 +49,7 @@ MAX_REGELS = 200
 MAX_FAVORIETEN = 50
 MAX_LAMPEN_PER_REGEL = 200
 MAX_NAAM = 60
+MAX_ICOON = 60
 
 # Hoe lang een gemist moment na een herstart nog telt. Uit langer dan aan: een
 # lamp die de hele dag blijft branden is erger dan een die laat uitgaat, en een
