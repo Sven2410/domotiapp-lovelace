@@ -40,6 +40,8 @@ export const WEERSTATION = {
   "De temperatuursensor van het weerstation. De rest zoekt de kaart zelf op hetzelfde apparaat.":
     "The temperature sensor of the weather station. The card finds the rest on the same device.",
   "Leeg laten: de naam van de sensor.": "Leave empty: the name of the sensor.",
+  "Een Shelly via BTHome meldt zijn merk niet, en dan toont Automatisch de thermometer. Kies daar zelf Shelly.":
+    "A Shelly via BTHome does not report its brand, and then Automatic shows the thermometer. Choose Shelly yourself there.",
   "DomotiApp Weerstation": "DomotiApp Weather Station",
   "Wat het weerstation meet: temperatuur, wind met een kompas, regen, UV, licht en luchtdruk.":
     "What the weather station measures: temperature, wind with a compass, rain, UV, light and air pressure.",

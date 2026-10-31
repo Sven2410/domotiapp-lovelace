@@ -8,6 +8,8 @@
  * Je kiest de temperatuursensor; de rest zoekt de kaart op het apparaat (zie de kop
  * van `weerstation-logica.js`). Wat er niet is of niets meldt, staat er niet.
  *
+ * Merk en type bepalen de foto, net als op de boiler en de stofzuiger.
+ *
  * De kaart is een hele breedte, voor in een pop-up. Hoeveel tegels er naast elkaar passen
  * volgt de kaart, met een container query en niet met een mediaquery (valkuil 46).
  */
@@ -17,7 +19,18 @@ import { DacEditor, section, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
-import { ROLLEN, WIND_EENHEDEN, burenVan, drukTrend, trendWoord, weerRollen, weerStand } from "./weerstation-logica.js";
+import { metType, merkKeuzes, typeKeuzes } from "./productfoto.js";
+import {
+  ROLLEN,
+  WEERSTATIONS,
+  WIND_EENHEDEN,
+  burenVan,
+  drukTrend,
+  trendWoord,
+  weerRollen,
+  weerStand,
+  weerstationAfbeelding,
+} from "./weerstation-logica.js";
 import { nt, t } from "../taal.js";
 
 /** Elke kwartier de trend opnieuw: de druk verandert niet per minuut. */
@@ -44,6 +57,14 @@ class WeerstationCard extends DacCard {
       border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 45%, transparent);
     }
     .ico .icon { width: 22px; height: 22px; }
+    /* De achtergrond volgt het thema: een wit station op een lichte kaart heeft anders geen rand. */
+    .foto {
+      display: block; flex: 0 0 auto; width: 58px; height: 72px;
+      padding: 6px; object-fit: contain; object-position: center;
+      border-radius: var(--dac-radius-sm);
+      background: radial-gradient(ellipse at 50% 45%, rgba(var(--dac-tint), .2), rgba(var(--dac-tint), .06) 75%);
+      border: 1px solid var(--dac-border);
+    }
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
     .nm { font-size: 13px; color: var(--dac-ink-2); line-height: 1.25; }
     .temp { font-size: 28px; font-weight: 500; line-height: 1.15; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
@@ -111,6 +132,7 @@ class WeerstationCard extends DacCard {
     return `
       <div class="card surface" style="--tone:${TONES.accent}">
         <div class="kop" role="button" tabindex="0">
+          <img class="foto" alt="" hidden />
           <span class="ico">${resolve("thermo")}</span>
           <span class="txt">
             <span class="nm"></span>
@@ -215,9 +237,35 @@ class WeerstationCard extends DacCard {
     ].join("");
   }
 
+  /** De foto: het gekozen type, de foto bij de modelcode, een eigen, of de thermometer. */
+  paintFoto_() {
+    const reg = this.hass?.entities?.[this.config.entity];
+    const apparaat = reg?.device_id ? this.hass?.devices?.[reg.device_id] ?? null : null;
+    const bron = weerstationAfbeelding(this.config, apparaat);
+    const img = this.$(".foto");
+    if (img.dataset.bron !== bron) {
+      img.dataset.bron = bron;
+      img.dataset.kapot = "";
+      if (bron) {
+        // Een foto die niet laadt: dan de thermometer.
+        img.onerror = () => {
+          img.dataset.kapot = "1";
+          if (this.hass && this.wired_) this.paint();
+        };
+        img.src = bron;
+      } else {
+        img.removeAttribute("src");
+      }
+    }
+    const toon = Boolean(bron) && img.dataset.kapot !== "1";
+    img.hidden = !toon;
+    this.$(".ico").hidden = toon;
+  }
+
   paint() {
     const c = this.config;
     const r = this.rollen_();
+    this.paintFoto_();
     const s = weerStand(this.hass, c.entity, r, { windEenheid: c.wind_eenheid ?? "auto" });
 
     this.text(".nm", c.name || nameOf(this.hass, c.entity));
@@ -278,19 +326,30 @@ const ROL_LABELS = {
 
 class WeerstationEditor extends DacEditor {
   defaults() {
-    return { wind_eenheid: "auto" };
+    return { merk: "auto", wind_eenheid: "auto" };
+  }
+
+  /** De fotokiezer alleen bij een ander merk: anders is het een veld dat niets doet. */
+  pickers() {
+    return this.config_?.merk === "eigen"
+      ? [{ key: "image", kind: "foto", label: t("Eigen afbeelding"), fallback: "thermo" }]
+      : [];
   }
 
   serialize(config) {
     const uit = { ...config };
     if (uit.wind_eenheid === "auto") delete uit.wind_eenheid;
-    return uit;
+    const reg = this.hass_?.entities?.[uit.entity];
+    return metType(uit, reg?.device_id ? this.hass_?.devices?.[reg.device_id] : null, WEERSTATIONS);
   }
 
   schema() {
+    const types = typeKeuzes(this.config_?.merk, WEERSTATIONS);
     return [
       { name: "entity", selector: { entity: { domain: "sensor", device_class: "temperature" } } },
       { name: "name", selector: sel.text() },
+      { name: "merk", selector: sel.select(merkKeuzes(WEERSTATIONS)) },
+      ...(types.length ? [{ name: "model", selector: sel.select(types) }] : []),
       {
         name: "wind_eenheid",
         selector: sel.select(WIND_EENHEDEN.map((k) => ({ value: k.value, label: k.value === "kmh" || k.value === "ms" ? k.label : t(k.label) }))),
@@ -312,6 +371,8 @@ class WeerstationEditor extends DacEditor {
       {
         entity: t("Temperatuur"),
         name: t("Naam"),
+        merk: t("Merk"),
+        model: t("Type"),
         wind_eenheid: t("Eenheid van de wind"),
       }[s.name] ?? super.label(s)
     );
@@ -321,6 +382,7 @@ class WeerstationEditor extends DacEditor {
     return {
       entity: t("De temperatuursensor van het weerstation. De rest zoekt de kaart zelf op hetzelfde apparaat."),
       name: t("Leeg laten: de naam van de sensor."),
+      merk: t("Een Shelly via BTHome meldt zijn merk niet, en dan toont Automatisch de thermometer. Kies daar zelf Shelly."),
     }[s.name];
   }
 }

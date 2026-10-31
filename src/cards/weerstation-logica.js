@@ -21,6 +21,30 @@
  */
 
 import { locale, nt, t } from "../taal.js";
+import { productAfbeelding } from "./productfoto.js";
+
+/**
+ * Merk en type, met hun foto (zie de kop van `productfoto.js`).
+ *
+ * Automatisch herkent de Shelly via BTHome NIET: die meldt geen fabrikant en als model
+ * "BTHome sensor". Op zo'n algemene naam kiezen we geen foto; daar kies je het merk zelf.
+ * De code staat er voor een integratie die hem wel meldt.
+ */
+export const WEERSTATIONS = {
+  shelly: {
+    label: "Shelly",
+    fabrikant: "shelly",
+    modellen: {
+      blu_weather_station: {
+        label: "BLU Weather Station (SBWS-90CM)",
+        pad: "weerstations/shelly-blu-weather-station.webp",
+        codes: ["SBWS-90CM"],
+      },
+    },
+  },
+};
+
+export const weerstationAfbeelding = (config, apparaat, lijst = WEERSTATIONS) => productAfbeelding(config, apparaat, lijst);
 
 const leeg = (s) => s == null || s === "" || s === "unknown" || s === "unavailable";
 
