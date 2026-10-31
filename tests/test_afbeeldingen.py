@@ -55,6 +55,9 @@ PNG_HANDTEKENING = b"\x89PNG\r\n\x1a\n"
 # (11 oktober 2026). Ook hier: alleen aanvullen, nooit hernoemen of weghalen --
 # een gekozen foto staat als pad in het dashboard.
 VASTE_WEBP = [
+    # Sinds 0.92.0: de weerstationkaart. Met toestemming van de eigenaar en van Shelly
+    # (31 oktober 2026).
+    "weerstations/shelly-blu-weather-station.webp",
     "laadpalen/easee-charge-up.webp",
     "laadpalen/easee-charge-max-pro.webp",
     "laadpalen/alfen-eve-single-plus.webp",

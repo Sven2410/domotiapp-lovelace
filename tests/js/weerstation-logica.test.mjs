@@ -176,3 +176,32 @@ describe("de trend van de luchtdruk", () => {
     assert.equal(L.trendWoord(null), "");
   });
 });
+
+describe("merk, type en foto", () => {
+  const FOTO = "/domotiapp_lovelace/afbeeldingen/weerstations/shelly-blu-weather-station.webp";
+  // Zoals BTHome hem in hass.devices zet: geen fabrikant, en een algemeen model.
+  const BTHOME = { manufacturer: null, model: "BTHome sensor", model_id: null };
+
+  it("Automatisch kiest bij BTHome geen foto: daar staat niets over het merk", () => {
+    assert.equal(L.weerstationAfbeelding({}, BTHOME), "");
+    assert.equal(L.weerstationAfbeelding({ merk: "auto" }, BTHOME), "");
+  });
+
+  it("Automatisch herkent hem wel als het apparaat het meldt", () => {
+    assert.equal(L.weerstationAfbeelding({}, { manufacturer: "Shelly", model: "SBWS-90CM" }), FOTO);
+  });
+
+  it("zelf gekozen: de foto, een eigen, of geen", () => {
+    assert.equal(L.weerstationAfbeelding({ merk: "shelly" }, BTHOME), FOTO);
+    assert.equal(L.weerstationAfbeelding({ merk: "shelly", model: "blu_weather_station" }, BTHOME), FOTO);
+    assert.equal(L.weerstationAfbeelding({ merk: "eigen", image: "/local/x.png" }, BTHOME), "/local/x.png");
+    assert.equal(L.weerstationAfbeelding({ merk: "eigen" }, BTHOME), "");
+    assert.equal(L.weerstationAfbeelding({ merk: "geen", image: "/local/x.png" }, BTHOME), "");
+  });
+
+  it("de foto staat in de repo, op de plek die de lijst noemt", () => {
+    const pad = L.WEERSTATIONS.shelly.modellen.blu_weather_station.pad;
+    const inhoud = readFileSync(new URL(`../../custom_components/domotiapp_lovelace/afbeeldingen/${pad}`, import.meta.url));
+    assert.equal(inhoud.subarray(8, 12).toString(), "WEBP");
+  });
+});
