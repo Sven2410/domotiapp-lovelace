@@ -510,14 +510,35 @@ export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
   return { ...favoriet, lampen: lijst, helderheden: per };
 }
 
-/** De sjablonen: een naam, een icoon en de vinkjes die alvast aan staan. De klant kan alles nog wijzigen. */
+/**
+ * De sjablonen: een naam, een icoon en de vinkjes die alvast aan staan. Met opzet maar twee. De eigenaar,
+ * 31 oktober 2026: "Ik wil maar 2 voor gemaakt efavorieten. Alles uit en woning verlaten. WOning verlaten is dan
+ * standaard buitenverlichting niet uit. ALles uit is ook de buitenverlichting uit. Zo houden we de kaart
+ * overzichtelijk en kan de klant daarna gewoon zelf zijn eigen favorieten maken".
+ */
 export const FAVORIET_SJABLONEN = [
-  { sleutel: "verlaten", naam: nt("Woning verlaten"), icoon: "homeLeave", vinkjes: ["alleUit", "behalveBuiten"] },
-  { sleutel: "slapen", naam: nt("Slapen"), icoon: "sleep", vinkjes: ["alleUit", "rolluikenDicht"] },
-  { sleutel: "thuis", naam: nt("Thuiskomen"), icoon: "house", vinkjes: ["buitenAan", "rolluikenOpen"] },
-  { sleutel: "dag", naam: nt("Dagstand"), icoon: "sun", vinkjes: ["buitenUit", "rolluikenOpen"] },
-  { sleutel: "allesuit", naam: nt("Alles uit"), icoon: "power", vinkjes: ["alleUit"] },
+  {
+    sleutel: "verlaten",
+    naam: nt("Woning verlaten"),
+    icoon: "homeLeave",
+    vinkjes: ["alleUit", "behalveBuiten"],
+    uitleg: nt("Alle lampen uit. Je kiest zelf of de buitenverlichting meedoet."),
+  },
+  {
+    sleutel: "allesuit",
+    naam: nt("Alles uit"),
+    icoon: "power",
+    vinkjes: ["alleUit"],
+    uitleg: nt("Alle lampen uit, ook de buitenverlichting."),
+  },
 ];
+
+/**
+ * De regel onder een sjabloon. "Behalve de buitenverlichting" hoort daar niet: dat las de eigenaar als een vast
+ * onderdeel, en het is een vinkje in de volgende stap. Zonder buitenlampen valt er niets te kiezen.
+ */
+export const sjabloonUitleg = (sjabloon, lampen, buiten) =>
+  lampen.some((l) => !l.rolluik && buiten(l.entity)) ? t(sjabloon.uitleg) : t("Alle lampen uit");
 
 /** Een favoriet uit een sjabloon. Een vinkje dat op deze kaart niets kan, doet niets. */
 export function favorietUitSjabloon(sjabloon, lampen, buiten) {
@@ -525,7 +546,7 @@ export function favorietUitSjabloon(sjabloon, lampen, buiten) {
   return sjabloon.vinkjes.reduce((f, sleutel) => metVinkje(f, lampen, buiten, sleutel, true), start);
 }
 
-/** De sjablonen die hier iets doen: zonder buitenlampen en rolluiken is er niets om thuis te komen. */
+/** De sjablonen die hier iets doen: op een kaart met alleen rolluiken is er geen lamp om uit te zetten. */
 export const sjablonenVoor = (lampen, buiten) =>
   FAVORIET_SJABLONEN.filter((s) => favorietUitSjabloon(s, lampen, buiten).lampen.length > 0);
 

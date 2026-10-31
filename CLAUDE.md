@@ -938,6 +938,8 @@ je niet hoort terug te draaien zonder het te vragen:
 - **Een vinkje op een favoriet is geen eigen gegeven** (sinds 0.98.0). Of het aan staat, volgt uit de lampen en standen
   (`favorietVinkjes`), en een sjabloon is alleen een naam, een icoon en de vinkjes die alvast aan staan. De server weet er
   niets van.
+- **Er zijn twee sjablonen, met opzet** (sinds 0.98.2): Woning verlaten (buiten niet uit) en Alles uit (buiten ook uit). De
+  rest maakt de klant zelf. "Behalve de buitenverlichting" hoort als vinkje in het scherm, niet als tekst bij het sjabloon.
 - **Buitenverlichting is de ruimte Buiten** (sinds 0.98.1; `isBuiten`, ook Outside). De eigenaar: bij elke installatie komt er
   standaard een ruimte Buiten, met de buitenverlichting erin. Geen gok op de naam van een lamp of op een ruimte als Tuin.
 - **De klant kiest uit onze eigen iconen, niet uit `mdi:`** (sinds 0.98.1). De eigenaar: "mdi icons gebruiken we niet alleen

@@ -549,8 +549,8 @@ describe("kant-en-klare favorieten met vinkjes (0.98.0)", () => {
     const alleenBinnen = L.lampenUit({ lampen: ["light.woon", "light.keuken"] });
     const niemand = () => false;
     assert.deepEqual(L.favorietVinkjes({ lampen: [] }, alleenBinnen, niemand).map((v) => v.sleutel), ["alleUit"]);
-    assert.deepEqual(L.sjablonenVoor(alleenBinnen, niemand).map((s) => s.sleutel), ["verlaten", "slapen", "allesuit"]);
-    assert.deepEqual(L.sjablonenVoor(LAMPEN, buiten).map((s) => s.sleutel), ["verlaten", "slapen", "thuis", "dag", "allesuit"]);
+    assert.deepEqual(L.sjablonenVoor(alleenBinnen, niemand).map((s) => s.sleutel), ["verlaten", "allesuit"]);
+    assert.deepEqual(L.sjablonenVoor(L.lampenUit({ rolluiken: ["cover.a"] }), niemand), []);
   });
 
   it("NIEUW GEDRAG: buiten is de ruimte Buiten of Outside, en verder niets", () => {
@@ -581,16 +581,42 @@ describe("kant-en-klare favorieten met vinkjes (0.98.0)", () => {
     assert.equal(L.isBuiten("light.bestaatniet", null), false);
   });
 
-  it("NIEUW GEDRAG: het sjabloon voor overdag heet Dagstand", () => {
-    assert.equal(sjabloon("dag").naam, "Dagstand");
-    assert.equal(L.favorietUitSjabloon(sjabloon("dag"), LAMPEN, buiten).naam, "Dagstand");
+  it("NIEUW GEDRAG: er zijn twee sjablonen: Woning verlaten en Alles uit", () => {
+    assert.deepEqual(L.FAVORIET_SJABLONEN.map((s) => s.naam), ["Woning verlaten", "Alles uit"]);
+    assert.deepEqual(L.sjablonenVoor(LAMPEN, buiten).map((s) => s.sleutel), ["verlaten", "allesuit"]);
   });
 
-  it("NIEUW GEDRAG: een sjabloon gaat als gewone favoriet naar de server, zonder vinkjes", () => {
-    const f = L.favorietUitSjabloon(sjabloon("slapen"), LAMPEN, buiten);
+  it("REGRESSIEWACHT: Alles uit zet ook buiten uit, en het vinkje behalve staat er uit", () => {
+    const f = L.favorietUitSjabloon(sjabloon("allesuit"), LAMPEN, buiten);
+    assert.equal(f.helderheden["light.tuin"], 0);
+    assert.equal(f.helderheden["light.woon"], 0);
+    assert.equal(f.lampen.includes("cover.a"), false, "alles uit gaat over de lampen");
+    const v = L.favorietVinkjes(f, LAMPEN, buiten).find((x) => x.sleutel === "behalveBuiten");
+    assert.equal(v.aan, false);
+    assert.equal(v.onder, true);
+  });
+
+  it("REGRESSIEWACHT: behalve is een vinkje, ook bij een eigen favoriet", () => {
+    let f = L.metVinkje({ favoriet: true, lampen: [], helderheden: {} }, LAMPEN, buiten, "alleUit", true);
+    assert.equal(vinkjes(f).behalveBuiten, false);
+    f = L.metVinkje(f, LAMPEN, buiten, "behalveBuiten", true);
+    assert.equal(vinkjes(f).behalveBuiten, true);
+    assert.equal(f.lampen.includes("light.tuin"), false);
+  });
+
+  it("NIEUW GEDRAG: de regel onder een sjabloon noemt het vinkje niet, en zonder buitenlampen ook de keuze niet", () => {
+    const tekst = (s, l, b) => L.sjabloonUitleg(sjabloon(s), l, b);
+    assert.equal(tekst("verlaten", LAMPEN, buiten), "Alle lampen uit. Je kiest zelf of de buitenverlichting meedoet.");
+    assert.equal(tekst("allesuit", LAMPEN, buiten), "Alle lampen uit, ook de buitenverlichting.");
+    const binnen = L.lampenUit({ lampen: ["light.woon"] });
+    assert.equal(tekst("verlaten", binnen, () => false), "Alle lampen uit");
+    assert.equal(tekst("allesuit", binnen, () => false), "Alle lampen uit");
+  });
+
+  it("REGRESSIEWACHT: een sjabloon gaat als gewone favoriet naar de server, zonder vinkjes", () => {
+    const f = L.favorietUitSjabloon(sjabloon("allesuit"), LAMPEN, buiten);
     const uit = L.favorietNaarServer(f, () => true);
     assert.deepEqual(Object.keys(uit).sort(), ["helderheden", "icoon", "lampen", "naam"]);
     assert.equal(uit.helderheden["light.tuin"], 0);
-    assert.equal(uit.helderheden["cover.a"], 0);
   });
 });
