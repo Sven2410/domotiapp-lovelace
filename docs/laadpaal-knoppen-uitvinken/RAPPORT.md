@@ -30,8 +30,11 @@ De vraag zei "dan verdwijnt de rij"; alleen het knoppendeel verdwijnt.
 ## Gemeten
 
 In de testinstance op de mini-pc (HA 2026.8.1, nagebootste coach), headless
-Chromium met Playwright en echte muiskliks en tikken. De `?v=` van de geladen
-bundel (`211281140731`) was gelijk aan de sha256 op schijf.
+Chromium met Playwright en echte muiskliks en tikken. Bij de ronde door de editor
+was de `?v=` van de geladen bundel (`211281140731`) gelijk aan de sha256 op schijf.
+De reparatie hieronder kwam daarna; de meting op 393 breed is erna herhaald, en dat
+die de nieuwe code draaide blijkt uit de hoogte die veranderde. De editorronde is
+niet herhaald: de reparatie is één CSS-regel.
 
 Via het echte potlood, de kaartoverlay en de knop Opslaan, telkens daarna herladen:
 
@@ -67,9 +70,8 @@ het raster. Geen paginafouten.
 
 **Proeven:**
 - `tests/js/laadpaal-knoppen-uitvinken.test.mjs`: 13 tests, waarvan 9 NIEUW GEDRAG
-  die falen op de code van vóór deze ronde (`# pass 4`, `# fail 9`), en 4 die daar
-  slagen: de drie als REGRESSIEWACHT gelabelde en "een aangevinkte knop die de
-  coach nu niet aanbiedt".
+  die falen op de code van vóór deze ronde (`# pass 4`, `# fail 9`), en 4
+  REGRESSIEWACHT die daar slagen.
 - JS 2088 groen (was 2075), Python 943 groen.
 - `verify`, `check:registratie`, `check:css`, `check:controls` en `check:taal` groen.
 

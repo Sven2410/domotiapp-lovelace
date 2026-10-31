@@ -28,7 +28,7 @@ describe("modusKnoppen met de keuze van de kaart", () => {
     assert.deepEqual(sleutels(L.modusKnoppen(SELECT("planning"), stand(ALLE), ["snel", "continu", "pauze"])), ["snel", "continu"]);
   });
 
-  it("een aangevinkte knop die de coach nu niet aanbiedt, komt er niet bij", () => {
+  it("REGRESSIEWACHT: een aangevinkte knop die de coach nu niet aanbiedt, komt er niet bij", () => {
     const s = stand({ modus_keuzes: ["snel"], modus_actief: "planning", planning_nu: true });
     assert.deepEqual(sleutels(L.modusKnoppen(SELECT("planning"), s, ["snel", "zon"])), ["snel"]);
   });
