@@ -637,6 +637,13 @@ Een ontlaadbeurt zet je met `POST /api/states/sensor.growatt_omvormer_accu_ontla
 ook een halve breedte. Kies op een batterijkaart altijd `coach_device`: met twee
 batterijen zegt een kaart zonder keuze "Kies in de editor".
 
+Sinds 31 oktober 2026 staat er ook een **nagebootst weerstation** in
+`.ha-dev-config/custom_components/nep_weerstation/` (niet in git), naar de dump in
+`tests/js/vaste-invoer/shelly-blu-weerstation.json`, met ook de twee sensoren die
+allebei "Speed" heten. De dienst `nep_weerstation.zet` zet een waarde
+(`{speed: 8, speed_2: 14, moisture: true}`). De geschiedenis van de luchtdruk is met de
+hand in `home-assistant_v2.db` gezet. Op `kaart-test` staat een view `weerstation`.
+
 Sinds 15 oktober 2026 staat er ook een **nagebootste Miele** in
 `.ha-dev-config/custom_components/nep_miele/` (niet in git), voor de
 programmakaart en de vriezerkaart. Hij speelt de dump uit
@@ -2054,7 +2061,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **eenendertig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **tweeëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -2064,6 +2071,7 @@ met **eenendertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort: afval, en sinds 0.85.0 de robotstofzuiger (klaar, storing, tanks, onderhoud; op de SENSOREN van het apparaat, zie de kop van `meldingen/stofzuiger.py`); het VERSTUREN doet de integratie) |
 | Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*) |
+| Buiten | **weerstation** (sinds 0.91.0: je kiest de temperatuursensor, de rest zoekt hij op het apparaat; temperatuur, wind met een kompas, regen, UV, licht en luchtdruk. Eerst de Shelly BLU Weather Station via BTHome; zie de kop van `weerstation-logica.js`) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`), **printer** (sinds 0.84.0: een printer voor papier via IPP; je kiest de statussensor, de patronen en tellers zoekt hij zelf; de kleur van een patroon op woorden, zie `kantoorprinter-logica.js`; type `domotiapp-kantoorprinter-card`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |
 | Wachtkamer | **infoscherm** (beeldvullend, op een iPad in kioskmodus; één scherm met een sleepbare indeling; sinds 0.73.0 ook **ruimtes boeken**, met een agenda per ruimte, zie SPEC 20.7 en `ruimtes-logica.js`; sinds 0.40.0 heeft de kaart GEEN config: de INSTALLATIE -- weer, energie, lampen, agenda's, kioskaccounts -- staat in de kaarteditor van het beheer en al het andere in het beheer zelf) en **infoscherm-beheer** (voor de receptie, slaat vanzelf op) |
