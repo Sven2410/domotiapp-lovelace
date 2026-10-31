@@ -67,6 +67,14 @@ openbaar. Er staat geen enkel gegeven van de gebruiker in dit antwoord — allee
 een hash die uit een bestand in de installatie komt, en sinds 0.54.0 de keuze
 licht, donker of automatisch.
 
+## Onze iconen in `ha-icon` (0.99.0)
+
+Home Assistant tekent `dai:bed` als er een set `dai` in `window.customIcons` staat, ook in een kaart van een ander,
+zoals de kop van een Bubble Card-pop-up. Die set staat HIER en niet in de bundel: `ha-icon` kijkt één keer, zet bij een
+onbekende naam `_legacy` en probeert het daarna niet meer (gelezen in de frontend van 2026.8). De bundel is 1,4 MB en
+komt dus misschien te laat; de lader draait eerst. De tekeningen zelf staan in `afbeeldingen/iconen.json` (260 kB) en komen
+pas als er een icoon gevraagd wordt. Dat bestand maakt `scripts/iconen-naar-paden.py`.
+
 ## Het thema reist mee (0.54.0)
 
 De keuze voor een licht of donker thema staat bij de integratie, en de kaarten
@@ -101,6 +109,20 @@ from .const import (
     THEMA_GLOBALE,
     THEMAS,
 )
+
+
+# Met de hash van de bundel erachter: de service worker geeft anders een dag lang zijn eigen kopie. Niet als `?v=`:
+# een oudere bundel leest dat veld uit dit antwoord (`src/verouderd.js`), en er hoort er één te staan.
+ICONENSET_JS = """(()=>{
+const url="/domotiapp_lovelace/afbeeldingen/iconen.json?h=@HASH@";
+let lijst;
+const laad=()=>lijst??=fetch(url).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).catch(f=>{lijst=undefined;throw f});
+(globalThis.customIcons??={}).dai={
+getIcon:n=>laad().then(l=>({path:l[n]?.d??"",viewBox:"0 0 24 24"})).catch(()=>({path:""})),
+getIconList:()=>laad().then(l=>Object.entries(l).map(([name,i])=>({name,keywords:i.w}))).catch(()=>[]),
+};
+})();
+"""
 
 
 class KaartLaderView(HomeAssistantView):
@@ -138,6 +160,8 @@ class KaartLaderView(HomeAssistantView):
             text=(
                 f'globalThis.{THEMA_GLOBALE}="{thema}";\n'
                 f'globalThis.{TAAL_GLOBALE}="{taal}";\n'
+                + ICONENSET_JS.replace("@HASH@", hash_nu)
+                +
                 f'import("{CARD_URL_PATH}?v={hash_nu}");\n'
             ),
             content_type="text/javascript",

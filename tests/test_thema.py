@@ -271,3 +271,13 @@ async def test_de_lader_bevat_nog_steeds_precies_een_hash(
     tekst = await _lader(hass, hass_client_no_auth)
     assert tekst.count("?v=") == 1
     assert "&v=" not in tekst
+
+
+async def test_de_lader_zet_onze_iconen_klaar_voor_de_bundel(
+    hass: HomeAssistant, hass_client_no_auth, opgezet
+) -> None:
+    """NIEUW GEDRAG: `ha-icon` probeert een onbekende set niet opnieuw, dus de set staat er voor alles."""
+    tekst = await _lader(hass, hass_client_no_auth)
+    assert tekst.index("customIcons") < tekst.index("import(")
+    assert "/domotiapp_lovelace/afbeeldingen/iconen.json?h=" in tekst
+    assert "@HASH@" not in tekst
