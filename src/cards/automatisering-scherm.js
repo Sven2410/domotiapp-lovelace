@@ -16,6 +16,7 @@ import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
+import { alleSleutels, zoekIconen, zoekMdi } from "../editor/icoon-zoek.js";
 import { t, tn } from "../taal.js";
 import {
   FAVORIET_ICONEN,
@@ -23,17 +24,22 @@ import {
   alleenRolluiken,
   dagNamen,
   favorietNaarServer,
+  favorietUitSjabloon,
+  favorietVinkjes,
   groepenUit,
   helderhedenUit,
+  isBuiten,
   lampStand,
   lampenGefilterd,
   magDimmen,
   metLamp,
   metSoort,
+  metVinkje,
   naarServer,
   nieuweGroep,
   niveauTekst,
   ruimtesVan,
+  sjablonenVoor,
   startHelderheden,
   stapVerschil,
   terugOproepen,
@@ -47,6 +53,22 @@ import {
 
 /** Vanaf zoveel lampen staan de zoekbalk en de ruimtes erboven; bij minder zijn ze alleen in de weg. */
 const FILTER_VANAF = 6;
+
+/** Zoveel iconen per keer in de kiezer; er zijn er ruim zevenduizend. */
+const ICONEN_PER_KEER = 120;
+
+/** De iconenlijst van Home Assistant, één keer per pagina en pas als iemand erom vraagt: hij is 520 kB. */
+let mdiLijst = null;
+const laadMdi = (hass) =>
+  (mdiLijst ??= fetch(hass?.hassUrl?.("/static/mdi/iconList.json") ?? "/static/mdi/iconList.json")
+    .then((r) => {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    })
+    .catch((fout) => {
+      mdiLijst = null;
+      throw fout;
+    }));
 
 const css = /* css */ `
   ${themaCss}
@@ -71,7 +93,7 @@ const css = /* css */ `
   }
 
   .vak {
-    width: min(560px, 100%);
+    width: min(640px, 100%);
     max-height: 100%; overflow-y: auto;
     padding: 14px 14px 16px;
     border-radius: var(--dac-radius);
@@ -83,7 +105,9 @@ const css = /* css */ `
   .vak:focus, .vak:focus-visible { outline: none; }
 
   header { display: flex; align-items: center; gap: 12px; }
-  header b { flex: 1 1 auto; min-width: 0; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+  header b { flex: 1 1 auto; min-width: 0; font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; }
+  .kopicoon { flex: 0 0 auto; display: flex; color: var(--dac-accent-hi); }
+  .kopicoon .icon { width: 20px; height: 20px; }
   .sluit {
     flex: 0 0 auto; width: 36px; height: 36px; padding: 0; cursor: pointer;
     display: grid; place-items: center; border-radius: var(--dac-radius-pill);
@@ -96,7 +120,9 @@ const css = /* css */ `
   .form { display: flex; flex-direction: column; gap: 14px; }
   .groep { display: flex; flex-direction: column; gap: 8px; }
   .form > .groep + .groep { padding-top: 14px; border-top: 1px solid var(--dac-border); }
-  .groep > .kop { font-size: 12.5px; font-weight: 600; color: var(--dac-ink); display: flex; justify-content: space-between; }
+  .groep > .kop { font-size: 13px; font-weight: 700; color: var(--dac-ink); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .groep > .kop .kt { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+  .groep > .kop .icon { width: 16px; height: 16px; --mdc-icon-size: 16px; flex: 0 0 auto; color: var(--dac-accent-hi); }
   .groep > .kop .teller { font-weight: 400; color: var(--dac-ink-2); }
   .opties { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -169,11 +195,11 @@ const css = /* css */ `
      rij onderaan laat zien dat er meer is. */
   .ruimtes {
     display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px;
-    max-height: 102px; overflow-y: auto; scrollbar-width: thin;
+    max-height: max(186px, 30vh); overflow-y: auto; scrollbar-width: thin;
   }
   .ruimtes .keus { padding: 0 12px; }
   .lampenlijst {
-    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: 226px; overflow-y: auto;
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: max(260px, 42vh); overflow-y: auto;
     padding: 8px; border: 1px solid var(--dac-border); border-radius: 12px; scrollbar-width: thin;
   }
   .niets { font-size: 12.5px; color: var(--dac-ink-3); }
@@ -188,7 +214,38 @@ const css = /* css */ `
   .hrij .keus { min-height: 32px; padding: 0 12px; }
   .iconen { display: flex; flex-wrap: wrap; gap: 6px; }
   .iconen .keus { width: 42px; height: 38px; padding: 0; justify-content: center; }
-  .iconen .icon { width: 18px; height: 18px; }
+  .iconen .icon { width: 18px; height: 18px; --mdc-icon-size: 18px; }
+  .iconraster { max-height: 240px; overflow-y: auto; align-content: flex-start; scrollbar-width: thin; }
+
+  .vinkjes { display: flex; flex-direction: column; }
+  .vinkje {
+    display: flex; align-items: center; gap: 11px; min-height: 48px; width: 100%; padding: 6px 2px; text-align: left;
+    cursor: pointer; font: inherit; color: var(--dac-ink); background: none; border: 0; border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vinkje[data-onder="true"] { padding-left: 34px; }
+  @media (hover: hover) { .vinkje:hover { background: var(--dac-hover); } }
+  .vak-v {
+    width: 23px; height: 23px; flex: 0 0 auto; display: grid; place-items: center; color: transparent;
+    border-radius: 7px; background-color: rgba(var(--dac-tint), .05); border: 1.5px solid var(--dac-border-hi);
+  }
+  .vak-v .icon { width: 15px; height: 15px; }
+  .vinkje[aria-checked="true"] .vak-v { background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi); }
+  .vt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .vt b { font-size: 14px; font-weight: 500; }
+  .vt small { font-size: 12px; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .sjablonen { display: flex; flex-direction: column; gap: 6px; }
+  .sjabloon {
+    display: flex; align-items: center; gap: 12px; min-height: 56px; width: 100%; padding: 8px 12px 8px 10px; text-align: left;
+    cursor: pointer; font: inherit; color: var(--dac-ink);
+    border-radius: 12px; background: var(--dac-surface); border: 1px solid var(--dac-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .sjabloon:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
+  .sjabloon > .icon { width: 22px; height: 22px; flex: 0 0 auto; color: var(--dac-accent-hi); }
+  .sjabloon .vt b { font-weight: 600; }
+  .sjabloon .vt small { white-space: normal; }
   .allemaal { min-height: 32px; font-size: 12.5px; }
   .pct {
     height: 32px; padding: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
@@ -270,6 +327,7 @@ class AutomatiseringScherm extends HTMLElement {
       <div class="laag">
         <div class="vak" role="dialog" aria-modal="true" aria-labelledby="kop" tabindex="-1">
           <header>
+            <span class="kopicoon"></span>
             <b id="kop"></b>
             <button class="sluit" type="button">${resolve("close")}</button>
           </header>
@@ -318,10 +376,18 @@ class AutomatiseringScherm extends HTMLElement {
     this.standen_ = {};
     this.foutTekst_ = "";
     this.bezig_ = false;
+    this.icoonOpen_ = false;
+    this.icoonZoek_ = "";
+    this.icoonMax_ = ICONEN_PER_KEER;
+    this.mdi_ = null;
+    this.mdiFout_ = false;
+    // Staat er al een vinkje aan, dan zijn de vinkjes het overzicht en de lampen een stap verder.
+    this.aanpassen_ = !regel.favoriet || !this.vinkjes_().some((v) => v.aan);
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
     if (regel.vakantie) titel = regel.id ? t("Vakantieregel wijzigen") : t("Nieuwe vakantieregel");
     if (regel.favoriet) titel = regel.id ? t("Favoriet wijzigen") : t("Nieuwe favoriet");
     this.$("#kop").textContent = titel;
+    this.$(".kopicoon").innerHTML = resolve(regel.favoriet ? "star" : regel.vakantie ? "beach" : "clock");
     this.$(".sluit").setAttribute("aria-label", t("Sluiten"));
     this.$(".nee").textContent = t("Annuleren");
     this.$(".ja").textContent = t("Opslaan");
@@ -349,6 +415,55 @@ class AutomatiseringScherm extends HTMLElement {
   /** Is er iets om in te stellen? Bij een regel alleen als hij iets aan of open zet. */
   metStand_() {
     return Boolean(this.concept?.favoriet || this.concept?.aan);
+  }
+
+  /** De kop van een blok, altijd vet en met een icoon. */
+  kop_(icoon, tekst, teller = false) {
+    return `<span class="kop"><span class="kt">${resolve(icoon)}<span>${veilig(tekst)}</span></span>${teller ? `<span class="teller"></span>` : ""}</span>`;
+  }
+
+  /** Is dit buitenverlichting? Met de naam die de beheerder op de kaart zette. */
+  buiten_(id) {
+    return isBuiten(id, this.bron.hass, this.bron.naamVanLamp_(id));
+  }
+
+  vinkjes_() {
+    return favorietVinkjes(this.concept, this.bron.lampen_(), (id) => this.buiten_(id), (id) => this.bron.naamVanLamp_(id));
+  }
+
+  /** De eerste stap van een nieuwe favoriet: kant-en-klaar, of zelf maken. */
+  sjablonenHtml_() {
+    const lampen = this.bron.lampen_();
+    const buiten = (id) => this.buiten_(id);
+    const naamVan = (id) => this.bron.naamVanLamp_(id);
+    const rijen = sjablonenVoor(lampen, buiten)
+      .map((s) => {
+        const f = favorietUitSjabloon(s, lampen, buiten);
+        const wat = favorietVinkjes(f, lampen, buiten, naamVan).filter((v) => v.aan).map((v) => v.label).join(" · ");
+        return `<button type="button" class="sjabloon" data-k="sjabloon:${veilig(s.sleutel)}">${resolve(s.icoon)}<span class="vt"><b>${veilig(f.naam)}</b><small>${veilig(wat)}</small></span></button>`;
+      })
+      .join("");
+    return `<div class="groep">
+      ${this.kop_("check", t("Kies een kant-en-klare favoriet"))}
+      <div class="sjablonen">${rijen}</div>
+    </div>
+    <div class="groep">
+      ${this.kop_("pencil", t("Of maak je eigen favoriet"))}
+      <div class="sjablonen"><button type="button" class="sjabloon" data-k="sjabloon:">${resolve("plus")}<span class="vt"><b>${veilig(t("Zelf maken"))}</b><small>${veilig(t("Kies zelf de lampen en standen."))}</small></span></button></div>
+    </div>`;
+  }
+
+  /** De vinkjes van een favoriet. */
+  vinkjesHtml_() {
+    const vinkjes = this.vinkjes_();
+    if (!vinkjes.length) return "";
+    const rijen = vinkjes
+      .map(
+        (v) =>
+          `<button type="button" class="vinkje" role="checkbox" aria-checked="${v.aan}" data-onder="${v.onder}" data-k="vinkje:${v.sleutel}"><span class="vak-v">${resolve("check")}</span><span class="vt"><b>${veilig(v.label)}</b><small>${veilig(v.tekst)}</small></span></button>`
+      )
+      .join("");
+    return `<div class="groep">${this.kop_("check", t("Wat moet er gebeuren?"))}<div class="vinkjes">${rijen}</div></div>`;
   }
 
   /** Krijgt deze lamp een schuif? */
@@ -380,13 +495,19 @@ class AutomatiseringScherm extends HTMLElement {
     let kop = wat === "aan" ? t("Aan") : t("Uit");
     if (alleenRolluiken(lampen)) kop = wat === "aan" ? t("Open") : t("Dicht");
     else if (rolluik) kop = wat === "aan" ? t("Aan of open") : t("Uit of dicht");
-    return `<div class="groep"><span class="kop">${veilig(kop)}</span><div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
+    return `<div class="groep">${this.kop_(wat === "aan" ? (rolluik ? "shutterOpen" : "bulb") : "power", kop)}<div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
   }
 
   teken_() {
     const c = this.concept;
     if (!c) return;
     const form = this.$(".form");
+    this.$(".ja").hidden = Boolean(c.kiezen);
+    if (c.kiezen) {
+      form.innerHTML = this.sjablonenHtml_();
+      this.kijkNa_();
+      return;
+    }
     const focus = this.shadowRoot.activeElement?.dataset?.k;
     const lijstScroll = form.querySelector(".lampenlijst")?.scrollTop ?? 0;
     const ruimteScroll = form.querySelector(".ruimtes")?.scrollTop ?? 0;
@@ -401,30 +522,38 @@ class AutomatiseringScherm extends HTMLElement {
 
     form.innerHTML = `
       <div class="groep">
-        <span class="kop">${veilig(t("Naam"))}</span>
+        ${this.kop_("pencil", t("Naam"))}
         <input class="naam" type="text" data-naam="1" maxlength="60" value="${veilig(c.naam ?? "")}" placeholder="${veilig(c.favoriet ? t("Bijvoorbeeld Woning verlaten") : t("Bijvoorbeeld Avond beneden"))}" aria-label="${veilig(t("Naam"))}" autocomplete="off" />
       </div>
       ${c.favoriet ? this.iconenHtml_() : ""}
-      <div class="groep">
-        <span class="kop"><span>${veilig(this.lijstKop_())}</span><span class="teller"></span></span>
+      ${c.favoriet ? this.vinkjesHtml_() : ""}
+      ${
+        this.aanpassen_
+          ? `<div class="groep">
+        ${this.kop_(this.lijstIcoon_(), this.lijstKop_(), true)}
         ${this.filterHtml_()}
         <div class="lampenlijst"></div>
       </div>
-      ${this.helderheidHtml_()}
+      ${this.helderheidHtml_()}`
+          : `<div class="groep"><button type="button" class="nieuw" data-k="aanpassen:">${resolve("pencil")}${veilig(tn(c.lampen.length, "Lampen aanpassen ({n} gekozen)", "Lampen aanpassen ({n} gekozen)"))}</button></div>`
+      }
+      ${this.voorbeeldHtml_()}
       ${
         c.favoriet
           ? ""
           : `${this.momentHtml_("aan", c.aan)}
       ${this.momentHtml_("uit", c.uit)}
-      <div class="groep"><span class="kop">${veilig(t("Dagen"))}</span><div class="dagen">${dagen}</div></div>`
+      <div class="groep">${this.kop_("calendar", t("Dagen"))}<div class="dagen">${dagen}</div></div>`
       }`;
     // De focus terug op dezelfde knop: alles is opnieuw getekend, en zonder
     // dit begint wie met Tab en Spatie werkt na elke keuze weer bovenaan.
     this.tekenLijst_();
-    form.querySelector(".lampenlijst").scrollTop = lijstScroll;
+    const lijstNu = form.querySelector(".lampenlijst");
+    if (lijstNu) lijstNu.scrollTop = lijstScroll;
+    if (this.icoonOpen_) this.tekenIconen_();
     const ruimtes = form.querySelector(".ruimtes");
     if (ruimtes) ruimtes.scrollTop = ruimteScroll;
-    if (focus) form.querySelector(`[data-k="${focus}"]`)?.focus();
+    if (focus) form.querySelector(`[data-k="${CSS.escape(focus)}"]`)?.focus();
     this.kijkNa_();
   }
 
@@ -443,6 +572,10 @@ class AutomatiseringScherm extends HTMLElement {
     return `<input class="zoek" type="search" data-zoek="1" value="${veilig(this.filter_.zoek)}" placeholder="${veilig(zoek)}" aria-label="${veilig(zoek)}" autocomplete="off" />${rij}<button type="button" class="nieuw allemaal" data-k="allemaal:"></button>`;
   }
 
+  lijstIcoon_() {
+    return this.bron.lampen_().every((l) => l.rolluik) ? "shutter" : "bulb";
+  }
+
   /** De kop boven de lijst: wat er op deze kaart te kiezen is. */
   lijstKop_() {
     const lampen = this.bron.lampen_();
@@ -453,11 +586,57 @@ class AutomatiseringScherm extends HTMLElement {
   /** De iconen van een favoriet: tikken in plaats van zoeken. */
   iconenHtml_() {
     const c = this.concept;
-    const keuzes = FAVORIET_ICONEN.map(
-      (naam) =>
-        `<button type="button" class="keus" role="radio" aria-checked="${c.icoon === naam}" aria-label="${veilig(naam)}" data-k="icoon:${veilig(naam)}">${resolve(naam)}</button>`
-    ).join("");
-    return `<div class="groep"><span class="kop">${veilig(t("Icoon"))}</span><div class="iconen" role="radiogroup" aria-label="${veilig(t("Icoon"))}">${keuzes}</div></div>`;
+    // Een icoon uit de grote lijst staat er ook bij, anders is niet te zien wat er gekozen is.
+    const rij = FAVORIET_ICONEN.includes(c.icoon) ? FAVORIET_ICONEN : [c.icoon, ...FAVORIET_ICONEN];
+    const keuzes = rij.map((naam) => this.icoonKnop_(naam)).join("");
+    const meer = `<button type="button" class="keus" aria-expanded="${this.icoonOpen_}" aria-label="${veilig(t("Alle iconen"))}" title="${veilig(t("Alle iconen"))}" data-k="iconenmeer:">${resolve("search")}</button>`;
+    const paneel = this.icoonOpen_
+      ? `<input class="zoek" type="search" data-icoonzoek="1" value="${veilig(this.icoonZoek_)}" placeholder="${veilig(t("Zoek in alle iconen"))}" aria-label="${veilig(t("Zoek in alle iconen"))}" autocomplete="off" />
+         <div class="iconen iconraster" role="radiogroup" aria-label="${veilig(t("Alle iconen"))}"></div>`
+      : "";
+    return `<div class="groep">${this.kop_("star", t("Icoon"))}<div class="iconen" role="radiogroup" aria-label="${veilig(t("Icoon"))}">${keuzes}${meer}</div>${paneel}</div>`;
+  }
+
+  icoonKnop_(naam) {
+    return `<button type="button" class="keus" role="radio" aria-checked="${this.concept.icoon === naam}" aria-label="${veilig(naam)}" title="${veilig(naam)}" data-k="icoon:${veilig(naam)}">${resolve(naam)}</button>`;
+  }
+
+  /** Eerst onze eigen iconen, dan die van Home Assistant. Alleen het raster: de zoekbalk blijft staan. */
+  tekenIconen_() {
+    const raster = this.$(".iconraster");
+    if (!raster) return;
+    const vraag = this.icoonZoek_.trim();
+    const eigen = vraag ? zoekIconen(vraag)[0][1] : alleSleutels();
+    const alle = [...eigen, ...zoekMdi(this.mdi_ ?? [], vraag).map((naam) => `mdi:${naam}`)];
+    let onder = "";
+    if (alle.length > this.icoonMax_) {
+      onder = `<button type="button" class="nieuw allemaal" style="flex:1 1 100%" data-k="iconenverder:">${veilig(t("Meer tonen ({n} over)", { n: alle.length - this.icoonMax_ }))}</button>`;
+    } else if (!this.mdi_ && !this.mdiFout_) {
+      onder = `<span class="niets" style="flex:1 1 100%">${veilig(t("Iconen laden..."))}</span>`;
+    } else if (!alle.length) {
+      onder = `<span class="niets">${veilig(t("Geen icoon gevonden."))}</span>`;
+    }
+    const fout = this.mdiFout_ ? `<span class="niets" style="flex:1 1 100%">${veilig(t("De iconen van Home Assistant zijn niet geladen; dit is onze eigen set."))}</span>` : "";
+    raster.innerHTML = fout + alle.slice(0, this.icoonMax_).map((naam) => this.icoonKnop_(naam)).join("") + onder;
+  }
+
+  /** De grote lijst pas ophalen als iemand hem opent. */
+  openIconen_() {
+    this.icoonOpen_ = !this.icoonOpen_;
+    if (!this.icoonOpen_ || this.mdi_) return;
+    const bron = this.bron;
+    this.mdiFout_ = false;
+    laadMdi(bron.hass)
+      .then((lijst) => {
+        this.mdi_ = lijst;
+      })
+      .catch((fout) => {
+        console.warn("DomotiApp Automatiseringen: iconenlijst", fout);
+        this.mdiFout_ = true;
+      })
+      .finally(() => {
+        if (this.bron === bron) this.tekenIconen_();
+      });
   }
 
   /** Wat de zoekbalk en de ruimte nu tonen. */
@@ -468,6 +647,7 @@ class AutomatiseringScherm extends HTMLElement {
   /** Alleen de lijst opnieuw: de zoekbalk blijft staan, met de cursor en het toetsenbord. */
   tekenLijst_() {
     const c = this.concept;
+    if (!this.$(".lampenlijst")) return;
     const lijst = this.getoond_();
     const allemaal = this.$(".allemaal");
     if (allemaal) {
@@ -519,7 +699,7 @@ class AutomatiseringScherm extends HTMLElement {
         ? t("Alleen aan en uit, of open en dicht")
         : t("Alleen aan en uit");
     const vast = opAanUit.length
-      ? `<div class="groep"><span class="kop">${veilig(vastKop)}</span><div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
+      ? `<div class="groep">${this.kop_("power", vastKop)}<div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
       : "";
     if (!groepen && !vast) return "";
     const heeftLeeg = this.groepen_.some((g) => !g.lampen.length);
@@ -527,11 +707,17 @@ class AutomatiseringScherm extends HTMLElement {
       this.groepen_.length && !heeftLeeg
         ? `<button type="button" class="nieuw" data-k="nieuw:">${resolve("plus")}${veilig(alleenRolluik ? t("Nieuwe stand") : t("Nieuwe helderheid"))}</button>`
         : "";
-    const aan = Boolean(this.voorbeeld_);
-    const voorbeeld = `<button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
-      ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}`;
     const kop = alleenRolluik ? t("Openingsstand") : c.lampen.some((id) => id.startsWith("cover.")) ? t("Helderheid en stand") : t("Helderheid");
-    return `${groepen ? `<div class="groep"><span class="kop">${veilig(kop)}</span>${groepen}${nieuw}</div>` : ""}${vast}<div class="groep">${voorbeeld}</div>`;
+    return `${groepen ? `<div class="groep">${this.kop_(alleenRolluik ? "shutter" : "sun", kop)}${groepen}${nieuw}</div>` : ""}${vast}`;
+  }
+
+  /** De knop Voorbeeld: los van de schuiven, want hij hoort er ook als die ingeklapt zijn. */
+  voorbeeldHtml_() {
+    const c = this.concept;
+    if (!this.metStand_() || !c.lampen.length) return "";
+    const aan = Boolean(this.voorbeeld_);
+    return `<div class="groep"><button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
+      ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}</div>`;
   }
 
   stuur_(hass, oproepen) {
@@ -597,7 +783,7 @@ class AutomatiseringScherm extends HTMLElement {
 
   /** Opslaan alleen als het kan, en dan zegt de regel eronder waarom niet. */
   kijkNa_() {
-    const reden = waaromNiet(this.concept);
+    const reden = this.concept.kiezen ? null : waaromNiet(this.concept);
     const fout = this.$(".fout");
     const tekst = this.foutTekst_ || reden || "";
     fout.textContent = tekst;
@@ -610,7 +796,18 @@ class AutomatiseringScherm extends HTMLElement {
     const c = this.concept;
     const [soort, ...rest] = knop.dataset.k.split(":");
     const waarde = rest.join(":");
-    if (soort === "lamp" || soort === "weg") this.wisselLamp_(waarde);
+    if (soort === "sjabloon") {
+      this.kiesSjabloon_(waarde);
+      return;
+    }
+    if (soort === "vinkje") {
+      const nu = this.vinkjes_().find((v) => v.sleutel === waarde);
+      this.zetConcept_(metVinkje(c, this.bron.lampen_(), (id) => this.buiten_(id), waarde, !nu?.aan));
+    }
+    else if (soort === "aanpassen") this.aanpassen_ = true;
+    else if (soort === "iconenmeer") this.openIconen_();
+    else if (soort === "iconenverder") this.icoonMax_ += ICONEN_PER_KEER;
+    else if (soort === "lamp" || soort === "weg") this.wisselLamp_(waarde);
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
     else if (soort === "groep") this.actief_ = Number(waarde);
     else if (soort === "nieuw") this.zetGroepen_(nieuweGroep(this.groepen_, this.actief_));
@@ -639,10 +836,33 @@ class AutomatiseringScherm extends HTMLElement {
     this.teken_();
   }
 
+  /** Lampen en standen van buitenaf gezet (een vinkje, een sjabloon): de groepen volgen. */
+  zetConcept_(nieuw) {
+    this.concept = nieuw;
+    this.groepen_ = groepenUit(nieuw.lampen, nieuw.helderheden, (id) => this.inGroep_(id));
+    this.actief_ = Math.max(0, this.groepen_.length - 1);
+  }
+
+  /** De eerste stap is voorbij. Een lege sleutel is zelf maken: dan meteen de lampen. */
+  kiesSjabloon_(sleutel) {
+    const lampen = this.bron.lampen_();
+    const sjabloon = sjablonenVoor(lampen, (id) => this.buiten_(id)).find((s) => s.sleutel === sleutel);
+    const { kiezen, ...blanco } = this.concept;
+    this.zetConcept_(sjabloon ? favorietUitSjabloon(sjabloon, lampen, (id) => this.buiten_(id)) : blanco);
+    this.aanpassen_ = !sjabloon;
+    this.teken_();
+  }
+
   /** Typen en schuiven tekenen niet opnieuw: dat haalt het veld onder je vingers weg. */
   invoer_(veld) {
     const c = this.concept;
     if (!c) return;
+    if (veld.dataset.icoonzoek) {
+      this.icoonZoek_ = veld.value;
+      this.icoonMax_ = ICONEN_PER_KEER;
+      this.tekenIconen_();
+      return;
+    }
     if (veld.dataset.zoek) {
       this.filter_.zoek = veld.value;
       this.tekenLijst_();

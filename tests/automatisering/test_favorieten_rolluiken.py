@@ -230,3 +230,11 @@ async def test_favorieten_overleven_een_herstart(
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.data[DOMAIN][DATA_MOTOR].opslag.favorieten == [f]
+
+
+async def test_de_langste_mdi_naam_past(ws, motor) -> None:
+    """NIEUW GEDRAG: de klant kiest uit alle iconen, en de langste is 46 tekens."""
+    icoon = "mdi:microsoft-xbox-controller-battery-charging"
+    assert len(icoon) == 46
+    f = await _bewaar(ws, icoon=icoon)
+    assert f["icoon"] == icoon

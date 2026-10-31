@@ -26,6 +26,7 @@ from .const import (
     DATA_OPSLAG,
     DATA_WS_REGISTERED,
     MAX_FAVORIETEN,
+    MAX_ICOON,
     MAX_LAMPEN_PER_REGEL,
     MAX_NAAM,
     MAX_REGELS,
@@ -58,7 +59,7 @@ _FAVORIET = vol.Schema(
     {
         vol.Optional("id"): cv.string,
         vol.Required("naam"): vol.All(cv.string, vol.Length(min=1, max=MAX_NAAM)),
-        vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=40)),
+        vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=MAX_ICOON)),
         vol.Required("lampen"): _APPARATEN,
         # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan.
         vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},

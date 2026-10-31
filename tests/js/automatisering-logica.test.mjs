@@ -487,3 +487,91 @@ describe("favorieten (0.97.0)", () => {
   });
 });
 
+
+describe("kant-en-klare favorieten met vinkjes (0.98.0)", () => {
+  const LAMPEN = L.lampenUit({
+    lampen: ["light.woon", "light.keuken", { entity: "light.tuin", name: "Tuin" }, "light.oprit"],
+    rolluiken: ["cover.a", "cover.b"],
+  });
+  const buiten = (id) => id === "light.tuin" || id === "light.oprit";
+  const vinkjes = (f) => Object.fromEntries(L.favorietVinkjes(f, LAMPEN, buiten).map((v) => [v.sleutel, v.aan]));
+  const sjabloon = (s) => L.FAVORIET_SJABLONEN.find((x) => x.sleutel === s);
+
+  it("NIEUW GEDRAG: Woning verlaten is alles uit behalve de buitenverlichting, en die staat er niet in", () => {
+    const f = L.favorietUitSjabloon(sjabloon("verlaten"), LAMPEN, buiten);
+    assert.deepEqual(f.lampen, ["light.woon", "light.keuken"]);
+    assert.deepEqual(f.helderheden, { "light.woon": 0, "light.keuken": 0 });
+    assert.equal(f.naam, "Woning verlaten");
+    assert.equal(f.icoon, "homeLeave");
+    const v = vinkjes(f);
+    assert.equal(v.alleUit, true);
+    assert.equal(v.behalveBuiten, true);
+    assert.equal(v.rolluikenDicht, false);
+    const telling = (x) => L.favorietVinkjes(x, LAMPEN, buiten).find((w) => w.sleutel === "alleUit").tekst;
+    assert.equal(telling(f), "2 lampen");
+    assert.equal(telling(L.metVinkje(f, LAMPEN, buiten, "behalveBuiten", false)), "4 lampen");
+  });
+
+  it("NIEUW GEDRAG: het vinkje behalve uit zet de buitenlampen er alsnog bij, op uit", () => {
+    const f = L.metVinkje(L.favorietUitSjabloon(sjabloon("verlaten"), LAMPEN, buiten), LAMPEN, buiten, "behalveBuiten", false);
+    assert.equal(f.helderheden["light.tuin"], 0);
+    assert.equal(f.helderheden["light.oprit"], 0);
+    assert.equal(vinkjes(f).alleUit, true);
+    assert.equal(vinkjes(f).behalveBuiten, false);
+  });
+
+  it("NIEUW GEDRAG: een vinkje raakt alleen zijn eigen deel; een lamp die je zelf zette blijft staan", () => {
+    const eigen = { favoriet: true, lampen: ["light.woon"], helderheden: { "light.woon": 40 } };
+    const f = L.metVinkje(eigen, LAMPEN, buiten, "rolluikenDicht", true);
+    assert.equal(f.helderheden["light.woon"], 40);
+    assert.equal(f.helderheden["cover.a"], 0);
+    assert.deepEqual(L.metVinkje(f, LAMPEN, buiten, "rolluikenDicht", false).lampen, ["light.woon"]);
+    assert.equal(vinkjes(eigen).alleUit, false);
+  });
+
+  it("NIEUW GEDRAG: dicht en open sluiten elkaar uit, want ze zetten hetzelfde rolluik", () => {
+    let f = L.metVinkje({ lampen: [], helderheden: {} }, LAMPEN, buiten, "rolluikenDicht", true);
+    f = L.metVinkje(f, LAMPEN, buiten, "rolluikenOpen", true);
+    assert.equal(vinkjes(f).rolluikenOpen, true);
+    assert.equal(vinkjes(f).rolluikenDicht, false);
+    assert.equal(f.lampen.filter((id) => id === "cover.a").length, 1);
+  });
+
+  it("NIEUW GEDRAG: de vinkjes volgen uit de favoriet, dus ook een eerder opgeslagen favoriet heeft ze", () => {
+    const opgeslagen = { lampen: ["light.woon", "light.keuken", "cover.a", "cover.b"], helderheden: { "light.woon": 0, "light.keuken": 0, "cover.a": 0, "cover.b": 0 } };
+    const v = vinkjes(opgeslagen);
+    assert.equal(v.alleUit, true);
+    assert.equal(v.behalveBuiten, true);
+    assert.equal(v.rolluikenDicht, true);
+  });
+
+  it("NIEUW GEDRAG: wat op de kaart niets kan, staat er niet; alleen binnenlampen geeft alleen Alle lampen uit", () => {
+    const alleenBinnen = L.lampenUit({ lampen: ["light.woon", "light.keuken"] });
+    const niemand = () => false;
+    assert.deepEqual(L.favorietVinkjes({ lampen: [] }, alleenBinnen, niemand).map((v) => v.sleutel), ["alleUit"]);
+    assert.deepEqual(L.sjablonenVoor(alleenBinnen, niemand).map((s) => s.sleutel), ["verlaten", "slapen", "allesuit"]);
+    assert.deepEqual(L.sjablonenVoor(LAMPEN, buiten).map((s) => s.sleutel), ["verlaten", "slapen", "thuis", "ochtend", "allesuit"]);
+  });
+
+  it("NIEUW GEDRAG: buiten herkent de verdieping, de ruimte en de naam, zonder de rest mee te nemen", () => {
+    const hass = {
+      floors: { b: { floor_id: "b", name: "Outside" }, e: { floor_id: "e", name: "Begane grond" } },
+      areas: { porch: { name: "Entrance", floor_id: "b" }, tuin: { name: "Achtertuin" }, keuken: { name: "Keuken", floor_id: "e" } },
+      entities: { "light.a": { area_id: "porch" }, "light.b": { area_id: "tuin" }, "light.c": { area_id: "keuken" }, "light.d": { device_id: "x" } },
+      devices: { x: { area_id: "keuken" } },
+    };
+    assert.equal(L.isBuiten("light.a", hass), true);
+    assert.equal(L.isBuiten("light.b", hass), true);
+    assert.equal(L.isBuiten("light.c", hass), false);
+    assert.equal(L.isBuiten("light.d", hass, "Buitenlamp"), true);
+    assert.equal(L.isBuiten("light.d", hass, "Plafondlamp"), false);
+  });
+
+  it("NIEUW GEDRAG: een sjabloon gaat als gewone favoriet naar de server, zonder vinkjes", () => {
+    const f = L.favorietUitSjabloon(sjabloon("slapen"), LAMPEN, buiten);
+    const uit = L.favorietNaarServer(f, () => true);
+    assert.deepEqual(Object.keys(uit).sort(), ["helderheden", "icoon", "lampen", "naam"]);
+    assert.equal(uit.helderheden["light.tuin"], 0);
+    assert.equal(uit.helderheden["cover.a"], 0);
+  });
+});
