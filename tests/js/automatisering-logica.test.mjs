@@ -349,3 +349,141 @@ describe("het voorbeeld (0.95.0)", () => {
     assert.deepEqual(L.terugOproepen({}), []);
   });
 });
+
+describe("de naam en het overzicht (0.96.0)", () => {
+  const lampen = [];
+  const naamVan = (id) => id.replace("light.", "");
+
+  it("NIEUW GEDRAG: tot drie lampen op naam, daarna een telling", () => {
+    assert.equal(L.lampenKort({ lampen: ["light.a", "light.b", "light.c"] }, lampen, naamVan), "a, b, c");
+    assert.equal(L.lampenKort({ lampen: ["light.a", "light.b", "light.c", "light.d"] }, lampen, naamVan), "a, b en 2 andere");
+    assert.equal(
+      L.lampenKort({ lampen: Array.from({ length: 55 }, (_, i) => `light.l${i}`) }, lampen, naamVan),
+      "l0, l1 en 53 andere"
+    );
+  });
+
+  it("NIEUW GEDRAG: de kop is de naam, en zonder naam de lampen", () => {
+    assert.equal(L.regelKop({ naam: "Avond beneden", lampen: ["light.a"] }, lampen, naamVan), "Avond beneden");
+    assert.equal(L.regelKop({ naam: "   ", lampen: ["light.a"] }, lampen, naamVan), "a");
+    assert.equal(L.regelKop({ lampen: ["light.a"] }, lampen, naamVan), "a");
+  });
+
+  it("NIEUW GEDRAG: de naam gaat mee naar de server, en een lege niet", () => {
+    const basis = { lampen: ["light.a"], dagen: [0], aan: null, uit: { soort: "tijd", tijd: "23:00" } };
+    assert.equal(L.naarServer({ ...basis, naam: "  Avond beneden " }).naam, "Avond beneden");
+    assert.equal("naam" in L.naarServer({ ...basis, naam: "  " }), false);
+    assert.equal("naam" in L.naarServer(basis), false);
+  });
+});
+
+describe("rolluiken (0.97.0)", () => {
+  const KAART_R = {
+    lampen: ["light.a"],
+    rolluiken: ["cover.x", { entity: "cover.y", name: "Serre" }, "light.geen", "cover.x"],
+    omgekeerd: ["cover.y"],
+  };
+
+  it("NIEUW GEDRAG: rolluiken op de kaart, met naam en omgekeerde motor", () => {
+    assert.deepEqual(L.lampenUit(KAART_R), [
+      { entity: "light.a", naam: "", aanUit: false },
+      { entity: "cover.x", naam: "", rolluik: true, omgekeerd: false },
+      { entity: "cover.y", naam: "Serre", rolluik: true, omgekeerd: true },
+    ]);
+  });
+
+  it("NIEUW GEDRAG: een schuif alleen als het rolluik zijn stand kent", () => {
+    assert.equal(L.magDimmen("cover.x", [], { attributes: { supported_features: 15 } }), true);
+    assert.equal(L.magDimmen("cover.x", [], { attributes: { supported_features: 11 } }), false);
+    assert.equal(L.magDimmen("cover.x", [], undefined), true);
+  });
+
+  it("NIEUW GEDRAG: de rij zegt open en dicht bij alleen rolluiken, en aan en uit als er ook een lamp is", () => {
+    const basis = regel({ lampen: ["cover.x"], aan: { soort: "tijd", tijd: "08:00" }, uit: { soort: "tijd", tijd: "20:00" } });
+    assert.match(L.regelTekst(basis), /^Open om 08:00 · dicht om 20:00/);
+    assert.match(L.regelTekst({ ...basis, aan: null }), /^Dicht om 20:00/);
+    assert.match(L.regelTekst({ ...basis, lampen: ["cover.x", "light.a"] }), /^Aan om 08:00 · uit om 20:00/);
+  });
+
+  it("NIEUW GEDRAG: het voorbeeld gebruikt de diensten van een rolluik, ook omgekeerd", () => {
+    assert.deepEqual(L.voorbeeldOproepen({ "cover.x": 40, "cover.y": 40 }, {}, ["cover.y"]), [
+      ["cover", "set_cover_position", { entity_id: ["cover.x"], position: 40 }],
+      ["cover", "set_cover_position", { entity_id: ["cover.y"], position: 60 }],
+    ]);
+    assert.deepEqual(L.voorbeeldOproepen({ "cover.x": 0, "cover.y": 0 }, {}, ["cover.y"]), [
+      ["cover", "close_cover", { entity_id: ["cover.x"] }],
+      ["cover", "open_cover", { entity_id: ["cover.y"] }],
+    ]);
+    assert.deepEqual(L.voorbeeldOproepen({ "cover.x": 100, "cover.z": null }), [
+      ["cover", "open_cover", { entity_id: ["cover.x", "cover.z"] }],
+    ]);
+  });
+
+  it("NIEUW GEDRAG: terug naar de stand zoals Home Assistant hem meldde", () => {
+    const op = (state, attributes = {}) => ({ entity_id: "cover.x", state, attributes });
+    assert.deepEqual(L.lampStand(op("open", { current_position: 70 })), { rolluik: true, aan: true, positie: 70 });
+    assert.deepEqual(L.lampStand(op("closed")), { rolluik: true, aan: false, positie: null });
+    assert.deepEqual(
+      L.terugOproepen({
+        "cover.x": { rolluik: true, aan: true, positie: 70 },
+        "cover.y": { rolluik: true, aan: true, positie: null },
+        "cover.z": { rolluik: true, aan: false, positie: null },
+      }),
+      [
+        ["cover", "set_cover_position", { entity_id: ["cover.x"], position: 70 }],
+        ["cover", "open_cover", { entity_id: ["cover.y"] }],
+        ["cover", "close_cover", { entity_id: ["cover.z"] }],
+      ]
+    );
+  });
+
+  it("NIEUW GEDRAG: de stand op de knop: 0 is uit, of dicht bij alleen rolluiken", () => {
+    assert.equal(L.niveauTekst(50), "50%");
+    assert.equal(L.niveauTekst(0), "Uit");
+    assert.equal(L.niveauTekst(0, true), "Dicht");
+    assert.equal(L.alleenRolluiken(["cover.x"]), true);
+    assert.equal(L.alleenRolluiken(["cover.x", "light.a"]), false);
+    assert.equal(L.alleenRolluiken([]), false);
+  });
+});
+
+describe("favorieten (0.97.0)", () => {
+  const states = { "light.a": { state: "on", attributes: {} }, "light.b": { state: "off", attributes: {} } };
+
+  it("NIEUW GEDRAG: een favoriet heeft een naam nodig en een lamp, maar geen moment of dagen", () => {
+    const f = L.nieuweFavoriet([{ entity: "light.a" }]);
+    assert.equal(L.waaromNiet(f), "Geef de favoriet een naam.");
+    assert.equal(L.waaromNiet({ ...f, naam: "  " }), "Geef de favoriet een naam.");
+    assert.equal(L.waaromNiet({ ...f, naam: "Slapen" }), null);
+    assert.equal(L.waaromNiet({ ...f, naam: "Slapen", lampen: [] }), "Kies minstens één lamp.");
+  });
+
+  it("NIEUW GEDRAG: naar de server: 0 blijft, en iets zonder schuif op een stand is gewoon aan", () => {
+    const uit = L.favorietNaarServer(
+      { id: "f", naam: " Slapen ", icoon: "sleep", lampen: ["light.a", "light.b", "light.c", "light.d"], helderheden: { "light.a": 0, "light.b": 40, "light.c": 0 } },
+      (id) => id !== "light.c" && id !== "light.d"
+    );
+    assert.deepEqual(uit, {
+      id: "f",
+      naam: "Slapen",
+      icoon: "sleep",
+      lampen: ["light.a", "light.b", "light.c", "light.d"],
+      helderheden: { "light.a": 0, "light.b": 40, "light.c": 0 },
+    });
+  });
+
+  it("NIEUW GEDRAG: het voorbeeld zet 0 uit, ook bij een lamp zonder schuif", () => {
+    const doelen = L.voorbeeldDoelen(["light.a", "light.b"], { "light.a": 0, "light.b": 40 }, () => false, states);
+    assert.deepEqual(doelen, { "light.a": 0, "light.b": null });
+    assert.deepEqual(L.voorbeeldOproepen(doelen), [
+      ["light", "turn_off", { entity_id: ["light.a"] }],
+      ["light", "turn_on", { entity_id: ["light.b"] }],
+    ]);
+  });
+
+  it("NIEUW GEDRAG: op de automatiseringskaart alleen wat een lamp van die kaart heeft", () => {
+    const f = [{ id: "1", lampen: ["light.a"] }, { id: "2", lampen: ["light.z"] }];
+    assert.deepEqual(L.favorietenVoor(f, [{ entity: "light.a" }]).map((x) => x.id), ["1"]);
+  });
+});
+

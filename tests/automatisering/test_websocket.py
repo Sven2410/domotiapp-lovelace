@@ -92,7 +92,7 @@ async def test_verwijderen_en_uitzetten(ws, opgezet) -> None:
 async def test_het_abonnement_krijgt_elke_wijziging(ws, opgezet) -> None:
     assert (await _vraag(ws, type=f"{T}/subscribe"))["success"]
     eerste = await ws.receive_json()
-    assert eerste["event"] == {"regels": [], "vakantie": False, "gekoppeld": None}
+    assert eerste["event"] == {"regels": [], "favorieten": [], "vakantie": False, "gekoppeld": None}
     await ws.send_json_auto_id({"type": f"{T}/vakantie", "aan": True})
     gezien = [await ws.receive_json() for _ in range(2)]
     gebeurtenis = next(g for g in gezien if g["type"] == "event")
@@ -125,3 +125,31 @@ async def test_regressiewacht_een_kaart_van_voor_093_stuurt_een_helderheid(ws, o
     assert (await _vraag(ws, type=f"{T}/opslaan", regel=regel(helderheid=35)))["success"]
     assert opgezet.opslag.regels[0]["helderheid"] == 35
     assert "helderheden" not in opgezet.opslag.regels[0]
+
+
+async def test_de_naam_wordt_bewaard_en_kan_weer_weg(ws, opgezet) -> None:
+    """NIEUW GEDRAG (0.96.0)."""
+    regel = {"lampen": ["light.woonkamer"], "aan": {"soort": "tijd", "tijd": "18:00"}, "dagen": [0]}
+    antwoord = await _vraag(ws, type=f"{DOMAIN}/automatisering/opslaan", regel={**regel, "naam": "Avond beneden"})
+    assert antwoord["success"]
+    gemaakt = antwoord["result"]["regel"]
+    assert gemaakt["naam"] == "Avond beneden"
+    antwoord = await _vraag(ws, type=f"{DOMAIN}/automatisering/opslaan", regel={**regel, "id": gemaakt["id"]})
+    assert "naam" not in antwoord["result"]["regel"]
+
+
+async def test_een_te_lange_naam_komt_er_niet_in(ws, opgezet) -> None:
+    """REGRESSIEWACHT (0.96.0): de oude server weigerde elke naam, deze alleen een te lange."""
+    regel = {"lampen": ["light.woonkamer"], "aan": {"soort": "tijd", "tijd": "18:00"}, "dagen": [0], "naam": "x" * 61}
+    antwoord = await _vraag(ws, type=f"{DOMAIN}/automatisering/opslaan", regel=regel)
+    assert not antwoord["success"]
+
+
+async def test_een_regel_mag_meer_dan_vijftig_lampen_hebben(ws, opgezet) -> None:
+    """NIEUW GEDRAG (0.96.0): een kaart kan er 55 hebben; de lamp-toets blijft gelden."""
+    lampen = [f"light.lamp_{i}" for i in range(55)]
+    regel = {"lampen": lampen, "aan": {"soort": "tijd", "tijd": "18:00"}, "dagen": [0]}
+    antwoord = await _vraag(ws, type=f"{DOMAIN}/automatisering/opslaan", regel=regel)
+    # Niet door de vorm geweigerd, maar omdat deze lampen niet op de kaart staan.
+    assert antwoord["error"]["code"] == "not_allowed"
+

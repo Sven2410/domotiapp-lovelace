@@ -25,6 +25,9 @@ from .const import (
     DATA_MOTOR,
     DATA_OPSLAG,
     DATA_WS_REGISTERED,
+    MAX_FAVORIETEN,
+    MAX_LAMPEN_PER_REGEL,
+    MAX_NAAM,
     MAX_REGELS,
     MAX_VERSCHIL_MIN,
     SOORT_TIJD,
@@ -48,13 +51,28 @@ _MOMENT = vol.Any(
     ),
 )
 
+_APPARAAT = vol.All(cv.string, vol.Match(r"^(light|cover)\."))
+_APPARATEN = vol.All([_APPARAAT], vol.Length(min=1, max=MAX_LAMPEN_PER_REGEL))
+
+_FAVORIET = vol.Schema(
+    {
+        vol.Optional("id"): cv.string,
+        vol.Required("naam"): vol.All(cv.string, vol.Length(min=1, max=MAX_NAAM)),
+        vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=40)),
+        vol.Required("lampen"): _APPARATEN,
+        # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan.
+        vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},
+    }
+)
+
 _REGEL = vol.Schema(
     {
         # Geen `id` als sleutel op het bericht zelf (valkuil 41); binnen de regel kan dat wel.
         vol.Optional("id"): cv.string,
-        vol.Required("lampen"): vol.All([vol.All(cv.string, vol.Match(r"^light\."))], vol.Length(min=1, max=50)),
+        vol.Optional("naam"): vol.All(cv.string, vol.Length(max=MAX_NAAM)),
+        vol.Required("lampen"): _APPARATEN,
         vol.Optional("helderheid", default=100): vol.All(int, vol.Range(min=1, max=100)),
-        vol.Optional("helderheden"): {vol.All(cv.string, vol.Match(r"^light\.")): vol.All(int, vol.Range(min=1, max=100))},
+        vol.Optional("helderheden"): {_APPARAAT: vol.All(int, vol.Range(min=1, max=100))},
         vol.Optional("aan"): _MOMENT,
         vol.Optional("uit"): _MOMENT,
         vol.Required("dagen"): vol.All([vol.All(int, vol.Range(min=0, max=6))], vol.Length(min=1, max=7), vol.Unique()),
@@ -74,6 +92,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_verwijder)
     websocket_api.async_register_command(hass, ws_actief)
     websocket_api.async_register_command(hass, ws_vakantie)
+    websocket_api.async_register_command(hass, ws_favoriet_opslaan)
+    websocket_api.async_register_command(hass, ws_favoriet_verwijder)
+    websocket_api.async_register_command(hass, ws_favoriet_uitvoeren)
     data[DATA_WS_REGISTERED] = True
 
 
@@ -85,6 +106,7 @@ def stand(hass: HomeAssistant) -> dict[str, Any]:
     motor = data.get(DATA_MOTOR)
     return {
         "regels": opslag.regels if opslag else [],
+        "favorieten": opslag.favorieten if opslag else [],
         "vakantie": opslag.vakantie if opslag else False,
         "gekoppeld": motor.gekoppeld if motor else None,
     }
@@ -216,3 +238,65 @@ async def ws_vakantie(hass: HomeAssistant, connection, msg: dict[str, Any]) -> N
         return
     await motor.async_zet_vakantie(msg["aan"])
     connection.send_result(msg["id"])
+
+
+# ------------------------------------------------------------------ de favorieten
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/automatisering/favoriet_opslaan", vol.Required("favoriet"): _FAVORIET}
+)
+@callback
+def ws_favoriet_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    motor = _motor_of_fout(hass, connection, msg)
+    if motor is None:
+        return
+    nieuw = msg["favoriet"]
+    bestaand = next((f for f in motor.opslag.favorieten if f["id"] == nieuw.get("id")), None)
+    # Dezelfde grens als bij een regel: wat al in deze favoriet stond, mag blijven.
+    mag = motor.toegestaan | set(bestaand["lampen"] if bestaand else [])
+    if not set(nieuw["lampen"]) <= mag:
+        connection.send_error(msg["id"], "not_allowed", t(hass, "Deze lamp staat niet op de kaart"))
+        return
+    if bestaand is None and len(motor.opslag.favorieten) >= MAX_FAVORIETEN:
+        connection.send_error(msg["id"], "not_allowed", t(hass, "Er staan te veel favorieten"))
+        return
+    favoriet = {
+        **nieuw,
+        "helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]},
+        "id": bestaand["id"] if bestaand else uuid4().hex[:12],
+    }
+    motor.opslag.zet_favoriet(favoriet)
+    async_meld_aan_abonnees(hass)
+    connection.send_result(msg["id"], {"favoriet": favoriet})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/automatisering/favoriet_verwijder", vol.Required("favoriet"): cv.string}
+)
+@callback
+def ws_favoriet_verwijder(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    motor = _motor_of_fout(hass, connection, msg)
+    if motor is None:
+        return
+    if not motor.opslag.verwijder_favoriet(msg["favoriet"]):
+        connection.send_error(msg["id"], "not_found", t(hass, "Deze favoriet bestaat niet meer"))
+        return
+    async_meld_aan_abonnees(hass)
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/automatisering/favoriet_uitvoeren", vol.Required("favoriet"): cv.string}
+)
+@callback
+def ws_favoriet_uitvoeren(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    motor = _motor_of_fout(hass, connection, msg)
+    if motor is None:
+        return
+    favoriet = next((f for f in motor.opslag.favorieten if f["id"] == msg["favoriet"]), None)
+    if favoriet is None:
+        connection.send_error(msg["id"], "not_found", t(hass, "Deze favoriet bestaat niet meer"))
+        return
+    connection.send_result(msg["id"], {"geschakeld": motor.voer_favoriet_uit(favoriet)})
+

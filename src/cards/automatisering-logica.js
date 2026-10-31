@@ -6,7 +6,8 @@
  * begint daar ook op maandag, met 0.
  */
 
-import { locale, nt, t } from "../taal.js";
+import { locale, nt, t, tn } from "../taal.js";
+import { dienstVoor, keerPositie } from "./cover-logica.js";
 
 export const SOORTEN = [
   { sleutel: "tijd", label: nt("Tijd"), icoon: "clock" },
@@ -20,19 +21,48 @@ export const VERSCHIL_MAX = 180;
 
 const ALLE_DAGEN = [0, 1, 2, 3, 4, 5, 6];
 
-/** De lampen op de kaart als `{entity, naam}`, zonder dubbele en zonder wat geen lamp is. */
+/**
+ * De lampen en rolluiken op de kaart als `{entity, naam}`, zonder dubbele en zonder wat er
+ * niet hoort. De eigenaar, 31 oktober 2026: "rolluiken mogen er ook in". Aan is dan open op
+ * een stand (100 is helemaal open), uit is dicht.
+ */
 export function lampenUit(config) {
   const uit = new Map();
-  for (const item of Array.isArray(config?.lampen) ? config.lampen : []) {
+  const lijstVan = (x) => (Array.isArray(x) ? x : []);
+  for (const item of lijstVan(config?.lampen)) {
     const entity = typeof item === "string" ? item : item?.entity;
     if (typeof entity !== "string" || !entity.startsWith("light.") || uit.has(entity)) continue;
     uit.set(entity, {
       entity,
       naam: typeof item === "object" ? String(item.name ?? "") : "",
-      aanUit: Array.isArray(config.alleen_aan_uit) && config.alleen_aan_uit.includes(entity),
+      aanUit: lijstVan(config.alleen_aan_uit).includes(entity),
+    });
+  }
+  for (const item of lijstVan(config?.rolluiken)) {
+    const entity = typeof item === "string" ? item : item?.entity;
+    if (typeof entity !== "string" || !entity.startsWith("cover.") || uit.has(entity)) continue;
+    uit.set(entity, {
+      entity,
+      naam: typeof item === "object" ? String(item.name ?? "") : "",
+      rolluik: true,
+      omgekeerd: lijstVan(config.omgekeerd).includes(entity),
     });
   }
   return [...uit.values()];
+}
+
+export const isRolluik = (entity) => String(entity).startsWith("cover.");
+
+/** Zijn dit alleen rolluiken? Dan zegt het scherm open en dicht in plaats van aan en uit. */
+export const alleenRolluiken = (lampen) => Boolean(lampen?.length) && lampen.every(isRolluik);
+
+/** Een stand op de knop: "50%", of "Uit" en "Dicht" bij 0. */
+export const niveauTekst = (pct, rolluiken = false) => (pct === 0 ? (rolluiken ? t("Dicht") : t("Uit")) : `${pct}%`);
+
+/** De favorieten die op deze kaart horen: minstens één lamp of rolluik van de kaart. */
+export function favorietenVoor(favorieten, lampen) {
+  const hier = new Set(lampen.map((l) => l.entity));
+  return (favorieten ?? []).filter((f) => f.lampen?.some((l) => hier.has(l)));
 }
 
 /**
@@ -56,6 +86,8 @@ export function kanDimmen(st) {
  * die niet kunnen dimmen meldt wel `brightness`.
  */
 export function magDimmen(entity, lampen, st) {
+  // Een rolluik dat zijn stand niet kent, gaat alleen open en dicht. Dat zijn er veel.
+  if (isRolluik(entity)) return !st || (Number(st.attributes?.supported_features) & 4) === 4;
   return kanDimmen(st) && !lampen.find((l) => l.entity === entity)?.aanUit;
 }
 
@@ -177,9 +209,12 @@ export function nieuweGroep(groepen, actief) {
 
 const weg = (st) => !st || st.state === "unavailable" || st.state === "unknown";
 
-/** Hoe een lamp nu staat, om straks terug te zetten; null als hij er niet is. */
+/** Hoe een lamp of rolluik nu staat, om straks terug te zetten; null als hij er niet is. */
 export function lampStand(st) {
   if (weg(st)) return null;
+  if (isRolluik(st.entity_id)) {
+    return { rolluik: true, aan: st.state !== "closed" && st.state !== "closing", positie: st.attributes?.current_position ?? null };
+  }
   return { aan: st.state === "on", helderheid: st.state === "on" ? st.attributes?.brightness ?? null : null };
 }
 
@@ -191,23 +226,32 @@ export function voorbeeldDoelen(lampen, helderheden, dimt, states) {
   const doelen = {};
   for (const lamp of lampen ?? []) {
     if (weg(states?.[lamp])) continue;
-    doelen[lamp] = dimt(lamp) ? helderheden?.[lamp] ?? 100 : null;
+    const pct = helderheden?.[lamp] ?? 100;
+    // 0 is uit of dicht, ook voor iets zonder schuif.
+    doelen[lamp] = pct === 0 ? 0 : dimt(lamp) ? pct : null;
   }
   return doelen;
 }
 
 /** Eén aanroep per waarde, alleen voor wat anders is dan `gezet`. */
-export function voorbeeldOproepen(doelen, gezet = {}) {
-  const perWaarde = new Map();
-  for (const [lamp, pct] of Object.entries(doelen)) {
-    if (lamp in gezet && gezet[lamp] === pct) continue;
-    perWaarde.set(pct, [...(perWaarde.get(pct) ?? []), lamp]);
+export function voorbeeldOproepen(doelen, gezet = {}, omgekeerd = []) {
+  const samen = new Map();
+  const bij = (domein, dienst, extra, id) => {
+    const sleutel = JSON.stringify([domein, dienst, extra]);
+    if (!samen.has(sleutel)) samen.set(sleutel, [domein, dienst, extra, []]);
+    samen.get(sleutel)[3].push(id);
+  };
+  for (const [id, pct] of Object.entries(doelen)) {
+    if (id in gezet && gezet[id] === pct) continue;
+    if (isRolluik(id)) {
+      const anders = omgekeerd.includes(id);
+      if (pct === 0) bij("cover", dienstVoor("dicht", anders), {}, id);
+      else if (pct == null || pct === 100) bij("cover", dienstVoor("open", anders), {}, id);
+      else bij("cover", "set_cover_position", { position: keerPositie(pct, anders) }, id);
+    } else if (pct === 0) bij("light", "turn_off", {}, id);
+    else bij("light", "turn_on", pct == null ? {} : { brightness_pct: pct }, id);
   }
-  return [...perWaarde].map(([pct, ids]) => [
-    "light",
-    "turn_on",
-    { entity_id: ids, ...(pct == null ? {} : { brightness_pct: pct }) },
-  ]);
+  return [...samen.values()].map(([domein, dienst, extra, ids]) => [domein, dienst, { entity_id: ids, ...extra }]);
 }
 
 /**
@@ -218,14 +262,20 @@ export function voorbeeldOproepen(doelen, gezet = {}) {
 export function terugOproepen(standen) {
   const uit = [];
   const perWaarde = new Map();
+  const rolluiken = [];
   for (const [lamp, stand] of Object.entries(standen)) {
     if (!stand) continue;
-    if (!stand.aan) uit.push(lamp);
+    // De stand zoals Home Assistant hem meldde, dus zonder omkeren.
+    if (stand.rolluik) {
+      if (stand.positie != null) rolluiken.push(["cover", "set_cover_position", { entity_id: [lamp], position: stand.positie }]);
+      else rolluiken.push(["cover", stand.aan ? "open_cover" : "close_cover", { entity_id: [lamp] }]);
+    } else if (!stand.aan) uit.push(lamp);
     else if (stand.helderheid != null) perWaarde.set(stand.helderheid, [...(perWaarde.get(stand.helderheid) ?? []), lamp]);
   }
   return [
     ...(uit.length ? [["light", "turn_off", { entity_id: uit }]] : []),
     ...[...perWaarde].map(([brightness, ids]) => ["light", "turn_on", { entity_id: ids, brightness }]),
+    ...rolluiken,
   ];
 }
 
@@ -285,8 +335,16 @@ export function helderheidTekst(regel) {
 /** De regel in één zin: "Aan bij zonsondergang · uit om 23:00 · 60% · Elke dag". */
 export function regelTekst(regel) {
   const delen = [];
-  if (regel.aan) delen.push(t("Aan {moment}", { moment: momentTekst(regel.aan) }));
-  if (regel.uit) delen.push((regel.aan ? t("uit {moment}", { moment: momentTekst(regel.uit) }) : t("Uit {moment}", { moment: momentTekst(regel.uit) })));
+  const rolluik = alleenRolluiken(regel.lampen);
+  if (regel.aan) {
+    const moment = momentTekst(regel.aan);
+    delen.push(rolluik ? t("Open {moment}", { moment }) : t("Aan {moment}", { moment }));
+  }
+  if (regel.uit) {
+    const moment = momentTekst(regel.uit);
+    if (rolluik) delen.push(regel.aan ? t("dicht {moment}", { moment }) : t("Dicht {moment}", { moment }));
+    else delen.push(regel.aan ? t("uit {moment}", { moment }) : t("Uit {moment}", { moment }));
+  }
   if (regel.aan) {
     const tekst = helderheidTekst(regel);
     if (tekst) delen.push(tekst);
@@ -302,6 +360,23 @@ export function lampenTekst(regel, lampen, naamVan = (id) => id) {
     .join(", ");
 }
 
+/**
+ * De lampen kort: tot drie op naam, daarna een telling. De eigenaar, 31 oktober 2026:
+ * "Heb je veel lampen geselecteerd dan wordt het heel on overzichtelijk in het overzicht".
+ */
+export function lampenKort(regel, lampen, naamVan = (id) => id, max = 3) {
+  const ids = regel.lampen ?? [];
+  if (ids.length <= max) return lampenTekst(regel, lampen, naamVan);
+  const kop = lampenTekst({ lampen: ids.slice(0, max - 1) }, lampen, naamVan);
+  const rest = ids.length - (max - 1);
+  return tn(rest, "{kop} en {n} andere", "{kop} en {n} andere", { kop });
+}
+
+/** De kop van een rij: de naam die de klant gaf, en anders de lampen. */
+export function regelKop(regel, lampen, naamVan = (id) => id) {
+  return String(regel.naam ?? "").trim() || lampenKort(regel, lampen, naamVan);
+}
+
 /** Een nieuwe regel: wat de meeste mensen willen, en één lamp staat er meteen in. */
 export const nieuweRegel = (lampen, vakantie = false) => ({
   lampen: lampen.length === 1 ? [lampen[0].entity] : [],
@@ -311,6 +386,39 @@ export const nieuweRegel = (lampen, vakantie = false) => ({
   dagen: [...ALLE_DAGEN],
   vakantie: Boolean(vakantie),
 });
+
+/**
+ * De iconen om uit te kiezen bij een favoriet. Een kort rijtje van ons eigen: de klant zoekt
+ * hier geen icoon op, hij tikt er een aan. Dezelfde eerste twee als de knoppen die er bij de
+ * eerste klant al stonden.
+ */
+export const FAVORIET_ICONEN = ["star", "homeLeave", "sleep", "bulb", "moon", "sun", "sofa", "tv", "door", "key", "shutter"];
+
+/** Een nieuwe favoriet: nog geen moment en geen dagen, want hij gaat op een tik. */
+export const nieuweFavoriet = (lampen) => ({
+  favoriet: true,
+  naam: "",
+  icoon: FAVORIET_ICONEN[0],
+  lampen: lampen.length === 1 ? [lampen[0].entity] : [],
+  helderheden: lampen.length === 1 ? { [lampen[0].entity]: 100 } : {},
+});
+
+/** Wat er naar de server gaat. 0 is uit of dicht; iets zonder schuif op een andere stand is gewoon aan. */
+export function favorietNaarServer(favoriet, dimt = () => true) {
+  const per = favoriet.helderheden ?? {};
+  const helderheden = {};
+  for (const lamp of favoriet.lampen) {
+    const pct = per[lamp] ?? 100;
+    if (pct === 0 || dimt(lamp)) helderheden[lamp] = pct;
+  }
+  return {
+    ...(favoriet.id ? { id: favoriet.id } : {}),
+    naam: String(favoriet.naam ?? "").trim(),
+    icoon: favoriet.icoon || FAVORIET_ICONEN[0],
+    lampen: favoriet.lampen,
+    helderheden,
+  };
+}
 
 /** Andere soort kiezen in het scherm; "geen" is null. */
 export function metSoort(sleutel) {
@@ -329,7 +437,9 @@ export function wissel(lijst, waarde) {
 
 /** Waarom deze regel nog niet opgeslagen kan worden, of null. */
 export function waaromNiet(regel) {
+  if (regel.favoriet && !String(regel.naam ?? "").trim()) return t("Geef de favoriet een naam.");
   if (!regel.lampen?.length) return t("Kies minstens één lamp.");
+  if (regel.favoriet) return null;
   if (!regel.aan && !regel.uit) return t("Kies wanneer hij aan of uit gaat.");
   for (const m of [regel.aan, regel.uit]) {
     if (m?.soort === "tijd" && !/^\d{2}:\d{2}$/.test(m.tijd ?? "")) return t("Vul een tijd in.");
@@ -346,8 +456,10 @@ export function waaromNiet(regel) {
  */
 export function naarServer(regel, dimt = () => true) {
   const per = regel.helderheden ?? startHelderheden(regel);
+  const naam = String(regel.naam ?? "").trim();
   return {
     ...(regel.id ? { id: regel.id } : {}),
+    ...(naam ? { naam } : {}),
     lampen: regel.lampen,
     helderheden: Object.fromEntries(regel.lampen.filter(dimt).map((l) => [l, per[l] ?? 100])),
     aan: regel.aan ?? null,
