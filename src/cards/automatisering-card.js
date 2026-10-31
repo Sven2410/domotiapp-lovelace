@@ -28,7 +28,7 @@ import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { vraagBevestiging } from "../vraag.js";
-import { lampenTekst, lampenUit, nieuweRegel, regelTekst, regelsVoor } from "./automatisering-logica.js";
+import { lampenKort, lampenUit, nieuweRegel, regelKop, regelTekst, regelsVoor } from "./automatisering-logica.js";
 import { automatiseringScherm, toonAutomatiseringScherm } from "./automatisering-scherm.js";
 import { nt, t } from "../taal.js";
 
@@ -63,7 +63,11 @@ class AutomatiseringCard extends DacCard {
     }
     .plus .icon, .weg .icon { width: 16px; height: 16px; }
 
-    .lijst { display: flex; flex-direction: column; gap: 8px; }
+    .lijst { display: flex; flex-direction: column; }
+    .lijst .rij { padding: 9px 0; }
+    .lijst .rij:first-child { padding-top: 2px; }
+    .lijst .rij:last-child { padding-bottom: 2px; }
+    .lijst .rij + .rij { border-top: 1px solid var(--dac-border); }
     .leeg, .uitleg { font-size: 12px; line-height: 1.4; color: var(--dac-ink-2); }
     .pauze { font-size: 12px; line-height: 1.4; color: var(--dac-warn); }
 
@@ -85,7 +89,8 @@ class AutomatiseringCard extends DacCard {
     }
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px; }
     .nm { font-size: 13.5px; font-weight: 500; line-height: 1.25; }
-    .st { font-size: 11.5px; line-height: 1.3; color: var(--dac-ink-2); }
+    .st, .lp { font-size: 11.5px; line-height: 1.3; color: var(--dac-ink-2); }
+    .nm, .lp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rij[data-aan="false"] .nm { color: var(--dac-ink-2); }
 
     .vakantie {
@@ -227,7 +232,7 @@ class AutomatiseringCard extends DacCard {
   async verwijder_(regel) {
     const ja = await vraagBevestiging({
       title: t("Automatisering verwijderen?"),
-      text: lampenTekst(regel, this.lampen_(), (id) => nameOf(this.hass, id)),
+      text: regelKop(regel, this.lampen_(), (id) => nameOf(this.hass, id)),
       confirmText: t("Verwijderen"),
     });
     if (ja) this.stuur_({ type: `${COMMANDO}/verwijder`, regel: regel.id }).catch((f) => this.mislukt_(f));
@@ -243,14 +248,16 @@ class AutomatiseringCard extends DacCard {
   }
 
   rijenHtml_(regels) {
+    const naamVan = (id) => nameOf(this.hass, id);
     return regels
       .map(
         (r) => `
         <div class="rij" data-id="${escapeHtml(r.id)}" data-aan="${r.actief !== false}">
           <span class="ico">${resolve("bulb")}</span>
           <span class="txt">
-            <span class="nm">${escapeHtml(lampenTekst(r, this.lampen_(), (id) => nameOf(this.hass, id)))}</span>
+            <span class="nm">${escapeHtml(regelKop(r, this.lampen_(), naamVan))}</span>
             <span class="st">${escapeHtml(regelTekst(r))}</span>
+            ${r.naam ? `<span class="lp">${escapeHtml(lampenKort(r, this.lampen_(), naamVan))}</span>` : ""}
           </span>
           <button class="weg" type="button" aria-label="${escapeHtml(t("Verwijderen"))}">${resolve("bin")}</button>
           ${toggleHtml({ label: t("Aan of uit") })}

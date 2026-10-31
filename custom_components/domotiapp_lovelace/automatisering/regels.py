@@ -3,13 +3,15 @@
 Een regel ziet er zo uit:
 
     {
-      "id": "a1b2c3", "actief": true, "vakantie": false,
+      "id": "a1b2c3", "actief": true, "vakantie": false, "naam": "Avond beneden",
       "lampen": ["light.woonkamer", "light.keuken"],
       "helderheden": {"light.woonkamer": 60, "light.keuken": 25},
       "aan": {"soort": "zonsondergang", "verschil": -30},
       "uit": {"soort": "tijd", "tijd": "23:00"},
       "dagen": [0, 1, 2, 3, 4, 5, 6]
     }
+
+`naam` mag ontbreken (sinds 0.96.0); de kaart noemt dan de lampen.
 
 `helderheden` is per lamp (sinds 0.94.0). Een lamp die er niet in staat, gaat aan
 zonder helderheid: hij kan niet dimmen. Een regel van daarvoor heeft geen
