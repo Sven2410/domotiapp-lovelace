@@ -69,4 +69,12 @@ export const AUTOMATISERING = {
   "DomotiApp Automatiseringen": "DomotiApp Automations",
   "De klant maakt zelf eenvoudige automatiseringen voor de lampen die jij kiest, met een vakantiemodus.":
     "Customers create simple automations for the lights you choose, with a holiday mode.",
+  "Geen ruimte": "No room",
+  "Zoek een lamp": "Search for a light",
+  "Geen lamp gevonden.": "No light found.",
+  "{n} gekozen": "{n} selected",
+  "{naam} weghalen": "Remove {naam}",
+  "Kies hierboven de lampen voor deze helderheid.": "Choose the lights for this brightness above.",
+  "Hier lampen bij kiezen": "Choose lights for this one",
+  "Nieuwe helderheid": "New brightness",
 };

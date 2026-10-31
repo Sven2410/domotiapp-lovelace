@@ -68,6 +68,104 @@ export function startHelderheden(regel) {
   return Object.fromEntries((regel.lampen ?? []).map((l) => [l, regel.helderheid ?? 100]));
 }
 
+/**
+ * Zoeken en filteren in de lijst lampen. De eigenaar, 31 oktober 2026: "nu hebben we een
+ * aardige lijst. Ik wil dat je kan filteren op ruimte bijvoorbeeld en een zoekbalk."
+ */
+
+/** Waar een lamp staat: de ruimte van de entiteit, anders die van zijn apparaat, anders "". */
+export function ruimteVan(hass, entity) {
+  const reg = hass?.entities?.[entity];
+  return reg?.area_id ?? hass?.devices?.[reg?.device_id]?.area_id ?? "";
+}
+
+/** De ruimtes van deze lampen op naam, en "Geen ruimte" als laatste. */
+export function ruimtesVan(lampen, hass) {
+  const ids = new Set(lampen.map((l) => ruimteVan(hass, l.entity)));
+  const metNaam = [...ids]
+    .filter(Boolean)
+    .map((id) => ({ id, naam: hass?.areas?.[id]?.name ?? id }))
+    .sort((a, b) => a.naam.localeCompare(b.naam, locale()));
+  return ids.has("") ? [...metNaam, { id: "", naam: t("Geen ruimte") }] : metNaam;
+}
+
+/** Zonder hoofdletters en accenten: "Café" vind je met "cafe". */
+const plat = (s) => String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/**
+ * De lampen die overblijven. Elk woord moet in de naam of in de ruimte staan, dus
+ * "lamp woon" vindt de lamp in de woonkamer.
+ *
+ * @param {Array<{entity: string}>} lampen
+ * @param {{zoek?: string, ruimte?: string|null}} filter `ruimte` null is alle ruimtes, "" geen ruimte
+ * @param {(entity: string) => string} naamVan
+ * @param {object} hass
+ */
+export function lampenGefilterd(lampen, { zoek = "", ruimte = null } = {}, naamVan = (id) => id, hass = null) {
+  const woorden = plat(zoek).split(/\s+/).filter(Boolean);
+  return lampen.filter((l) => {
+    const hier = ruimteVan(hass, l.entity);
+    if (ruimte !== null && hier !== ruimte) return false;
+    const tekst = plat(`${naamVan(l.entity)} ${hass?.areas?.[hier]?.name ?? ""}`);
+    return woorden.every((w) => tekst.includes(w));
+  });
+}
+
+/**
+ * De helderheid in groepen: lampen die samen op 50% gaan, staan bij elkaar. De eigenaar,
+ * 31 oktober 2026: een lamp erbij kiezen "die ook 50% doet en dan de optie een nieuwe
+ * helderheid". Op de server blijft het per lamp (`helderheden`); de groep bestaat alleen
+ * in het scherm.
+ *
+ * Een lamp die je kiest, komt in de actieve groep. Een lege groep is er alleen net na
+ * "Nieuwe helderheid", en telt niet mee in `helderhedenUit`.
+ */
+
+/** Uit een regel: lampen met dezelfde waarde samen, op volgorde van de eerste lamp. */
+export function groepenUit(lampen, helderheden, dimt = () => true) {
+  const groepen = [];
+  for (const lamp of lampen ?? []) {
+    if (!dimt(lamp)) continue;
+    const pct = helderheden?.[lamp] ?? 100;
+    const groep = groepen.find((g) => g.pct === pct);
+    if (groep) groep.lampen.push(lamp);
+    else groepen.push({ pct, lampen: [lamp] });
+  }
+  return groepen;
+}
+
+/** Terug naar wat de server kent: per lamp een waarde. */
+export const helderhedenUit = (groepen) =>
+  Object.fromEntries(groepen.flatMap((g) => g.lampen.map((lamp) => [lamp, g.pct])));
+
+/** Een lamp erbij, in de actieve groep. Zonder groep begint er een op 100%. */
+export function metLamp(groepen, actief, lamp) {
+  if (!groepen.length) return { groepen: [{ pct: 100, lampen: [lamp] }], actief: 0 };
+  const index = groepen[actief] ? actief : groepen.length - 1;
+  return {
+    groepen: groepen.map((g, i) => (i === index ? { ...g, lampen: [...g.lampen, lamp] } : g)),
+    actief: index,
+  };
+}
+
+/** Een lamp eruit. Een groep die daardoor leeg raakt, gaat ook weg. */
+export function zonderLamp(groepen, actief, lamp) {
+  const huidig = groepen[actief];
+  const uit = groepen
+    .map((g) => (g.lampen.includes(lamp) ? { ...g, lampen: g.lampen.filter((l) => l !== lamp), raakte: true } : g))
+    .filter((g) => g.lampen.length || !g.raakte)
+    .map(({ raakte, ...g }) => g);
+  const plek = uit.findIndex((g) => g.pct === huidig?.pct && g.lampen.every((l) => huidig.lampen.includes(l)));
+  return { groepen: uit, actief: plek >= 0 ? plek : Math.max(0, uit.length - 1) };
+}
+
+/** Een nieuwe, lege groep die actief wordt, op de waarde van de actieve. Er is er hooguit één leeg. */
+export function nieuweGroep(groepen, actief) {
+  const leeg = groepen.findIndex((g) => !g.lampen.length);
+  if (leeg >= 0) return { groepen, actief: leeg };
+  return { groepen: [...groepen, { pct: groepen[actief]?.pct ?? 100, lampen: [] }], actief: groepen.length };
+}
+
 /** Maandag tot en met zondag, kort, in de taal van de kaart. */
 export const dagNamen = () =>
   ALLE_DAGEN.map((i) => new Date(2026, 10, 2 + i).toLocaleDateString(locale(), { weekday: "short" }).replace(".", ""));
