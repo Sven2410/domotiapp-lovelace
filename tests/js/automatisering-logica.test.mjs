@@ -23,8 +23,8 @@ const regel = (extra = {}) => ({
 describe("lampenUit", () => {
   it("houdt alleen lampen over, één keer, met hun naam", () => {
     assert.deepEqual(L.lampenUit(KAART), [
-      { entity: "light.a", naam: "Woonkamer" },
-      { entity: "light.b", naam: "" },
+      { entity: "light.a", naam: "Woonkamer", aanUit: false },
+      { entity: "light.b", naam: "", aanUit: false },
     ]);
     assert.deepEqual(L.lampenUit({}), []);
     assert.deepEqual(L.lampenUit(null), []);
@@ -135,12 +135,49 @@ describe("kleine hulpjes", () => {
     const uit = L.naarServer(regel({ id: undefined, dagen: [6, 0], actief: false, extra: 1 }));
     assert.deepEqual(uit, {
       lampen: ["light.a"],
-      helderheid: 100,
+      helderheden: { "light.a": 100 },
       aan: { soort: "tijd", tijd: "07:00" },
       uit: null,
       dagen: [0, 6],
       vakantie: false,
     });
     assert.equal(L.naarServer(regel()).id, "r");
+  });
+});
+
+describe("de helderheid per lamp (0.94.0)", () => {
+  const twee = { lampen: ["light.a", "light.b"] };
+
+  it("een oude regel met één helderheid geldt voor al zijn lampen", () => {
+    assert.deepEqual(L.startHelderheden({ ...twee, helderheid: 35 }), { "light.a": 35, "light.b": 35 });
+    assert.deepEqual(L.startHelderheden(twee), { "light.a": 100, "light.b": 100 });
+  });
+
+  it("een nieuwe regel houdt zijn eigen waarden", () => {
+    assert.deepEqual(L.startHelderheden({ ...twee, helderheid: 35, helderheden: { "light.a": 60 } }), { "light.a": 60 });
+  });
+
+  it("naar de server: alleen wat dimt, en een lamp zonder waarde op 100", () => {
+    const r = { ...regel(twee), helderheden: { "light.a": 60 } };
+    assert.deepEqual(L.naarServer(r).helderheden, { "light.a": 60, "light.b": 100 });
+    assert.deepEqual(L.naarServer(r, (id) => id === "light.b").helderheden, { "light.b": 100 });
+    assert.equal("helderheid" in L.naarServer(r), false);
+  });
+
+  it("de tekst: één waarde, een bereik, of niets", () => {
+    assert.equal(L.helderheidTekst({ helderheden: { a: 60, b: 60 } }), "60%");
+    assert.equal(L.helderheidTekst({ helderheden: { a: 20, b: 60 } }), "20-60%");
+    assert.equal(L.helderheidTekst({ helderheden: { a: 100 } }), "");
+    assert.equal(L.helderheidTekst({ helderheden: {} }), "");
+    assert.equal(L.helderheidTekst({ helderheid: 40 }), "40%");
+    assert.equal(L.regelTekst(regel({ helderheden: { "light.a": 20, "light.b": 60 } })), "Aan om 07:00 · 20-60% · Elke dag");
+  });
+
+  it("alleen aan en uit: de lamp kan wel dimmen, maar krijgt geen schuif", () => {
+    const lampen = L.lampenUit({ lampen: ["light.a", "light.b"], alleen_aan_uit: ["light.b"] });
+    const dim = { attributes: { supported_color_modes: ["brightness"] } };
+    assert.equal(L.magDimmen("light.a", lampen, dim), true);
+    assert.equal(L.magDimmen("light.b", lampen, dim), false);
+    assert.equal(L.magDimmen("light.a", lampen, { attributes: { supported_color_modes: ["onoff"] } }), false);
   });
 });

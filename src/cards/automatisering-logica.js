@@ -26,7 +26,11 @@ export function lampenUit(config) {
   for (const item of Array.isArray(config?.lampen) ? config.lampen : []) {
     const entity = typeof item === "string" ? item : item?.entity;
     if (typeof entity !== "string" || !entity.startsWith("light.") || uit.has(entity)) continue;
-    uit.set(entity, { entity, naam: typeof item === "object" ? String(item.name ?? "") : "" });
+    uit.set(entity, {
+      entity,
+      naam: typeof item === "object" ? String(item.name ?? "") : "",
+      aanUit: Array.isArray(config.alleen_aan_uit) && config.alleen_aan_uit.includes(entity),
+    });
   }
   return [...uit.values()];
 }
@@ -44,6 +48,24 @@ export function regelsVoor(regels, lampen, vakantie) {
 export function kanDimmen(st) {
   const standen = st?.attributes?.supported_color_modes;
   return !Array.isArray(standen) || standen.some((s) => s !== "onoff");
+}
+
+/**
+ * Mag deze lamp een helderheid krijgen? Niet als de lamp zegt dat hij het niet kan,
+ * en niet als de beheerder hem op "alleen aan en uit" zette: een dimblokje met lampen
+ * die niet kunnen dimmen meldt wel `brightness`.
+ */
+export function magDimmen(entity, lampen, st) {
+  return kanDimmen(st) && !lampen.find((l) => l.entity === entity)?.aanUit;
+}
+
+/**
+ * De helderheden om mee te beginnen, per lamp. Een regel van vóór 0.94.0 heeft één
+ * `helderheid`, en die geldt dan voor al zijn lampen.
+ */
+export function startHelderheden(regel) {
+  if (regel.helderheden) return { ...regel.helderheden };
+  return Object.fromEntries((regel.lampen ?? []).map((l) => [l, regel.helderheid ?? 100]));
 }
 
 /** Maandag tot en met zondag, kort, in de taal van de kaart. */
@@ -89,12 +111,25 @@ export function momentTekst(moment) {
   return v < 0 ? t("{duur} voor {zon}", { duur, zon }) : t("{duur} na {zon}", { duur, zon });
 }
 
+/** "60%", of "20-60%" als de lampen verschillen. Niets als alles op 100% gaat. */
+export function helderheidTekst(regel) {
+  const waarden = regel.helderheden ? Object.values(regel.helderheden) : [regel.helderheid];
+  const goed = waarden.filter((w) => w != null);
+  if (!goed.length) return "";
+  const [laag, hoog] = [Math.min(...goed), Math.max(...goed)];
+  if (laag === 100) return "";
+  return laag === hoog ? `${laag}%` : `${laag}-${hoog}%`;
+}
+
 /** De regel in één zin: "Aan bij zonsondergang · uit om 23:00 · 60% · Elke dag". */
 export function regelTekst(regel) {
   const delen = [];
   if (regel.aan) delen.push(t("Aan {moment}", { moment: momentTekst(regel.aan) }));
   if (regel.uit) delen.push((regel.aan ? t("uit {moment}", { moment: momentTekst(regel.uit) }) : t("Uit {moment}", { moment: momentTekst(regel.uit) })));
-  if (regel.aan && regel.helderheid != null && regel.helderheid < 100) delen.push(`${regel.helderheid}%`);
+  if (regel.aan) {
+    const tekst = helderheidTekst(regel);
+    if (tekst) delen.push(tekst);
+  }
   delen.push(dagenTekst(regel.dagen));
   return delen.join(" · ");
 }
@@ -109,7 +144,7 @@ export function lampenTekst(regel, lampen, naamVan = (id) => id) {
 /** Een nieuwe regel: wat de meeste mensen willen, en één lamp staat er meteen in. */
 export const nieuweRegel = (lampen, vakantie = false) => ({
   lampen: lampen.length === 1 ? [lampen[0].entity] : [],
-  helderheid: 100,
+  helderheden: lampen.length === 1 ? { [lampen[0].entity]: 100 } : {},
   aan: { soort: "zonsondergang", verschil: 0 },
   uit: { soort: "tijd", tijd: "23:00" },
   dagen: [...ALLE_DAGEN],
@@ -142,12 +177,18 @@ export function waaromNiet(regel) {
   return null;
 }
 
-/** Wat er naar de server gaat. */
-export function naarServer(regel) {
+/**
+ * Wat er naar de server gaat.
+ *
+ * @param {object} regel
+ * @param {(entity: string) => boolean} [dimt] alleen deze lampen krijgen een helderheid
+ */
+export function naarServer(regel, dimt = () => true) {
+  const per = regel.helderheden ?? startHelderheden(regel);
   return {
     ...(regel.id ? { id: regel.id } : {}),
     lampen: regel.lampen,
-    helderheid: regel.helderheid ?? 100,
+    helderheden: Object.fromEntries(regel.lampen.filter(dimt).map((l) => [l, per[l] ?? 100])),
     aan: regel.aan ?? null,
     uit: regel.uit ?? null,
     dagen: [...regel.dagen].sort((a, b) => a - b),

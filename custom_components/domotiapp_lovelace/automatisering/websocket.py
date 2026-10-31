@@ -54,6 +54,7 @@ _REGEL = vol.Schema(
         vol.Optional("id"): cv.string,
         vol.Required("lampen"): vol.All([vol.All(cv.string, vol.Match(r"^light\."))], vol.Length(min=1, max=50)),
         vol.Optional("helderheid", default=100): vol.All(int, vol.Range(min=1, max=100)),
+        vol.Optional("helderheden"): {vol.All(cv.string, vol.Match(r"^light\.")): vol.All(int, vol.Range(min=1, max=100))},
         vol.Optional("aan"): _MOMENT,
         vol.Optional("uit"): _MOMENT,
         vol.Required("dagen"): vol.All([vol.All(int, vol.Range(min=0, max=6))], vol.Length(min=1, max=7), vol.Unique()),
@@ -154,6 +155,11 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         "aan": nieuw.get("aan"),
         "uit": nieuw.get("uit"),
         "dagen": sorted(nieuw["dagen"]),
+        **(
+            {"helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]}}
+            if "helderheden" in nieuw
+            else {}
+        ),
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
         "actief": bestaand.get("actief", True) if bestaand else True,
         # Een bestaande regel wisselt niet van groep: zijn plek op de kaart zegt het.

@@ -20,9 +20,10 @@ import { t } from "../taal.js";
 import {
   SOORTEN,
   dagNamen,
-  kanDimmen,
+  magDimmen,
   metSoort,
   naarServer,
+  startHelderheden,
   stapVerschil,
   verschilTekst,
   waaromNiet,
@@ -135,6 +136,9 @@ const css = /* css */ `
   .stapper .icon { width: 15px; height: 15px; }
   .stapper .wat { flex: 1 1 auto; min-width: 0; text-align: center; font-size: 13.5px; font-weight: 500; }
 
+  .hrij { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 38px; align-items: center; gap: 8px; min-height: 32px; }
+  .hrij .wie { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hrij .pct { font-size: 12.5px; text-align: right; color: var(--dac-ink-2); font-variant-numeric: tabular-nums; }
   input[type="range"] { width: 100%; margin: 0; height: 28px; accent-color: var(--dac-accent-hi); cursor: pointer; }
 
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-warn); }
@@ -223,6 +227,9 @@ class AutomatiseringScherm extends HTMLElement {
     if (!this.gebouwd_) this.bouw_();
     this.bron = bron;
     this.concept = structuredClone(regel);
+    this.concept.helderheden = startHelderheden(regel);
+    // Een lamp die erbij komt, begint op wat er het laatst is ingesteld.
+    this.laatste_ = 100;
     this.foutTekst_ = "";
     this.bezig_ = false;
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -246,11 +253,9 @@ class AutomatiseringScherm extends HTMLElement {
     return this.hasAttribute("open") && this.bron === kaart;
   }
 
-  /** Mag de helderheid? Alleen als er een lamp bij is die kan dimmen. */
-  dimbaar_() {
-    const { lampen } = this.concept;
-    if (!lampen.length) return true;
-    return lampen.some((id) => kanDimmen(this.bron.hass?.states?.[id]));
+  /** Krijgt deze lamp een schuif? */
+  dimbaar_(id) {
+    return magDimmen(id, this.bron.lampen_(), this.bron.hass?.states?.[id]);
   }
 
   momentHtml_(wat, moment) {
@@ -297,16 +302,24 @@ class AutomatiseringScherm extends HTMLElement {
       )
       .join("");
 
+    const schuiven = c.aan
+      ? c.lampen
+          .filter((id) => this.dimbaar_(id))
+          .map((id) => {
+            const pct = c.helderheden[id] ?? 100;
+            const naam = veilig(this.bron.naamVanLamp_(id));
+            return `<div class="hrij">
+              <span class="wie">${naam}</span>
+              <input type="range" min="1" max="100" step="1" value="${pct}" data-lamp="${veilig(id)}" aria-label="${veilig(t("Helderheid"))}: ${naam}" />
+              <span class="pct">${pct}%</span>
+            </div>`;
+          })
+          .join("")
+      : "";
+
     form.innerHTML = `
       <div class="groep"><span class="kop">${veilig(t("Lampen"))}</span><div class="opties">${lampen}</div></div>
-      ${
-        this.dimbaar_() && c.aan
-          ? `<div class="groep">
-              <span class="kop"><span>${veilig(t("Helderheid"))}</span><span class="pct">${c.helderheid}%</span></span>
-              <input type="range" min="1" max="100" step="1" value="${c.helderheid}" data-veld="helderheid" aria-label="${veilig(t("Helderheid"))}" />
-            </div>`
-          : ""
-      }
+      ${schuiven ? `<div class="groep"><span class="kop">${veilig(t("Helderheid"))}</span>${schuiven}</div>` : ""}
       ${this.momentHtml_("aan", c.aan)}
       ${this.momentHtml_("uit", c.uit)}
       <div class="groep"><span class="kop">${veilig(t("Dagen"))}</span><div class="dagen">${dagen}</div></div>`;
@@ -331,7 +344,10 @@ class AutomatiseringScherm extends HTMLElement {
     const c = this.concept;
     const [soort, ...rest] = knop.dataset.k.split(":");
     const waarde = rest.join(":");
-    if (soort === "lamp") c.lampen = wissel(c.lampen, waarde);
+    if (soort === "lamp") {
+      if (!c.lampen.includes(waarde)) c.helderheden[waarde] ??= this.laatste_;
+      c.lampen = wissel(c.lampen, waarde);
+    }
     else if (soort === "dag") c.dagen = wissel(c.dagen, Number(waarde));
     else if (waarde === "min" || waarde === "plus") {
       c[soort] = { ...c[soort], verschil: stapVerschil(c[soort].verschil, waarde === "min" ? -1 : 1) };
@@ -345,12 +361,16 @@ class AutomatiseringScherm extends HTMLElement {
   /** Typen en schuiven tekenen niet opnieuw: dat haalt het veld onder je vingers weg. */
   invoer_(veld) {
     const c = this.concept;
-    if (!c || !veld.dataset.veld) return;
-    if (veld.dataset.veld === "helderheid") {
-      c.helderheid = Number(veld.value);
-      this.$(".pct").textContent = `${c.helderheid}%`;
-    } else {
+    if (!c) return;
+    if (veld.dataset.lamp) {
+      const pct = Number(veld.value);
+      c.helderheden[veld.dataset.lamp] = pct;
+      this.laatste_ = pct;
+      veld.closest(".hrij").querySelector(".pct").textContent = `${pct}%`;
+    } else if (veld.dataset.veld) {
       c[veld.dataset.veld] = { soort: "tijd", tijd: veld.value };
+    } else {
+      return;
     }
     this.foutTekst_ = "";
     this.kijkNa_();
@@ -361,7 +381,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.bezig_ = true;
     this.kijkNa_();
     try {
-      await this.bron.opslaan(naarServer(this.concept));
+      await this.bron.opslaan(naarServer(this.concept, (id) => this.dimbaar_(id)));
       this.sluit();
     } catch (fout) {
       this.bezig_ = false;

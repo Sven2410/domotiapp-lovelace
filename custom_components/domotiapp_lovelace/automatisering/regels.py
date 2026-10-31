@@ -4,11 +4,16 @@ Een regel ziet er zo uit:
 
     {
       "id": "a1b2c3", "actief": true, "vakantie": false,
-      "lampen": ["light.woonkamer"], "helderheid": 60,
+      "lampen": ["light.woonkamer", "light.keuken"],
+      "helderheden": {"light.woonkamer": 60, "light.keuken": 25},
       "aan": {"soort": "zonsondergang", "verschil": -30},
       "uit": {"soort": "tijd", "tijd": "23:00"},
       "dagen": [0, 1, 2, 3, 4, 5, 6]
     }
+
+`helderheden` is per lamp (sinds 0.94.0). Een lamp die er niet in staat, gaat aan
+zonder helderheid: hij kan niet dimmen. Een regel van daarvoor heeft geen
+`helderheden` maar één `helderheid`, en die geldt dan voor al zijn lampen.
 
 `dagen` gaat over de dag waarop hij AAN gaat, met maandag als 0. Valt de uit-tijd
 vóór de aan-tijd, dan is dat de volgende dag: aan om 22:00, uit om 01:00. Een
@@ -27,6 +32,14 @@ from homeassistant.helpers.sun import get_astral_event_date
 from homeassistant.util import dt as dt_util
 
 from .const import SOORT_TIJD, SOORT_ZONSOPKOMST, VAKANTIE_WISSEL_MIN
+
+
+def helderheid_van(regel: dict[str, Any], lamp: str) -> int | None:
+    """De helderheid van deze lamp in deze regel, of None als hij alleen aan gaat."""
+    per_lamp = regel.get("helderheden")
+    if isinstance(per_lamp, dict):
+        return per_lamp.get(lamp)
+    return regel.get("helderheid")
 
 
 def wissel(regel_id: str, dag: date, wat: str) -> int:

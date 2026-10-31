@@ -908,6 +908,9 @@ je niet hoort terug te draaien zonder het te vragen:
   een gewone regel. Gewone regels pauzeren, vakantieregels wisselen tot 15 minuten.
 - **De wissel wordt afgeleid, niet geloot** (`wissel` in `regels.py`), anders geldt na
   een herstart een andere tijd.
+- **De helderheid is per lamp** (sinds 0.94.0, `helderheden`). Een regel van daarvoor heeft
+  één `helderheid`, en die blijft gelden. Staat een lamp niet in `helderheden`, dan gaat hij
+  aan zonder helderheid; `alleen_aan_uit` op de kaart is voor een dimblokje met vaste lampen.
 
 ### Het infoscherm bij een klant: wie opent wat
 

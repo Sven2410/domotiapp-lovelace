@@ -181,11 +181,20 @@ class Motor:
         self.opslag.zet_brandt(regel["id"], wat == "aan")
         # Elke uitvoering legt de klok vast; zie de kop van store.py.
         self.opslag.zet_laatst(dt_util.utcnow())
-        data: dict[str, Any] = {"entity_id": lampen}
-        if wat == "aan" and regel.get("helderheid") is not None:
-            data["brightness_pct"] = regel["helderheid"]
         _LOGGER.debug("Regel %s: %s %s", regel["id"], wat, lampen)
-        self.hass.async_create_task(self._roep_aan("turn_on" if wat == "aan" else "turn_off", data))
+        if wat == "uit":
+            self.hass.async_create_task(self._roep_aan("turn_off", {"entity_id": lampen}))
+            return
+        # Lampen met dezelfde helderheid in één aanroep: een groep die samen aangaat,
+        # gaat ook echt tegelijk aan.
+        groepen: dict[int | None, list[str]] = {}
+        for lamp in lampen:
+            groepen.setdefault(regelmaker.helderheid_van(regel, lamp), []).append(lamp)
+        for pct, samen in groepen.items():
+            data: dict[str, Any] = {"entity_id": samen}
+            if pct is not None:
+                data["brightness_pct"] = pct
+            self.hass.async_create_task(self._roep_aan("turn_on", data))
 
     async def _roep_aan(self, dienst: str, data: dict[str, Any]) -> None:
         try:

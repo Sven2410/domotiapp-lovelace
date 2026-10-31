@@ -58,6 +58,8 @@ export const AUTOMATISERING = {
   "Titel": "Title",
   "Lampen die de klant kan kiezen": "Lights the customer can choose",
   "Vakantiemodus op deze kaart": "Holiday mode on this card",
+  "Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif.":
+    "Lights that can dim according to Home Assistant but do not, such as a dimmer module with fixed spots. These get no slider.",
   "Bestaande vakantiestand": "Existing holiday switch",
   "Leeg laten: Automatiseringen.": "Leave empty: Automations.",
   "Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten.":
