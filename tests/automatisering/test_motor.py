@@ -17,7 +17,7 @@ from custom_components.domotiapp_lovelace.automatisering.const import (
 from custom_components.domotiapp_lovelace.const import DOMAIN
 
 from ..conftest import zet_integratie_op
-from .conftest import GEHEIM, KAART, WOONKAMER, laat_starten, om, regel, tik, zet_dashboard
+from .conftest import GEHEIM, KAART, KEUKEN, WOONKAMER, laat_starten, om, regel, tik, zet_dashboard
 
 
 def _maak(motor, **extra):
@@ -247,3 +247,46 @@ async def test_een_eerste_start_voert_niets_van_eerder_uit(hass: HomeAssistant, 
     assert motor.opslag.laatst is not None
     assert dt_util.as_local(motor.opslag.laatst).hour == 19
     assert lampen == []
+
+
+# ------------------------------------------------------------ helderheid per lamp
+
+
+async def test_elke_lamp_krijgt_zijn_eigen_helderheid(hass: HomeAssistant, opgezet, lampen, freezer) -> None:
+    _maak(opgezet, lampen=[WOONKAMER, KEUKEN], helderheden={WOONKAMER: 60, KEUKEN: 25})
+    await tik(hass, freezer, om(2, 18))
+    assert sorted(lampen, key=lambda x: x[1]["brightness_pct"]) == [
+        ("turn_on", {"entity_id": [KEUKEN], "brightness_pct": 25}),
+        ("turn_on", {"entity_id": [WOONKAMER], "brightness_pct": 60}),
+    ]
+
+
+async def test_dezelfde_helderheid_gaat_in_een_aanroep(hass: HomeAssistant, opgezet, lampen, freezer) -> None:
+    _maak(opgezet, lampen=[WOONKAMER, KEUKEN], helderheden={WOONKAMER: 40, KEUKEN: 40})
+    await tik(hass, freezer, om(2, 18))
+    assert lampen == [("turn_on", {"entity_id": [WOONKAMER, KEUKEN], "brightness_pct": 40})]
+
+
+async def test_een_lamp_zonder_helderheid_gaat_gewoon_aan(hass: HomeAssistant, opgezet, lampen, freezer) -> None:
+    """Een dimblokje met vaste spots: geen brightness_pct."""
+    _maak(opgezet, lampen=[WOONKAMER, KEUKEN], helderheden={WOONKAMER: 60})
+    await tik(hass, freezer, om(2, 18))
+    assert ("turn_on", {"entity_id": [KEUKEN]}) in lampen
+    assert ("turn_on", {"entity_id": [WOONKAMER], "brightness_pct": 60}) in lampen
+
+
+async def test_uit_is_voor_alle_lampen_een_aanroep(hass: HomeAssistant, opgezet, lampen, freezer) -> None:
+    _maak(opgezet, lampen=[WOONKAMER, KEUKEN], helderheden={WOONKAMER: 60, KEUKEN: 25})
+    await tik(hass, freezer, om(2, 18))
+    lampen.clear()
+    await tik(hass, freezer, om(2, 23))
+    assert lampen == [("turn_off", {"entity_id": [WOONKAMER, KEUKEN]})]
+
+
+async def test_regressiewacht_een_oude_regel_met_een_helderheid_blijft_werken(
+    hass: HomeAssistant, opgezet, lampen, freezer
+) -> None:
+    """REGRESSIEWACHT: een regel van 0.89.0 tot en met 0.92.0."""
+    _maak(opgezet, lampen=[WOONKAMER, KEUKEN], helderheid=35)
+    await tik(hass, freezer, om(2, 18))
+    assert lampen == [("turn_on", {"entity_id": [WOONKAMER, KEUKEN], "brightness_pct": 35})]

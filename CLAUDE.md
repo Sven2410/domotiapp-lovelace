@@ -644,6 +644,12 @@ allebei "Speed" heten. De dienst `nep_weerstation.zet` zet een waarde
 (`{speed: 8, speed_2: 14, moisture: true}`). De geschiedenis van de luchtdruk is met de
 hand in `home-assistant_v2.db` gezet. Op `kaart-test` staat een view `weerstation`.
 
+Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
+`.ha-dev-config/custom_components/nep_atlantic/` (niet in git), naar de dump in
+`tests/js/vaste-invoer/cozytouch-atlantic-airco.json`: geen `hvac_action`,
+`current_temperature` altijd `null`, `temperature` `null` bij uit en fan_only, een doel per
+stand, en lamellen die vanzelf meegaan. Op `kaart-test` staat een view `atlantic`.
+
 Sinds 15 oktober 2026 staat er ook een **nagebootste Miele** in
 `.ha-dev-config/custom_components/nep_miele/` (niet in git), voor de
 programmakaart en de vriezerkaart. Hij speelt de dump uit
@@ -908,6 +914,10 @@ je niet hoort terug te draaien zonder het te vragen:
   een gewone regel. Gewone regels pauzeren, vakantieregels wisselen tot 15 minuten.
 - **De wissel wordt afgeleid, niet geloot** (`wissel` in `regels.py`), anders geldt na
   een herstart een andere tijd.
+- **De helderheid is per lamp** (sinds 0.94.0, `helderheden`). Een regel van daarvoor heeft
+  één `helderheid`, en die blijft gelden. Staat een lamp niet in `helderheden`, dan gaat hij
+  aan zonder helderheid; `alleen_aan_uit` op de kaart is voor een dimblokje met vaste lampen.
+  In het scherm zijn het groepen (lampen op dezelfde waarde); die bestaan niet op de server.
 
 ### Het infoscherm bij een klant: wie opent wat
 

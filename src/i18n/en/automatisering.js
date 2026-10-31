@@ -58,6 +58,8 @@ export const AUTOMATISERING = {
   "Titel": "Title",
   "Lampen die de klant kan kiezen": "Lights the customer can choose",
   "Vakantiemodus op deze kaart": "Holiday mode on this card",
+  "Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif.":
+    "Lights that can dim according to Home Assistant but do not, such as a dimmer module with fixed spots. These get no slider.",
   "Bestaande vakantiestand": "Existing holiday switch",
   "Leeg laten: Automatiseringen.": "Leave empty: Automations.",
   "Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten.":
@@ -67,4 +69,12 @@ export const AUTOMATISERING = {
   "DomotiApp Automatiseringen": "DomotiApp Automations",
   "De klant maakt zelf eenvoudige automatiseringen voor de lampen die jij kiest, met een vakantiemodus.":
     "Customers create simple automations for the lights you choose, with a holiday mode.",
+  "Geen ruimte": "No room",
+  "Zoek een lamp": "Search for a light",
+  "Geen lamp gevonden.": "No light found.",
+  "{n} gekozen": "{n} selected",
+  "{naam} weghalen": "Remove {naam}",
+  "Kies hierboven de lampen voor deze helderheid.": "Choose the lights for this brightness above.",
+  "Hier lampen bij kiezen": "Choose lights for this one",
+  "Nieuwe helderheid": "New brightness",
 };

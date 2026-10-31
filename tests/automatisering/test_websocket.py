@@ -98,3 +98,30 @@ async def test_het_abonnement_krijgt_elke_wijziging(ws, opgezet) -> None:
     gebeurtenis = next(g for g in gezien if g["type"] == "event")
     assert gebeurtenis["event"]["vakantie"] is True
     assert opgezet.vakantie is True
+
+
+async def test_de_helderheid_per_lamp_wordt_bewaard(ws, opgezet) -> None:
+    r = regel(lampen=[WOONKAMER, KEUKEN], helderheden={WOONKAMER: 60, KEUKEN: 25})
+    uit = await _vraag(ws, type=f"{T}/opslaan", regel=r)
+    assert uit["success"], uit
+    assert opgezet.opslag.regels[0]["helderheden"] == {WOONKAMER: 60, KEUKEN: 25}
+
+
+async def test_een_helderheid_van_een_lamp_die_er_niet_in_zit_valt_weg(ws, opgezet) -> None:
+    r = regel(lampen=[WOONKAMER], helderheden={WOONKAMER: 60, KEUKEN: 25})
+    assert (await _vraag(ws, type=f"{T}/opslaan", regel=r))["success"]
+    assert opgezet.opslag.regels[0]["helderheden"] == {WOONKAMER: 60}
+
+
+@pytest.mark.parametrize("fout", [{WOONKAMER: 0}, {WOONKAMER: 101}, {"switch.x": 50}])
+async def test_een_verkeerde_helderheid_komt_er_niet_in(ws, opgezet, fout) -> None:
+    uit = await _vraag(ws, type=f"{T}/opslaan", regel=regel(helderheden=fout))
+    assert uit["success"] is False
+    assert opgezet.opslag.regels == []
+
+
+async def test_regressiewacht_een_kaart_van_voor_093_stuurt_een_helderheid(ws, opgezet) -> None:
+    """REGRESSIEWACHT: een telefoon die de oude bundel nog vasthoudt, kan gewoon opslaan."""
+    assert (await _vraag(ws, type=f"{T}/opslaan", regel=regel(helderheid=35)))["success"]
+    assert opgezet.opslag.regels[0]["helderheid"] == 35
+    assert "helderheden" not in opgezet.opslag.regels[0]

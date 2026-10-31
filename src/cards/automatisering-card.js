@@ -338,6 +338,10 @@ class AutomatiseringEditor extends DacEditor {
       return name ? { entity: id, name } : id;
     });
     for (const k of Object.keys(uit)) if (k.startsWith("naam:")) delete uit[k];
+    // Alleen wat nog op de kaart staat; leeg hoort niet in de YAML.
+    const aanUit = (uit.alleen_aan_uit ?? []).filter((id) => (config.lampen ?? []).includes(id));
+    if (aanUit.length) uit.alleen_aan_uit = aanUit;
+    else delete uit.alleen_aan_uit;
     if (uit.vakantie !== false) delete uit.vakantie;
     if (uit.vakantie === false) delete uit.vakantie_entiteit;
     return uit;
@@ -349,6 +353,7 @@ class AutomatiseringEditor extends DacEditor {
       { name: "name", selector: sel.text() },
       { name: "lampen", selector: { entity: { domain: "light", multiple: true } } },
       ...ids.map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
+      ...(ids.length ? [{ name: "alleen_aan_uit", selector: { entity: { include_entities: ids, multiple: true } } }] : []),
       { name: "vakantie", selector: sel.bool() },
       ...(this.config_?.vakantie !== false
         ? [{ name: "vakantie_entiteit", selector: sel.entity(["input_boolean", "switch"]) }]
@@ -365,6 +370,7 @@ class AutomatiseringEditor extends DacEditor {
       {
         name: t("Titel"),
         lampen: t("Lampen die de klant kan kiezen"),
+        alleen_aan_uit: t("Alleen aan en uit"),
         vakantie: t("Vakantiemodus op deze kaart"),
         vakantie_entiteit: t("Bestaande vakantiestand"),
       }[s.name] ?? super.label(s)
@@ -375,6 +381,7 @@ class AutomatiseringEditor extends DacEditor {
     return {
       name: t("Leeg laten: Automatiseringen."),
       lampen: t("Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten."),
+      alleen_aan_uit: t("Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif."),
       vakantie_entiteit: t("Leeg laten: de schakelaar die de integratie zelf heeft. Kies hier een stand die er al was, dan volgt de kaart die."),
     }[s.name];
   }
