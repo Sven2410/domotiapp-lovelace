@@ -24,8 +24,9 @@ import { WEKKER } from "./en/wekker.js";
 import { INFOSCHERM } from "./en/infoscherm.js";
 import { BEHEER } from "./en/beheer.js";
 import { AUTOMATISERING } from "./en/automatisering.js";
+import { WEERSTATION } from "./en/weerstation.js";
 
 /** De delen apart, voor de toets die kijkt of een zin overal hetzelfde vertaald is. */
-export const DELEN = { ALGEMEEN, COACH, BATTERIJ, PROGRAMMA, ENTITEITEN, SCENE, KLIMAAT, MEDIA, INDELING, MELDINGEN, GEDEELD, CAMERA, APPARATEN, APPARATUUR, WEKKER, INFOSCHERM, BEHEER, AUTOMATISERING };
+export const DELEN = { ALGEMEEN, COACH, BATTERIJ, PROGRAMMA, ENTITEITEN, SCENE, KLIMAAT, MEDIA, INDELING, MELDINGEN, GEDEELD, CAMERA, APPARATEN, APPARATUUR, WEKKER, INFOSCHERM, BEHEER, AUTOMATISERING, WEERSTATION };
 
 export const EN = Object.assign({}, ...Object.values(DELEN));

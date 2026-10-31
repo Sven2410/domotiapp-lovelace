@@ -1,0 +1,198 @@
+{
+ "_bron": "Shelly BLU Weather Station (SBWS-90CM) via BTHome, 31 oktober 2026. Geanonimiseerd: zonder MAC en zonder installatie.",
+ "entities": [
+  {
+   "entity_id": "binary_sensor.weather_station_moisture",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_illuminance",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_speed",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_speed_2",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_uv_index",
+   "device_id": "weerstation",
+   "translation_key": "uv_index",
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_direction",
+   "device_id": "weerstation",
+   "translation_key": "direction",
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_battery",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_pressure",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_dew_point",
+   "device_id": "weerstation",
+   "translation_key": "dew_point",
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_voltage",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_humidity",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_temperature",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  },
+  {
+   "entity_id": "sensor.weather_station_precipitation",
+   "device_id": "weerstation",
+   "translation_key": null,
+   "platform": "bthome"
+  }
+ ],
+ "states": {
+  "binary_sensor.weather_station_moisture": {
+   "entity_id": "binary_sensor.weather_station_moisture",
+   "state": "off",
+   "attributes": {
+    "friendly_name": "Weather station Moisture",
+    "device_class": "moisture"
+   }
+  },
+  "sensor.weather_station_illuminance": {
+   "entity_id": "sensor.weather_station_illuminance",
+   "state": "78000.0",
+   "attributes": {
+    "friendly_name": "Weather station Illuminance",
+    "device_class": "illuminance",
+    "unit_of_measurement": "lx"
+   }
+  },
+  "sensor.weather_station_speed": {
+   "entity_id": "sensor.weather_station_speed",
+   "state": "0.9",
+   "attributes": {
+    "friendly_name": "Weather station Speed",
+    "device_class": "speed",
+    "unit_of_measurement": "m/s"
+   }
+  },
+  "sensor.weather_station_speed_2": {
+   "entity_id": "sensor.weather_station_speed_2",
+   "state": "0.9",
+   "attributes": {
+    "friendly_name": "Weather station Speed",
+    "device_class": "speed",
+    "unit_of_measurement": "m/s"
+   }
+  },
+  "sensor.weather_station_uv_index": {
+   "entity_id": "sensor.weather_station_uv_index",
+   "state": "5.0",
+   "attributes": {
+    "friendly_name": "Weather station UV Index"
+   }
+  },
+  "sensor.weather_station_direction": {
+   "entity_id": "sensor.weather_station_direction",
+   "state": "104.0",
+   "attributes": {
+    "friendly_name": "Weather station Direction",
+    "unit_of_measurement": "°"
+   }
+  },
+  "sensor.weather_station_battery": {
+   "entity_id": "sensor.weather_station_battery",
+   "state": "59",
+   "attributes": {
+    "friendly_name": "Weather station Battery",
+    "device_class": "battery",
+    "unit_of_measurement": "%"
+   }
+  },
+  "sensor.weather_station_pressure": {
+   "entity_id": "sensor.weather_station_pressure",
+   "state": "1011.8",
+   "attributes": {
+    "friendly_name": "Weather station Pressure",
+    "device_class": "pressure",
+    "unit_of_measurement": "mbar"
+   }
+  },
+  "sensor.weather_station_dew_point": {
+   "entity_id": "sensor.weather_station_dew_point",
+   "state": "9.8",
+   "attributes": {
+    "friendly_name": "Weather station Dew point",
+    "device_class": "temperature",
+    "unit_of_measurement": "°C"
+   }
+  },
+  "sensor.weather_station_voltage": {
+   "entity_id": "sensor.weather_station_voltage",
+   "state": "5.3",
+   "attributes": {
+    "friendly_name": "Weather station Voltage",
+    "device_class": "voltage",
+    "unit_of_measurement": "V"
+   }
+  },
+  "sensor.weather_station_humidity": {
+   "entity_id": "sensor.weather_station_humidity",
+   "state": "39",
+   "attributes": {
+    "friendly_name": "Weather station Humidity",
+    "device_class": "humidity",
+    "unit_of_measurement": "%"
+   }
+  },
+  "sensor.weather_station_temperature": {
+   "entity_id": "sensor.weather_station_temperature",
+   "state": "24.7",
+   "attributes": {
+    "friendly_name": "Weather station Temperature",
+    "device_class": "temperature",
+    "unit_of_measurement": "°C"
+   }
+  },
+  "sensor.weather_station_precipitation": {
+   "entity_id": "sensor.weather_station_precipitation",
+   "state": "0.0",
+   "attributes": {
+    "friendly_name": "Weather station Precipitation",
+    "device_class": "precipitation",
+    "unit_of_measurement": "mm"
+   }
+  }
+ }
+}
