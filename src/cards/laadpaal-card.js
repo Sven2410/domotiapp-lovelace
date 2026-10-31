@@ -18,6 +18,7 @@
  *    met een veld en Doorgeven (coach 0.117.0).
  * 3. De modus (Planning / Snel / Continu / Zon) en Pauze. Een modus anders dan
  *    planning, en pauze, gelden tot de kabel eruit gaat; dat staat erbij.
+ *    Snel, Continu, Zon en Pauze kunnen per kaart uit (`knoppen`, sinds 0.88.0).
  * 4. Het schema: aan/uit, klaar om, en laden tot. Met een weekschema toont de
  *    kaart de week, en wordt er in de coach bewerkt (afgesproken op
  *    11 oktober 2026).
@@ -51,12 +52,15 @@ import {
   klantEntiteiten,
 } from "./coach-logica.js";
 import {
+  KAARTKNOPPEN,
   LAADPAAL_FOTOS,
   LAADPAAL_MODELLEN,
   MODI,
   accustandInvoer,
   accustandVeld,
   getalTekst,
+  kaartKnoppen,
+  knopOpKaart,
   laadpaalAfbeelding,
   laadpaalStand,
   modusKnoppen,
@@ -68,6 +72,7 @@ import {
   stapWaarde,
   vermogenTekst,
   weekSchema,
+  zonderVolleKnoppen,
 } from "./laadpaal-logica.js";
 import { veldWaarde, zetOproep } from "./tijdveld.js";
 import { nt, t } from "../taal.js";
@@ -211,6 +216,8 @@ class LaadpaalCard extends DacCard {
        "Goedkoopst") op een eigen regel boven de knoppen, en naast de knop als
        er maar één is (Snel, met een planning voor vandaag). */
     .modi { flex-wrap: wrap; align-items: center; }
+    /* Alles uitgevinkt: anders staat het lege vak nog een gat onder de regel. */
+    .modi .knoppen:empty { display: none; }
     .modusregel {
       flex: 1 1 100%; min-width: 0;
       display: flex; align-items: center; gap: 6px;
@@ -753,7 +760,8 @@ class LaadpaalCard extends DacCard {
   paintBediening_(r, s) {
     // ----- modus
     const modusSt = stateOf(this.hass, r.modus);
-    const modi = modusKnoppen(modusSt, s);
+    const keuze = kaartKnoppen(this.config);
+    const modi = modusKnoppen(modusSt, s, keuze);
     const rij = this.$(".modi");
     const knoppen = this.$(".modi .knoppen");
     const sig = JSON.stringify(modi.map((m) => m.sleutel));
@@ -773,7 +781,7 @@ class LaadpaalCard extends DacCard {
     // Wat er geldt zonder knop. Nog een keer de knop kiezen die aan staat zet
     // hem terug naar de voorkeur (coach 0.112.3); daar hoeft de kaart niets
     // voor te doen, want een tik stuurt altijd de optie van de knop.
-    const regel = modusRegel(modusSt, s, stateOf(this.hass, r.klaar_om));
+    const regel = modusRegel(modusSt, s, stateOf(this.hass, r.klaar_om), keuze);
     const rEl = this.$(".modusregel");
     rEl.hidden = !regel;
     const rHtml = regel
@@ -794,7 +802,8 @@ class LaadpaalCard extends DacCard {
       el.setAttribute("aria-pressed", String(st?.state === "on"));
       return !el.hidden;
     };
-    const metPauze = schakel("pauze", r.pauze);
+    // Uitgevinkt en toch gepauzeerd: dat zeggen de stand en de zin eronder.
+    const metPauze = schakel("pauze", knopOpKaart(keuze, "pauze") ? r.pauze : null);
     const metSchema = schakel("schema", r.schema);
     this.$(".schakels").hidden = !metPauze && !metSchema;
 
@@ -926,7 +935,7 @@ const AFBEELDING_KEUZES = [
 
 class LaadpaalEditor extends DacEditor {
   defaults() {
-    return { afbeelding: "auto" };
+    return { afbeelding: "auto", knoppen: KAARTKNOPPEN.map((k) => k.sleutel) };
   }
 
   /** De fotokiezer alleen bij "eigen afbeelding": anders is het een veld dat niets doet. */
@@ -945,6 +954,16 @@ class LaadpaalEditor extends DacEditor {
       },
       { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
       { name: "power", selector: sel.entity(["sensor"]) },
+      {
+        name: "knoppen",
+        selector: {
+          select: {
+            multiple: true,
+            mode: "list",
+            options: KAARTKNOPPEN.map((k) => ({ value: k.sleutel, label: t(k.label) })),
+          },
+        },
+      },
     ];
   }
 
@@ -955,6 +974,7 @@ class LaadpaalEditor extends DacEditor {
         coach_device: t("Laadpaal bij de coach"),
         afbeelding: t("Afbeelding"),
         power: t("Vermogen"),
+        knoppen: t("Knoppen op deze kaart"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -967,7 +987,14 @@ class LaadpaalEditor extends DacEditor {
       ),
       afbeelding: t("Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen)."),
       power: t("Leeg laten: de vermogenssensor die bij de coach is ingevuld."),
+      knoppen: t(
+        "Uitgevinkt staat de knop niet op deze kaart. Het paneel van de coach houdt ze allemaal, en staat een uitgevinkte stand daar aan, dan zegt de kaart dat."
+      ),
     }[s.name];
+  }
+
+  serialize(config) {
+    return zonderVolleKnoppen(config);
   }
 }
 
