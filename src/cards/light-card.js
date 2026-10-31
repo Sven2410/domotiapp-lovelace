@@ -22,14 +22,13 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, isDead, lampkleurCss, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
+import { lampBesturing } from "./light-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { nt, t } from "../taal.js";
 
-const DIMMABLE = new Set(["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"]);
 const COLOURFUL = new Set(["hs", "rgb", "rgbw", "rgbww", "xy"]);
 
 const modesOf = (st) => st?.attributes?.supported_color_modes ?? [];
-const isDimmable = (st) => modesOf(st).some((m) => DIMMABLE.has(m));
 const hasColour = (st) => modesOf(st).some((m) => COLOURFUL.has(m));
 const hasTemp = (st) => modesOf(st).includes("color_temp");
 
@@ -192,7 +191,7 @@ class LightCard extends DacCard {
     lampEl.style.setProperty("--tone", kleur ?? "var(--dac-lit)");
 
     const ctl = this.$(".ctl");
-    const kind = dead ? "none" : isDimmable(st) ? "range" : "toggle";
+    const kind = lampBesturing(st, { dood: dead, schakelaar: c.schakelaar });
     if (ctl.dataset.kind !== kind) {
       ctl.dataset.kind = kind;
       ctl.innerHTML =
@@ -359,6 +358,7 @@ class LightEditor extends DacEditor {
     return [
       { name: "entity", selector: sel.entity("light") },
       { name: "name", selector: sel.text() },
+      { name: "schakelaar", selector: sel.bool() },
       { name: "show_colour", selector: sel.bool() },
     ];
   }
@@ -366,6 +366,7 @@ class LightEditor extends DacEditor {
   label(s) {
     return (
       { entity: t("Lamp"), name: t("Naam (overschrijft die van de lamp)"),
+        schakelaar: t("Alleen aan en uit"),
         show_colour: t("Kleurstrips tonen") }[s.name] ?? super.label(s)
     );
   }
@@ -373,6 +374,8 @@ class LightEditor extends DacEditor {
   helper(s) {
     if (s.name === "entity")
       return t("Eén lamp per kaart. Dimbaar krijgt een schuif, alleen schakelbaar een tuimelaar.");
+    if (s.name === "schakelaar")
+      return t("Een schakelaar in plaats van de schuif, voor een dimblokje met lampen die niet kunnen dimmen.");
     if (s.name === "show_colour")
       return t("Kleur en kleurtemperatuur verschijnen zodra de lamp aan is. De kaart is dan twee rijen hoog.");
     return undefined;
