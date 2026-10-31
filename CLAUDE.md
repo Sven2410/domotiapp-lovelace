@@ -653,8 +653,8 @@ Op `kaart-test` staat sinds 31 oktober 2026 ook een view `favorieten`. De automa
 heeft de demo-rolluiken `cover.hall_window`, `cover.kitchen_window` (geen stand) en `cover.living_room_window`.
 
 Sinds 31 oktober 2026 staat er ook een **nagebootst groot huis** in `.ha-dev-config/custom_components/nep_huis/` (niet in
-git): 55 dimbare lampen in 21 ruimtes, als `light: - platform: nep_huis` in `configuration.yaml`. De ruimtes en de verdieping
-`Outside` staan in het register, gezet via de websocket. Op `kaart-test` staat een view `huis`, met de automatiseringskaart
+git): 55 dimbare lampen in 21 ruimtes, als `light: - platform: nep_huis` in `configuration.yaml`. De ruimtes staan in het register, gezet
+via de websocket; negen lampen staan in de ruimte `Buiten`, de lampen in `Oprit` en `Gevel` tellen met opzet niet als buiten. Op `kaart-test` staat een view `huis`, met de automatiseringskaart
 zoals bij een klant. Daarop meet je de zoekbalk, de ruimtes en de vinkjes.
 
 Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
@@ -937,10 +937,11 @@ je niet hoort terug te draaien zonder het te vragen:
   vraagt de server. De grens is die van de regels.
 - **Een vinkje op een favoriet is geen eigen gegeven** (sinds 0.98.0). Of het aan staat, volgt uit de lampen en standen
   (`favorietVinkjes`), en een sjabloon is alleen een naam, een icoon en de vinkjes die alvast aan staan. De server weet er
-  niets van. Wat buiten is, leest `isBuiten` uit de verdieping, de ruimte en de naam, op woorden. Past dat niet, dan staat
-  het vinkje er niet, en kiest de klant de lampen zelf.
-- **Alle iconen komen uit `/static/mdi/iconList.json`** (sinds 0.98.0), intern bij Home Assistant, 7447 namen, pas opgehaald
-  als iemand de kiezer opent. Verdwijnt dat adres, dan zegt de kiezer het en blijft onze eigen set werken.
+  niets van.
+- **Buitenverlichting is de ruimte Buiten** (sinds 0.98.1; `isBuiten`, ook Outside). De eigenaar: bij elke installatie komt er
+  standaard een ruimte Buiten, met de buitenverlichting erin. Geen gok op de naam van een lamp of op een ruimte als Tuin.
+- **De klant kiest uit onze eigen iconen, niet uit `mdi:`** (sinds 0.98.1). De eigenaar: "mdi icons gebruiken we niet alleen
+  onze icons". 0.98.0 had ze wel; bouw dat niet terug. Een opgeslagen `mdi:` blijft wel getekend.
 - **Geen scrollrij opzij in dit scherm** (sinds 0.96.0). Een muiswiel op een laptop doet dat niet; de
   eigenaar kon er niet door zijn ruimtes. Zijn ruimtes lopen door en scrollen omlaag.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
@@ -2108,7 +2109,7 @@ met **drieëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort: afval, en sinds 0.85.0 de robotstofzuiger (klaar, storing, tanks, onderhoud; op de SENSOREN van het apparaat, zie de kop van `meldingen/stofzuiger.py`); het VERSTUREN doet de integratie) |
-| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*; sinds 0.97.0 ook rolluiken) en **favorieten** (sinds 0.97.0: de knoppen die de klant daar maakt, sinds 0.98.0 ook kant-en-klaar met vinkjes en uit alle iconen; twee naast elkaar, een oneven laatste over de volle breedte) |
+| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*; sinds 0.97.0 ook rolluiken) en **favorieten** (sinds 0.97.0: de knoppen die de klant daar maakt, sinds 0.98.0 ook kant-en-klaar met vinkjes; twee naast elkaar, een oneven laatste over de volle breedte) |
 | Buiten | **weerstation** (sinds 0.91.0: je kiest de temperatuursensor, de rest zoekt hij op het apparaat; temperatuur, wind met een kompas, regen, UV, licht en luchtdruk. Eerst de Shelly BLU Weather Station via BTHome, met merk, type en foto; die meldt zijn merk niet, dus daar kies je Shelly zelf; zie de kop van `weerstation-logica.js`) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; sinds 0.93.0 ook Fujitsu General, die Cozytouch als Atlantic meldt; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`), **printer** (sinds 0.84.0: een printer voor papier via IPP; je kiest de statussensor, de patronen en tellers zoekt hij zelf; de kleur van een patroon op woorden, zie `kantoorprinter-logica.js`; type `domotiapp-kantoorprinter-card`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |

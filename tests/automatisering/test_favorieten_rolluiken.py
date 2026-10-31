@@ -10,7 +10,7 @@ from homeassistant.components.cover import CoverEntityFeature
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, ServiceCall
 
-from custom_components.domotiapp_lovelace.automatisering.const import DATA_MOTOR, STORAGE_KEY
+from custom_components.domotiapp_lovelace.automatisering.const import DATA_ABONNEES, DATA_MOTOR, STORAGE_KEY
 from custom_components.domotiapp_lovelace.const import DOMAIN
 
 from .conftest import GEHEIM, KAART, KEUKEN, WOONKAMER, om, regel, tik, zet_dashboard
@@ -231,10 +231,12 @@ async def test_favorieten_overleven_een_herstart(
     await hass.async_block_till_done()
     assert hass.data[DOMAIN][DATA_MOTOR].opslag.favorieten == [f]
 
-
-async def test_de_langste_mdi_naam_past(ws, motor) -> None:
-    """NIEUW GEDRAG: de klant kiest uit alle iconen, en de langste is 46 tekens."""
-    icoon = "mdi:microsoft-xbox-controller-battery-charging"
-    assert len(icoon) == 46
-    f = await _bewaar(ws, icoon=icoon)
-    assert f["icoon"] == icoon
+async def test_de_stand_is_op_te_vragen_zonder_abonnement(hass: HomeAssistant, ws, motor) -> None:
+    """NIEUW GEDRAG: voor gereedschap dat geen gebeurtenissen kan lezen."""
+    f = await _bewaar(ws)
+    uit = await _vraag(ws, type=f"{T}/stand")
+    assert uit["success"], uit
+    assert uit["result"]["favorieten"] == [f]
+    assert uit["result"]["regels"] == []
+    assert uit["result"]["vakantie"] is False
+    assert not hass.data[DOMAIN].get(DATA_ABONNEES)

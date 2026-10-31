@@ -26,7 +26,6 @@ from .const import (
     DATA_OPSLAG,
     DATA_WS_REGISTERED,
     MAX_FAVORIETEN,
-    MAX_ICOON,
     MAX_LAMPEN_PER_REGEL,
     MAX_NAAM,
     MAX_REGELS,
@@ -59,7 +58,7 @@ _FAVORIET = vol.Schema(
     {
         vol.Optional("id"): cv.string,
         vol.Required("naam"): vol.All(cv.string, vol.Length(min=1, max=MAX_NAAM)),
-        vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=MAX_ICOON)),
+        vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=40)),
         vol.Required("lampen"): _APPARATEN,
         # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan.
         vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},
@@ -88,6 +87,7 @@ def async_register(hass: HomeAssistant) -> None:
     data = hass.data.setdefault(DOMAIN, {})
     if data.get(DATA_WS_REGISTERED):
         return
+    websocket_api.async_register_command(hass, ws_stand)
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_opslaan)
     websocket_api.async_register_command(hass, ws_verwijder)
@@ -128,6 +128,15 @@ def _motor_of_fout(hass: HomeAssistant, connection, msg: dict[str, Any]):
     if motor is None:
         connection.send_error(msg["id"], "not_allowed", t(hass, "De automatiseringen zijn nog niet geladen"))
     return motor
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/automatisering/stand"})
+@callback
+def ws_stand(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Eén keer de stand, zonder abonnement: voor gereedschap dat geen gebeurtenissen kan lezen."""
+    if _motor_of_fout(hass, connection, msg) is None:
+        return
+    connection.send_result(msg["id"], stand(hass))
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/automatisering/subscribe"})

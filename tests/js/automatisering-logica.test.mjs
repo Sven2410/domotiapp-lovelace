@@ -550,21 +550,40 @@ describe("kant-en-klare favorieten met vinkjes (0.98.0)", () => {
     const niemand = () => false;
     assert.deepEqual(L.favorietVinkjes({ lampen: [] }, alleenBinnen, niemand).map((v) => v.sleutel), ["alleUit"]);
     assert.deepEqual(L.sjablonenVoor(alleenBinnen, niemand).map((s) => s.sleutel), ["verlaten", "slapen", "allesuit"]);
-    assert.deepEqual(L.sjablonenVoor(LAMPEN, buiten).map((s) => s.sleutel), ["verlaten", "slapen", "thuis", "ochtend", "allesuit"]);
+    assert.deepEqual(L.sjablonenVoor(LAMPEN, buiten).map((s) => s.sleutel), ["verlaten", "slapen", "thuis", "dag", "allesuit"]);
   });
 
-  it("NIEUW GEDRAG: buiten herkent de verdieping, de ruimte en de naam, zonder de rest mee te nemen", () => {
+  it("NIEUW GEDRAG: buiten is de ruimte Buiten of Outside, en verder niets", () => {
     const hass = {
-      floors: { b: { floor_id: "b", name: "Outside" }, e: { floor_id: "e", name: "Begane grond" } },
-      areas: { porch: { name: "Entrance", floor_id: "b" }, tuin: { name: "Achtertuin" }, keuken: { name: "Keuken", floor_id: "e" } },
-      entities: { "light.a": { area_id: "porch" }, "light.b": { area_id: "tuin" }, "light.c": { area_id: "keuken" }, "light.d": { device_id: "x" } },
-      devices: { x: { area_id: "keuken" } },
+      floors: { b: { floor_id: "b", name: "Outside" } },
+      areas: {
+        buiten: { name: "Buiten" },
+        out: { name: " outside " },
+        tuin: { name: "Tuin" },
+        hal: { name: "Hal", floor_id: "b" },
+      },
+      entities: {
+        "light.a": { area_id: "buiten" },
+        "light.b": { area_id: "out" },
+        "light.c": { device_id: "x" },
+        "light.tuin": { area_id: "tuin" },
+        "light.verdieping": { area_id: "hal" },
+        "light.geen": {},
+      },
+      devices: { x: { area_id: "buiten" } },
     };
     assert.equal(L.isBuiten("light.a", hass), true);
     assert.equal(L.isBuiten("light.b", hass), true);
-    assert.equal(L.isBuiten("light.c", hass), false);
-    assert.equal(L.isBuiten("light.d", hass, "Buitenlamp"), true);
-    assert.equal(L.isBuiten("light.d", hass, "Plafondlamp"), false);
+    assert.equal(L.isBuiten("light.c", hass), true, "de ruimte van het apparaat telt ook");
+    assert.equal(L.isBuiten("light.tuin", hass), false, "een andere ruimte is geen gok waard");
+    assert.equal(L.isBuiten("light.verdieping", hass), false, "de verdieping telt niet");
+    assert.equal(L.isBuiten("light.geen", hass), false);
+    assert.equal(L.isBuiten("light.bestaatniet", null), false);
+  });
+
+  it("NIEUW GEDRAG: het sjabloon voor overdag heet Dagstand", () => {
+    assert.equal(sjabloon("dag").naam, "Dagstand");
+    assert.equal(L.favorietUitSjabloon(sjabloon("dag"), LAMPEN, buiten).naam, "Dagstand");
   });
 
   it("NIEUW GEDRAG: een sjabloon gaat als gewone favoriet naar de server, zonder vinkjes", () => {

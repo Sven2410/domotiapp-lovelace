@@ -118,7 +118,7 @@ export const AUTOMATISERING = {
   "Woning verlaten": "Leave home",
   "Slapen": "Sleep",
   "Thuiskomen": "Coming home",
-  "Goedemorgen": "Good morning",
+  "Dagstand": "Day mode",
   "Alles uit": "All off",
   "Alle lampen uit": "All lights off",
   "Behalve de buitenverlichting": "Except the outdoor lights",
@@ -136,8 +136,5 @@ export const AUTOMATISERING = {
   "Lampen aanpassen ({n} gekozen)": "Adjust lights ({n} selected)",
   "Alle iconen": "All icons",
   "Zoek in alle iconen": "Search all icons",
-  "Meer tonen ({n} over)": "Show more ({n} left)",
-  "Iconen laden...": "Loading icons...",
   "Geen icoon gevonden.": "No icon found.",
-  "De iconen van Home Assistant zijn niet geladen; dit is onze eigen set.": "The Home Assistant icons did not load; this is our own set.",
 };
