@@ -60,6 +60,40 @@ export const MODI = [
   { sleutel: "zon", label: nt("Zon"), icoon: "sun" },
 ];
 
+/**
+ * De knoppen die per kaart uit kunnen (sinds 0.88.0). De eigenaar op
+ * 31 oktober 2026: *"ik wil op de laadpaalkaart diverse opties kunnen
+ * deselecteren"*, per kaart in Lovelace; het paneel van de coach houdt ze alle
+ * vier.
+ */
+export const KAARTKNOPPEN = [
+  ...MODI.map(({ sleutel, label }) => ({ sleutel, label })),
+  { sleutel: "pauze", label: nt("Pauze") },
+];
+
+/**
+ * Welke knoppen deze kaart toont: een lijst, of null voor allemaal.
+ *
+ * Een lege lijst is geen enkele knop. Geen lijst is allemaal, zodat een kaart
+ * van vóór 0.88.0 niets verliest.
+ */
+export const kaartKnoppen = (config) => (Array.isArray(config?.knoppen) ? config.knoppen : null);
+
+/** Staat deze knop op de kaart? */
+export const knopOpKaart = (knoppen, sleutel) => !knoppen || knoppen.includes(sleutel);
+
+/**
+ * De config zoals hij de YAML in gaat: alles aangevinkt is geen `knoppen`.
+ *
+ * Dat is hetzelfde als een kaart die er nooit aan kwam, en een knop die er
+ * later bijkomt staat er dan vanzelf ook op.
+ */
+export function zonderVolleKnoppen(config) {
+  if (!KAARTKNOPPEN.every((k) => config.knoppen?.includes(k.sleutel))) return config;
+  const { knoppen: _alles, ...rest } = config;
+  return rest;
+}
+
 const LEEG = new Set(["", "unknown", "unavailable"]);
 
 /** Een tijdstip met zone als `Date`, of null. */
@@ -162,16 +196,21 @@ export const standVorm = (stand) => STANDEN[stand] ?? { label: "", icoon: "plug"
  * deze kaart ook. Aan staat `modus_actief`, niet de voorkeur van de paal.
  *
  * @param {object|null} st de state van de select `modus`
+ * Daarbovenop haalt de keuze van deze kaart (`kaartKnoppen`) er knoppen af.
+ *
+ * @param {object|null} st de state van de select `modus`
  * @param {object|null} [stand] uit `laadpaalStand()`
+ * @param {string[]|null} [knoppen] uit `kaartKnoppen()`
  */
-export function modusKnoppen(st, stand = null) {
+export function modusKnoppen(st, stand = null, knoppen = null) {
   if (!st || st.state === "unavailable") return [];
   const opties = Array.isArray(st.attributes?.options) ? st.attributes.options : null;
   const keuzes = stand?.modusKeuzes ?? null;
   const actief = stand?.modusActief ?? st.state;
-  return MODI.filter((m) => (!opties || opties.includes(m.sleutel)) && (!keuzes || keuzes.includes(m.sleutel))).map(
-    (m) => ({ ...m, aan: actief === m.sleutel })
-  );
+  return MODI.filter(
+    (m) =>
+      (!opties || opties.includes(m.sleutel)) && (!keuzes || keuzes.includes(m.sleutel)) && knopOpKaart(knoppen, m.sleutel)
+  ).map((m) => ({ ...m, aan: actief === m.sleutel }));
 }
 
 /**
@@ -186,17 +225,24 @@ export function modusKnoppen(st, stand = null) {
  *   uren zonder klaar-tijd.
  *
  * Staat er een andere modus aan, dan zegt die knop het al, en is er geen regel.
+ * Behalve als die knop op deze kaart is uitgevinkt: de bewoner kan de stand in
+ * het paneel van de coach aanzetten, en dan hoort de kaart te zeggen wat er
+ * geldt. Een regel, want een knop is precies wat hier niet gevraagd is.
+ *
  * Een coach zonder `modus_actief` (van vóór 0.111.1) weet niet of de planning
  * vandaag geldt: dan alleen "Planning".
  *
  * @param {object|null} st de state van de select `modus`
  * @param {object|null} stand uit `laadpaalStand()`
  * @param {object|null} [klaarSt] de state van de time `klaar_om`
+ * @param {string[]|null} [knoppen] uit `kaartKnoppen()`
  * @returns {{icoon: string, woord: string, tijd: string}|null}
  */
-export function modusRegel(st, stand, klaarSt = null) {
+export function modusRegel(st, stand, klaarSt = null, knoppen = null) {
   if (!st || st.state === "unavailable") return null;
   const actief = stand?.modusActief ?? st.state;
+  const verborgen = MODI.find((m) => m.sleutel === actief && !knopOpKaart(knoppen, m.sleutel));
+  if (verborgen) return { icoon: verborgen.icoon, woord: t(verborgen.label), tijd: "" };
   if (actief !== "planning") return null;
   if (stand?.modusActief == null) return { icoon: "calendar", woord: t("Planning"), tijd: "" };
   if (!stand.planningNu) return { icoon: "clock", woord: t("Goedkoopst"), tijd: "" };
