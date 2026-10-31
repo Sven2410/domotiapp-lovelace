@@ -282,7 +282,7 @@ describe("de foto", () => {
   it("NIEUW GEDRAG (0.63.1): de Mitsubishi Premium is te kiezen, maar Automatisch kiest hem niet", () => {
     // Zijn keuze op 13 oktober 2026: "Alleen als ik hem kies". MELCloud geeft
     // geen model door, en een witte Mitsubishi mag geen zwarte unit worden.
-    assert.deepEqual(Object.keys(AIRCO_FOTOS), ["mitsubishi_premium_onyx"]);
+    assert.deepEqual(Object.keys(AIRCO_FOTOS), ["mitsubishi_premium_onyx", "fujitsu_general"]);
     assert.equal(fotoBijAirco(mitsubishi), null);
     assert.equal(aircoAfbeelding("auto", mitsubishi, ""), "");
     assert.equal(aircoAfbeelding(undefined, mitsubishi, ""), "");

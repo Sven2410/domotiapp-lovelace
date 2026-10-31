@@ -504,6 +504,7 @@ class AircoCard extends DacCard {
     this.teardown_.push(() => {
       clearTimeout(this.sendTimer_);
       clearTimeout(this.loslaatTimer_);
+      clearTimeout(this.keuzeTimer_);
       this.pending_ = null;
     });
 
@@ -572,6 +573,17 @@ class AircoCard extends DacCard {
       if (!lijst) return;
       e.stopPropagation();
       this.roep_(keuzeOproep(this.st_(), lijst.dataset.soort, lijst.value));
+      // Neemt de airco de keuze niet over, dan komt er geen nieuwe toestand en
+      // bleef de lijst liegen (Cozytouch leest Basis terug als Geen). Daarom na
+      // even terug naar wat er echt staat. Zonder focus, anders volgt de lijst
+      // een trage melding van de airco daarna niet meer (zie `vulLijst_`).
+      clearTimeout(this.keuzeTimer_);
+      this.keuzeTimer_ = setTimeout(() => {
+        const nu = keuzeNu(this.st_(), lijst.dataset.soort);
+        if (!nu || lijst.value === nu) return;
+        lijst.value = nu;
+        lijst.blur();
+      }, 3000);
     });
 
     // Een tegel opent zijn sensor: daar staat de geschiedenis.
@@ -988,7 +1000,7 @@ class AircoEditor extends DacEditor {
       afbeelding: t(
         "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit."
       ),
-      temperature: t("Leeg laten: wat de airco zelf meet. Kies een sensor als die beter in de kamer hangt."),
+      temperature: t("Een externe temperatuursensor, voor elk merk airco. Die gaat voor wat de airco zelf meet, en is de enige bron bij een airco die geen kamertemperatuur doorgeeft. Leeg laten: wat de airco zelf meet."),
       energy: t("Leeg laten: de energiesensor van hetzelfde apparaat, als die er is."),
     }[s.name];
   }
