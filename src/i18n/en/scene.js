@@ -9,6 +9,9 @@ export const SCENE = {
   "Lamp": "Light",
   "Naam (overschrijft die van de lamp)": "Name (overrides the light's name)",
   "Kleurstrips tonen": "Show colour strips",
+  "Alleen aan en uit": "On and off only",
+  "Een schakelaar in plaats van de schuif, voor een dimblokje met lampen die niet kunnen dimmen.":
+    "A switch instead of the slider, for a dimmer module with lights that cannot dim.",
   "Eén lamp per kaart. Dimbaar krijgt een schuif, alleen schakelbaar een tuimelaar.":
     "One light per card. A dimmable light gets a slider, a switch-only light a toggle.",
   "Kleur en kleurtemperatuur verschijnen zodra de lamp aan is. De kaart is dan twee rijen hoog.":
