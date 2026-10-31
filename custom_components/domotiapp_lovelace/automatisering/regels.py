@@ -13,6 +13,10 @@ Een regel ziet er zo uit:
 
 `naam` mag ontbreken (sinds 0.96.0); de kaart noemt dan de lampen.
 
+`lampen` en `helderheden` gaan sinds 0.97.0 ook over rolluiken (`cover.`): aan is open
+op die stand (100 is helemaal open), uit is dicht. De sleutels heten nog zo omdat ze in
+de opslag staan van wie al regels heeft.
+
 `helderheden` is per lamp (sinds 0.94.0). Een lamp die er niet in staat, gaat aan
 zonder helderheid: hij kan niet dimmen. Een regel van daarvoor heeft geen
 `helderheden` maar één `helderheid`, en die geldt dan voor al zijn lampen.

@@ -644,6 +644,9 @@ allebei "Speed" heten. De dienst `nep_weerstation.zet` zet een waarde
 (`{speed: 8, speed_2: 14, moisture: true}`). De geschiedenis van de luchtdruk is met de
 hand in `home-assistant_v2.db` gezet. Op `kaart-test` staat een view `weerstation`.
 
+Op `kaart-test` staat sinds 31 oktober 2026 ook een view `favorieten`. De automatiseringskaart op view `automatisering`
+heeft de demo-rolluiken `cover.hall_window`, `cover.kitchen_window` (geen stand) en `cover.living_room_window`.
+
 Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
 `.ha-dev-config/custom_components/nep_atlantic/` (niet in git), naar de dump in
 `tests/js/vaste-invoer/cozytouch-atlantic-airco.json`: geen `hvac_action`,
@@ -918,6 +921,10 @@ je niet hoort terug te draaien zonder het te vragen:
   één `helderheid`, en die blijft gelden. Staat een lamp niet in `helderheden`, dan gaat hij
   aan zonder helderheid; `alleen_aan_uit` op de kaart is voor een dimblokje met vaste lampen.
   In het scherm zijn het groepen (lampen op dezelfde waarde); die bestaan niet op de server.
+- **Rolluiken staan in dezelfde lijsten als de lampen** (sinds 0.97.0): `lampen` en `helderheden` in de regel, omdat
+  dat in de opslag staat. Aan is open op de stand, uit is dicht. `omgekeerd` op de kaart volgt de rolluikkaart.
+- **Favorieten staan in dezelfde opslag** (`favorieten`; 0 is uit of dicht). De favorietenkaart kent geen lampen en
+  vraagt de server. De grens is die van de regels.
 - **Geen scrollrij opzij in dit scherm** (sinds 0.96.0). Een muiswiel op een laptop doet dat niet; de
   eigenaar kon er niet door zijn ruimtes. Zijn ruimtes lopen door en scrollen omlaag.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
@@ -2076,7 +2083,7 @@ per onderwerp, niet per fase. Wat er per ronde gebeurd is staat in `docs/<naam>/
 `git log --oneline` leest als de inhoudsopgave.
 
 **Wat er draait:** één integratie die haar eigen bundel serveert en registreert,
-met **tweeëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
+met **drieëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
@@ -2085,7 +2092,7 @@ met **tweeëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort: afval, en sinds 0.85.0 de robotstofzuiger (klaar, storing, tanks, onderhoud; op de SENSOREN van het apparaat, zie de kop van `meldingen/stofzuiger.py`); het VERSTUREN doet de integratie) |
-| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*) |
+| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*; sinds 0.97.0 ook rolluiken) en **favorieten** (sinds 0.97.0: de knoppen die de klant daar maakt; twee naast elkaar, een oneven laatste over de volle breedte) |
 | Buiten | **weerstation** (sinds 0.91.0: je kiest de temperatuursensor, de rest zoekt hij op het apparaat; temperatuur, wind met een kompas, regen, UV, licht en luchtdruk. Eerst de Shelly BLU Weather Station via BTHome, met merk, type en foto; die meldt zijn merk niet, dus daar kies je Shelly zelf; zie de kop van `weerstation-logica.js`) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; sinds 0.93.0 ook Fujitsu General, die Cozytouch als Atlantic meldt; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`), **printer** (sinds 0.84.0: een printer voor papier via IPP; je kiest de statussensor, de patronen en tellers zoekt hij zelf; de kleur van een patroon op woorden, zie `kantoorprinter-logica.js`; type `domotiapp-kantoorprinter-card`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |

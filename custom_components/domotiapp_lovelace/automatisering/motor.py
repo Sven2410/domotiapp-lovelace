@@ -37,6 +37,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
+from homeassistant.components.cover import CoverEntityFeature
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_ON
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers.event import (
@@ -66,12 +67,13 @@ EVENT_LOVELACE_UPDATED = "lovelace_updated"
 
 
 def lampen_uit(kaart: dict[str, Any]) -> list[str]:
-    """De lampen op deze kaart: een entity_id of `{entity, name}`."""
+    """De lampen en rolluiken op deze kaart: een entity_id of `{entity, name}`."""
     uit: list[str] = []
-    for item in kaart.get("lampen") or []:
-        ident = item.get("entity") if isinstance(item, dict) else item
-        if isinstance(ident, str) and ident.startswith("light.") and ident not in uit:
-            uit.append(ident)
+    for sleutel, begin in (("lampen", "light."), ("rolluiken", "cover.")):
+        for item in kaart.get(sleutel) or []:
+            ident = item.get("entity") if isinstance(item, dict) else item
+            if isinstance(ident, str) and ident.startswith(begin) and ident not in uit:
+                uit.append(ident)
     return uit
 
 
@@ -84,6 +86,7 @@ class Motor:
         self._meld = meld
         # Wat een regel mag noemen: de lampen van alle kaarten samen.
         self.toegestaan: set[str] = set()
+        self.omgekeerd: set[str] = set()
         self.gekoppeld: str | None = None
         self._uit: list[CALLBACK_TYPE] = []
         self._koppeling_uit: CALLBACK_TYPE | None = None
@@ -129,6 +132,8 @@ class Motor:
     async def async_herlees(self) -> None:
         gelezen = await dashboards.async_lees_kaarten(self.hass, KAART_TYPE)
         self.toegestaan = {lamp for _, kaart in gelezen for lamp in lampen_uit(kaart)}
+        # Een motor die andersom hangt: open is dan close_cover, net als op de rolluikkaart.
+        self.omgekeerd = {str(id_) for _, kaart in gelezen for id_ in kaart.get("omgekeerd") or []}
         koppel = next(
             (
                 str(kaart["vakantie_entiteit"])
@@ -183,24 +188,58 @@ class Motor:
         self.opslag.zet_laatst(dt_util.utcnow())
         _LOGGER.debug("Regel %s: %s %s", regel["id"], wat, lampen)
         if wat == "uit":
-            self.hass.async_create_task(self._roep_aan("turn_off", {"entity_id": lampen}))
-            return
-        # Lampen met dezelfde helderheid in één aanroep: een groep die samen aangaat,
-        # gaat ook echt tegelijk aan.
-        groepen: dict[int | None, list[str]] = {}
-        for lamp in lampen:
-            groepen.setdefault(regelmaker.helderheid_van(regel, lamp), []).append(lamp)
-        for pct, samen in groepen.items():
-            data: dict[str, Any] = {"entity_id": samen}
-            if pct is not None:
-                data["brightness_pct"] = pct
-            self.hass.async_create_task(self._roep_aan("turn_on", data))
+            self._schakel(dict.fromkeys(lampen, 0))
+        else:
+            self._schakel({lamp: regelmaker.helderheid_van(regel, lamp) for lamp in lampen})
 
-    async def _roep_aan(self, dienst: str, data: dict[str, Any]) -> None:
+    @callback
+    def voer_favoriet_uit(self, favoriet: dict[str, Any]) -> int:
+        """Eén tik op een favoriet. Geeft terug hoeveel er geschakeld is."""
+        per_lamp = favoriet.get("helderheden") or {}
+        doelen = {lamp: per_lamp.get(lamp) for lamp in favoriet["lampen"] if lamp in self.toegestaan}
+        _LOGGER.debug("Favoriet %s: %s", favoriet["id"], doelen)
+        self._schakel(doelen)
+        return len(doelen)
+
+    @callback
+    def _schakel(self, doelen: dict[str, int | None]) -> None:
+        """Zet alles op zijn stand: een percentage, 0 voor uit of dicht, None voor gewoon aan of open.
+
+        Wat hetzelfde doet in één aanroep: een groep die samen aangaat, gaat ook echt
+        tegelijk aan.
+        """
+        samen: dict[tuple[str, str, int | None], list[str]] = {}
+        for ident, pct in doelen.items():
+            if ident.startswith("cover."):
+                dienst, stand = self._rolluik_dienst(ident, pct)
+                samen.setdefault(("cover", dienst, stand), []).append(ident)
+            elif pct == 0:
+                samen.setdefault(("light", "turn_off", None), []).append(ident)
+            else:
+                samen.setdefault(("light", "turn_on", pct), []).append(ident)
+        for (domein, dienst, stand), idents in samen.items():
+            data: dict[str, Any] = {"entity_id": idents}
+            if stand is not None:
+                data["position" if domein == "cover" else "brightness_pct"] = stand
+            self.hass.async_create_task(self._roep_aan(domein, dienst, data))
+
+    @callback
+    def _rolluik_dienst(self, ident: str, pct: int | None) -> tuple[str, int | None]:
+        """Welke dienst en stand. Een rolluik dat geen stand kent, gaat gewoon open of dicht."""
+        omgekeerd = ident in self.omgekeerd
+        if pct == 0:
+            return ("open_cover" if omgekeerd else "close_cover"), None
+        status = self.hass.states.get(ident)
+        kan_stand = bool(status and int(status.attributes.get("supported_features") or 0) & CoverEntityFeature.SET_POSITION)
+        if pct is None or pct == 100 or not kan_stand:
+            return ("close_cover" if omgekeerd else "open_cover"), None
+        return "set_cover_position", (100 - pct if omgekeerd else pct)
+
+    async def _roep_aan(self, domein: str, dienst: str, data: dict[str, Any]) -> None:
         try:
-            await self.hass.services.async_call("light", dienst, data, blocking=True)
+            await self.hass.services.async_call(domein, dienst, data, blocking=True)
         except Exception as fout:  # noqa: BLE001 - één kapotte lamp houdt de klok niet tegen
-            _LOGGER.warning("Automatisering: light.%s op %s mislukte: %s", dienst, data["entity_id"], fout)
+            _LOGGER.warning("Automatisering: %s.%s op %s mislukte: %s", domein, dienst, data["entity_id"], fout)
 
     # ------------------------------------------------------------ na een wijziging
 

@@ -18,8 +18,11 @@ import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { t, tn } from "../taal.js";
 import {
+  FAVORIET_ICONEN,
   SOORTEN,
+  alleenRolluiken,
   dagNamen,
+  favorietNaarServer,
   groepenUit,
   helderhedenUit,
   lampStand,
@@ -29,6 +32,7 @@ import {
   metSoort,
   naarServer,
   nieuweGroep,
+  niveauTekst,
   ruimtesVan,
   startHelderheden,
   stapVerschil,
@@ -180,6 +184,12 @@ const css = /* css */ `
   }
   .hgroep[data-actief="true"] { border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent); }
   .hrij { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 32px; }
+  .hrij.metuit { grid-template-columns: 52px minmax(0, 1fr) auto; }
+  .hrij .keus { min-height: 32px; padding: 0 12px; }
+  .iconen { display: flex; flex-wrap: wrap; gap: 6px; }
+  .iconen .keus { width: 42px; height: 38px; padding: 0; justify-content: center; }
+  .iconen .icon { width: 18px; height: 18px; }
+  .allemaal { min-height: 32px; font-size: 12.5px; }
   .pct {
     height: 32px; padding: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
     font-variant-numeric: tabular-nums; color: var(--dac-ink);
@@ -301,7 +311,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.bron = bron;
     this.concept = structuredClone(regel);
     this.concept.helderheden = startHelderheden(regel);
-    const groepen = groepenUit(this.concept.lampen, this.concept.helderheden, (id) => this.dimbaar_(id));
+    const groepen = groepenUit(this.concept.lampen, this.concept.helderheden, (id) => this.inGroep_(id));
     this.groepen_ = groepen;
     this.actief_ = Math.max(0, groepen.length - 1);
     this.filter_ = { zoek: "", ruimte: null };
@@ -310,6 +320,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.bezig_ = false;
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
     if (regel.vakantie) titel = regel.id ? t("Vakantieregel wijzigen") : t("Nieuwe vakantieregel");
+    if (regel.favoriet) titel = regel.id ? t("Favoriet wijzigen") : t("Nieuwe favoriet");
     this.$("#kop").textContent = titel;
     this.$(".sluit").setAttribute("aria-label", t("Sluiten"));
     this.$(".nee").textContent = t("Annuleren");
@@ -328,6 +339,16 @@ class AutomatiseringScherm extends HTMLElement {
 
   isVan(kaart) {
     return this.hasAttribute("open") && this.bron === kaart;
+  }
+
+  /** Staat hij in een groep? Bij een favoriet alles: ook wat geen schuif kent, kan uit of dicht. */
+  inGroep_(id) {
+    return Boolean(this.concept?.favoriet) || this.dimbaar_(id);
+  }
+
+  /** Is er iets om in te stellen? Bij een regel alleen als hij iets aan of open zet. */
+  metStand_() {
+    return Boolean(this.concept?.favoriet || this.concept?.aan);
   }
 
   /** Krijgt deze lamp een schuif? */
@@ -354,7 +375,11 @@ class AutomatiseringScherm extends HTMLElement {
           <button type="button" data-k="${wat}:plus" aria-label="${veilig(t("Later"))}" ${stapVerschil(v, 1) === v ? "disabled" : ""}>${resolve("plus")}</button>
         </div>`;
     }
-    const kop = wat === "aan" ? t("Aan") : t("Uit");
+    const lampen = this.concept.lampen;
+    const rolluik = lampen.some((id) => id.startsWith("cover."));
+    let kop = wat === "aan" ? t("Aan") : t("Uit");
+    if (alleenRolluiken(lampen)) kop = wat === "aan" ? t("Open") : t("Dicht");
+    else if (rolluik) kop = wat === "aan" ? t("Aan of open") : t("Uit of dicht");
     return `<div class="groep"><span class="kop">${veilig(kop)}</span><div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
   }
 
@@ -370,24 +395,29 @@ class AutomatiseringScherm extends HTMLElement {
     const dagen = namen
       .map(
         (naam, i) =>
-          `<button type="button" class="dag" role="checkbox" aria-checked="${c.dagen.includes(i)}" data-k="dag:${i}">${veilig(naam)}</button>`
+          `<button type="button" class="dag" role="checkbox" aria-checked="${(c.dagen ?? []).includes(i)}" data-k="dag:${i}">${veilig(naam)}</button>`
       )
       .join("");
 
     form.innerHTML = `
       <div class="groep">
         <span class="kop">${veilig(t("Naam"))}</span>
-        <input class="naam" type="text" data-naam="1" maxlength="60" value="${veilig(c.naam ?? "")}" placeholder="${veilig(t("Bijvoorbeeld Avond beneden"))}" aria-label="${veilig(t("Naam"))}" autocomplete="off" />
+        <input class="naam" type="text" data-naam="1" maxlength="60" value="${veilig(c.naam ?? "")}" placeholder="${veilig(c.favoriet ? t("Bijvoorbeeld Woning verlaten") : t("Bijvoorbeeld Avond beneden"))}" aria-label="${veilig(t("Naam"))}" autocomplete="off" />
       </div>
+      ${c.favoriet ? this.iconenHtml_() : ""}
       <div class="groep">
-        <span class="kop"><span>${veilig(t("Lampen"))}</span><span class="teller"></span></span>
+        <span class="kop"><span>${veilig(this.lijstKop_())}</span><span class="teller"></span></span>
         ${this.filterHtml_()}
         <div class="lampenlijst"></div>
       </div>
       ${this.helderheidHtml_()}
-      ${this.momentHtml_("aan", c.aan)}
+      ${
+        c.favoriet
+          ? ""
+          : `${this.momentHtml_("aan", c.aan)}
       ${this.momentHtml_("uit", c.uit)}
-      <div class="groep"><span class="kop">${veilig(t("Dagen"))}</span><div class="dagen">${dagen}</div></div>`;
+      <div class="groep"><span class="kop">${veilig(t("Dagen"))}</span><div class="dagen">${dagen}</div></div>`
+      }`;
     // De focus terug op dezelfde knop: alles is opnieuw getekend, en zonder
     // dit begint wie met Tab en Spatie werkt na elke keuze weer bovenaan.
     this.tekenLijst_();
@@ -409,19 +439,46 @@ class AutomatiseringScherm extends HTMLElement {
       ruimtes.length > 1
         ? `<div class="ruimtes" role="radiogroup" aria-label="${veilig(t("Ruimte"))}">${keus("*", t("Alle"))}${ruimtes.map((r) => keus(r.id, r.naam)).join("")}</div>`
         : "";
-    return `<input class="zoek" type="search" data-zoek="1" value="${veilig(this.filter_.zoek)}" placeholder="${veilig(t("Zoek een lamp"))}" aria-label="${veilig(t("Zoek een lamp"))}" autocomplete="off" />${rij}`;
+    const zoek = lampen.some((l) => l.rolluik) ? t("Zoek een lamp of rolluik") : t("Zoek een lamp");
+    return `<input class="zoek" type="search" data-zoek="1" value="${veilig(this.filter_.zoek)}" placeholder="${veilig(zoek)}" aria-label="${veilig(zoek)}" autocomplete="off" />${rij}<button type="button" class="nieuw allemaal" data-k="allemaal:"></button>`;
+  }
+
+  /** De kop boven de lijst: wat er op deze kaart te kiezen is. */
+  lijstKop_() {
+    const lampen = this.bron.lampen_();
+    if (lampen.every((l) => l.rolluik)) return t("Rolluiken");
+    return lampen.some((l) => l.rolluik) ? t("Lampen en rolluiken") : t("Lampen");
+  }
+
+  /** De iconen van een favoriet: tikken in plaats van zoeken. */
+  iconenHtml_() {
+    const c = this.concept;
+    const keuzes = FAVORIET_ICONEN.map(
+      (naam) =>
+        `<button type="button" class="keus" role="radio" aria-checked="${c.icoon === naam}" aria-label="${veilig(naam)}" data-k="icoon:${veilig(naam)}">${resolve(naam)}</button>`
+    ).join("");
+    return `<div class="groep"><span class="kop">${veilig(t("Icoon"))}</span><div class="iconen" role="radiogroup" aria-label="${veilig(t("Icoon"))}">${keuzes}</div></div>`;
+  }
+
+  /** Wat de zoekbalk en de ruimte nu tonen. */
+  getoond_() {
+    return lampenGefilterd(this.bron.lampen_(), this.filter_, (id) => this.bron.naamVanLamp_(id), this.bron.hass);
   }
 
   /** Alleen de lijst opnieuw: de zoekbalk blijft staan, met de cursor en het toetsenbord. */
   tekenLijst_() {
     const c = this.concept;
-    const alle = this.bron.lampen_();
-    const lijst = lampenGefilterd(alle, this.filter_, (id) => this.bron.naamVanLamp_(id), this.bron.hass);
+    const lijst = this.getoond_();
+    const allemaal = this.$(".allemaal");
+    if (allemaal) {
+      allemaal.textContent = lijst.length && lijst.every((l) => c.lampen.includes(l.entity)) ? t("Niets kiezen") : t("Alles kiezen");
+      allemaal.hidden = !lijst.length;
+    }
     this.$(".lampenlijst").innerHTML = lijst.length
       ? lijst
-          .map(({ entity }) => {
+          .map(({ entity, rolluik }) => {
             const aan = c.lampen.includes(entity);
-            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve("bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
+            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve(rolluik ? "shutter" : "bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
           })
           .join("")
       : `<span class="niets">${veilig(t("Geen lamp gevonden."))}</span>`;
@@ -431,7 +488,8 @@ class AutomatiseringScherm extends HTMLElement {
   /** Per helderheid een schuif met zijn lampen, en daaronder de knop voor een nieuwe. */
   helderheidHtml_() {
     const c = this.concept;
-    if (!c.aan) return "";
+    if (!this.metStand_()) return "";
+    const alleenRolluik = alleenRolluiken(c.lampen);
     const lampje = (id) => {
       const naam = veilig(this.bron.naamVanLamp_(id));
       return `<button type="button" class="lampje" data-k="weg:${veilig(id)}" aria-label="${veilig(t("{naam} weghalen", { naam: this.bron.naamVanLamp_(id) }))}"><span class="tk">${naam}</span>${resolve("close")}</button>`;
@@ -441,29 +499,39 @@ class AutomatiseringScherm extends HTMLElement {
         const inhoud = g.lampen.length
           ? `<div class="hlampen">${g.lampen.map(lampje).join("")}</div>`
           : `<span class="niets">${veilig(t("Kies hierboven de lampen voor deze helderheid."))}</span>`;
+        const uit = c.favoriet
+          ? `<button type="button" class="keus" data-k="groepuit:${i}"><span class="tk">${veilig(niveauTekst(0, alleenRolluik))}</span></button>`
+          : "";
         return `<div class="hgroep" data-actief="${this.groepen_.length > 1 && i === this.actief_}">
-          <div class="hrij">
-            <button type="button" class="pct" data-k="groep:${i}" aria-label="${veilig(t("Hier lampen bij kiezen"))}">${g.pct}%</button>
-            <input type="range" min="1" max="100" step="1" value="${g.pct}" data-groep="${i}" aria-label="${veilig(t("Helderheid"))}" />
+          <div class="hrij${c.favoriet ? " metuit" : ""}">
+            <button type="button" class="pct" data-k="groep:${i}" aria-label="${veilig(t("Hier lampen bij kiezen"))}">${veilig(niveauTekst(g.pct, alleenRolluik))}</button>
+            <input type="range" min="${c.favoriet ? 0 : 1}" max="100" step="1" value="${g.pct}" data-groep="${i}" aria-label="${veilig(t("Helderheid"))}" />
+            ${uit}
           </div>
           ${inhoud}
         </div>`;
       })
       .join("");
-    const opAanUit = c.lampen.filter((id) => !this.dimbaar_(id));
+    const opAanUit = c.favoriet ? [] : c.lampen.filter((id) => !this.dimbaar_(id));
+    const vastKop = alleenRolluiken(opAanUit)
+      ? t("Alleen open en dicht")
+      : opAanUit.some((id) => id.startsWith("cover."))
+        ? t("Alleen aan en uit, of open en dicht")
+        : t("Alleen aan en uit");
     const vast = opAanUit.length
-      ? `<div class="groep"><span class="kop">${veilig(t("Alleen aan en uit"))}</span><div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
+      ? `<div class="groep"><span class="kop">${veilig(vastKop)}</span><div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
       : "";
     if (!groepen && !vast) return "";
     const heeftLeeg = this.groepen_.some((g) => !g.lampen.length);
     const nieuw =
       this.groepen_.length && !heeftLeeg
-        ? `<button type="button" class="nieuw" data-k="nieuw:">${resolve("plus")}${veilig(t("Nieuwe helderheid"))}</button>`
+        ? `<button type="button" class="nieuw" data-k="nieuw:">${resolve("plus")}${veilig(alleenRolluik ? t("Nieuwe stand") : t("Nieuwe helderheid"))}</button>`
         : "";
     const aan = Boolean(this.voorbeeld_);
     const voorbeeld = `<button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
       ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}`;
-    return `${groepen ? `<div class="groep"><span class="kop">${veilig(t("Helderheid"))}</span>${groepen}${nieuw}</div>` : ""}${vast}<div class="groep">${voorbeeld}</div>`;
+    const kop = alleenRolluik ? t("Openingsstand") : c.lampen.some((id) => id.startsWith("cover.")) ? t("Helderheid en stand") : t("Helderheid");
+    return `${groepen ? `<div class="groep"><span class="kop">${veilig(kop)}</span>${groepen}${nieuw}</div>` : ""}${vast}<div class="groep">${voorbeeld}</div>`;
   }
 
   stuur_(hass, oproepen) {
@@ -485,7 +553,7 @@ class AutomatiseringScherm extends HTMLElement {
     const v = this.voorbeeld_;
     if (!v) return;
     const c = this.concept;
-    if (!c.aan) {
+    if (!this.metStand_()) {
       this.stopVoorbeeld_();
       return;
     }
@@ -496,7 +564,8 @@ class AutomatiseringScherm extends HTMLElement {
     for (const id of Object.keys(doelen)) {
       if (!(id in this.standen_)) this.standen_[id] = lampStand(hass.states[id]);
     }
-    this.stuur_(hass, voorbeeldOproepen(doelen, v.gezet));
+    const omgekeerd = this.bron.lampen_().filter((l) => l.omgekeerd).map((l) => l.entity);
+    this.stuur_(hass, voorbeeldOproepen(doelen, v.gezet, omgekeerd));
     v.gezet = doelen;
   }
 
@@ -522,7 +591,7 @@ class AutomatiseringScherm extends HTMLElement {
     const c = this.concept;
     const erbij = !c.lampen.includes(id);
     c.lampen = wissel(c.lampen, id);
-    if (!this.dimbaar_(id)) return;
+    if (!this.inGroep_(id)) return;
     this.zetGroepen_(erbij ? metLamp(this.groepen_, this.actief_, id) : zonderLamp(this.groepen_, this.actief_, id));
   }
 
@@ -545,6 +614,16 @@ class AutomatiseringScherm extends HTMLElement {
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
     else if (soort === "groep") this.actief_ = Number(waarde);
     else if (soort === "nieuw") this.zetGroepen_(nieuweGroep(this.groepen_, this.actief_));
+    else if (soort === "icoon") c.icoon = waarde;
+    else if (soort === "groepuit") {
+      const i = Number(waarde);
+      this.groepen_[i] = { ...this.groepen_[i], pct: 0 };
+      this.zetGroepen_({ groepen: this.groepen_, actief: i });
+    } else if (soort === "allemaal") {
+      const getoond = this.getoond_().map((l) => l.entity);
+      const allesAl = getoond.every((id) => c.lampen.includes(id));
+      for (const id of getoond) if (c.lampen.includes(id) === allesAl) this.wisselLamp_(id);
+    }
     else if (soort === "voorbeeld") {
       if (this.voorbeeld_) this.stopVoorbeeld_();
       else this.voorbeeld_ = { gezet: {} };
@@ -579,7 +658,7 @@ class AutomatiseringScherm extends HTMLElement {
       this.groepen_[i] = { ...this.groepen_[i], pct };
       this.actief_ = i;
       c.helderheden = helderhedenUit(this.groepen_);
-      veld.closest(".hrij").querySelector(".pct").textContent = `${pct}%`;
+      veld.closest(".hrij").querySelector(".pct").textContent = niveauTekst(pct, alleenRolluiken(c.lampen));
       // Wie schuift, kiest daarmee ook de groep. Geen tekenen: de schuif blijft onder je vinger.
       const meer = this.groepen_.length > 1;
       this.shadowRoot.querySelectorAll(".hgroep").forEach((g, n) => {
@@ -602,7 +681,9 @@ class AutomatiseringScherm extends HTMLElement {
     this.bezig_ = true;
     this.kijkNa_();
     try {
-      await this.bron.opslaan(naarServer(this.concept, (id) => this.dimbaar_(id)));
+      const dimt = (id) => this.dimbaar_(id);
+      if (this.concept.favoriet) await this.bron.opslaanFavoriet(favorietNaarServer(this.concept, dimt));
+      else await this.bron.opslaan(naarServer(this.concept, dimt));
       this.sluit();
     } catch (fout) {
       this.bezig_ = false;

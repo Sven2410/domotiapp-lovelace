@@ -46,6 +46,7 @@ VAKANTIE_WISSEL_MIN = 15
 
 # Een grens zodat een open commando de opslag niet vol kan schrijven.
 MAX_REGELS = 200
+MAX_FAVORIETEN = 50
 MAX_LAMPEN_PER_REGEL = 200
 MAX_NAAM = 60
 

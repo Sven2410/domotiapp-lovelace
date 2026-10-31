@@ -92,7 +92,7 @@ async def test_verwijderen_en_uitzetten(ws, opgezet) -> None:
 async def test_het_abonnement_krijgt_elke_wijziging(ws, opgezet) -> None:
     assert (await _vraag(ws, type=f"{T}/subscribe"))["success"]
     eerste = await ws.receive_json()
-    assert eerste["event"] == {"regels": [], "vakantie": False, "gekoppeld": None}
+    assert eerste["event"] == {"regels": [], "favorieten": [], "vakantie": False, "gekoppeld": None}
     await ws.send_json_auto_id({"type": f"{T}/vakantie", "aan": True})
     gezien = [await ws.receive_json() for _ in range(2)]
     gebeurtenis = next(g for g in gezien if g["type"] == "event")

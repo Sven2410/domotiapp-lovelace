@@ -4,5 +4,7 @@
   "Kies een moment om aan of uit te gaan": "Choose a moment to switch on or off",
   "Deze lamp staat niet op de kaart": "This light is not on the card",
   "Er staan te veel automatiseringen": "There are too many automations",
-  "Deze automatisering bestaat niet meer": "This automation no longer exists"
+  "Deze automatisering bestaat niet meer": "This automation no longer exists",
+  "Er staan te veel favorieten": "There are too many favourites",
+  "Deze favoriet bestaat niet meer": "This favourite no longer exists"
 }

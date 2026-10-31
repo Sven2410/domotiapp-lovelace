@@ -28,7 +28,16 @@ import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { vraagBevestiging } from "../vraag.js";
-import { lampenKort, lampenUit, nieuweRegel, regelKop, regelTekst, regelsVoor } from "./automatisering-logica.js";
+import {
+  favorietenVoor,
+  lampenKort,
+  lampenUit,
+  nieuweFavoriet,
+  nieuweRegel,
+  regelKop,
+  regelTekst,
+  regelsVoor,
+} from "./automatisering-logica.js";
 import { automatiseringScherm, toonAutomatiseringScherm } from "./automatisering-scherm.js";
 import { nt, t } from "../taal.js";
 
@@ -93,7 +102,7 @@ class AutomatiseringCard extends DacCard {
     .nm, .lp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rij[data-aan="false"] .nm { color: var(--dac-ink-2); }
 
-    .vakantie {
+    .vakantie, .favorieten {
       display: flex; flex-direction: column; gap: 8px;
       padding-top: 10px; border-top: 1px solid var(--dac-border);
     }
@@ -114,7 +123,7 @@ class AutomatiseringCard extends DacCard {
 
   validate(config) {
     const c = { ...config };
-    if (!lampenUit(c).length) c[INCOMPLETE] = t("Kies minstens één lamp.");
+    if (!lampenUit(c).length) c[INCOMPLETE] = t("Kies minstens één lamp of rolluik.");
     return c;
   }
 
@@ -128,6 +137,10 @@ class AutomatiseringCard extends DacCard {
 
   metVakantie_() {
     return this.config.vakantie !== false;
+  }
+
+  metFavorieten_() {
+    return this.config.favorieten !== false;
   }
 
   watched() {
@@ -147,6 +160,18 @@ class AutomatiseringCard extends DacCard {
         <div class="pauze" hidden>${escapeHtml(t("Gepauzeerd: de vakantiemodus staat aan."))}</div>
         <div class="leeg" data-groep="gewoon" hidden>${escapeHtml(t("Nog geen automatiseringen. Maak er een met het plusje."))}</div>
         <div class="lijst" data-groep="gewoon"></div>
+        ${
+          this.metFavorieten_()
+            ? `<div class="favorieten">
+                <div class="kop">
+                  <span class="titel vkop">${escapeHtml(t("Favorieten"))}</span>
+                  ${plus("favoriet", t("Nieuwe favoriet"))}
+                </div>
+                <div class="leeg" data-groep="favoriet" hidden>${escapeHtml(t("Knoppen voor de favorietenkaart: één tik zet alles zoals je het hier kiest."))}</div>
+                <div class="lijst" data-groep="favoriet"></div>
+              </div>`
+            : ""
+        }
         ${
           this.metVakantie_()
             ? `<div class="vakantie">
@@ -169,7 +194,12 @@ class AutomatiseringCard extends DacCard {
 
   wire() {
     for (const plus of this.$$(".plus")) {
-      this.on(plus, "click", () => toonAutomatiseringScherm(this, nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")));
+      this.on(plus, "click", () =>
+        toonAutomatiseringScherm(
+          this,
+          plus.dataset.groep === "favoriet" ? nieuweFavoriet(this.lampen_()) : nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")
+        )
+      );
     }
     for (const lijst of this.$$(".lijst")) this.on(lijst, "click", (e) => this.tikOpLijst_(e));
     const schakelaar = this.$(".vrij .toggle");
@@ -213,6 +243,13 @@ class AutomatiseringCard extends DacCard {
   tikOpLijst_(e) {
     const rij = e.target.closest(".rij");
     if (!rij) return;
+    if (rij.dataset.favoriet) {
+      const favoriet = this.stand_?.favorieten?.find((f) => f.id === rij.dataset.favoriet);
+      if (!favoriet) return;
+      if (e.target.closest(".weg")) this.verwijderFavoriet_(favoriet);
+      else toonAutomatiseringScherm(this, { ...favoriet, favoriet: true });
+      return;
+    }
     const regel = this.regel_(rij.dataset.id);
     if (!regel) return;
     if (e.target.closest(".weg")) this.verwijder_(regel);
@@ -227,6 +264,20 @@ class AutomatiseringCard extends DacCard {
   /** Het scherm roept dit aan, en toont zelf de fout. */
   opslaan(regel) {
     return this.stuur_({ type: `${COMMANDO}/opslaan`, regel });
+  }
+
+  /** Het scherm roept dit aan, en toont zelf de fout. */
+  opslaanFavoriet(favoriet) {
+    return this.stuur_({ type: `${COMMANDO}/favoriet_opslaan`, favoriet });
+  }
+
+  async verwijderFavoriet_(favoriet) {
+    const ja = await vraagBevestiging({
+      title: t("Favoriet verwijderen?"),
+      text: favoriet.naam,
+      confirmText: t("Verwijderen"),
+    });
+    if (ja) this.stuur_({ type: `${COMMANDO}/favoriet_verwijder`, favoriet: favoriet.id }).catch((f) => this.mislukt_(f));
   }
 
   async verwijder_(regel) {
@@ -266,6 +317,27 @@ class AutomatiseringCard extends DacCard {
       .join("");
   }
 
+  /** De favorieten: geen schakelaar, want ze gaan op een tik op de favorietenkaart. */
+  tekenFavorieten_(lijst, favorieten) {
+    const sig = JSON.stringify(favorieten) + this.lampen_().map((l) => l.naam).join();
+    if (lijst.dataset.sig === sig) return;
+    lijst.dataset.sig = sig;
+    const naamVan = (id) => nameOf(this.hass, id);
+    lijst.innerHTML = favorieten
+      .map(
+        (f) => `
+        <div class="rij" data-favoriet="${escapeHtml(f.id)}" data-aan="true">
+          <span class="ico">${resolve(f.icoon, "star")}</span>
+          <span class="txt">
+            <span class="nm">${escapeHtml(f.naam)}</span>
+            <span class="lp">${escapeHtml(lampenKort(f, this.lampen_(), naamVan))}</span>
+          </span>
+          <button class="weg" type="button" aria-label="${escapeHtml(t("Verwijderen"))}">${resolve("bin")}</button>
+        </div>`
+      )
+      .join("");
+  }
+
   /** Teken een lijst opnieuw als er iets aan veranderde, en koppel de schakelaars. */
   tekenLijst_(lijst, regels) {
     const sig = JSON.stringify(regels) + this.lampen_().map((l) => l.naam).join();
@@ -290,6 +362,12 @@ class AutomatiseringCard extends DacCard {
       const gewoon = regelsVoor(stand.regels, lampen, false);
       this.tekenLijst_(this.$('.lijst[data-groep="gewoon"]'), gewoon);
       this.$('.leeg[data-groep="gewoon"]').hidden = gewoon.length > 0;
+      const fav = this.$('.lijst[data-groep="favoriet"]');
+      if (fav) {
+        const favorieten = favorietenVoor(stand.favorieten, lampen);
+        this.tekenFavorieten_(fav, favorieten);
+        this.$('.leeg[data-groep="favoriet"]').hidden = favorieten.length > 0;
+      }
       const vak = this.$('.lijst[data-groep="vakantie"]');
       if (vak) {
         this.tekenLijst_(vak, regelsVoor(stand.regels, lampen, true));
@@ -327,28 +405,39 @@ class AutomatiseringCard extends DacCard {
  */
 class AutomatiseringEditor extends DacEditor {
   defaults() {
-    return { vakantie: true };
+    return { vakantie: true, favorieten: true };
   }
 
   setConfig(config) {
     const flat = { ...config };
     const lijst = lampenUit(config);
-    flat.lampen = lijst.map((l) => l.entity);
+    flat.lampen = lijst.filter((l) => !l.rolluik).map((l) => l.entity);
+    const rolluiken = lijst.filter((l) => l.rolluik).map((l) => l.entity);
+    if (rolluiken.length) flat.rolluiken = rolluiken;
+    else delete flat.rolluiken;
     for (const l of lijst) if (l.naam) flat[`naam:${l.entity}`] = l.naam;
     super.setConfig(flat);
   }
 
   serialize(config) {
     const uit = { ...config };
-    uit.lampen = (uit.lampen ?? []).map((id) => {
+    const metNaam = (id) => {
       const name = uit[`naam:${id}`];
       return name ? { entity: id, name } : id;
-    });
+    };
+    uit.lampen = (uit.lampen ?? []).map(metNaam);
+    const rolluiken = (uit.rolluiken ?? []).map(metNaam);
+    if (rolluiken.length) uit.rolluiken = rolluiken;
+    else delete uit.rolluiken;
+    const omgekeerd = (uit.omgekeerd ?? []).filter((id) => (config.rolluiken ?? []).includes(id));
+    if (omgekeerd.length) uit.omgekeerd = omgekeerd;
+    else delete uit.omgekeerd;
     for (const k of Object.keys(uit)) if (k.startsWith("naam:")) delete uit[k];
     // Alleen wat nog op de kaart staat; leeg hoort niet in de YAML.
     const aanUit = (uit.alleen_aan_uit ?? []).filter((id) => (config.lampen ?? []).includes(id));
     if (aanUit.length) uit.alleen_aan_uit = aanUit;
     else delete uit.alleen_aan_uit;
+    if (uit.favorieten !== false) delete uit.favorieten;
     if (uit.vakantie !== false) delete uit.vakantie;
     if (uit.vakantie === false) delete uit.vakantie_entiteit;
     return uit;
@@ -356,11 +445,15 @@ class AutomatiseringEditor extends DacEditor {
 
   schema() {
     const ids = (this.config_?.lampen ?? []).filter((x) => typeof x === "string");
+    const rolluiken = (this.config_?.rolluiken ?? []).filter((x) => typeof x === "string");
     return [
       { name: "name", selector: sel.text() },
       { name: "lampen", selector: { entity: { domain: "light", multiple: true } } },
-      ...ids.map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
+      { name: "rolluiken", selector: { entity: { domain: "cover", multiple: true } } },
+      ...[...ids, ...rolluiken].map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
       ...(ids.length ? [{ name: "alleen_aan_uit", selector: { entity: { include_entities: ids, multiple: true } } }] : []),
+      ...(rolluiken.length ? [{ name: "omgekeerd", selector: { entity: { include_entities: rolluiken, multiple: true } } }] : []),
+      { name: "favorieten", selector: sel.bool() },
       { name: "vakantie", selector: sel.bool() },
       ...(this.config_?.vakantie !== false
         ? [{ name: "vakantie_entiteit", selector: sel.entity(["input_boolean", "switch"]) }]
@@ -377,7 +470,10 @@ class AutomatiseringEditor extends DacEditor {
       {
         name: t("Titel"),
         lampen: t("Lampen die de klant kan kiezen"),
+        rolluiken: t("Rolluiken die de klant kan kiezen"),
         alleen_aan_uit: t("Alleen aan en uit"),
+        omgekeerd: t("Motor omgekeerd"),
+        favorieten: t("Favorieten op deze kaart"),
         vakantie: t("Vakantiemodus op deze kaart"),
         vakantie_entiteit: t("Bestaande vakantiestand"),
       }[s.name] ?? super.label(s)
@@ -388,6 +484,9 @@ class AutomatiseringEditor extends DacEditor {
     return {
       name: t("Leeg laten: Automatiseringen."),
       lampen: t("Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten."),
+      rolluiken: t("Aan is open op de gekozen stand, uit is dicht. Een rolluik dat zijn stand niet kent, gaat alleen open en dicht."),
+      omgekeerd: t("Rolluiken waarvan de motor andersom is aangesloten, net als het vinkje op de rolluikkaart."),
+      favorieten: t("Hier maakt de klant de knoppen voor de favorietenkaart."),
       alleen_aan_uit: t("Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif."),
       vakantie_entiteit: t("Leeg laten: de schakelaar die de integratie zelf heeft. Kies hier een stand die er al was, dan volgt de kaart die."),
     }[s.name];
