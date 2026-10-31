@@ -349,3 +349,30 @@ describe("het voorbeeld (0.95.0)", () => {
     assert.deepEqual(L.terugOproepen({}), []);
   });
 });
+
+describe("de naam en het overzicht (0.96.0)", () => {
+  const lampen = [];
+  const naamVan = (id) => id.replace("light.", "");
+
+  it("NIEUW GEDRAG: tot drie lampen op naam, daarna een telling", () => {
+    assert.equal(L.lampenKort({ lampen: ["light.a", "light.b", "light.c"] }, lampen, naamVan), "a, b, c");
+    assert.equal(L.lampenKort({ lampen: ["light.a", "light.b", "light.c", "light.d"] }, lampen, naamVan), "a, b en 2 andere");
+    assert.equal(
+      L.lampenKort({ lampen: Array.from({ length: 55 }, (_, i) => `light.l${i}`) }, lampen, naamVan),
+      "l0, l1 en 53 andere"
+    );
+  });
+
+  it("NIEUW GEDRAG: de kop is de naam, en zonder naam de lampen", () => {
+    assert.equal(L.regelKop({ naam: "Avond beneden", lampen: ["light.a"] }, lampen, naamVan), "Avond beneden");
+    assert.equal(L.regelKop({ naam: "   ", lampen: ["light.a"] }, lampen, naamVan), "a");
+    assert.equal(L.regelKop({ lampen: ["light.a"] }, lampen, naamVan), "a");
+  });
+
+  it("NIEUW GEDRAG: de naam gaat mee naar de server, en een lege niet", () => {
+    const basis = { lampen: ["light.a"], dagen: [0], aan: null, uit: { soort: "tijd", tijd: "23:00" } };
+    assert.equal(L.naarServer({ ...basis, naam: "  Avond beneden " }).naam, "Avond beneden");
+    assert.equal("naam" in L.naarServer({ ...basis, naam: "  " }), false);
+    assert.equal("naam" in L.naarServer(basis), false);
+  });
+});

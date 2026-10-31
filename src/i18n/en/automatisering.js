@@ -80,4 +80,6 @@ export const AUTOMATISERING = {
   "Voorbeeld stoppen": "Stop preview",
   "De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit.": "The lights go back to how they were when you stop or close this screen.",
   "Het voorbeeld is niet gelukt.": "The preview did not work.",
+  "{kop} en {n} andere": "{kop} and {n} more",
+  "Bijvoorbeeld Avond beneden": "For example Evening downstairs",
 };

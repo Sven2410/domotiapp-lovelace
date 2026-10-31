@@ -6,7 +6,7 @@
  * begint daar ook op maandag, met 0.
  */
 
-import { locale, nt, t } from "../taal.js";
+import { locale, nt, t, tn } from "../taal.js";
 
 export const SOORTEN = [
   { sleutel: "tijd", label: nt("Tijd"), icoon: "clock" },
@@ -302,6 +302,23 @@ export function lampenTekst(regel, lampen, naamVan = (id) => id) {
     .join(", ");
 }
 
+/**
+ * De lampen kort: tot drie op naam, daarna een telling. De eigenaar, 31 oktober 2026:
+ * "Heb je veel lampen geselecteerd dan wordt het heel on overzichtelijk in het overzicht".
+ */
+export function lampenKort(regel, lampen, naamVan = (id) => id, max = 3) {
+  const ids = regel.lampen ?? [];
+  if (ids.length <= max) return lampenTekst(regel, lampen, naamVan);
+  const kop = lampenTekst({ lampen: ids.slice(0, max - 1) }, lampen, naamVan);
+  const rest = ids.length - (max - 1);
+  return tn(rest, "{kop} en {n} andere", "{kop} en {n} andere", { kop });
+}
+
+/** De kop van een rij: de naam die de klant gaf, en anders de lampen. */
+export function regelKop(regel, lampen, naamVan = (id) => id) {
+  return String(regel.naam ?? "").trim() || lampenKort(regel, lampen, naamVan);
+}
+
 /** Een nieuwe regel: wat de meeste mensen willen, en één lamp staat er meteen in. */
 export const nieuweRegel = (lampen, vakantie = false) => ({
   lampen: lampen.length === 1 ? [lampen[0].entity] : [],
@@ -346,8 +363,10 @@ export function waaromNiet(regel) {
  */
 export function naarServer(regel, dimt = () => true) {
   const per = regel.helderheden ?? startHelderheden(regel);
+  const naam = String(regel.naam ?? "").trim();
   return {
     ...(regel.id ? { id: regel.id } : {}),
+    ...(naam ? { naam } : {}),
     lampen: regel.lampen,
     helderheden: Object.fromEntries(regel.lampen.filter(dimt).map((l) => [l, per[l] ?? 100])),
     aan: regel.aan ?? null,

@@ -67,7 +67,7 @@ const css = /* css */ `
   }
 
   .vak {
-    width: min(420px, 100%);
+    width: min(560px, 100%);
     max-height: 100%; overflow-y: auto;
     padding: 14px 14px 16px;
     border-radius: var(--dac-radius);
@@ -90,8 +90,10 @@ const css = /* css */ `
   .sluit .icon { width: 17px; height: 17px; }
 
   .form { display: flex; flex-direction: column; gap: 14px; }
-  .groep { display: flex; flex-direction: column; gap: 7px; }
-  .groep > .kop { font-size: 12px; color: var(--dac-ink-2); display: flex; justify-content: space-between; }
+  .groep { display: flex; flex-direction: column; gap: 8px; }
+  .form > .groep + .groep { padding-top: 14px; border-top: 1px solid var(--dac-border); }
+  .groep > .kop { font-size: 12.5px; font-weight: 600; color: var(--dac-ink); display: flex; justify-content: space-between; }
+  .groep > .kop .teller { font-weight: 400; color: var(--dac-ink-2); }
   .opties { display: flex; flex-wrap: wrap; gap: 6px; }
 
   .keus {
@@ -150,19 +152,26 @@ const css = /* css */ `
   .stapper .icon { width: 15px; height: 15px; }
   .stapper .wat { flex: 1 1 auto; min-width: 0; text-align: center; font-size: 13.5px; font-weight: 500; }
 
-  .zoek {
+  .naam, .zoek {
     -webkit-appearance: none; appearance: none;
     width: 100%; height: 38px; padding: 0 14px;
     font: inherit; font-size: 14px; color: var(--dac-ink); color-scheme: var(--dac-scheme);
     background-color: rgba(var(--dac-tint), .05);
     border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
   }
-  .zoek::placeholder { color: var(--dac-ink-3); }
-  @media (hover: hover) { .zoek:hover { border-color: var(--dac-border-hi); } }
-  .ruimtes { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
-  .ruimtes::-webkit-scrollbar { display: none; }
-  .ruimtes .keus { flex: 0 0 auto; padding: 0 12px; }
-  .lampenlijst { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: 210px; overflow-y: auto; }
+  .naam::placeholder, .zoek::placeholder { color: var(--dac-ink-3); }
+  @media (hover: hover) { .naam:hover, .zoek:hover { border-color: var(--dac-border-hi); } }
+  /* Omlaag scrollen en niet opzij: dat kan ook met een muiswiel op een laptop. De halve
+     rij onderaan laat zien dat er meer is. */
+  .ruimtes {
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px;
+    max-height: 102px; overflow-y: auto; scrollbar-width: thin;
+  }
+  .ruimtes .keus { padding: 0 12px; }
+  .lampenlijst {
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: 226px; overflow-y: auto;
+    padding: 8px; border: 1px solid var(--dac-border); border-radius: 12px; scrollbar-width: thin;
+  }
   .niets { font-size: 12.5px; color: var(--dac-ink-3); }
 
   .hgroep {
@@ -177,7 +186,7 @@ const css = /* css */ `
     border-radius: var(--dac-radius-pill); background: var(--dac-surface); border: 1px solid var(--dac-border);
   }
   @media (hover: hover) { .pct:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
-  .hlampen { display: flex; flex-wrap: wrap; gap: 5px; }
+  .hlampen { display: flex; flex-wrap: wrap; gap: 5px; max-height: 100px; overflow-y: auto; scrollbar-width: thin; }
   .lampje {
     display: inline-flex; align-items: center; gap: 5px; min-height: 28px; max-width: 100%; padding: 0 7px 0 10px;
     cursor: pointer; font: inherit; font-size: 12.5px; color: var(--dac-ink-2);
@@ -205,7 +214,7 @@ const css = /* css */ `
   input[type="range"] { width: 100%; margin: 0; height: 28px; accent-color: var(--dac-accent-hi); cursor: pointer; }
 
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-warn); }
-  .knoppen { display: flex; gap: 8px; }
+  .knoppen { display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid var(--dac-border); }
   .knoppen button {
     flex: 1 1 0; min-height: 42px; padding: 0 14px; cursor: pointer;
     border-radius: 12px; font: inherit; font-size: 14px; font-weight: 500;
@@ -355,7 +364,7 @@ class AutomatiseringScherm extends HTMLElement {
     const form = this.$(".form");
     const focus = this.shadowRoot.activeElement?.dataset?.k;
     const lijstScroll = form.querySelector(".lampenlijst")?.scrollTop ?? 0;
-    const ruimteScroll = form.querySelector(".ruimtes")?.scrollLeft ?? 0;
+    const ruimteScroll = form.querySelector(".ruimtes")?.scrollTop ?? 0;
 
     const namen = dagNamen();
     const dagen = namen
@@ -366,6 +375,10 @@ class AutomatiseringScherm extends HTMLElement {
       .join("");
 
     form.innerHTML = `
+      <div class="groep">
+        <span class="kop">${veilig(t("Naam"))}</span>
+        <input class="naam" type="text" data-naam="1" maxlength="60" value="${veilig(c.naam ?? "")}" placeholder="${veilig(t("Bijvoorbeeld Avond beneden"))}" aria-label="${veilig(t("Naam"))}" autocomplete="off" />
+      </div>
       <div class="groep">
         <span class="kop"><span>${veilig(t("Lampen"))}</span><span class="teller"></span></span>
         ${this.filterHtml_()}
@@ -380,7 +393,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.tekenLijst_();
     form.querySelector(".lampenlijst").scrollTop = lijstScroll;
     const ruimtes = form.querySelector(".ruimtes");
-    if (ruimtes) ruimtes.scrollLeft = ruimteScroll;
+    if (ruimtes) ruimtes.scrollTop = ruimteScroll;
     if (focus) form.querySelector(`[data-k="${focus}"]`)?.focus();
     this.kijkNa_();
   }
@@ -439,7 +452,7 @@ class AutomatiseringScherm extends HTMLElement {
       .join("");
     const opAanUit = c.lampen.filter((id) => !this.dimbaar_(id));
     const vast = opAanUit.length
-      ? `<span class="kop">${veilig(t("Alleen aan en uit"))}</span><div class="hlampen">${opAanUit.map(lampje).join("")}</div>`
+      ? `<div class="groep"><span class="kop">${veilig(t("Alleen aan en uit"))}</span><div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
       : "";
     if (!groepen && !vast) return "";
     const heeftLeeg = this.groepen_.some((g) => !g.lampen.length);
@@ -450,7 +463,7 @@ class AutomatiseringScherm extends HTMLElement {
     const aan = Boolean(this.voorbeeld_);
     const voorbeeld = `<button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
       ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}`;
-    return `<div class="groep">${groepen ? `<span class="kop">${veilig(t("Helderheid"))}</span>${groepen}${nieuw}` : ""}${vast}${voorbeeld}</div>`;
+    return `${groepen ? `<div class="groep"><span class="kop">${veilig(t("Helderheid"))}</span>${groepen}${nieuw}</div>` : ""}${vast}<div class="groep">${voorbeeld}</div>`;
   }
 
   stuur_(hass, oproepen) {
@@ -554,6 +567,10 @@ class AutomatiseringScherm extends HTMLElement {
     if (veld.dataset.zoek) {
       this.filter_.zoek = veld.value;
       this.tekenLijst_();
+      return;
+    }
+    if (veld.dataset.naam) {
+      c.naam = veld.value;
       return;
     }
     if (veld.dataset.groep != null) {

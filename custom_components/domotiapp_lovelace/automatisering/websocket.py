@@ -25,6 +25,8 @@ from .const import (
     DATA_MOTOR,
     DATA_OPSLAG,
     DATA_WS_REGISTERED,
+    MAX_LAMPEN_PER_REGEL,
+    MAX_NAAM,
     MAX_REGELS,
     MAX_VERSCHIL_MIN,
     SOORT_TIJD,
@@ -52,7 +54,10 @@ _REGEL = vol.Schema(
     {
         # Geen `id` als sleutel op het bericht zelf (valkuil 41); binnen de regel kan dat wel.
         vol.Optional("id"): cv.string,
-        vol.Required("lampen"): vol.All([vol.All(cv.string, vol.Match(r"^light\."))], vol.Length(min=1, max=50)),
+        vol.Optional("naam"): vol.All(cv.string, vol.Length(max=MAX_NAAM)),
+        vol.Required("lampen"): vol.All(
+            [vol.All(cv.string, vol.Match(r"^light\."))], vol.Length(min=1, max=MAX_LAMPEN_PER_REGEL)
+        ),
         vol.Optional("helderheid", default=100): vol.All(int, vol.Range(min=1, max=100)),
         vol.Optional("helderheden"): {vol.All(cv.string, vol.Match(r"^light\.")): vol.All(int, vol.Range(min=1, max=100))},
         vol.Optional("aan"): _MOMENT,
