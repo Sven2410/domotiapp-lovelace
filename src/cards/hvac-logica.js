@@ -230,6 +230,16 @@ const HVAC_MODE = {
   fan_only: nt("Ventileren"),
 };
 
+/** De kleur bij een stand, als er geen hvac_action is. Auto is het accent, net als op de airco-kaart. */
+const STAND_TOON = {
+  heat: "solar",
+  cool: "water",
+  dry: "water",
+  fan_only: "water",
+  heat_cool: "accent",
+  auto: "accent",
+};
+
 const HVAC_ACTION = {
   heating: nt("Verwarmt"),
   cooling: nt("Koelt"),
@@ -403,6 +413,7 @@ export function tegels(soort, config, lees, code = locale()) {
  *   2. Een hoofdentiteit die niet bereikbaar is, is dat. Grijs.
  *   3. Wat het apparaat doet: verwarmt (oranje), koelt (blauw), ventileert
  *      (blauw), standby of uit (grijs).
+ *      Zonder hvac_action de stand: wat er gevraagd is, in dezelfde kleuren.
  *   4. Een statussensor vult aan of vervangt, als er verder niets bekend is.
  *   5. Een filter dat vervangen moet worden hangt er als waarschuwing achter,
  *      want dat is geen toestand maar een klus.
@@ -425,9 +436,15 @@ export function statusRegel({ soort, hoofd, status, fault, filter, heating } = {
 
   if (hoofd && domein === "climate") {
     const a = hoofd.attributes ?? {};
-    const actie = a.hvac_action ?? (hoofd.state === "off" ? "off" : "idle");
-    const woord = HVAC_ACTION[actie] ? t(HVAC_ACTION[actie]) : standLabel(actie);
-    const tone = actie === "heating" || actie === "preheating" ? "solar" : ["cooling", "drying", "fan"].includes(actie) ? "water" : "neutral";
+    // Niet elke integratie meldt hvac_action (MELCloud, Daikin Onecta). Dan is
+    // de stand wat er gevraagd is, net als op de airco-kaart, en niet "Standby".
+    const actie = leeg(a.hvac_action) ? null : a.hvac_action;
+    const woord = actie
+      ? HVAC_ACTION[actie] ? t(HVAC_ACTION[actie]) : standLabel(actie)
+      : HVAC_MODE[hoofd.state] ? t(HVAC_MODE[hoofd.state]) : standLabel(hoofd.state);
+    const tone = !actie
+      ? STAND_TOON[hoofd.state] ?? "neutral"
+      : actie === "heating" || actie === "preheating" ? "solar" : ["cooling", "drying", "fan"].includes(actie) ? "water" : "neutral";
     const bezig = tone !== "neutral" || actie === "defrosting";
     // Bij een warmtepomp zegt de statussensor vaak méér dan hvac_action
     // ("Tapwater", "Ontdooien"): dan staat die erachter.

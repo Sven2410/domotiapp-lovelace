@@ -66,6 +66,7 @@ import {
 
 /** Van een kleurnaam uit de logica naar de token van het thema. */
 const TOON = {
+  accent: TONES.accent,
   solar: TONES.solar,
   water: TONES.water,
   bad: TONES.bad,
