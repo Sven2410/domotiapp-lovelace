@@ -197,6 +197,7 @@ export const GEDEELD = {
   "qr": "qr",
   "sirene": "siren",
   "sirene uit": "siren off",
+  "wijnglas": "wine glass",
   "benzine": "petrol",
   "diesel": "diesel",
   "gas": "gas",

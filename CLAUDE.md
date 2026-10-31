@@ -995,9 +995,17 @@ over te typen.
 De val: `dai:bulb` bevat een dubbele punt en belandt zonder de eigen tak bij
 `<ha-icon icon="dai:bulb">`. Die tekent NIETS, zonder fout en zonder log.
 
-**Een icoon toevoegen is drie plekken**, en de test valt als je er een vergeet:
+**Een icoon toevoegen is vier plekken**, en de test valt als je er een vergeet:
 de tekening in `icons.js`, de plek in `GROEPEN` en de zoekwoorden in `TERMEN`
-(allebei in `editor/icoon-zoek.js`). Lijndikte 1.6, altijd.
+(allebei in `editor/icoon-zoek.js`), en daarna `scripts/iconen-naar-paden.py` draaien.
+Lijndikte 1.6, altijd.
+
+**Onze iconen werken sinds 0.99.0 ook in `ha-icon`**, dus overal waar Home Assistant of een
+kaart van een ander een icoon tekent: `dai:bed` in de kop van een Bubble Card-pop-up. De eigenaar op
+31 oktober 2026: "mdi icons gebruiken we niet alleen onze icons", en daarna: "Ja, alles vervangen".
+De set staat in de lader (`loader.py`, zie de kop daar waarom niet in de bundel). `ha-svg-icon` kent alleen
+een gevulde vorm, dus `afbeeldingen/iconen.json` heeft van elke lijn de omtrek, gemaakt met dat script en
+meegecommit. Het logo `domotitech` is een plaatje en zit er niet in.
 
 ### Het energiedashboard van Home Assistant uitlezen
 

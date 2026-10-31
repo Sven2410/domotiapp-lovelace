@@ -212,3 +212,12 @@ async def test_regressiewacht_de_submap_toont_geen_inhoud(hass: HomeAssistant, h
     for adres in (f"{ADRES}/laadpalen", f"{ADRES}/laadpalen/", f"{ADRES}/thuisbatterijen/"):
         antwoord = await client.get(adres)
         assert antwoord.status in (403, 404), (adres, antwoord.status)
+
+
+async def test_de_iconen_worden_geserveerd(hass: HomeAssistant, hass_client_no_auth) -> None:
+    """NIEUW GEDRAG: zonder token, want de lader haalt ze op voordat er iemand is ingelogd."""
+    await zet_integratie_op(hass)
+    client = await hass_client_no_auth()
+    antwoord = await client.get(f"{ADRES}/iconen.json?h=abc")
+    assert antwoord.status == 200
+    assert await antwoord.read() == (MAP / "iconen.json").read_bytes()

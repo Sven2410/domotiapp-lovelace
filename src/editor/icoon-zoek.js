@@ -30,7 +30,7 @@ import { nt, t } from "../taal.js";
  */
 export const GROEPEN = [
   [nt("Woning"), ["house", "homeLeave", "homeStatus", "homeThermo", "floorB", "floor1", "floor2", "garage", "door", "window", "stairs", "grid"]],
-  [nt("Kamers"), ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "eettafel", "kitchen", "shower", "toilet", "desk", "speelkamer", "garage", "storage"]],
+  [nt("Kamers"), ["bed", "bedDouble", "wardrobe", "hanger", "sofa", "lounge", "eettafel", "kitchen", "shower", "toilet", "desk", "speelkamer", "wijnglas", "garage", "storage"]],
   [nt("Buiten"), ["tree", "parasol", "veranda", "fence", "gate", "sun", "awning", "gras", "kruiden", "car", "beach"]],
   [nt("Rolluiken"), ["shutter", "shutterOpen", "awning", "gate", "gateOpen", "garageOpen", "garageClosed", "arrowUp", "arrowDown", "stop"]],
   [nt("Navigatie"), ["arrowLeft", "arrowRight", "arrowUp", "arrowDown", "chevronLeft", "chevronRight", "chevronDown", "house", "grid", "close"]],
@@ -56,6 +56,8 @@ export const GROEPEN = [
  * oplevert. Een icoon dat je niet vindt bestaat niet.
  */
 export const TERMEN = {
+  wijnglas: [nt("wijnglas"), "glas", "wijn", "drank", "bar", "kelder", "wine", "glass", "liquor", "drink", "cellar"],
+
   /* Woning */
   house: [nt("huis"), "woning", "thuis", "home", "hal", "gang", "entree", "overzicht", "house", "hall", "overview"],
   floorB: [nt("begane grond"), "beneden", "vloer", "verdieping", "etage", "ground floor", "downstairs"],
