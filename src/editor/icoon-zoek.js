@@ -327,39 +327,6 @@ export function scoreIcoon(sleutel, woorden) {
   return som;
 }
 
-/**
- * Zoeken in de hele bibliotheek van Home Assistant: `iconList.json`, `{name, keywords}` per icoon.
- * Elk woord moet in de naam of de trefwoorden staan; de naam gaat voor. Die lijst is Engels, en onze
- * eigen set hierboven vangt het Nederlands.
- *
- * @returns {string[]} de namen zonder `mdi:`, de beste bovenaan
- */
-export function zoekMdi(lijst, vraag) {
-  const woorden = normaliseer(String(vraag ?? "").replace(/^\s*mdi:/i, "")).split(" ").filter(Boolean);
-  if (!woorden.length) return (lijst ?? []).map((i) => i.name);
-  const treffers = [];
-  for (const icoon of lijst ?? []) {
-    const naam = normaliseer(icoon.name);
-    const trefwoorden = normaliseer((icoon.keywords ?? []).join(" "));
-    let score = 0;
-    for (const woord of woorden) {
-      let hier = 0;
-      if (naam === woord) hier = 4;
-      else if (naam.startsWith(woord)) hier = 3;
-      else if (naam.includes(woord)) hier = 2;
-      else if (trefwoorden.includes(woord)) hier = 1;
-      if (!hier) {
-        score = 0;
-        break;
-      }
-      score += hier;
-    }
-    if (score) treffers.push({ naam: icoon.name, score });
-  }
-  treffers.sort((a, b) => b.score - a.score || a.naam.length - b.naam.length || a.naam.localeCompare(b.naam));
-  return treffers.map((x) => x.naam);
-}
-
 /** De naam die onder een icoon hoort. Valt terug op de sleutel zelf. */
 export const naamVan = (sleutel) => TERMEN[sleutel]?.[0] ?? sleutel;
 

@@ -414,18 +414,17 @@ export const nieuweFavoriet = (lampen) => ({
  * dezelfde vinkjes, en wat je na het aanvinken nog zelf aanpast, gaat nooit verloren in een tweede waarheid.
  */
 
-/** Woorden die buiten betekenen, ook midden in een naam: "Buitenlamp", "Achtertuin". */
-const BUITEN = /buiten|tuin|terras|oprit|balkon|veranda|carport|gevel|pergola|outside|outdoor|exterior|garden|terrace|driveway|balcony|porch|patio|yard|facade/;
+/** Hoe de ruimte voor buiten heet. Elke installatie krijgt hem standaard. */
+const BUITEN = new Set(["buiten", "outside", "outdoor", "outdoors"]);
 
 /**
- * Is dit buitenverlichting? De verdieping, de ruimte en de naam tellen alle drie: de ene klant heeft
- * een verdieping Buiten, de andere een ruimte Tuin en een derde alleen een lamp die Buitenlamp heet.
- * Geen vinkje om in te stellen: wat hij vond staat op het scherm, en de klant kan het aanpassen.
+ * Is dit buitenverlichting? Dat zegt de ruimte waar de lamp in staat, en verder niets. De eigenaar,
+ * 31 oktober 2026: "je gebruikt gewoon de ruimte waar de lampen in staat", want bij elke installatie
+ * komt er standaard een ruimte Buiten met de buitenverlichting erin. Daarom geen gok op een naam: een
+ * lamp in de ruimte Tuin of met Buitenlamp als naam telt niet, tot hij in die ruimte staat.
  */
-export function isBuiten(entity, hass, naam = "") {
-  const ruimte = hass?.areas?.[ruimteVan(hass, entity)];
-  const verdieping = hass?.floors?.[ruimte?.floor_id];
-  return [verdieping?.name, verdieping?.floor_id, ruimte?.name, naam].some((tekst) => BUITEN.test(plat(tekst)));
+export function isBuiten(entity, hass) {
+  return BUITEN.has(plat(hass?.areas?.[ruimteVan(hass, entity)]?.name).trim());
 }
 
 /** De drie delen waar de vinkjes over gaan. */
@@ -516,7 +515,7 @@ export const FAVORIET_SJABLONEN = [
   { sleutel: "verlaten", naam: nt("Woning verlaten"), icoon: "homeLeave", vinkjes: ["alleUit", "behalveBuiten"] },
   { sleutel: "slapen", naam: nt("Slapen"), icoon: "sleep", vinkjes: ["alleUit", "rolluikenDicht"] },
   { sleutel: "thuis", naam: nt("Thuiskomen"), icoon: "house", vinkjes: ["buitenAan", "rolluikenOpen"] },
-  { sleutel: "ochtend", naam: nt("Goedemorgen"), icoon: "sun", vinkjes: ["buitenUit", "rolluikenOpen"] },
+  { sleutel: "dag", naam: nt("Dagstand"), icoon: "sun", vinkjes: ["buitenUit", "rolluikenOpen"] },
   { sleutel: "allesuit", naam: nt("Alles uit"), icoon: "power", vinkjes: ["alleUit"] },
 ];
 

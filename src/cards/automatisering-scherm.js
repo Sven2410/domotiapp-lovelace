@@ -16,7 +16,7 @@ import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
-import { alleSleutels, zoekIconen, zoekMdi } from "../editor/icoon-zoek.js";
+import { alleSleutels, zoekIconen } from "../editor/icoon-zoek.js";
 import { t, tn } from "../taal.js";
 import {
   FAVORIET_ICONEN,
@@ -53,22 +53,6 @@ import {
 
 /** Vanaf zoveel lampen staan de zoekbalk en de ruimtes erboven; bij minder zijn ze alleen in de weg. */
 const FILTER_VANAF = 6;
-
-/** Zoveel iconen per keer in de kiezer; er zijn er ruim zevenduizend. */
-const ICONEN_PER_KEER = 120;
-
-/** De iconenlijst van Home Assistant, één keer per pagina en pas als iemand erom vraagt: hij is 520 kB. */
-let mdiLijst = null;
-const laadMdi = (hass) =>
-  (mdiLijst ??= fetch(hass?.hassUrl?.("/static/mdi/iconList.json") ?? "/static/mdi/iconList.json")
-    .then((r) => {
-      if (!r.ok) throw new Error(String(r.status));
-      return r.json();
-    })
-    .catch((fout) => {
-      mdiLijst = null;
-      throw fout;
-    }));
 
 const css = /* css */ `
   ${themaCss}
@@ -378,9 +362,6 @@ class AutomatiseringScherm extends HTMLElement {
     this.bezig_ = false;
     this.icoonOpen_ = false;
     this.icoonZoek_ = "";
-    this.icoonMax_ = ICONEN_PER_KEER;
-    this.mdi_ = null;
-    this.mdiFout_ = false;
     // Staat er al een vinkje aan, dan zijn de vinkjes het overzicht en de lampen een stap verder.
     this.aanpassen_ = !regel.favoriet || !this.vinkjes_().some((v) => v.aan);
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -422,9 +403,9 @@ class AutomatiseringScherm extends HTMLElement {
     return `<span class="kop"><span class="kt">${resolve(icoon)}<span>${veilig(tekst)}</span></span>${teller ? `<span class="teller"></span>` : ""}</span>`;
   }
 
-  /** Is dit buitenverlichting? Met de naam die de beheerder op de kaart zette. */
+  /** Is dit buitenverlichting? Dat zegt de ruimte. */
   buiten_(id) {
-    return isBuiten(id, this.bron.hass, this.bron.naamVanLamp_(id));
+    return isBuiten(id, this.bron.hass);
   }
 
   vinkjes_() {
@@ -601,42 +582,15 @@ class AutomatiseringScherm extends HTMLElement {
     return `<button type="button" class="keus" role="radio" aria-checked="${this.concept.icoon === naam}" aria-label="${veilig(naam)}" title="${veilig(naam)}" data-k="icoon:${veilig(naam)}">${resolve(naam)}</button>`;
   }
 
-  /** Eerst onze eigen iconen, dan die van Home Assistant. Alleen het raster: de zoekbalk blijft staan. */
+  /** Al onze eigen iconen, of wat bij het zoekwoord past. Alleen het raster: de zoekbalk blijft staan. */
   tekenIconen_() {
     const raster = this.$(".iconraster");
     if (!raster) return;
     const vraag = this.icoonZoek_.trim();
-    const eigen = vraag ? zoekIconen(vraag)[0][1] : alleSleutels();
-    const alle = [...eigen, ...zoekMdi(this.mdi_ ?? [], vraag).map((naam) => `mdi:${naam}`)];
-    let onder = "";
-    if (alle.length > this.icoonMax_) {
-      onder = `<button type="button" class="nieuw allemaal" style="flex:1 1 100%" data-k="iconenverder:">${veilig(t("Meer tonen ({n} over)", { n: alle.length - this.icoonMax_ }))}</button>`;
-    } else if (!this.mdi_ && !this.mdiFout_) {
-      onder = `<span class="niets" style="flex:1 1 100%">${veilig(t("Iconen laden..."))}</span>`;
-    } else if (!alle.length) {
-      onder = `<span class="niets">${veilig(t("Geen icoon gevonden."))}</span>`;
-    }
-    const fout = this.mdiFout_ ? `<span class="niets" style="flex:1 1 100%">${veilig(t("De iconen van Home Assistant zijn niet geladen; dit is onze eigen set."))}</span>` : "";
-    raster.innerHTML = fout + alle.slice(0, this.icoonMax_).map((naam) => this.icoonKnop_(naam)).join("") + onder;
-  }
-
-  /** De grote lijst pas ophalen als iemand hem opent. */
-  openIconen_() {
-    this.icoonOpen_ = !this.icoonOpen_;
-    if (!this.icoonOpen_ || this.mdi_) return;
-    const bron = this.bron;
-    this.mdiFout_ = false;
-    laadMdi(bron.hass)
-      .then((lijst) => {
-        this.mdi_ = lijst;
-      })
-      .catch((fout) => {
-        console.warn("DomotiApp Automatiseringen: iconenlijst", fout);
-        this.mdiFout_ = true;
-      })
-      .finally(() => {
-        if (this.bron === bron) this.tekenIconen_();
-      });
+    const alle = vraag ? zoekIconen(vraag)[0][1] : alleSleutels();
+    raster.innerHTML = alle.length
+      ? alle.map((naam) => this.icoonKnop_(naam)).join("")
+      : `<span class="niets">${veilig(t("Geen icoon gevonden."))}</span>`;
   }
 
   /** Wat de zoekbalk en de ruimte nu tonen. */
@@ -805,8 +759,7 @@ class AutomatiseringScherm extends HTMLElement {
       this.zetConcept_(metVinkje(c, this.bron.lampen_(), (id) => this.buiten_(id), waarde, !nu?.aan));
     }
     else if (soort === "aanpassen") this.aanpassen_ = true;
-    else if (soort === "iconenmeer") this.openIconen_();
-    else if (soort === "iconenverder") this.icoonMax_ += ICONEN_PER_KEER;
+    else if (soort === "iconenmeer") this.icoonOpen_ = !this.icoonOpen_;
     else if (soort === "lamp" || soort === "weg") this.wisselLamp_(waarde);
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
     else if (soort === "groep") this.actief_ = Number(waarde);
@@ -859,7 +812,6 @@ class AutomatiseringScherm extends HTMLElement {
     if (!c) return;
     if (veld.dataset.icoonzoek) {
       this.icoonZoek_ = veld.value;
-      this.icoonMax_ = ICONEN_PER_KEER;
       this.tekenIconen_();
       return;
     }
