@@ -296,3 +296,56 @@ describe("helderheid in groepen (0.94.0)", () => {
     assert.deepEqual(L.zonderLamp([{ pct: 50, lampen: ["light.a"] }], 0, "light.a"), { groepen: [], actief: 0 });
   });
 });
+
+describe("het voorbeeld (0.95.0)", () => {
+  const states = {
+    "light.a": { state: "on", attributes: { brightness: 77 } },
+    "light.b": { state: "off", attributes: {} },
+    "light.c": { state: "on", attributes: {} },
+    "light.weg": { state: "unavailable", attributes: {} },
+  };
+
+  it("NIEUW GEDRAG: de beginstand: aan met helderheid, uit, en een lamp die er niet is", () => {
+    assert.deepEqual(L.lampStand(states["light.a"]), { aan: true, helderheid: 77 });
+    assert.deepEqual(L.lampStand(states["light.b"]), { aan: false, helderheid: null });
+    assert.equal(L.lampStand(states["light.weg"]), null);
+    assert.equal(L.lampStand(undefined), null);
+  });
+
+  it("NIEUW GEDRAG: de doelen: percentage, gewoon aan, en niets voor een lamp die weg is", () => {
+    assert.deepEqual(
+      L.voorbeeldDoelen(["light.a", "light.b", "light.c", "light.weg"], { "light.a": 50 }, (id) => id !== "light.c", states),
+      { "light.a": 50, "light.b": 100, "light.c": null }
+    );
+  });
+
+  it("NIEUW GEDRAG: alles op 50% is één aanroep, een aan-uit-lamp zonder helderheid", () => {
+    assert.deepEqual(L.voorbeeldOproepen({ "light.a": 50, "light.b": 50, "light.c": null }), [
+      ["light", "turn_on", { entity_id: ["light.a", "light.b"], brightness_pct: 50 }],
+      ["light", "turn_on", { entity_id: ["light.c"] }],
+    ]);
+  });
+
+  it("NIEUW GEDRAG: een schuif verzetten stuurt alleen wat veranderde", () => {
+    assert.deepEqual(L.voorbeeldOproepen({ "light.a": 60, "light.b": 50 }, { "light.a": 50, "light.b": 50 }), [
+      ["light", "turn_on", { entity_id: ["light.a"], brightness_pct: 60 }],
+    ]);
+    assert.deepEqual(L.voorbeeldOproepen({ "light.c": null }, { "light.c": null }), []);
+  });
+
+  it("NIEUW GEDRAG: terug: uit weer uit, aan op zijn eigen helderheid, en verder niets", () => {
+    assert.deepEqual(
+      L.terugOproepen({
+        "light.a": { aan: true, helderheid: 77 },
+        "light.b": { aan: false, helderheid: null },
+        "light.c": { aan: true, helderheid: null },
+        "light.weg": null,
+      }),
+      [
+        ["light", "turn_off", { entity_id: ["light.b"] }],
+        ["light", "turn_on", { entity_id: ["light.a"], brightness: 77 }],
+      ]
+    );
+    assert.deepEqual(L.terugOproepen({}), []);
+  });
+});

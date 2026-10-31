@@ -77,4 +77,7 @@ export const AUTOMATISERING = {
   "Kies hierboven de lampen voor deze helderheid.": "Choose the lights for this brightness above.",
   "Hier lampen bij kiezen": "Choose lights for this one",
   "Nieuwe helderheid": "New brightness",
+  "Voorbeeld stoppen": "Stop preview",
+  "De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit.": "The lights go back to how they were when you stop or close this screen.",
+  "Het voorbeeld is niet gelukt.": "The preview did not work.",
 };

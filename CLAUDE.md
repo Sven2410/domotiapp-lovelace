@@ -918,6 +918,9 @@ je niet hoort terug te draaien zonder het te vragen:
   één `helderheid`, en die blijft gelden. Staat een lamp niet in `helderheden`, dan gaat hij
   aan zonder helderheid; `alleen_aan_uit` op de kaart is voor een dimblokje met vaste lampen.
   In het scherm zijn het groepen (lampen op dezelfde waarde); die bestaan niet op de server.
+- **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
+  regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
+  blijven ze staan; dat is bewust geen timer of servertaak.
 
 ### Het infoscherm bij een klant: wie opent wat
 
