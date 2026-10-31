@@ -166,6 +166,69 @@ export function nieuweGroep(groepen, actief) {
   return { groepen: [...groepen, { pct: groepen[actief]?.pct ?? 100, lampen: [] }], actief: groepen.length };
 }
 
+/**
+ * Het voorbeeld: de lampen nu al zo zetten als de regel ze straks zet. De eigenaar,
+ * 31 oktober 2026: "bijvoorbeeld ingesteld op 50% dat alles naar 50% gaat als je op
+ * voorbeeld klikt". Bij stoppen gaan ze terug zoals ze stonden.
+ *
+ * Dit draait in de browser en niet in de motor: het is een proef van wie kijkt, en
+ * geen regel. Gaat de pagina dicht tijdens een voorbeeld, dan blijven de lampen staan.
+ */
+
+const weg = (st) => !st || st.state === "unavailable" || st.state === "unknown";
+
+/** Hoe een lamp nu staat, om straks terug te zetten; null als hij er niet is. */
+export function lampStand(st) {
+  if (weg(st)) return null;
+  return { aan: st.state === "on", helderheid: st.state === "on" ? st.attributes?.brightness ?? null : null };
+}
+
+/**
+ * Wat elke lamp in het voorbeeld hoort te doen: een percentage, of null voor gewoon
+ * aan. Een lamp die er niet is, doet niet mee.
+ */
+export function voorbeeldDoelen(lampen, helderheden, dimt, states) {
+  const doelen = {};
+  for (const lamp of lampen ?? []) {
+    if (weg(states?.[lamp])) continue;
+    doelen[lamp] = dimt(lamp) ? helderheden?.[lamp] ?? 100 : null;
+  }
+  return doelen;
+}
+
+/** Eén aanroep per waarde, alleen voor wat anders is dan `gezet`. */
+export function voorbeeldOproepen(doelen, gezet = {}) {
+  const perWaarde = new Map();
+  for (const [lamp, pct] of Object.entries(doelen)) {
+    if (lamp in gezet && gezet[lamp] === pct) continue;
+    perWaarde.set(pct, [...(perWaarde.get(pct) ?? []), lamp]);
+  }
+  return [...perWaarde].map(([pct, ids]) => [
+    "light",
+    "turn_on",
+    { entity_id: ids, ...(pct == null ? {} : { brightness_pct: pct }) },
+  ]);
+}
+
+/**
+ * Terug zoals ze stonden: wat uit stond weer uit, wat aan stond op zijn eigen
+ * helderheid. Een lamp die aan stond zonder helderheid hoeft niets. Alleen de
+ * helderheid: de kleur raakt het voorbeeld niet aan.
+ */
+export function terugOproepen(standen) {
+  const uit = [];
+  const perWaarde = new Map();
+  for (const [lamp, stand] of Object.entries(standen)) {
+    if (!stand) continue;
+    if (!stand.aan) uit.push(lamp);
+    else if (stand.helderheid != null) perWaarde.set(stand.helderheid, [...(perWaarde.get(stand.helderheid) ?? []), lamp]);
+  }
+  return [
+    ...(uit.length ? [["light", "turn_off", { entity_id: uit }]] : []),
+    ...[...perWaarde].map(([brightness, ids]) => ["light", "turn_on", { entity_id: ids, brightness }]),
+  ];
+}
+
 /** Maandag tot en met zondag, kort, in de taal van de kaart. */
 export const dagNamen = () =>
   ALLE_DAGEN.map((i) => new Date(2026, 10, 2 + i).toLocaleDateString(locale(), { weekday: "short" }).replace(".", ""));

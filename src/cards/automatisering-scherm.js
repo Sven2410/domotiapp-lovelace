@@ -22,6 +22,7 @@ import {
   dagNamen,
   groepenUit,
   helderhedenUit,
+  lampStand,
   lampenGefilterd,
   magDimmen,
   metLamp,
@@ -31,7 +32,10 @@ import {
   ruimtesVan,
   startHelderheden,
   stapVerschil,
+  terugOproepen,
   verschilTekst,
+  voorbeeldDoelen,
+  voorbeeldOproepen,
   waaromNiet,
   wissel,
   zonderLamp,
@@ -189,6 +193,15 @@ const css = /* css */ `
   }
   @media (hover: hover) { .nieuw:hover { background: var(--dac-hover); color: var(--dac-ink); } }
   .nieuw .icon { width: 14px; height: 14px; }
+  .voorbeeld {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 500; color: var(--dac-ink);
+    border-radius: 12px; background: var(--dac-surface); border: 1px solid var(--dac-border);
+  }
+  @media (hover: hover) { .voorbeeld:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
+  .voorbeeld .icon { width: 15px; height: 15px; }
+  .voorbeeld[aria-pressed="true"] { border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent); }
+  .voorbeeld[aria-pressed="true"] .icon { color: var(--dac-accent-hi); }
   input[type="range"] { width: 100%; margin: 0; height: 28px; accent-color: var(--dac-accent-hi); cursor: pointer; }
 
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-warn); }
@@ -275,6 +288,7 @@ class AutomatiseringScherm extends HTMLElement {
   open(bron, regel) {
     volgThema(this);
     if (!this.gebouwd_) this.bouw_();
+    this.stopVoorbeeld_();
     this.bron = bron;
     this.concept = structuredClone(regel);
     this.concept.helderheden = startHelderheden(regel);
@@ -282,6 +296,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.groepen_ = groepen;
     this.actief_ = Math.max(0, groepen.length - 1);
     this.filter_ = { zoek: "", ruimte: null };
+    this.standen_ = {};
     this.foutTekst_ = "";
     this.bezig_ = false;
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -296,6 +311,7 @@ class AutomatiseringScherm extends HTMLElement {
   }
 
   sluit() {
+    this.stopVoorbeeld_();
     this.removeAttribute("open");
     this.bron = null;
     this.concept = null;
@@ -431,7 +447,54 @@ class AutomatiseringScherm extends HTMLElement {
       this.groepen_.length && !heeftLeeg
         ? `<button type="button" class="nieuw" data-k="nieuw:">${resolve("plus")}${veilig(t("Nieuwe helderheid"))}</button>`
         : "";
-    return `<div class="groep">${groepen ? `<span class="kop">${veilig(t("Helderheid"))}</span>${groepen}${nieuw}` : ""}${vast}</div>`;
+    const aan = Boolean(this.voorbeeld_);
+    const voorbeeld = `<button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
+      ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}`;
+    return `<div class="groep">${groepen ? `<span class="kop">${veilig(t("Helderheid"))}</span>${groepen}${nieuw}` : ""}${vast}${voorbeeld}</div>`;
+  }
+
+  stuur_(hass, oproepen) {
+    for (const [domein, dienst, data] of oproepen) {
+      Promise.resolve(hass?.callService(domein, dienst, data)).catch(() => {
+        if (!this.concept) return;
+        this.foutTekst_ = t("Het voorbeeld is niet gelukt.");
+        this.kijkNa_();
+      });
+    }
+  }
+
+  /**
+   * Zet de lampen zoals het scherm nu zegt. Hoe een lamp stond onthoudt het scherm
+   * zolang het openstaat (`standen_`): vlak na een wijziging loopt `hass` nog achter,
+   * en dan zou het voorbeeld zijn eigen stand als beginstand onthouden.
+   */
+  werkVoorbeeld_() {
+    const v = this.voorbeeld_;
+    if (!v) return;
+    const c = this.concept;
+    if (!c.aan) {
+      this.stopVoorbeeld_();
+      return;
+    }
+    const hass = this.bron.hass;
+    const doelen = voorbeeldDoelen(c.lampen, c.helderheden, (id) => this.dimbaar_(id), hass?.states);
+    const eruit = Object.keys(v.gezet).filter((id) => !(id in doelen));
+    this.stuur_(hass, terugOproepen(Object.fromEntries(eruit.map((id) => [id, this.standen_[id]]))));
+    for (const id of Object.keys(doelen)) {
+      if (!(id in this.standen_)) this.standen_[id] = lampStand(hass.states[id]);
+    }
+    this.stuur_(hass, voorbeeldOproepen(doelen, v.gezet));
+    v.gezet = doelen;
+  }
+
+  /** Alles terug. Dit gaat ook bij sluiten en opslaan, want dan is de proef voorbij. */
+  stopVoorbeeld_() {
+    clearTimeout(this.voorbeeldTimer_);
+    const v = this.voorbeeld_;
+    if (!v) return;
+    this.voorbeeld_ = null;
+    const standen = Object.fromEntries(Object.keys(v.gezet).map((id) => [id, this.standen_[id]]));
+    this.stuur_(this.bron?.hass, terugOproepen(standen));
   }
 
   /** De groepen zijn de waarheid in dit scherm; de regel volgt ze. */
@@ -469,6 +532,10 @@ class AutomatiseringScherm extends HTMLElement {
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
     else if (soort === "groep") this.actief_ = Number(waarde);
     else if (soort === "nieuw") this.zetGroepen_(nieuweGroep(this.groepen_, this.actief_));
+    else if (soort === "voorbeeld") {
+      if (this.voorbeeld_) this.stopVoorbeeld_();
+      else this.voorbeeld_ = { gezet: {} };
+    }
     else if (soort === "dag") c.dagen = wissel(c.dagen, Number(waarde));
     else if (waarde === "min" || waarde === "plus") {
       c[soort] = { ...c[soort], verschil: stapVerschil(c[soort].verschil, waarde === "min" ? -1 : 1) };
@@ -476,6 +543,7 @@ class AutomatiseringScherm extends HTMLElement {
       c[soort] = metSoort(waarde);
     }
     this.foutTekst_ = "";
+    this.werkVoorbeeld_();
     this.teken_();
   }
 
@@ -500,6 +568,9 @@ class AutomatiseringScherm extends HTMLElement {
       this.shadowRoot.querySelectorAll(".hgroep").forEach((g, n) => {
         g.dataset.actief = String(meer && n === i);
       });
+      // Met een voorbeeld aan volgen de lampen de schuif, maar niet elke pixel.
+      clearTimeout(this.voorbeeldTimer_);
+      if (this.voorbeeld_) this.voorbeeldTimer_ = setTimeout(() => this.werkVoorbeeld_(), 250);
     } else if (veld.dataset.veld) {
       c[veld.dataset.veld] = { soort: "tijd", tijd: veld.value };
     } else {
