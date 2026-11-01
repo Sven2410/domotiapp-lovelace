@@ -144,6 +144,42 @@ export function lampenGefilterd(lampen, { zoek = "", ruimte = null } = {}, naamV
 }
 
 /**
+ * De ruimtes staan op één rij die opzij veegt (sinds 0.100.0). De eigenaar, 1 november 2026: "Mensen gaan toch
+ * meer de zoekfunctie gebruiken. zo houden we weer veel meer ruimte over." Een muiswiel kan niet opzij, en daarom ging de rij er
+ * in 0.96.0 uit; hier neemt het wiel dat over.
+ *
+ * Wat een wieltik de rij opzij schuift, in pixels. 0 is: niets te doen, en dan scrolt het scherm gewoon door. Een touchpad
+ * dat zelf opzij veegt, laten we met rust.
+ */
+export function wielOpzij({ deltaX = 0, deltaY = 0, deltaMode = 0 }, { scrollLeft, clientWidth, scrollWidth }) {
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) return 0;
+  const stap = deltaMode === 1 ? deltaY * 16 : deltaMode === 2 ? deltaY * clientWidth : deltaY;
+  const naar = Math.min(scrollWidth - clientWidth, Math.max(0, scrollLeft + stap));
+  // Minder dan een pixel is het einde: de breedtes zijn afgerond en de stand niet.
+  return Math.abs(naar - scrollLeft) < 1 ? 0 : naar - scrollLeft;
+}
+
+/**
+ * Hoort deze wieltik bij de rij? Wie het scherm aan het scrollen is en met de muis over de rij komt, scrolt gewoon door. Dus:
+ * waar het wiel begon, telt, tot het even stilstaat.
+ */
+export function wielBeurt(vorige, tijd, inRij, pauze = 300) {
+  return { tijd, inRij: vorige && tijd - vorige.tijd < pauze ? vorige.inRij : inRij };
+}
+
+/** Waar de rij verder loopt dan je ziet. Dat vervaagt de rand, want zonder balk is dat het enige teken dat er meer is. */
+export function randenVan({ scrollLeft, clientWidth, scrollWidth }) {
+  return { links: scrollLeft > 1, rechts: scrollLeft + clientWidth < scrollWidth - 1 };
+}
+
+/** Hoeveel de rij moet schuiven om een knop helemaal in beeld te hebben; de marge houdt hem uit de vervaagde rand. */
+export function schuifNaar(knop, rij, marge = 0) {
+  if (knop.left < rij.left + marge) return knop.left - rij.left - marge;
+  if (knop.right > rij.right - marge) return knop.right - rij.right + marge;
+  return 0;
+}
+
+/**
  * De helderheid in groepen: lampen die samen op 50% gaan, staan bij elkaar. De eigenaar,
  * 31 oktober 2026: een lamp erbij kiezen "die ook 50% doet en dan de optie een nieuwe
  * helderheid". Op de server blijft het per lamp (`helderheden`); de groep bestaat alleen

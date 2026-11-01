@@ -38,7 +38,9 @@ import {
   naarServer,
   nieuweGroep,
   niveauTekst,
+  randenVan,
   ruimtesVan,
+  schuifNaar,
   sjabloonUitleg,
   sjablonenVoor,
   startHelderheden,
@@ -48,12 +50,18 @@ import {
   voorbeeldDoelen,
   voorbeeldOproepen,
   waaromNiet,
+  wielBeurt,
+  wielOpzij,
   wissel,
   zonderLamp,
 } from "./automatisering-logica.js";
 
 /** Vanaf zoveel lampen staan de zoekbalk en de ruimtes erboven; bij minder zijn ze alleen in de weg. */
 const FILTER_VANAF = 6;
+/** Zoveel pixels met de muis is slepen en geen klik meer. */
+const SLEEP_VANAF = 5;
+/** Zo breed vervaagt de rand van de rij ruimtes. */
+const RAND = 28;
 
 const css = /* css */ `
   ${themaCss}
@@ -176,13 +184,21 @@ const css = /* css */ `
   }
   .naam::placeholder, .zoek::placeholder { color: var(--dac-ink-3); }
   @media (hover: hover) { .naam:hover, .zoek:hover { border-color: var(--dac-border-hi); } }
-  /* Omlaag scrollen en niet opzij: dat kan ook met een muiswiel op een laptop. De halve
-     rij onderaan laat zien dat er meer is. */
+  /* Eén rij die opzij veegt: met een vinger, een touchpad, het muiswiel of slepen. De padding houdt
+     de focusring binnen de rij, en de marge haalt die ruimte er weer af. */
   .ruimtes {
-    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px;
-    max-height: max(186px, 30vh); overflow-y: auto; scrollbar-width: thin;
+    display: flex; gap: 6px; padding: 4px; margin: -4px;
+    overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none;
+    -webkit-user-select: none; user-select: none;
+    --links: 0px; --rechts: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent, black var(--links), black calc(100% - var(--rechts)), transparent);
+    mask-image: linear-gradient(to right, transparent, black var(--links), black calc(100% - var(--rechts)), transparent);
   }
-  .ruimtes .keus { padding: 0 12px; }
+  .ruimtes::-webkit-scrollbar { display: none; }
+  .ruimtes[data-links="true"] { --links: ${RAND}px; }
+  .ruimtes[data-rechts="true"] { --rechts: ${RAND}px; }
+  .ruimtes[data-sleept="true"], .ruimtes[data-sleept="true"] .keus { cursor: grabbing; }
+  .ruimtes .keus { flex: 0 0 auto; max-width: none; padding: 0 12px; }
   .lampenlijst {
     display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: max(260px, 42vh); overflow-y: auto;
     padding: 8px; border: 1px solid var(--dac-border); border-radius: 12px; scrollbar-width: thin;
@@ -197,6 +213,8 @@ const css = /* css */ `
   .hrij { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 32px; }
   .hrij.metuit { grid-template-columns: 52px minmax(0, 1fr) auto; }
   .hrij .keus { min-height: 32px; padding: 0 12px; }
+  /* Staat de groep al op uit, dan zegt de knop links dat al. De plek blijft, anders verspringt de schuif onder je vinger. */
+  .hrij .keus.al-uit { visibility: hidden; }
   .iconen { display: flex; flex-wrap: wrap; gap: 6px; }
   .iconen .keus { width: 42px; height: 38px; padding: 0; justify-content: center; }
   .iconen .icon { width: 18px; height: 18px; --mdc-icon-size: 18px; }
@@ -339,6 +357,68 @@ class AutomatiseringScherm extends HTMLElement {
     const form = this.$(".form");
     form.addEventListener("click", (e) => this.tik_(e.target.closest("[data-k]")));
     form.addEventListener("input", (e) => this.invoer_(e.target));
+    form.addEventListener("pointerdown", (e) => this.sleepRij_(e));
+    form.addEventListener("scroll", (e) => this.randen_(e.target), true);
+    // Op het hele vak, want ook een wiel dat buiten de rij begon, telt mee.
+    this.$(".vak").addEventListener("wheel", (e) => this.wiel_(e), { passive: false });
+  }
+
+  /** Een muiswiel kan niet opzij; boven de rij doet het dat toch. */
+  wiel_(e) {
+    const rij = e.target.closest?.(".ruimtes") ?? null;
+    this.wielBeurt_ = wielBeurt(this.wielBeurt_, e.timeStamp, Boolean(rij));
+    if (!rij || !this.wielBeurt_.inRij) return;
+    const stap = wielOpzij(e, rij);
+    if (!stap) return;
+    e.preventDefault();
+    rij.scrollLeft += stap;
+  }
+
+  /** Een muis kan niet vegen, dus slepen. Op `window`, zodat het ook buiten de rij doorloopt. */
+  sleepRij_(e) {
+    const rij = e.target.closest?.(".ruimtes");
+    if (!rij || e.pointerType !== "mouse" || e.button !== 0) return;
+    const form = this.$(".form");
+    const beginX = e.clientX;
+    const beginStand = rij.scrollLeft;
+    let sleept = false;
+    const beweeg = (m) => {
+      const weg = m.clientX - beginX;
+      if (!sleept && Math.abs(weg) < SLEEP_VANAF) return;
+      sleept = true;
+      rij.dataset.sleept = "true";
+      rij.scrollLeft = beginStand - weg;
+    };
+    const los = () => {
+      window.removeEventListener("pointermove", beweeg, true);
+      window.removeEventListener("pointerup", los, true);
+      window.removeEventListener("pointercancel", los, true);
+      if (!sleept) return;
+      delete rij.dataset.sleept;
+      // De klik die nu komt is het einde van het slepen, geen keuze.
+      const slik = (k) => k.stopPropagation();
+      form.addEventListener("click", slik, { capture: true, once: true });
+      setTimeout(() => form.removeEventListener("click", slik, true), 50);
+    };
+    window.addEventListener("pointermove", beweeg, true);
+    window.addEventListener("pointerup", los, true);
+    window.addEventListener("pointercancel", los, true);
+  }
+
+  randen_(rij) {
+    if (!rij?.classList?.contains("ruimtes")) return;
+    const { links, rechts } = randenVan(rij);
+    rij.dataset.links = String(links);
+    rij.dataset.rechts = String(rechts);
+  }
+
+  /** De gekozen ruimte helemaal in beeld. */
+  toonGekozen_() {
+    const rij = this.$(".ruimtes");
+    const knop = rij?.querySelector('[aria-checked="true"]');
+    if (!knop) return;
+    rij.scrollLeft += schuifNaar(knop.getBoundingClientRect(), rij.getBoundingClientRect(), RAND);
+    this.randen_(rij);
   }
 
   /**
@@ -489,7 +569,7 @@ class AutomatiseringScherm extends HTMLElement {
     }
     const focus = this.shadowRoot.activeElement?.dataset?.k;
     const lijstScroll = form.querySelector(".lampenlijst")?.scrollTop ?? 0;
-    const ruimteScroll = form.querySelector(".ruimtes")?.scrollTop ?? 0;
+    const ruimteScroll = form.querySelector(".ruimtes")?.scrollLeft ?? 0;
 
     const namen = dagNamen();
     const dagen = namen
@@ -531,7 +611,10 @@ class AutomatiseringScherm extends HTMLElement {
     if (lijstNu) lijstNu.scrollTop = lijstScroll;
     if (this.icoonOpen_) this.tekenIconen_();
     const ruimtes = form.querySelector(".ruimtes");
-    if (ruimtes) ruimtes.scrollTop = ruimteScroll;
+    if (ruimtes) {
+      ruimtes.scrollLeft = ruimteScroll;
+      this.randen_(ruimtes);
+    }
     if (focus) form.querySelector(`[data-k="${CSS.escape(focus)}"]`)?.focus();
     this.kijkNa_();
   }
@@ -632,7 +715,7 @@ class AutomatiseringScherm extends HTMLElement {
           ? `<div class="hlampen">${g.lampen.map(lampje).join("")}</div>`
           : `<span class="niets">${veilig(t("Kies hierboven de lampen voor deze helderheid."))}</span>`;
         const uit = c.favoriet
-          ? `<button type="button" class="keus" data-k="groepuit:${i}"><span class="tk">${veilig(niveauTekst(0, alleenRolluik))}</span></button>`
+          ? `<button type="button" class="keus${g.pct === 0 ? " al-uit" : ""}" data-k="groepuit:${i}"><span class="tk">${veilig(niveauTekst(0, alleenRolluik))}</span></button>`
           : "";
         return `<div class="hgroep" data-actief="${this.groepen_.length > 1 && i === this.actief_}">
           <div class="hrij${c.favoriet ? " metuit" : ""}">
@@ -785,6 +868,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.foutTekst_ = "";
     this.werkVoorbeeld_();
     this.teken_();
+    if (soort === "ruimte") this.toonGekozen_();
   }
 
   /** Lampen en standen van buitenaf gezet (een vinkje, een sjabloon): de groepen volgen. */
@@ -816,6 +900,8 @@ class AutomatiseringScherm extends HTMLElement {
     if (veld.dataset.zoek) {
       this.filter_.zoek = veld.value;
       this.tekenLijst_();
+      // De zoekbalk zoekt binnen de gekozen ruimte; die hoort dan niet uit beeld te staan.
+      if (this.filter_.ruimte !== null) this.toonGekozen_();
       return;
     }
     if (veld.dataset.naam) {
@@ -829,6 +915,7 @@ class AutomatiseringScherm extends HTMLElement {
       this.actief_ = i;
       c.helderheden = helderhedenUit(this.groepen_);
       veld.closest(".hrij").querySelector(".pct").textContent = niveauTekst(pct, alleenRolluiken(c.lampen));
+      veld.closest(".hrij").querySelector('[data-k^="groepuit:"]')?.classList.toggle("al-uit", pct === 0);
       // Wie schuift, kiest daarmee ook de groep. Geen tekenen: de schuif blijft onder je vinger.
       const meer = this.groepen_.length > 1;
       this.shadowRoot.querySelectorAll(".hgroep").forEach((g, n) => {

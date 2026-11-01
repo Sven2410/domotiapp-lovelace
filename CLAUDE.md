@@ -944,8 +944,9 @@ je niet hoort terug te draaien zonder het te vragen:
   standaard een ruimte Buiten, met de buitenverlichting erin. Geen gok op de naam van een lamp of op een ruimte als Tuin.
 - **De klant kiest uit onze eigen iconen, niet uit `mdi:`** (sinds 0.98.1). De eigenaar: "mdi icons gebruiken we niet alleen
   onze icons". 0.98.0 had ze wel; bouw dat niet terug. Een opgeslagen `mdi:` blijft wel getekend.
-- **Geen scrollrij opzij in dit scherm** (sinds 0.96.0). Een muiswiel op een laptop doet dat niet; de
-  eigenaar kon er niet door zijn ruimtes. Zijn ruimtes lopen door en scrollen omlaag.
+- **De ruimtes zijn één rij die opzij veegt** (sinds 0.100.0). De eigenaar: "Mensen gaan toch meer de zoekfunctie gebruiken.
+  zo houden we weer veel meer ruimte over." In 0.96.0 ging zo'n rij er juist uit, omdat een muiswiel op een laptop niet opzij
+  kan. Daarom doen het wiel (`wielOpzij`, `wielBeurt`) en slepen het nu ook; laat die niet weg. De rand vervaagt waar er meer is.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.
