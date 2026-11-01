@@ -620,3 +620,52 @@ describe("kant-en-klare favorieten met vinkjes (0.98.0)", () => {
     assert.equal(uit.helderheden["light.tuin"], 0);
   });
 });
+
+describe("de rij ruimtes opzij (0.100.0)", () => {
+  const rij = (scrollLeft) => ({ scrollLeft, clientWidth: 600, scrollWidth: 1000 });
+
+  it("NIEUW GEDRAG: een muiswiel schuift de rij opzij", () => {
+    assert.equal(L.wielOpzij({ deltaY: 100 }, rij(0)), 100);
+    assert.equal(L.wielOpzij({ deltaY: -100 }, rij(250)), -100);
+  });
+
+  it("NIEUW GEDRAG: aan het einde is er niets te doen, en dan scrolt het scherm door", () => {
+    assert.equal(L.wielOpzij({ deltaY: 100 }, rij(400)), 0);
+    assert.equal(L.wielOpzij({ deltaY: -100 }, rij(0)), 0);
+    assert.equal(L.wielOpzij({ deltaY: 100 }, rij(399.5)), 0, "een halve pixel is geen weg meer");
+    assert.equal(L.wielOpzij({ deltaY: 100 }, rij(350)), 50, "niet verder dan het einde");
+  });
+
+  it("NIEUW GEDRAG: een touchpad dat zelf opzij veegt, blijft met rust", () => {
+    assert.equal(L.wielOpzij({ deltaX: 40, deltaY: 10 }, rij(0)), 0);
+  });
+
+  it("NIEUW GEDRAG: een wiel dat in regels telt, gaat ook een fatsoenlijk eind", () => {
+    assert.equal(L.wielOpzij({ deltaY: 3, deltaMode: 1 }, rij(0)), 48);
+    assert.equal(L.wielOpzij({ deltaY: 1, deltaMode: 2 }, { scrollLeft: 0, clientWidth: 100, scrollWidth: 1000 }), 100);
+  });
+
+  it("NIEUW GEDRAG: wie het scherm al scrolde, blijft dat doen als de muis over de rij komt", () => {
+    let beurt = L.wielBeurt(undefined, 1000, false);
+    beurt = L.wielBeurt(beurt, 1100, true);
+    assert.equal(beurt.inRij, false, "het wiel begon buiten de rij");
+    beurt = L.wielBeurt(beurt, 1800, true);
+    assert.equal(beurt.inRij, true, "na een pauze is het een nieuwe beurt");
+    beurt = L.wielBeurt(beurt, 1900, false);
+    assert.equal(beurt.inRij, true, "begonnen op de rij blijft op de rij");
+  });
+
+  it("NIEUW GEDRAG: de rand vervaagt alleen waar er meer staat", () => {
+    assert.deepEqual(L.randenVan(rij(0)), { links: false, rechts: true });
+    assert.deepEqual(L.randenVan(rij(200)), { links: true, rechts: true });
+    assert.deepEqual(L.randenVan(rij(400)), { links: true, rechts: false });
+    assert.deepEqual(L.randenVan({ scrollLeft: 0, clientWidth: 600, scrollWidth: 600 }), { links: false, rechts: false });
+  });
+
+  it("NIEUW GEDRAG: een half zichtbare knop schuift helemaal in beeld, een hele blijft staan", () => {
+    const vak = { left: 100, right: 700 };
+    assert.equal(L.schuifNaar({ left: 300, right: 400 }, vak, 28), 0);
+    assert.equal(L.schuifNaar({ left: 650, right: 750 }, vak, 28), 78);
+    assert.equal(L.schuifNaar({ left: 80, right: 180 }, vak, 28), -48);
+  });
+});
