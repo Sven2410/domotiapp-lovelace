@@ -24,7 +24,6 @@ import {
   alleenRolluiken,
   dagNamen,
   favorietNaarServer,
-  favorietUitSjabloon,
   favorietVinkjes,
   groepenUit,
   helderhedenUit,
@@ -41,8 +40,6 @@ import {
   randenVan,
   ruimtesVan,
   schuifNaar,
-  sjabloonUitleg,
-  sjablonenVoor,
   startHelderheden,
   stapVerschil,
   terugOproepen,
@@ -238,17 +235,6 @@ const css = /* css */ `
   .vt b { font-size: 14px; font-weight: 500; }
   .vt small { font-size: 12px; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  .sjablonen { display: flex; flex-direction: column; gap: 6px; }
-  .sjabloon {
-    display: flex; align-items: center; gap: 12px; min-height: 56px; width: 100%; padding: 8px 12px 8px 10px; text-align: left;
-    cursor: pointer; font: inherit; color: var(--dac-ink);
-    border-radius: 12px; background: var(--dac-surface); border: 1px solid var(--dac-border);
-    -webkit-tap-highlight-color: transparent;
-  }
-  @media (hover: hover) { .sjabloon:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); } }
-  .sjabloon > .icon { width: 22px; height: 22px; flex: 0 0 auto; color: var(--dac-accent-hi); }
-  .sjabloon .vt b { font-weight: 600; }
-  .sjabloon .vt small { white-space: normal; }
   .allemaal { min-height: 32px; font-size: 12.5px; }
   .pct {
     height: 32px; padding: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
@@ -493,25 +479,6 @@ class AutomatiseringScherm extends HTMLElement {
     return favorietVinkjes(this.concept, this.bron.lampen_(), (id) => this.buiten_(id), (id) => this.bron.naamVanLamp_(id));
   }
 
-  /** De eerste stap van een nieuwe favoriet: kant-en-klaar, of zelf maken. */
-  sjablonenHtml_() {
-    const lampen = this.bron.lampen_();
-    const buiten = (id) => this.buiten_(id);
-    const rijen = sjablonenVoor(lampen, buiten)
-      .map((s) => {
-        return `<button type="button" class="sjabloon" data-k="sjabloon:${veilig(s.sleutel)}">${resolve(s.icoon)}<span class="vt"><b>${veilig(t(s.naam))}</b><small>${veilig(sjabloonUitleg(s, lampen, buiten))}</small></span></button>`;
-      })
-      .join("");
-    return `${rijen ? `<div class="groep">
-      ${this.kop_("check", t("Kies een kant-en-klare favoriet"))}
-      <div class="sjablonen">${rijen}</div>
-    </div>` : ""}
-    <div class="groep">
-      ${this.kop_("pencil", t("Of maak je eigen favoriet"))}
-      <div class="sjablonen"><button type="button" class="sjabloon" data-k="sjabloon:">${resolve("plus")}<span class="vt"><b>${veilig(t("Zelf maken"))}</b><small>${veilig(t("Kies zelf de lampen en standen."))}</small></span></button></div>
-    </div>`;
-  }
-
   /** De vinkjes van een favoriet. */
   vinkjesHtml_() {
     const vinkjes = this.vinkjes_();
@@ -561,12 +528,6 @@ class AutomatiseringScherm extends HTMLElement {
     const c = this.concept;
     if (!c) return;
     const form = this.$(".form");
-    this.$(".ja").hidden = Boolean(c.kiezen);
-    if (c.kiezen) {
-      form.innerHTML = this.sjablonenHtml_();
-      this.kijkNa_();
-      return;
-    }
     const focus = this.shadowRoot.activeElement?.dataset?.k;
     const lijstScroll = form.querySelector(".lampenlijst")?.scrollTop ?? 0;
     const ruimteScroll = form.querySelector(".ruimtes")?.scrollLeft ?? 0;
@@ -818,7 +779,7 @@ class AutomatiseringScherm extends HTMLElement {
 
   /** Opslaan alleen als het kan, en dan zegt de regel eronder waarom niet. */
   kijkNa_() {
-    const reden = this.concept.kiezen ? null : waaromNiet(this.concept);
+    const reden = waaromNiet(this.concept);
     const fout = this.$(".fout");
     const tekst = this.foutTekst_ || reden || "";
     fout.textContent = tekst;
@@ -831,10 +792,6 @@ class AutomatiseringScherm extends HTMLElement {
     const c = this.concept;
     const [soort, ...rest] = knop.dataset.k.split(":");
     const waarde = rest.join(":");
-    if (soort === "sjabloon") {
-      this.kiesSjabloon_(waarde);
-      return;
-    }
     if (soort === "vinkje") {
       const nu = this.vinkjes_().find((v) => v.sleutel === waarde);
       this.zetConcept_(metVinkje(c, this.bron.lampen_(), (id) => this.buiten_(id), waarde, !nu?.aan));
@@ -871,21 +828,11 @@ class AutomatiseringScherm extends HTMLElement {
     if (soort === "ruimte") this.toonGekozen_();
   }
 
-  /** Lampen en standen van buitenaf gezet (een vinkje, een sjabloon): de groepen volgen. */
+  /** Lampen en standen van buitenaf gezet (een vinkje): de groepen volgen. */
   zetConcept_(nieuw) {
     this.concept = nieuw;
     this.groepen_ = groepenUit(nieuw.lampen, nieuw.helderheden, (id) => this.inGroep_(id));
     this.actief_ = Math.max(0, this.groepen_.length - 1);
-  }
-
-  /** De eerste stap is voorbij. Een lege sleutel is zelf maken: dan meteen de lampen. */
-  kiesSjabloon_(sleutel) {
-    const lampen = this.bron.lampen_();
-    const sjabloon = sjablonenVoor(lampen, (id) => this.buiten_(id)).find((s) => s.sleutel === sleutel);
-    const { kiezen, ...blanco } = this.concept;
-    this.zetConcept_(sjabloon ? favorietUitSjabloon(sjabloon, lampen, (id) => this.buiten_(id)) : blanco);
-    this.aanpassen_ = !sjabloon;
-    this.teken_();
   }
 
   /** Typen en schuiven tekenen niet opnieuw: dat haalt het veld onder je vingers weg. */

@@ -201,7 +201,7 @@ class AutomatiseringCard extends DacCard {
       this.on(plus, "click", () =>
         toonAutomatiseringScherm(
           this,
-          plus.dataset.groep === "favoriet" ? { ...nieuweFavoriet(this.lampen_()), kiezen: true } : nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")
+          plus.dataset.groep === "favoriet" ? nieuweFavoriet(this.lampen_()) : nieuweRegel(this.lampen_(), plus.dataset.groep === "vakantie")
         )
       );
     }
