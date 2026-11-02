@@ -202,17 +202,37 @@ export function uitgelezenStand(stand, toestand) {
 }
 
 /**
+ * Of een knop, getal of schakelaar van de coach iets doet.
+ *
+ * De coach zet wat een merk niet kan op niet beschikbaar (`AccuBediening` in
+ * zijn `entiteit.py`): bij een Growatt met een laadschema (v0.150.0) vol laden,
+ * leegladen, terug naar het plan, leegladen tot en de vakantiestand, terwijl
+ * `alleen_lezen` daar false is. De eigenaar, 2 november 2026: een functie die
+ * het merk niet kan, hoort niet op de kaart. Welk merk wat kan weet de coach;
+ * de kaart volgt hem, zodat er niets bij hoeft als de coach later meer kan.
+ *
+ * Bij een herstart is de sensor van de coach ook weg, en staat er geen
+ * bediening. Komt een knop daarna een tel later terug dan de sensor, dan
+ * verschijnt hij een tel later; een knop die niets doet is erger.
+ *
+ * @param {object|null|undefined} st
+ */
+export const bedienbaar = (st) => Boolean(st) && st.state !== "unavailable";
+
+/**
  * De knoppen voor een handmatige opdracht, in volgorde.
  *
  * Vol laden en Leegladen staan aan als die opdracht loopt (`override`).
  * Terug naar het plan staat er alleen als er iets te beëindigen valt: zonder
  * opdracht volgt hij het plan al, en een knop die niets doet is ruis. Een
- * knop zonder entiteit staat er niet.
+ * knop zonder entiteit staat er niet, en met `toestand` erbij ook geen knop
+ * die het merk niet kan (`bedienbaar`).
  *
  * @param {ReturnType<typeof batterijStand>} stand
  * @param {Record<string, string>} rollen uit `coachRollen()`
+ * @param {(entityId: string) => object|null|undefined} [toestand] bijvoorbeeld `(id) => hass.states[id]`
  */
-export function opdrachtKnoppen(stand, rollen) {
+export function opdrachtKnoppen(stand, rollen, toestand) {
   // Een batterij die de coach alleen uitleest heeft de knoppen wel, maar ze
   // doen niets (coach 0.123.0). Verbergen is het eerlijkst.
   if (!stand || stand.alleenLezen) return [];
@@ -224,7 +244,7 @@ export function opdrachtKnoppen(stand, rollen) {
     // "Naar plan" op een smalle kaart: de hele naam werd daar afgekapt.
     uit.push({ rol: "plan", entity: rollen.terug_naar_plan, label: t("Terug naar het plan"), kort: t("Naar plan"), icoon: "calendar", aan: false });
   }
-  return uit.filter((k) => k.entity);
+  return uit.filter((k) => k.entity && (!toestand || bedienbaar(toestand(k.entity))));
 }
 
 /**

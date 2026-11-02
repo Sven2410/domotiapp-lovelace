@@ -29,6 +29,10 @@
  * zijn eigen sensoren, en de knoppen, de vakantiestand en het plan zijn er
  * niet. Gevraagd op 15 oktober 2026, voor een Growatt ARK bij een klant. Zie
  * `uitgelezenStand` in batterij-logica.js.
+ *
+ * Wat de coach WEL stuurt maar het merk niet kan (een Growatt met een
+ * laadschema: geen vol laden, leegladen of vakantiestand), zet de coach op niet
+ * beschikbaar, en dan staat het niet op de kaart (`bedienbaar`, sinds 0.100.2).
  */
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -41,6 +45,7 @@ import {
   BATTERIJ_MODELLEN,
   batterijAfbeelding,
   batterijStand,
+  bedienbaar,
   grenzenTekst,
   leegTotMetGrens,
   opdrachtKnoppen,
@@ -481,7 +486,7 @@ class BatterijCard extends DacCard {
 
   paintOpdrachten_(s, r) {
     // Vol laden, Leegladen en Terug naar het plan, naast elkaar.
-    const knoppen = opdrachtKnoppen(s, r);
+    const knoppen = opdrachtKnoppen(s, r, (id) => stateOf(this.hass, id));
     const rij = this.$(".opdrachten");
     const sig = JSON.stringify(knoppen.map((k) => [k.rol, k.entity]));
     if (rij.dataset.sig !== sig) {
@@ -500,9 +505,10 @@ class BatterijCard extends DacCard {
 
     // Leegladen tot [− getal +], de instelling bij de knop Leegladen.
     // Bij een batterij die de coach alleen uitleest bestaan leeg_tot en de
-    // vakantiestand wel, maar ze doen niets.
+    // vakantiestand wel, maar ze doen niets. Het getal hoort bij de knop: kan
+    // het merk niet leegladen, dan staat het er ook niet (`bedienbaar`).
     const totSt = leegTotMetGrens(stateOf(this.hass, r.leeg_tot), s);
-    const metLeeg = !s?.alleenLezen && Boolean(r.leegladen) && Boolean(totSt) && totSt.state !== "unavailable";
+    const metLeeg = !s?.alleenLezen && bedienbaar(stateOf(this.hass, r.leegladen)) && bedienbaar(totSt);
     this.$(".leeg").hidden = !metLeeg;
     if (metLeeg) {
       const v = this.pending_ ?? Number(totSt.state);
@@ -517,7 +523,7 @@ class BatterijCard extends DacCard {
 
     // De vakantiestand: aan of uit, met de grens van de installateur erbij.
     const vakSt = stateOf(this.hass, r.vakantiestand);
-    const metVak = !s?.alleenLezen && Boolean(vakSt) && vakSt.state !== "unavailable";
+    const metVak = !s?.alleenLezen && bedienbaar(vakSt);
     this.$(".vakantierij").hidden = !metVak;
     if (metVak) {
       const aan = vakSt.state === "on";
