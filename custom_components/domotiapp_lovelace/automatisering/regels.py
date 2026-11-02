@@ -17,6 +17,11 @@ Een regel ziet er zo uit:
 op die stand (100 is helemaal open), uit is dicht. De sleutels heten nog zo omdat ze in
 de opslag staan van wie al regels heeft.
 
+Sinds 0.101.0 kunnen er ook speakers van Music Assistant in (`media_player.`). Bij een speaker
+is `helderheden` het volume; uit is stoppen. Wat er speelt staat in `media`, één keer voor de
+hele regel: `{"uri", "naam", "soort", "beeld"}` uit het zoeken in Music Assistant. Muziek die
+gemist is, wordt niet ingehaald (`MEDIA_INHAAL_MIN`).
+
 `helderheden` is per lamp (sinds 0.94.0). Een lamp die er niet in staat, gaat aan
 zonder helderheid: hij kan niet dimmen. Een regel van daarvoor heeft geen
 `helderheden` maar één `helderheid`, en die geldt dan voor al zijn lampen.

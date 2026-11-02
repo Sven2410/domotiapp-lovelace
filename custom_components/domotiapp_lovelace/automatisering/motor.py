@@ -58,6 +58,7 @@ from .const import (
     INHAAL_UIT_UUR,
     KAART_TYPE,
     KOPPEL_DOMEINEN,
+    MEDIA_INHAAL_MIN,
 )
 from .store import AutomatiseringOpslag
 
@@ -67,9 +68,9 @@ EVENT_LOVELACE_UPDATED = "lovelace_updated"
 
 
 def lampen_uit(kaart: dict[str, Any]) -> list[str]:
-    """De lampen en rolluiken op deze kaart: een entity_id of `{entity, name}`."""
+    """De lampen, rolluiken en speakers op deze kaart: een entity_id of `{entity, name}`."""
     uit: list[str] = []
-    for sleutel, begin in (("lampen", "light."), ("rolluiken", "cover.")):
+    for sleutel, begin in (("lampen", "light."), ("rolluiken", "cover."), ("speakers", "media_player.")):
         for item in kaart.get(sleutel) or []:
             ident = item.get("entity") if isinstance(item, dict) else item
             if isinstance(ident, str) and ident.startswith(begin) and ident not in uit:
@@ -170,10 +171,10 @@ class Motor:
             if wat == "aan" and nu - op > timedelta(hours=INHAAL_AAN_UUR):
                 _LOGGER.info("Regel %s: aan van %s is te lang geleden om in te halen", regel["id"], op)
                 continue
-            self._voer_uit(regel, wat)
+            self._voer_uit(regel, wat, nu - op)
 
     @callback
-    def _voer_uit(self, regel: dict[str, Any], wat: str) -> None:
+    def _voer_uit(self, regel: dict[str, Any], wat: str, laat: timedelta = timedelta(0)) -> None:
         # De groep van de regel moet de groep zijn die nu geldt; zie de kop.
         geldt = bool(regel.get("vakantie")) == self.vakantie
         if not geldt and not (wat == "uit" and self.opslag.brandt(regel["id"])):
@@ -181,6 +182,9 @@ class Motor:
         # Nog een keer getoetst: de eigenaar kan een lamp uit de kaart gehaald
         # hebben nadat de regel gemaakt is.
         lampen = [lamp for lamp in regel["lampen"] if lamp in self.toegestaan]
+        if wat == "aan" and laat > timedelta(minutes=MEDIA_INHAAL_MIN):
+            # Muziek die gemist is, begint niet alsnog; zie MEDIA_INHAAL_MIN. De lampen wel.
+            lampen = [lamp for lamp in lampen if not lamp.startswith("media_player.")]
         if not lampen:
             return
         self.opslag.zet_brandt(regel["id"], wat == "aan")
@@ -190,7 +194,7 @@ class Motor:
         if wat == "uit":
             self._schakel(dict.fromkeys(lampen, 0))
         else:
-            self._schakel({lamp: regelmaker.helderheid_van(regel, lamp) for lamp in lampen})
+            self._schakel({lamp: regelmaker.helderheid_van(regel, lamp) for lamp in lampen}, regel.get("media"))
 
     @callback
     def voer_favoriet_uit(self, favoriet: dict[str, Any]) -> int:
@@ -198,19 +202,26 @@ class Motor:
         per_lamp = favoriet.get("helderheden") or {}
         doelen = {lamp: per_lamp.get(lamp) for lamp in favoriet["lampen"] if lamp in self.toegestaan}
         _LOGGER.debug("Favoriet %s: %s", favoriet["id"], doelen)
-        self._schakel(doelen)
+        self._schakel(doelen, favoriet.get("media"))
         return len(doelen)
 
     @callback
-    def _schakel(self, doelen: dict[str, int | None]) -> None:
+    def _schakel(self, doelen: dict[str, int | None], media: dict[str, Any] | None = None) -> None:
         """Zet alles op zijn stand: een percentage, 0 voor uit of dicht, None voor gewoon aan of open.
 
         Wat hetzelfde doet in één aanroep: een groep die samen aangaat, gaat ook echt
-        tegelijk aan.
+        tegelijk aan. Een speaker (sinds 0.101.0): het percentage is het volume, 0 is stoppen,
+        en wat er speelt is `media`, voor alle speakers samen.
         """
         samen: dict[tuple[str, str, int | None], list[str]] = {}
+        spelen: dict[int | None, list[str]] = {}
         for ident, pct in doelen.items():
-            if ident.startswith("cover."):
+            if ident.startswith("media_player."):
+                if pct == 0:
+                    samen.setdefault(("media_player", "media_stop", None), []).append(ident)
+                else:
+                    spelen.setdefault(pct, []).append(ident)
+            elif ident.startswith("cover."):
                 dienst, stand = self._rolluik_dienst(ident, pct)
                 samen.setdefault(("cover", dienst, stand), []).append(ident)
             elif pct == 0:
@@ -222,6 +233,26 @@ class Motor:
             if stand is not None:
                 data["position" if domein == "cover" else "brightness_pct"] = stand
             self.hass.async_create_task(self._roep_aan(domein, dienst, data))
+        if spelen:
+            self.hass.async_create_task(self._speel(spelen, media))
+
+    async def _speel(self, per_volume: dict[int | None, list[str]], media: dict[str, Any] | None) -> None:
+        """Eerst het volume, dan afspelen: anders begint de muziek even op het volume van gisteren.
+
+        Via `music_assistant.play_media`, dezelfde dienst als het zoekscherm van de mediakaart. Zonder `media` (een regel
+        van een kaart waar de speaker later bij kwam) speelt hij verder waar hij was.
+        """
+        alle = [ident for idents in per_volume.values() for ident in idents]
+        for volume, idents in per_volume.items():
+            if volume is not None:
+                await self._roep_aan("media_player", "volume_set", {"entity_id": idents, "volume_level": volume / 100})
+        if media and media.get("uri"):
+            data: dict[str, Any] = {"entity_id": alle, "media_id": media["uri"], "enqueue": "replace"}
+            if media.get("soort"):
+                data["media_type"] = media["soort"]
+            await self._roep_aan("music_assistant", "play_media", data)
+        else:
+            await self._roep_aan("media_player", "media_play", {"entity_id": alle})
 
     @callback
     def _rolluik_dienst(self, ident: str, pct: int | None) -> tuple[str, int | None]:
