@@ -218,3 +218,49 @@ describe("NIEUW GEDRAG: de foto van een Growatt ARK", () => {
     assert.equal(B.fotoBijAccu({ fabrikant: "Anker", model: "Anker SOLIX Solarbank Max AC" }), "anker_solarbank_max_ac");
   });
 });
+
+/**
+ * Een Growatt met een laadschema (coach v0.150.0): de coach stuurt hem wel (`alleen_lezen` false), maar vol laden,
+ * leegladen, terug naar het plan, leegladen tot en de vakantiestand kan hij daar niet, en die zet de coach op
+ * `unavailable` (`AccuBediening` in zijn `entiteit.py`). Zo gezien door de beheersessie bij een klant op
+ * 2 november 2026. De eigenaar: een functie die het merk niet kan, hoort niet op de kaart.
+ */
+describe("een Growatt die de coach stuurt met een laadschema (0.100.2)", () => {
+  const rollen = { vol_laden: "button.v", leegladen: "button.l", terug_naar_plan: "button.p" };
+  const stuurt = () =>
+    B.batterijStand(coachSensor({ brand: "growatt", alleen_lezen: false, stand: "nul_op_de_meter", soc: 55 }));
+  const met = (staat) => (id) => (Object.values(rollen).includes(id) ? { entity_id: id, state: staat, attributes: {} } : null);
+
+  it("NIEUW GEDRAG: toont geen knop die de coach op niet beschikbaar zet", () => {
+    assert.deepEqual(B.opdrachtKnoppen(stuurt(), rollen, met("unavailable")), []);
+  });
+
+  it("NIEUW GEDRAG: ook Terug naar het plan niet, als er toch een opdracht loopt", () => {
+    const s = B.batterijStand(coachSensor({ brand: "growatt", alleen_lezen: false, stand: "laden", override: "vol" }));
+    assert.deepEqual(B.opdrachtKnoppen(s, rollen, met("unavailable")), []);
+  });
+
+  it("NIEUW GEDRAG: een knop zonder toestand staat er ook niet", () => {
+    assert.deepEqual(B.opdrachtKnoppen(stuurt(), rollen, () => undefined), []);
+  });
+
+  it("NIEUW GEDRAG: bedienbaar zegt nee bij unavailable en bij niets, ja bij al het andere", () => {
+    assert.equal(B.bedienbaar({ state: "unavailable" }), false);
+    assert.equal(B.bedienbaar(null), false);
+    assert.equal(B.bedienbaar(undefined), false);
+    assert.equal(B.bedienbaar({ state: "unknown" }), true);
+    assert.equal(B.bedienbaar({ state: "2026-11-02T10:00:00+00:00" }), true);
+    assert.equal(B.bedienbaar({ state: "off" }), true);
+  });
+
+  it("REGRESSIEWACHT: een knop die de coach beschikbaar zet, blijft staan", () => {
+    assert.deepEqual(
+      B.opdrachtKnoppen(stuurt(), rollen, met("unknown")).map((k) => k.rol),
+      ["vol", "leeg"]
+    );
+  });
+
+  it("REGRESSIEWACHT: zonder toestand blijft het zoals het was", () => {
+    assert.deepEqual(B.opdrachtKnoppen(stuurt(), rollen).map((k) => k.rol), ["vol", "leeg"]);
+  });
+});
