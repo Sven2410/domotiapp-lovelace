@@ -657,6 +657,13 @@ git): 55 dimbare lampen in 21 ruimtes, als `light: - platform: nep_huis` in `con
 via de websocket; negen lampen staan in de ruimte `Buiten`, de lampen in `Oprit` en `Gevel` tellen met opzet niet als buiten. Op `kaart-test` staat een view `huis`, met de automatiseringskaart
 zoals bij een klant. Daarop meet je de zoekbalk, de ruimtes en de vinkjes.
 
+Sinds 2 november 2026 staat er ook een **nagebootste Music Assistant** in
+`.ha-dev-config/custom_components/music_assistant/` (niet in git; hetzelfde domein als de echte, die hier niet staat, met versie
+`9.0.0` om valkuil 72): `music_assistant.search` met een antwoord in emmers, de entiteitsdienst `music_assistant.play_media`, en twee
+spelers met `mass_player_type`, `media_player.keuken` en `media_player.badkamer`. Elke aanroep komt als `nep_ma` op de bus. De
+automatiseringskaarten op `kaart-test` hebben die twee als `speakers`. Het bibliotheekdeel van de mediakaart werkt er niet mee:
+dat gaat via de client van de echte integratie.
+
 Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
 `.ha-dev-config/custom_components/nep_atlantic/` (niet in git), naar de dump in
 `tests/js/vaste-invoer/cozytouch-atlantic-airco.json`: geen `hvac_action`,
@@ -947,6 +954,12 @@ je niet hoort terug te draaien zonder het te vragen:
 - **De ruimtes zijn één rij die opzij veegt** (sinds 0.100.0). De eigenaar: "Mensen gaan toch meer de zoekfunctie gebruiken.
   zo houden we weer veel meer ruimte over." In 0.96.0 ging zo'n rij er juist uit, omdat een muiswiel op een laptop niet opzij
   kan. Daarom doen het wiel (`wielOpzij`, `wielBeurt`) en slepen het nu ook; laat die niet weg. De rand vervaagt waar er meer is.
+- **Speakers van Music Assistant staan in dezelfde lijsten** (sinds 0.101.0). De eigenaar: "ik wil dat de klant in de automatisering
+  kaart ook media kan afspelen". `speakers` op de kaart (alleen spelers van Music Assistant); in een regel is `helderheden` dan het
+  VOLUME, 0 is stoppen, en wat er speelt staat één keer in `media` (`{uri, naam, soort, beeld}`, uit `media/search`). De motor zet
+  eerst het volume en speelt dan via `music_assistant.play_media`. **Gemiste muziek wordt niet ingehaald** (`MEDIA_INHAAL_MIN`, 5
+  minuten): een wekkerlijst die na een herstart om half tien alsnog begint, is erger dan stilte. De lampen wel. Het voorbeeld laat de
+  speakers met rust, want wat er speelde is niet terug te zetten.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.
@@ -2120,7 +2133,7 @@ met **drieëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
 | Herinneringen | **meldingen** (per persoon een potlood met een pop-up vol vinkjes, één per soort: afval, en sinds 0.85.0 de robotstofzuiger (klaar, storing, tanks, onderhoud; op de SENSOREN van het apparaat, zie de kop van `meldingen/stofzuiger.py`); het VERSTUREN doet de integratie) |
-| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*; sinds 0.97.0 ook rolluiken) en **favorieten** (sinds 0.97.0: de knoppen die de klant daar maakt, sinds 0.98.0 met vinkjes; twee naast elkaar, een oneven laatste over de volle breedte) |
+| Automatiseringen | **automatisering** (sinds 0.89.0: de klant maakt zelf regels voor de lampen die de beheerder op de kaart zet; het UITVOEREN doet de integratie, zie *De automatiseringskaart*; sinds 0.97.0 ook rolluiken, sinds 0.101.0 speakers van Music Assistant) en **favorieten** (sinds 0.97.0: de knoppen die de klant daar maakt, sinds 0.98.0 met vinkjes; twee naast elkaar, een oneven laatste over de volle breedte) |
 | Buiten | **weerstation** (sinds 0.91.0: je kiest de temperatuursensor, de rest zoekt hij op het apparaat; temperatuur, wind met een kompas, regen, UV, licht en luchtdruk. Eerst de Shelly BLU Weather Station via BTHome, met merk, type en foto; die meldt zijn merk niet, dus daar kies je Shelly zelf; zie de kop van `weerstation-logica.js`) |
 | Apparatuur | **3D-printer**, **auto**, **camera**, **laadpaal** en **thuisbatterij** (met de coach; sinds 0.69.0 ook een batterij die de coach alleen uitleest, zoals een Growatt: zie de kop van `batterij-logica.js`), **airco** (sinds 0.63.0: elke climate-entiteit, de rest van het apparaat zoekt hij zelf; sinds 0.93.0 ook Fujitsu General, die Cozytouch als Atlantic meldt; zie `airco-logica.js`), **robotstofzuiger** (sinds 0.67.0: één vacuum-entiteit, de rest op `translation_key`; merk en type met productfoto, eerst Dreame; zie de kop van `stofzuiger-logica.js`), **warmtepompboiler** (sinds 0.68.0: alleen tapwater, één water_heater; doel, vier standen en een grafiek van 24 uur; eerst de LG WH27S; zie `boiler-logica.js`), **vriezer** (sinds 0.70.0: één climate; temperatuur, instellen, deur, storing en melding, geen supervriezen of modus; eerst de Miele FNS 7710 E; sinds 0.80.0 ook de **koelkast**, die de kaart zelf herkent, eerst de Miele K 7747 C; het `type` bleef `domotiapp-vriezer-card`; zie `vriezer-logica.js`), **printer** (sinds 0.84.0: een printer voor papier via IPP; je kiest de statussensor, de patronen en tellers zoekt hij zelf; de kleur van een patroon op woorden, zie `kantoorprinter-logica.js`; type `domotiapp-kantoorprinter-card`). Merk, type en foto delen ze in `productfoto.js`, dat de code in `model` of in `model_id` zoekt |
 | Gasten | **wifi** (sinds 0.74.0: de QR-code van een wifi-netwerk, van UniFi Network; tik voor groot; zie de kop van `wifi-logica.js` voor wat UniFi geeft en wat niet) |

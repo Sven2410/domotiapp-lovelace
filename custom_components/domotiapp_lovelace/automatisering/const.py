@@ -44,6 +44,14 @@ MAX_VERSCHIL_MIN = 180
 # of later, vast ingebouwd.
 VAKANTIE_WISSEL_MIN = 15
 
+# Wat Music Assistant afspeelt (sinds 0.101.0): de soorten uit zijn zoekresultaten.
+MEDIA_SOORTEN = ("track", "album", "artist", "playlist", "radio", "podcast", "audiobook")
+MAX_URI = 500
+
+# Muziek die gemist is, haalt de motor niet in: een wekkerlijst die om 07:00 moest en na een herstart om 09:30 alsnog
+# begint, is erger dan stilte. Een paar minuten mag, want een tik kan net na de herstart vallen.
+MEDIA_INHAAL_MIN = 5
+
 # Een grens zodat een open commando de opslag niet vol kan schrijven.
 MAX_REGELS = 200
 MAX_FAVORIETEN = 50

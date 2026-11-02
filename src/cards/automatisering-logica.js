@@ -48,13 +48,80 @@ export function lampenUit(config) {
       omgekeerd: lijstVan(config.omgekeerd).includes(entity),
     });
   }
+  for (const item of lijstVan(config?.speakers)) {
+    const entity = typeof item === "string" ? item : item?.entity;
+    if (typeof entity !== "string" || !entity.startsWith("media_player.") || uit.has(entity)) continue;
+    uit.set(entity, { entity, naam: typeof item === "object" ? String(item.name ?? "") : "", speaker: true });
+  }
   return [...uit.values()];
 }
 
 export const isRolluik = (entity) => String(entity).startsWith("cover.");
 
+/**
+ * Speakers van Music Assistant (sinds 0.101.0). De eigenaar, 2 november 2026: "ik wil dat de klant in de automatisering
+ * kaart ook media kan afspelen. Nu heb je verlichting en rolluiken". Ze staan in dezelfde lijsten als de lampen, omdat de
+ * server het zo opslaat: `helderheden` is bij een speaker het VOLUME, en 0 is stoppen. Wat er speelt staat in `media`, één
+ * keer per regel of favoriet: `{uri, naam, soort, beeld}` uit het zoeken in Music Assistant.
+ */
+export const isSpeaker = (entity) => String(entity).startsWith("media_player.");
+
+/** Het volume waar een speaker mee begint. Een wekker op 80% is erger dan een die te zacht begint. */
+export const VOLUME_STANDAARD = 25;
+
+/**
+ * Het blok Muziek van een regel of favoriet: het volume, en of de speakers stoppen (alleen bij een favoriet; bij een regel
+ * is stoppen de uit). Alle speakers van een regel hebben hetzelfde volume; het scherm zet ze samen.
+ */
+export function muziekVan(regel, favoriet = Boolean(regel?.favoriet)) {
+  const speakers = (regel?.lampen ?? []).filter(isSpeaker);
+  const waarden = speakers.map((id) => regel.helderheden?.[id]).filter((v) => v != null);
+  const volume = waarden.find((v) => v > 0) ?? VOLUME_STANDAARD;
+  return { volume, stoppen: favoriet && speakers.length > 0 && waarden.length === speakers.length && waarden.every((v) => v === 0) };
+}
+
+/** Elke speaker in de regel op dit volume, of op 0 om te stoppen. De lampen blijven zoals ze waren. */
+export function metMuziek(helderheden, lampen, waarde) {
+  const uit = { ...(helderheden ?? {}) };
+  for (const id of lampen ?? []) if (isSpeaker(id)) uit[id] = waarde;
+  return uit;
+}
+
+/** Een zoekresultaat van Music Assistant, zoals het in de regel komt te staan. */
+export function mediaUit(treffer) {
+  if (!treffer?.uri) return null;
+  return {
+    uri: String(treffer.uri),
+    naam: String(treffer.name ?? treffer.naam ?? ""),
+    ...(treffer.media_type || treffer.soort ? { soort: String(treffer.media_type ?? treffer.soort) } : {}),
+    ...(typeof (treffer.image ?? treffer.beeld) === "string" ? { beeld: treffer.image ?? treffer.beeld } : {}),
+  };
+}
+
+/** Speelt deze regel of favoriet iets af? Dan hoort er iets gekozen te zijn. */
+export function speeltAf(regel) {
+  if (!(regel?.lampen ?? []).some(isSpeaker)) return false;
+  return regel.favoriet ? !muziekVan(regel).stoppen : Boolean(regel.aan);
+}
+
+/**
+ * De kop boven de lijst: wat er op deze kaart te kiezen is. "Lampen, rolluiken en speakers", in de taal van de kaart.
+ */
+export function lijstKopVan(lampen) {
+  const delen = [];
+  if (lampen.some((l) => !l.rolluik && !l.speaker)) delen.push(t("Lampen"));
+  if (lampen.some((l) => l.rolluik)) delen.push(t("Rolluiken"));
+  if (lampen.some((l) => l.speaker)) delen.push(t("Speakers"));
+  if (!delen.length) return t("Lampen");
+  const zin = new Intl.ListFormat(locale(), { type: "conjunction" }).format(delen.map((d, i) => (i ? d.toLowerCase() : d)));
+  return zin;
+}
+
 /** Zijn dit alleen rolluiken? Dan zegt het scherm open en dicht in plaats van aan en uit. */
 export const alleenRolluiken = (lampen) => Boolean(lampen?.length) && lampen.every(isRolluik);
+
+/** Alleen speakers? Dan is het afspelen en stoppen. */
+export const alleenSpeakers = (lampen) => Boolean(lampen?.length) && lampen.every(isSpeaker);
 
 /** Een stand op de knop: "50%", of "Uit" en "Dicht" bij 0. */
 export const niveauTekst = (pct, rolluiken = false) => (pct === 0 ? (rolluiken ? t("Dicht") : t("Uit")) : `${pct}%`);
@@ -86,6 +153,8 @@ export function kanDimmen(st) {
  * die niet kunnen dimmen meldt wel `brightness`.
  */
 export function magDimmen(entity, lampen, st) {
+  // Een speaker heeft een volume, en dat staat in het blok Muziek; niet in een groep met lampen.
+  if (isSpeaker(entity)) return false;
   // Een rolluik dat zijn stand niet kent, gaat alleen open en dicht. Dat zijn er veel.
   if (isRolluik(entity)) return !st || (Number(st.attributes?.supported_features) & 4) === 4;
   return kanDimmen(st) && !lampen.find((l) => l.entity === entity)?.aanUit;
@@ -261,7 +330,8 @@ export function lampStand(st) {
 export function voorbeeldDoelen(lampen, helderheden, dimt, states) {
   const doelen = {};
   for (const lamp of lampen ?? []) {
-    if (weg(states?.[lamp])) continue;
+    // Een speaker doet niet mee: wat hij speelde is na het voorbeeld niet terug te zetten.
+    if (isSpeaker(lamp) || weg(states?.[lamp])) continue;
     const pct = helderheden?.[lamp] ?? 100;
     // 0 is uit of dicht, ook voor iets zonder schuif.
     doelen[lamp] = pct === 0 ? 0 : dimt(lamp) ? pct : null;
@@ -360,7 +430,10 @@ export function momentTekst(moment) {
 
 /** "60%", of "20-60%" als de lampen verschillen. Niets als alles op 100% gaat. */
 export function helderheidTekst(regel) {
-  const waarden = regel.helderheden ? Object.values(regel.helderheden) : [regel.helderheid];
+  // Bij een speaker is het het volume, en dat hoort niet in de helderheid.
+  const waarden = regel.helderheden
+    ? Object.entries(regel.helderheden).filter(([id]) => !isSpeaker(id)).map(([, v]) => v)
+    : [regel.helderheid];
   const goed = waarden.filter((w) => w != null);
   if (!goed.length) return "";
   const [laag, hoog] = [Math.min(...goed), Math.max(...goed)];
@@ -372,18 +445,22 @@ export function helderheidTekst(regel) {
 export function regelTekst(regel) {
   const delen = [];
   const rolluik = alleenRolluiken(regel.lampen);
+  const speaker = alleenSpeakers(regel.lampen);
   if (regel.aan) {
     const moment = momentTekst(regel.aan);
-    delen.push(rolluik ? t("Open {moment}", { moment }) : t("Aan {moment}", { moment }));
+    if (speaker) delen.push(t("Afspelen {moment}", { moment }));
+    else delen.push(rolluik ? t("Open {moment}", { moment }) : t("Aan {moment}", { moment }));
   }
   if (regel.uit) {
     const moment = momentTekst(regel.uit);
-    if (rolluik) delen.push(regel.aan ? t("dicht {moment}", { moment }) : t("Dicht {moment}", { moment }));
+    if (speaker) delen.push(regel.aan ? t("stoppen {moment}", { moment }) : t("Stoppen {moment}", { moment }));
+    else if (rolluik) delen.push(regel.aan ? t("dicht {moment}", { moment }) : t("Dicht {moment}", { moment }));
     else delen.push(regel.aan ? t("uit {moment}", { moment }) : t("Uit {moment}", { moment }));
   }
   if (regel.aan) {
     const tekst = helderheidTekst(regel);
     if (tekst) delen.push(tekst);
+    if (regel.media?.naam && (regel.lampen ?? []).some(isSpeaker)) delen.push(regel.media.naam);
   }
   delen.push(dagenTekst(regel.dagen));
   return delen.join(" · ");
@@ -465,11 +542,12 @@ export function isBuiten(entity, hass) {
 
 /** De drie delen waar de vinkjes over gaan. */
 function delenVan(lampen, buiten) {
-  const lichten = lampen.filter((l) => !l.rolluik).map((l) => l.entity);
+  const lichten = lampen.filter((l) => !l.rolluik && !l.speaker).map((l) => l.entity);
   return {
     binnen: lichten.filter((id) => !buiten(id)),
     buiten: lichten.filter((id) => buiten(id)),
     rolluiken: lampen.filter((l) => l.rolluik).map((l) => l.entity),
+    speakers: lampen.filter((l) => l.speaker).map((l) => l.entity),
   };
 }
 
@@ -509,6 +587,9 @@ export function favorietVinkjes(favoriet, lampen, buiten, naamVan = (id) => id) 
     rij.push(vinkje("rolluikenDicht", t("Rolluiken dicht"), aantal, allemaal(d.rolluiken, uit)));
     rij.push(vinkje("rolluikenOpen", t("Rolluiken open"), aantal, allemaal(d.rolluiken, (pct) => pct === 100)));
   }
+  if (d.speakers.length) {
+    rij.push(vinkje("muziekUit", t("Muziek uit"), tn(d.speakers.length, "{n} speaker", "{n} speakers"), allemaal(d.speakers, uit)));
+  }
   return rij;
 }
 
@@ -542,6 +623,9 @@ export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
   } else if (sleutel === "rolluikenDicht" || sleutel === "rolluikenOpen") {
     if (aan) zet(d.rolluiken, sleutel === "rolluikenOpen" ? 100 : 0);
     else weg(d.rolluiken);
+  } else if (sleutel === "muziekUit") {
+    if (aan) zet(d.speakers, 0);
+    else weg(d.speakers);
   }
   return { ...favoriet, lampen: lijst, helderheden: per };
 }
@@ -550,16 +634,23 @@ export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
 export function favorietNaarServer(favoriet, dimt = () => true) {
   const per = favoriet.helderheden ?? {};
   const helderheden = {};
+  const muziek = muziekVan(favoriet, true);
   for (const lamp of favoriet.lampen) {
+    if (isSpeaker(lamp)) {
+      helderheden[lamp] = muziek.stoppen ? 0 : muziek.volume;
+      continue;
+    }
     const pct = per[lamp] ?? 100;
     if (pct === 0 || dimt(lamp)) helderheden[lamp] = pct;
   }
+  const media = speeltAf({ ...favoriet, favoriet: true }) ? mediaUit(favoriet.media) : null;
   return {
     ...(favoriet.id ? { id: favoriet.id } : {}),
     naam: String(favoriet.naam ?? "").trim(),
     icoon: favoriet.icoon || FAVORIET_ICONEN[0],
     lampen: favoriet.lampen,
     helderheden,
+    ...(media ? { media } : {}),
   };
 }
 
@@ -582,6 +673,7 @@ export function wissel(lijst, waarde) {
 export function waaromNiet(regel) {
   if (regel.favoriet && !String(regel.naam ?? "").trim()) return t("Geef de favoriet een naam.");
   if (!regel.lampen?.length) return t("Kies minstens één lamp.");
+  if (speeltAf(regel) && !regel.media?.uri) return t("Kies wat er moet spelen.");
   if (regel.favoriet) return null;
   if (!regel.aan && !regel.uit) return t("Kies wanneer hij aan of uit gaat.");
   for (const m of [regel.aan, regel.uit]) {
@@ -600,11 +692,17 @@ export function waaromNiet(regel) {
 export function naarServer(regel, dimt = () => true) {
   const per = regel.helderheden ?? startHelderheden(regel);
   const naam = String(regel.naam ?? "").trim();
+  const volume = muziekVan(regel, false).volume;
+  const media = speeltAf({ ...regel, favoriet: false }) ? mediaUit(regel.media) : null;
   return {
     ...(regel.id ? { id: regel.id } : {}),
     ...(naam ? { naam } : {}),
     lampen: regel.lampen,
-    helderheden: Object.fromEntries(regel.lampen.filter(dimt).map((l) => [l, per[l] ?? 100])),
+    helderheden: Object.fromEntries([
+      ...regel.lampen.filter((l) => !isSpeaker(l) && dimt(l)).map((l) => [l, per[l] ?? 100]),
+      ...regel.lampen.filter(isSpeaker).map((l) => [l, volume]),
+    ]),
+    ...(media ? { media } : {}),
     aan: regel.aan ?? null,
     uit: regel.uit ?? null,
     dagen: [...regel.dagen].sort((a, b) => a - b),

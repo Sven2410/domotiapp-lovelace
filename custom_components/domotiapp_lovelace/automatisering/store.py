@@ -3,7 +3,7 @@
 | sleutel | wat |
 |---|---|
 | `regels` | de regels; zie `regels.py` |
-| `favorieten` | de favorieten: `{id, naam, icoon, lampen, helderheden}`; 0 is uit of dicht |
+| `favorieten` | de favorieten: `{id, naam, icoon, lampen, helderheden, media}`; 0 is uit, dicht of stoppen |
 | `vakantie` | staat de vakantiemodus aan? |
 | `laatst` | tot waar de klok is gekomen; zie hieronder |
 | `brandt` | de regels die hun lamp aan zetten en nog niet uit |

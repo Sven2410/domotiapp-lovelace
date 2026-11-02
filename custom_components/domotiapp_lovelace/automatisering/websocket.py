@@ -29,7 +29,9 @@ from .const import (
     MAX_LAMPEN_PER_REGEL,
     MAX_NAAM,
     MAX_REGELS,
+    MAX_URI,
     MAX_VERSCHIL_MIN,
+    MEDIA_SOORTEN,
     SOORT_TIJD,
     SOORT_ZONSONDERGANG,
     SOORT_ZONSOPKOMST,
@@ -51,7 +53,16 @@ _MOMENT = vol.Any(
     ),
 )
 
-_APPARAAT = vol.All(cv.string, vol.Match(r"^(light|cover)\."))
+_APPARAAT = vol.All(cv.string, vol.Match(r"^(light|cover|media_player)\."))
+# Wat er speelt, uit het zoeken in Music Assistant. Eén per regel of favoriet, voor al zijn speakers.
+_MEDIA = vol.Schema(
+    {
+        vol.Required("uri"): vol.All(cv.string, vol.Length(min=1, max=MAX_URI)),
+        vol.Optional("naam", default=""): vol.All(cv.string, vol.Length(max=200)),
+        vol.Optional("soort"): vol.In(MEDIA_SOORTEN),
+        vol.Optional("beeld"): vol.All(cv.string, vol.Length(max=2000)),
+    }
+)
 _APPARATEN = vol.All([_APPARAAT], vol.Length(min=1, max=MAX_LAMPEN_PER_REGEL))
 
 _FAVORIET = vol.Schema(
@@ -60,8 +71,9 @@ _FAVORIET = vol.Schema(
         vol.Required("naam"): vol.All(cv.string, vol.Length(min=1, max=MAX_NAAM)),
         vol.Optional("icoon", default="star"): vol.All(cv.string, vol.Length(max=40)),
         vol.Required("lampen"): _APPARATEN,
-        # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan.
+        # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan. Bij een speaker is het het volume, en 0 stoppen.
         vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},
+        vol.Optional("media"): vol.Any(None, _MEDIA),
     }
 )
 
@@ -77,8 +89,16 @@ _REGEL = vol.Schema(
         vol.Optional("uit"): _MOMENT,
         vol.Required("dagen"): vol.All([vol.All(int, vol.Range(min=0, max=6))], vol.Length(min=1, max=7), vol.Unique()),
         vol.Optional("vakantie", default=False): bool,
+        vol.Optional("media"): vol.Any(None, _MEDIA),
     }
 )
+
+
+def _met_media(nieuw: dict[str, Any]) -> dict[str, Any]:
+    """`media` alleen als er een speaker in staat; anders blijft er niets van over in de opslag."""
+    if nieuw.get("media") and any(lamp.startswith("media_player.") for lamp in nieuw["lampen"]):
+        return {"media": nieuw["media"]}
+    return {"media": None} if "media" in nieuw else {}
 
 
 @callback
@@ -192,6 +212,7 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             if "helderheden" in nieuw
             else {}
         ),
+        **_met_media(nieuw),
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
         "actief": bestaand.get("actief", True) if bestaand else True,
         # Een bestaande regel wisselt niet van groep: zijn plek op de kaart zegt het.
@@ -274,6 +295,7 @@ def ws_favoriet_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
     favoriet = {
         **nieuw,
         "helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]},
+        **_met_media(nieuw),
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
     }
     motor.opslag.zet_favoriet(favoriet)

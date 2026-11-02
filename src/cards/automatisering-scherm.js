@@ -18,10 +18,17 @@ import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { alleSleutels, zoekIconen } from "../editor/icoon-zoek.js";
 import { t, tn } from "../taal.js";
+import { nogNietGereed } from "../herkansing.js";
 import {
   FAVORIET_ICONEN,
   SOORTEN,
   alleenRolluiken,
+  alleenSpeakers,
+  isSpeaker,
+  lijstKopVan,
+  mediaUit,
+  metMuziek,
+  muziekVan,
   dagNamen,
   favorietNaarServer,
   favorietVinkjes,
@@ -59,6 +66,8 @@ const FILTER_VANAF = 6;
 const SLEEP_VANAF = 5;
 /** Zo breed vervaagt de rand van de rij ruimtes. */
 const RAND = 28;
+/** Zolang wachten na de laatste toets voordat Music Assistant gevraagd wordt. */
+const ZOEK_NA_MS = 350;
 
 const css = /* css */ `
   ${themaCss}
@@ -269,6 +278,28 @@ const css = /* css */ `
   .voorbeeld[aria-pressed="true"] .icon { color: var(--dac-accent-hi); }
   input[type="range"] { width: 100%; margin: 0; height: 28px; accent-color: var(--dac-accent-hi); cursor: pointer; }
 
+  /* Wat er speelt: een hoes, de naam en de soort. Een treffer is een knop; de gekozen heeft een rand. */
+  .treffers { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
+  .treffer {
+    display: flex; align-items: center; gap: 10px; min-height: 48px; width: 100%; padding: 4px 6px; text-align: left;
+    cursor: pointer; font: inherit; color: var(--dac-ink); background: none; border: 1px solid transparent; border-radius: 12px;
+  }
+  @media (hover: hover) { .treffer:hover { background: var(--dac-hover); } }
+  .treffer.gekozen { cursor: default; border-color: var(--dac-border); }
+  .hoes {
+    width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden;
+    border-radius: 8px; background-color: rgba(var(--dac-tint), .06); color: var(--dac-ink-3);
+  }
+  .hoes img { width: 100%; height: 100%; object-fit: cover; }
+  .hoes .icon { width: 18px; height: 18px; }
+  .treffer .vt { flex: 1 1 auto; }
+  .treffer .vt b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .treffer .wijzig { flex: 0 0 auto; min-height: 32px; }
+  /* Het volume: een luidspreker ervoor, anders zegt "30%" onder een afspeellijst niet waarover het gaat. */
+  .vrij { display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 32px; }
+  .vrij .wat { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--dac-ink); }
+  .vrij .wat .icon { width: 15px; height: 15px; flex: 0 0 auto; color: var(--dac-ink-2); }
+
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-warn); }
   .knoppen { display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid var(--dac-border); }
   .knoppen button {
@@ -429,6 +460,11 @@ class AutomatiseringScherm extends HTMLElement {
     this.bezig_ = false;
     this.icoonOpen_ = false;
     this.icoonZoek_ = "";
+    this.muziekZoek_ = "";
+    this.muziekTreffers_ = [];
+    this.muziekMelding_ = "";
+    this.muziekKiezen_ = !regel.media?.uri;
+    clearTimeout(this.muziekTimer_);
     // Staat er al een vinkje aan, dan zijn de vinkjes het overzicht en de lampen een stap verder.
     this.aanpassen_ = !regel.favoriet || !this.vinkjes_().some((v) => v.aan);
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -446,6 +482,7 @@ class AutomatiseringScherm extends HTMLElement {
 
   sluit() {
     this.stopVoorbeeld_();
+    clearTimeout(this.muziekTimer_);
     this.removeAttribute("open");
     this.bron = null;
     this.concept = null;
@@ -455,8 +492,9 @@ class AutomatiseringScherm extends HTMLElement {
     return this.hasAttribute("open") && this.bron === kaart;
   }
 
-  /** Staat hij in een groep? Bij een favoriet alles: ook wat geen schuif kent, kan uit of dicht. */
+  /** Staat hij in een groep? Bij een favoriet alles: ook wat geen schuif kent, kan uit of dicht. Een speaker nooit: die heeft het blok Muziek. */
   inGroep_(id) {
+    if (isSpeaker(id)) return false;
     return Boolean(this.concept?.favoriet) || this.dimbaar_(id);
   }
 
@@ -519,9 +557,13 @@ class AutomatiseringScherm extends HTMLElement {
     const lampen = this.concept.lampen;
     const rolluik = lampen.some((id) => id.startsWith("cover."));
     let kop = wat === "aan" ? t("Aan") : t("Uit");
-    if (alleenRolluiken(lampen)) kop = wat === "aan" ? t("Open") : t("Dicht");
+    let icoon = wat === "aan" ? (rolluik ? "shutterOpen" : "bulb") : "power";
+    if (alleenSpeakers(lampen)) {
+      kop = wat === "aan" ? t("Afspelen") : t("Stoppen");
+      icoon = wat === "aan" ? "play" : "power";
+    } else if (alleenRolluiken(lampen)) kop = wat === "aan" ? t("Open") : t("Dicht");
     else if (rolluik) kop = wat === "aan" ? t("Aan of open") : t("Uit of dicht");
-    return `<div class="groep">${this.kop_(wat === "aan" ? (rolluik ? "shutterOpen" : "bulb") : "power", kop)}<div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
+    return `<div class="groep">${this.kop_(icoon, kop)}<div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
   }
 
   teken_() {
@@ -557,6 +599,7 @@ class AutomatiseringScherm extends HTMLElement {
       ${this.helderheidHtml_()}`
           : `<div class="groep"><button type="button" class="nieuw" data-k="aanpassen:">${resolve("pencil")}${veilig(tn(c.lampen.length, "Lampen aanpassen ({n} gekozen)", "Lampen aanpassen ({n} gekozen)"))}</button></div>`
       }
+      ${this.muziekHtml_()}
       ${this.voorbeeldHtml_()}
       ${
         c.favoriet
@@ -568,6 +611,7 @@ class AutomatiseringScherm extends HTMLElement {
     // De focus terug op dezelfde knop: alles is opnieuw getekend, en zonder
     // dit begint wie met Tab en Spatie werkt na elke keuze weer bovenaan.
     this.tekenLijst_();
+    this.tekenMuziek_();
     const lijstNu = form.querySelector(".lampenlijst");
     if (lijstNu) lijstNu.scrollTop = lijstScroll;
     if (this.icoonOpen_) this.tekenIconen_();
@@ -591,19 +635,19 @@ class AutomatiseringScherm extends HTMLElement {
       ruimtes.length > 1
         ? `<div class="ruimtes" role="radiogroup" aria-label="${veilig(t("Ruimte"))}">${keus("*", t("Alle"))}${ruimtes.map((r) => keus(r.id, r.naam)).join("")}</div>`
         : "";
-    const zoek = lampen.some((l) => l.rolluik) ? t("Zoek een lamp of rolluik") : t("Zoek een lamp");
+    const zoek = lampen.some((l) => l.speaker) ? t("Zoek op naam") : lampen.some((l) => l.rolluik) ? t("Zoek een lamp of rolluik") : t("Zoek een lamp");
     return `<input class="zoek" type="search" data-zoek="1" value="${veilig(this.filter_.zoek)}" placeholder="${veilig(zoek)}" aria-label="${veilig(zoek)}" autocomplete="off" />${rij}<button type="button" class="nieuw allemaal" data-k="allemaal:"></button>`;
   }
 
   lijstIcoon_() {
-    return this.bron.lampen_().every((l) => l.rolluik) ? "shutter" : "bulb";
+    const lampen = this.bron.lampen_();
+    if (lampen.every((l) => l.speaker)) return "speaker";
+    return lampen.every((l) => l.rolluik) ? "shutter" : "bulb";
   }
 
   /** De kop boven de lijst: wat er op deze kaart te kiezen is. */
   lijstKop_() {
-    const lampen = this.bron.lampen_();
-    if (lampen.every((l) => l.rolluik)) return t("Rolluiken");
-    return lampen.some((l) => l.rolluik) ? t("Lampen en rolluiken") : t("Lampen");
+    return lijstKopVan(this.bron.lampen_());
   }
 
   /** De iconen van een favoriet: tikken in plaats van zoeken. */
@@ -652,9 +696,9 @@ class AutomatiseringScherm extends HTMLElement {
     }
     this.$(".lampenlijst").innerHTML = lijst.length
       ? lijst
-          .map(({ entity, rolluik }) => {
+          .map(({ entity, rolluik, speaker }) => {
             const aan = c.lampen.includes(entity);
-            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve(rolluik ? "shutter" : "bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
+            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve(speaker ? "speaker" : rolluik ? "shutter" : "bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
           })
           .join("")
       : `<span class="niets">${veilig(t("Geen lamp gevonden."))}</span>`;
@@ -688,7 +732,7 @@ class AutomatiseringScherm extends HTMLElement {
         </div>`;
       })
       .join("");
-    const opAanUit = c.favoriet ? [] : c.lampen.filter((id) => !this.dimbaar_(id));
+    const opAanUit = c.favoriet ? [] : c.lampen.filter((id) => !isSpeaker(id) && !this.dimbaar_(id));
     const vastKop = alleenRolluiken(opAanUit)
       ? t("Alleen open en dicht")
       : opAanUit.some((id) => id.startsWith("cover."))
@@ -710,10 +754,113 @@ class AutomatiseringScherm extends HTMLElement {
   /** De knop Voorbeeld: los van de schuiven, want hij hoort er ook als die ingeklapt zijn. */
   voorbeeldHtml_() {
     const c = this.concept;
-    if (!this.metStand_() || !c.lampen.length) return "";
+    // Een speaker doet niet mee aan het voorbeeld (zie `voorbeeldDoelen`); met alleen speakers is er niets te zien.
+    if (!this.metStand_() || !c.lampen.some((id) => !isSpeaker(id))) return "";
     const aan = Boolean(this.voorbeeld_);
     return `<div class="groep"><button type="button" class="voorbeeld" data-k="voorbeeld:" aria-pressed="${aan}">${resolve("bulb")}${veilig(aan ? t("Voorbeeld stoppen") : t("Voorbeeld"))}</button>
       ${aan ? `<span class="niets">${veilig(t("De lampen gaan terug zoals ze stonden als je stopt of dit scherm sluit."))}</span>` : ""}</div>`;
+  }
+
+  /**
+   * Wat er speelt, en hoe hard. Alleen als er een speaker gekozen is en er iets aan gaat: bij een regel zonder aan stoppen
+   * de speakers op de uit, en daar is niets voor in te stellen.
+   */
+  muziekHtml_() {
+    const c = this.concept;
+    if (!this.metStand_() || !c.lampen.some(isSpeaker)) return "";
+    const m = muziekVan(c, Boolean(c.favoriet));
+    const stand = c.favoriet
+      ? `<div class="opties" role="radiogroup" aria-label="${veilig(t("Muziek"))}">
+          <button type="button" class="keus" role="radio" aria-checked="${!m.stoppen}" data-k="muziekstand:afspelen">${resolve("play")}<span class="tk">${veilig(t("Afspelen"))}</span></button>
+          <button type="button" class="keus" role="radio" aria-checked="${m.stoppen}" data-k="muziekstand:stoppen">${resolve("power")}<span class="tk">${veilig(t("Stoppen"))}</span></button>
+        </div>`
+      : "";
+    if (m.stoppen) return `<div class="groep">${this.kop_("music", t("Muziek"))}${stand}</div>`;
+    const kiezen =
+      this.muziekKiezen_ || !c.media?.uri
+        ? `<input class="zoek" type="search" data-muziekzoek="1" value="${veilig(this.muziekZoek_)}" placeholder="${veilig(t("Zoek een afspeellijst, zender of nummer"))}" aria-label="${veilig(t("Zoek in Music Assistant"))}" autocomplete="off" />
+           <div class="treffers" role="listbox" aria-label="${veilig(t("Muziek kiezen"))}"></div>`
+        : `<div class="treffers">${this.trefferHtml_(c.media, null)}</div>`;
+    return `<div class="groep">${this.kop_("music", t("Muziek"))}${stand}${kiezen}
+      <div class="vrij"><span class="wat" title="${veilig(t("Volume"))}">${resolve("speaker")}<span data-volumetekst="1">${m.volume}%</span></span><input type="range" min="1" max="100" step="1" value="${m.volume}" data-volume="1" aria-label="${veilig(t("Volume"))}" /></div>
+    </div>`;
+  }
+
+  /** Eén regel met hoes: een treffer om te kiezen (`i`), of het gekozene met een knop om te wijzigen (`i` null). */
+  trefferHtml_(item, i) {
+    const naam = item.naam ?? item.name ?? "";
+    const beeld = item.beeld ?? item.image;
+    const hoes = `<span class="hoes">${typeof beeld === "string" && beeld ? `<img src="${veilig(beeld)}" alt="" loading="lazy" />` : resolve("music")}</span>`;
+    const onder = this.muziekOnder_(item);
+    const tekst = `<span class="vt"><b>${veilig(naam)}</b>${onder ? `<small>${veilig(onder)}</small>` : ""}</span>`;
+    if (i == null) {
+      return `<div class="treffer gekozen">${hoes}${tekst}<button type="button" class="keus wijzig" data-k="muziekkiezen:"><span class="tk">${veilig(t("Wijzigen"))}</span></button></div>`;
+    }
+    return `<button type="button" class="treffer" role="option" aria-selected="false" data-k="muziek:${i}">${hoes}${tekst}</button>`;
+  }
+
+  /** De regel onder de naam: de artiest, of wat het is. */
+  muziekOnder_(item) {
+    const artiesten = Array.isArray(item.artists)
+      ? item.artists.map((a) => (typeof a === "string" ? a : a?.name)).filter(Boolean).join(", ")
+      : "";
+    if (artiesten) return artiesten;
+    const soort = item.soort ?? item.media_type;
+    return (
+      {
+        playlist: t("Afspeellijst"),
+        radio: t("Radiozender"),
+        track: t("Nummer"),
+        album: t("Album"),
+        artist: t("Artiest"),
+        podcast: t("Podcast"),
+        audiobook: t("Luisterboek"),
+      }[soort] ?? ""
+    );
+  }
+
+  /** Alleen de treffers opnieuw: de zoekbalk blijft staan, met de cursor. */
+  tekenMuziek_() {
+    const vak = this.$("[data-muziekzoek]") && this.$(".treffers");
+    if (!vak) return;
+    if (this.muziekMelding_) {
+      vak.innerHTML = `<span class="niets">${veilig(this.muziekMelding_)}</span>`;
+      return;
+    }
+    if (!this.muziekTreffers_.length) {
+      vak.innerHTML = `<span class="niets">${veilig(
+        this.muziekZoek_.trim() ? t("Niets gevonden.") : t("Typ een naam en kies uit wat Music Assistant kent.")
+      )}</span>`;
+      return;
+    }
+    vak.innerHTML = this.muziekTreffers_.map((tr, i) => this.trefferHtml_(tr, i)).join("");
+  }
+
+  /** Zoeken in Music Assistant, via de integratie: dat mag ook een gewone gebruiker. */
+  async zoekMuziek_() {
+    const vraag = this.muziekZoek_.trim();
+    const beurt = (this.muziekBeurt_ = (this.muziekBeurt_ ?? 0) + 1);
+    if (!vraag) {
+      this.muziekTreffers_ = [];
+      this.muziekMelding_ = "";
+      this.tekenMuziek_();
+      return;
+    }
+    this.muziekMelding_ = t("Zoeken…");
+    this.tekenMuziek_();
+    try {
+      const antwoord = await this.bron.hass.callWS({ type: "domotiapp_lovelace/media/search", query: vraag, limit: 12 });
+      if (beurt !== this.muziekBeurt_ || !this.concept) return;
+      this.muziekTreffers_ = (antwoord?.results ?? []).filter((tr) => tr?.uri);
+      this.muziekMelding_ = "";
+    } catch (fout) {
+      if (beurt !== this.muziekBeurt_ || !this.concept) return;
+      this.muziekTreffers_ = [];
+      this.muziekMelding_ = nogNietGereed(fout)
+        ? t("Home Assistant start nog op. Probeer het zo opnieuw.")
+        : fout?.message || t("Music Assistant gaf geen antwoord.");
+    }
+    this.tekenMuziek_();
   }
 
   stuur_(hass, oproepen) {
@@ -761,17 +908,32 @@ class AutomatiseringScherm extends HTMLElement {
     this.stuur_(this.bron?.hass, terugOproepen(standen));
   }
 
-  /** De groepen zijn de waarheid in dit scherm; de regel volgt ze. */
+  /** De groepen zijn de waarheid in dit scherm; de regel volgt ze. Het volume van de speakers staat er los van. */
   zetGroepen_({ groepen, actief }) {
     this.groepen_ = groepen;
     this.actief_ = actief;
-    this.concept.helderheden = helderhedenUit(groepen);
+    this.concept.helderheden = this.metSpeakers_(helderhedenUit(groepen));
+  }
+
+  /** De helderheden van de groepen, met het volume van de speakers erbij. */
+  metSpeakers_(helderheden) {
+    const oud = this.concept.helderheden ?? {};
+    return { ...helderheden, ...Object.fromEntries(Object.entries(oud).filter(([id]) => isSpeaker(id))) };
   }
 
   /** Een lamp kiezen of weghalen: bij een schuif-lamp ook in zijn groep. */
   wisselLamp_(id) {
     const c = this.concept;
     const erbij = !c.lampen.includes(id);
+    if (isSpeaker(id)) {
+      // Een speaker erbij krijgt wat de andere al hebben: hetzelfde volume, of stoppen.
+      const m = muziekVan(c, Boolean(c.favoriet));
+      c.lampen = wissel(c.lampen, id);
+      c.helderheden = { ...(c.helderheden ?? {}) };
+      if (erbij) c.helderheden[id] = m.stoppen ? 0 : m.volume;
+      else delete c.helderheden[id];
+      return;
+    }
     c.lampen = wissel(c.lampen, id);
     if (!this.inGroep_(id)) return;
     this.zetGroepen_(erbij ? metLamp(this.groepen_, this.actief_, id) : zonderLamp(this.groepen_, this.actief_, id));
@@ -803,6 +965,17 @@ class AutomatiseringScherm extends HTMLElement {
     else if (soort === "groep") this.actief_ = Number(waarde);
     else if (soort === "nieuw") this.zetGroepen_(nieuweGroep(this.groepen_, this.actief_));
     else if (soort === "icoon") c.icoon = waarde;
+    else if (soort === "muziekstand") {
+      const m = muziekVan(c, true);
+      c.helderheden = metMuziek(c.helderheden, c.lampen, waarde === "stoppen" ? 0 : m.volume);
+    } else if (soort === "muziekkiezen") this.muziekKiezen_ = true;
+    else if (soort === "muziek") {
+      const gekozen = mediaUit(this.muziekTreffers_[Number(waarde)]);
+      if (gekozen) {
+        c.media = gekozen;
+        this.muziekKiezen_ = false;
+      }
+    }
     else if (soort === "groepuit") {
       const i = Number(waarde);
       this.groepen_[i] = { ...this.groepen_[i], pct: 0 };
@@ -844,6 +1017,18 @@ class AutomatiseringScherm extends HTMLElement {
       this.tekenIconen_();
       return;
     }
+    if (veld.dataset.muziekzoek) {
+      this.muziekZoek_ = veld.value;
+      clearTimeout(this.muziekTimer_);
+      this.muziekTimer_ = setTimeout(() => this.zoekMuziek_(), ZOEK_NA_MS);
+      return;
+    }
+    if (veld.dataset.volume) {
+      const pct = Number(veld.value);
+      c.helderheden = metMuziek(c.helderheden, c.lampen, pct);
+      veld.closest(".vrij").querySelector("[data-volumetekst]").textContent = `${pct}%`;
+      return;
+    }
     if (veld.dataset.zoek) {
       this.filter_.zoek = veld.value;
       this.tekenLijst_();
@@ -860,7 +1045,7 @@ class AutomatiseringScherm extends HTMLElement {
       const pct = Number(veld.value);
       this.groepen_[i] = { ...this.groepen_[i], pct };
       this.actief_ = i;
-      c.helderheden = helderhedenUit(this.groepen_);
+      c.helderheden = this.metSpeakers_(helderhedenUit(this.groepen_));
       veld.closest(".hrij").querySelector(".pct").textContent = niveauTekst(pct, alleenRolluiken(c.lampen));
       veld.closest(".hrij").querySelector('[data-k^="groepuit:"]')?.classList.toggle("al-uit", pct === 0);
       // Wie schuift, kiest daarmee ook de groep. Geen tekenen: de schuif blijft onder je vinger.

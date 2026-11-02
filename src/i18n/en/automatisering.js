@@ -128,4 +128,27 @@ export const AUTOMATISERING = {
   "Alle iconen": "All icons",
   "Zoek in alle iconen": "Search all icons",
   "Geen icoon gevonden.": "No icon found.",
+
+  // Speakers van Music Assistant (0.101.0)
+  "Kies minstens één lamp, rolluik of speaker.": "Choose at least one light, shutter or speaker.",
+  "Speakers die de klant kan kiezen": "Speakers the customer can choose",
+  "Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen.":
+    "Music Assistant players. The customer chooses what plays and how loud; off is stop.",
+  "Speakers": "Speakers",
+  "Afspelen {moment}": "Play {moment}",
+  "stoppen {moment}": "stop {moment}",
+  "Stoppen {moment}": "Stop {moment}",
+  "Muziek uit": "Music off",
+  "{n} speaker": "{n} speaker",
+  "{n} speakers": "{n} speakers",
+  "Kies wat er moet spelen.": "Choose what should play.",
+  "Afspelen": "Play",
+  "Stoppen": "Stop",
+  "Zoek op naam": "Search by name",
+  "Muziek": "Music",
+  "Muziek kiezen": "Choose music",
+  "Zoek een afspeellijst, zender of nummer": "Search for a playlist, station or track",
+  "Wijzigen": "Change",
+  "Typ een naam en kies uit wat Music Assistant kent.": "Type a name and choose from what Music Assistant knows.",
+  "Home Assistant start nog op. Probeer het zo opnieuw.": "Home Assistant is still starting. Try again in a moment.",
 };
