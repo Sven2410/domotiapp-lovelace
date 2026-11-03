@@ -118,6 +118,8 @@ _REGEL = vol.Schema(
         vol.Required("dagen"): vol.All([vol.All(int, vol.Range(min=0, max=6))], vol.Length(min=1, max=7), vol.Unique()),
         vol.Optional("vakantie", default=False): bool,
         vol.Optional("media"): vol.Any(None, _MEDIA),
+        # Zodat een regel uit `stand` ongewijzigd terug kan. Zonder blijft hij zoals hij stond.
+        vol.Optional("actief"): bool,
     }
 )
 
@@ -290,7 +292,7 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         **inhoud,
         "dagen": sorted(nieuw["dagen"]),
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
-        "actief": bestaand.get("actief", True) if bestaand else True,
+        "actief": nieuw.get("actief", bestaand.get("actief", True) if bestaand else True),
         # Een bestaande regel wisselt niet van groep: zijn plek op de kaart zegt het.
         "vakantie": bestaand.get("vakantie", False) if bestaand else nieuw["vakantie"],
     }
