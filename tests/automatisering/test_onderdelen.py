@@ -249,6 +249,28 @@ async def test_een_onderdeel_zonder_moment_weigert_de_server(ws, motor) -> None:
     assert uit["error"]["code"] == "invalid_format"
 
 
+async def test_een_regel_uit_stand_kan_ongewijzigd_terug(ws, motor) -> None:
+    """De beheersessie haalde een regel uit `stand` en sloeg hem zo weer op; 0.104.0 zei "extra keys not allowed" op `actief`."""
+    for bericht in ({"dagen": ELKE_DAG, "delen": DELEN}, {**regel(), "helderheden": {WOONKAMER: 40}}):
+        assert (await _vraag(ws, type=f"{T}/opslaan", regel=bericht))["success"]
+    eerst = (await _vraag(ws, type=f"{T}/stand"))["result"]["regels"]
+    assert len(eerst) == 2
+    for r in eerst:
+        uit = await _vraag(ws, type=f"{T}/opslaan", regel=r)
+        assert uit["success"], uit
+    assert (await _vraag(ws, type=f"{T}/stand"))["result"]["regels"] == eerst
+
+
+async def test_actief_in_opslaan_telt(ws, motor) -> None:
+    eerst = await _vraag(ws, type=f"{T}/opslaan", regel={"dagen": ELKE_DAG, "delen": DELEN, "actief": False})
+    assert eerst["success"], eerst
+    assert motor.opslag.regels[0]["actief"] is False
+    # Zonder `actief` blijft hij zoals hij stond: zo doet de kaart het.
+    uit = await _vraag(ws, type=f"{T}/opslaan", regel={"id": eerst["result"]["regel"]["id"], "dagen": ELKE_DAG, "delen": DELEN})
+    assert uit["success"], uit
+    assert motor.opslag.regels[0]["actief"] is False
+
+
 async def test_regressiewacht_een_regel_zonder_onderdelen_slaat_op_zoals_altijd(ws, motor) -> None:
     """REGRESSIEWACHT: de vorm van voor 0.102.0 komt er hetzelfde uit."""
     uit = await _vraag(ws, type=f"{T}/opslaan", regel={**regel(), "helderheden": {WOONKAMER: 40}})
