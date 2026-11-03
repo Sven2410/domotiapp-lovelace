@@ -50,7 +50,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
 from ..meldingen import kaarten as dashboards
-from . import regels as regelmaker
+from . import licht, regels as regelmaker
 from .const import (
     HERLEES_INTERVAL_MIN,
     INHAAL_AAN_UUR,
@@ -58,6 +58,7 @@ from .const import (
     INHAAL_UIT_UUR,
     KAART_TYPE,
     KOPPEL_DOMEINEN,
+    LICHT_WACHT_MIN,
     MEDIA_INHAAL_MIN,
 )
 from .store import AutomatiseringOpslag
@@ -88,6 +89,10 @@ class Motor:
         # Wat een regel mag noemen: de lampen van alle kaarten samen.
         self.toegestaan: set[str] = set()
         self.omgekeerd: set[str] = set()
+        # De lichtsensoren die een beheerder op een kaart zette; zie licht.py.
+        self.lichtsensoren: set[str] = set()
+        # Sinds wanneer een grens voorbij is, en hoe lang de motor daarvoor niet keek. Met opzet niet in de opslag.
+        self._licht_sinds: dict[str, tuple[datetime, timedelta]] = {}
         self.gekoppeld: str | None = None
         self._uit: list[CALLBACK_TYPE] = []
         self._koppeling_uit: CALLBACK_TYPE | None = None
@@ -135,6 +140,9 @@ class Motor:
         self.toegestaan = {lamp for _, kaart in gelezen for lamp in lampen_uit(kaart)}
         # Een motor die andersom hangt: open is dan close_cover, net als op de rolluikkaart.
         self.omgekeerd = {str(id_) for _, kaart in gelezen for id_ in kaart.get("omgekeerd") or []}
+        self.lichtsensoren = {
+            str(kaart["lichtsensor"]) for _, kaart in gelezen if str(kaart.get("lichtsensor") or "").startswith("sensor.")
+        }
         koppel = next(
             (
                 str(kaart["vakantie_entiteit"])
@@ -157,6 +165,8 @@ class Motor:
         if not self._klaar:
             return
         nu = dt_util.utcnow()
+        # Hoe lang de motor niet keek: een minuut, of na een herstart de hele tijd dat Home Assistant weg was.
+        gat = nu - (self.opslag.laatst or nu)
         # Een eerste start heeft geen geschiedenis: dan begint de klok nu, en
         # voert hij niets van vanmorgen alsnog uit.
         van = self.opslag.laatst or nu
@@ -174,6 +184,48 @@ class Motor:
                     _LOGGER.info("Regel %s: aan van %s is te lang geleden om in te halen", regel["id"], op)
                     continue
                 self._voer_uit(regel, wat, nu - op)
+        self._kijk_naar_licht(nu, gat)
+
+    @callback
+    def _kijk_naar_licht(self, nu: datetime, gat: timedelta) -> None:
+        """De momenten op de lichtsterkte; zie de kop van licht.py.
+
+        Ook een regel die uit staat kijkt mee, zonder iets te doen. Anders gaan de lampen om 22:00 meteen aan als iemand
+        hem weer aanzet: de motor zag het dan nog licht.
+        """
+        for heel in self.opslag.regels:
+            actief = heel.get("actief", True)
+            for regel, wat, moment in licht.momenten_van(heel):
+                sleutel = licht.sleutel(regel["id"], wat)
+                if (lux := licht.lux_van(self.hass, moment["sensor"])) is None:
+                    continue
+                was = self.opslag.licht_was(sleutel)
+                if not licht.voorbij(moment, lux):
+                    self._licht_sinds.pop(sleutel, None)
+                    if was is not False:
+                        self.opslag.zet_licht_was(sleutel, False)
+                    continue
+                if was is not False:
+                    # Al voorbij, of nooit eerder gezien: geen overschrijding.
+                    if was is None:
+                        self.opslag.zet_licht_was(sleutel, True)
+                    continue
+                sinds, gemist = self._licht_sinds.setdefault(sleutel, (nu, gat))
+                if nu - sinds < timedelta(minutes=LICHT_WACHT_MIN):
+                    continue
+                self._licht_sinds.pop(sleutel, None)
+                self.opslag.zet_licht_was(sleutel, True)
+                if not actief:
+                    continue
+                vandaag = dt_util.as_local(nu).date()
+                if vandaag.weekday() not in regel["dagen"] or self.opslag.licht_gedaan(sleutel) == vandaag.isoformat():
+                    continue
+                if gemist > timedelta(hours=INHAAL_AAN_UUR if wat == "aan" else INHAAL_UIT_UUR):
+                    _LOGGER.info("Regel %s: %s op het licht is te lang geleden om in te halen", regel["id"], wat)
+                    continue
+                self.opslag.zet_licht_gedaan(sleutel, vandaag.isoformat())
+                # Te laat is alleen wat de motor niet zag, niet het wachten: anders begint de muziek nooit.
+                self._voer_uit(regel, wat, gemist)
 
     @callback
     def _voer_uit(self, regel: dict[str, Any], wat: str, laat: timedelta = timedelta(0)) -> None:

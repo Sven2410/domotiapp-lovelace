@@ -661,7 +661,8 @@ Sinds 2 november 2026 staat er ook een **nagebootste Music Assistant** in
 `.ha-dev-config/custom_components/music_assistant/` (niet in git; hetzelfde domein als de echte, die hier niet staat, met versie
 `9.0.0` om valkuil 72): `music_assistant.search` met een antwoord in emmers, de entiteitsdienst `music_assistant.play_media`, en twee
 spelers met `mass_player_type`, `media_player.keuken` en `media_player.badkamer`. Elke aanroep komt als `nep_ma` op de bus. De
-automatiseringskaarten op `kaart-test` hebben die twee als `speakers`. Het bibliotheekdeel van de mediakaart werkt er niet mee:
+automatiseringskaarten op `kaart-test` hebben die twee als `speakers`, en sinds 3 november 2026 de lichtsterkte van het nagebootste
+weerstation als `lichtsensor` (`sensor.weather_station_illuminance`; schemer nadoen met `nep_weerstation.zet {illuminance: 30}`). Het bibliotheekdeel van de mediakaart werkt er niet mee:
 dat gaat via de client van de echte integratie.
 
 Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
@@ -965,6 +966,12 @@ je niet hoort terug te draaien zonder het te vragen:
   inhalen per onderdeel kloppen. Naam, dagen, vakantie en `actief` zijn van de regel. Eén onderdeel staat er zonder `delen`, in de vorm
   van voor 0.102.0; daar is dus niets om te zetten, en zo hoort het te blijven. `brandt` en de verschuiving gaan per onderdeel
   (`regel-id:deel-id`). Het scherm wijzigt één onderdeel tegelijk in `concept`; `volledig_()` geeft de hele regel.
+- **De lichtsterkte is een moment** (sinds 0.103.0, `automatisering/licht.py`). De eigenaar: "ik wil dat de klant ook lichtsterkte kan
+  gebruiken als voorwaarde ipv zonsondergang", en "hij moet dan vragen waarvan je de lichtsterkte wilt pakken": `lichtsensor` op de
+  kaart, gekozen door de beheerder. Het moment is het OVERSCHRIJDEN van de grens, niet het donker ZIJN: vijf minuten aan een stuk,
+  hooguit één keer per dag. `was` en `gedaan` staan in de opslag (`licht`), zodat een overschrijding tijdens een herstart wordt
+  ingehaald; het wachten van vijf minuten staat er met opzet niet in. Een nieuwe of gewijzigde regel kijkt eerst (`vergeet_licht`), en
+  een regel die uit staat kijkt mee: anders gaan de lampen aan op het moment dat iemand hem aanzet.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.

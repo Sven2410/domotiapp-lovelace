@@ -17,7 +17,7 @@ import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { alleSleutels, zoekIconen } from "../editor/icoon-zoek.js";
-import { t, tn } from "../taal.js";
+import { locale, t, tn } from "../taal.js";
 import { nogNietGereed } from "../herkansing.js";
 import {
   DEEL_VELDEN,
@@ -53,7 +53,9 @@ import {
   ruimtesVan,
   schuifNaar,
   startHelderheden,
+  stapLux,
   stapVerschil,
+  standaardRichting,
   terugOproepen,
   verschilTekst,
   voorbeeldDoelen,
@@ -635,15 +637,48 @@ class AutomatiseringScherm extends HTMLElement {
     return magDimmen(id, this.bron.lampen_(), this.bron.hass?.states?.[id]);
   }
 
+  /** De lichtsensor van de kaart, als de beheerder er een koos. */
+  lichtsensor_() {
+    return this.bron.lichtsensor_?.() ?? null;
+  }
+
+  /** "als het donker wordt" of "als het licht wordt", een grens in lux, en wat de sensor nu zegt. */
+  lichtHtml_(wat, moment) {
+    const richting = ["donker", "licht"]
+      .map(
+        (r) =>
+          `<button type="button" class="keus" role="radio" aria-checked="${moment.richting === r}" data-k="richting:${wat}:${r}">${resolve(r === "donker" ? "moon" : "sun")}<span class="tk">${veilig(r === "donker" ? t("Als het donker wordt") : t("Als het licht wordt"))}</span></button>`
+      )
+      .join("");
+    const lux = Number(moment.lux ?? 0);
+    const grens = moment.richting === "licht" ? t("Lichter dan {lux} lx", { lux: lux.toLocaleString(locale()) }) : t("Donkerder dan {lux} lx", { lux: lux.toLocaleString(locale()) });
+    const st = this.bron.hass?.states?.[moment.sensor];
+    const meting = Number.parseFloat(st?.state);
+    const nu = Number.isFinite(meting)
+      ? t("Nu {lux} lx", { lux: Math.round(meting).toLocaleString(locale()) })
+      : t("De lichtsensor geeft nu geen meting.");
+    return `<div class="opties" role="radiogroup" aria-label="${veilig(t("Lichtsterkte"))}">${richting}</div>
+      <div class="stapper">
+        <button type="button" data-k="lux:${wat}:min" aria-label="${veilig(t("Lager"))}" ${stapLux(lux, -1) >= lux ? "disabled" : ""}>${resolve("minus")}</button>
+        <span class="wat">${veilig(grens)}</span>
+        <button type="button" data-k="lux:${wat}:plus" aria-label="${veilig(t("Hoger"))}" ${stapLux(lux, 1) <= lux ? "disabled" : ""}>${resolve("plus")}</button>
+      </div>
+      <span class="niets">${veilig(nu)}</span>`;
+  }
+
   momentHtml_(wat, moment) {
-    const keuzes = [...SOORTEN, { sleutel: "geen", label: "Geen", icoon: "close" }]
+    // De lichtsterkte alleen met een sensor op de kaart; een regel die hem al heeft, houdt hem.
+    const soorten = SOORTEN.filter((s) => s.sleutel !== "licht" || this.lichtsensor_() || moment?.soort === "licht");
+    const keuzes = [...soorten, { sleutel: "geen", label: "Geen", icoon: "close" }]
       .map((s) => {
         const aan = (moment?.soort ?? "geen") === s.sleutel;
         return `<button type="button" class="keus" role="radio" aria-checked="${aan}" data-k="${wat}:${s.sleutel}">${resolve(s.icoon)}<span class="tk">${veilig(t(s.label))}</span></button>`;
       })
       .join("");
     let verder = "";
-    if (moment?.soort === "tijd") {
+    if (moment?.soort === "licht") {
+      verder = this.lichtHtml_(wat, moment);
+    } else if (moment?.soort === "tijd") {
       verder = `<input class="tijd" type="time" data-veld="${wat}" value="${veilig(moment.tijd)}" aria-label="${veilig(t("Tijd"))}" />`;
     } else if (moment) {
       const v = moment.verschil ?? 0;
@@ -1095,10 +1130,16 @@ class AutomatiseringScherm extends HTMLElement {
       else this.voorbeeld_ = { gezet: {} };
     }
     else if (soort === "dag") c.dagen = wissel(c.dagen, Number(waarde));
+    else if (soort === "richting" || soort === "lux") {
+      const [wat, keus] = waarde.split(":");
+      if (c[wat]?.soort === "licht") {
+        c[wat] = soort === "richting" ? { ...c[wat], richting: keus } : { ...c[wat], lux: stapLux(c[wat].lux, keus === "min" ? -1 : 1) };
+      }
+    }
     else if (waarde === "min" || waarde === "plus") {
       c[soort] = { ...c[soort], verschil: stapVerschil(c[soort].verschil, waarde === "min" ? -1 : 1) };
     } else if ((c[soort]?.soort ?? "geen") !== waarde) {
-      c[soort] = metSoort(waarde);
+      c[soort] = metSoort(waarde, { sensor: this.lichtsensor_(), richting: standaardRichting(soort, c.lampen) });
     }
     this.foutTekst_ = "";
     this.werkVoorbeeld_();

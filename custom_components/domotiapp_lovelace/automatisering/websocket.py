@@ -20,6 +20,7 @@ from homeassistant.helpers import config_validation as cv
 
 from ..const import DOMAIN
 from ..taal import t
+from . import licht
 from .const import (
     DATA_ABONNEES,
     DATA_MOTOR,
@@ -29,10 +30,14 @@ from .const import (
     MAX_FAVORIETEN,
     MAX_LAMPEN_PER_REGEL,
     MAX_NAAM,
+    MAX_LUX,
     MAX_REGELS,
     MAX_URI,
     MAX_VERSCHIL_MIN,
     MEDIA_SOORTEN,
+    RICHTING_DONKER,
+    RICHTING_LICHT,
+    SOORT_LICHT,
     SOORT_TIJD,
     SOORT_ZONSONDERGANG,
     SOORT_ZONSOPKOMST,
@@ -43,6 +48,14 @@ _LOGGER = logging.getLogger(__name__)
 _TIJD = vol.Match(r"^([01]\d|2[0-3]):[0-5]\d$")
 _MOMENT = vol.Any(
     None,
+    vol.Schema(
+        {
+            vol.Required("soort"): SOORT_LICHT,
+            vol.Required("sensor"): vol.All(cv.string, vol.Match(r"^sensor\.")),
+            vol.Required("lux"): vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_LUX)),
+            vol.Required("richting"): vol.In((RICHTING_DONKER, RICHTING_LICHT)),
+        }
+    ),
     vol.Schema({vol.Required("soort"): SOORT_TIJD, vol.Required("tijd"): _TIJD}),
     vol.Schema(
         {
@@ -255,6 +268,10 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     if not set(lampen) <= mag:
         connection.send_error(msg["id"], "not_allowed", t(hass, "Deze lamp staat niet op de kaart"))
         return
+    # Net zo met de lichtsensor: alleen een die de beheerder op een kaart zette, of die er al in stond.
+    if not licht.sensoren_van({"delen": delen} if delen else nieuw) <= motor.lichtsensoren | licht.sensoren_van(bestaand):
+        connection.send_error(msg["id"], "not_allowed", t(hass, "Deze lichtsensor staat niet op de kaart"))
+        return
     if bestaand is None and len(motor.opslag.regels) >= MAX_REGELS:
         connection.send_error(msg["id"], "not_allowed", t(hass, "Er staan te veel automatiseringen"))
         return
@@ -278,6 +295,7 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         "vakantie": bestaand.get("vakantie", False) if bestaand else nieuw["vakantie"],
     }
     motor.opslag.zet_regel(regel)
+    motor.opslag.vergeet_licht(regel["id"])
     motor.regels_gewijzigd()
     connection.send_result(msg["id"], {"regel": regel})
 

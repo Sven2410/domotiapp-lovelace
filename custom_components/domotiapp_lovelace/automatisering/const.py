@@ -36,7 +36,14 @@ KOPPEL_DOMEINEN = ("input_boolean", "switch")
 SOORT_TIJD = "tijd"
 SOORT_ZONSOPKOMST = "zonsopkomst"
 SOORT_ZONSONDERGANG = "zonsondergang"
-SOORTEN = (SOORT_TIJD, SOORT_ZONSOPKOMST, SOORT_ZONSONDERGANG)
+# Sinds 0.103.0: de lichtsterkte van een sensor die de beheerder op de kaart zette (`lichtsensor`). Zie de kop van licht.py.
+SOORT_LICHT = "licht"
+SOORTEN = (SOORT_TIJD, SOORT_ZONSOPKOMST, SOORT_ZONSONDERGANG, SOORT_LICHT)
+RICHTING_DONKER = "donker"
+RICHTING_LICHT = "licht"
+# Zolang moet het donker (of licht) blijven voordat de regel iets doet: een wolk is nog geen avond.
+LICHT_WACHT_MIN = 5
+MAX_LUX = 200000
 
 # Hoe ver een verschuiving op de zon mag: drie uur, zoals de kaart hem aanbiedt.
 MAX_VERSCHIL_MIN = 180
