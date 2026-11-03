@@ -141,6 +141,12 @@ class AutomatiseringCard extends DacCard {
     return this.lampen_().find((l) => l.entity === id)?.naam || nameOf(this.hass, id);
   }
 
+  /** De lichtsensor die de beheerder koos, voor "als het donker wordt"; zie `automatisering/licht.py`. */
+  lichtsensor_() {
+    const id = this.config.lichtsensor;
+    return typeof id === "string" && id.startsWith("sensor.") ? id : null;
+  }
+
   metVakantie_() {
     return this.config.vakantie !== false;
   }
@@ -468,6 +474,7 @@ class AutomatiseringEditor extends DacEditor {
       ...[...ids, ...rolluiken, ...speakers].map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
       ...(ids.length ? [{ name: "alleen_aan_uit", selector: { entity: { include_entities: ids, multiple: true } } }] : []),
       ...(rolluiken.length ? [{ name: "omgekeerd", selector: { entity: { include_entities: rolluiken, multiple: true } } }] : []),
+      { name: "lichtsensor", selector: { entity: { domain: "sensor", device_class: "illuminance" } } },
       { name: "favorieten", selector: sel.bool() },
       { name: "vakantie", selector: sel.bool() },
       ...(this.config_?.vakantie !== false
@@ -489,6 +496,7 @@ class AutomatiseringEditor extends DacEditor {
         speakers: t("Speakers die de klant kan kiezen"),
         alleen_aan_uit: t("Alleen aan en uit"),
         omgekeerd: t("Motor omgekeerd"),
+        lichtsensor: t("Lichtsensor"),
         favorieten: t("Favorieten op deze kaart"),
         vakantie: t("Vakantiemodus op deze kaart"),
         vakantie_entiteit: t("Bestaande vakantiestand"),
@@ -502,6 +510,7 @@ class AutomatiseringEditor extends DacEditor {
       lampen: t("Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten."),
       rolluiken: t("Aan is open op de gekozen stand, uit is dicht. Een rolluik dat zijn stand niet kent, gaat alleen open en dicht."),
       speakers: t("Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen."),
+      lichtsensor: t("Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt."),
       omgekeerd: t("Rolluiken waarvan de motor andersom is aangesloten, net als het vinkje op de rolluikkaart."),
       favorieten: t("Hier maakt de klant de knoppen voor de favorietenkaart."),
       alleen_aan_uit: t("Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif."),

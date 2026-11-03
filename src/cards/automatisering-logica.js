@@ -13,7 +13,29 @@ export const SOORTEN = [
   { sleutel: "tijd", label: nt("Tijd"), icoon: "clock" },
   { sleutel: "zonsopkomst", label: nt("Zonsopkomst"), icoon: "sunrise" },
   { sleutel: "zonsondergang", label: nt("Zonsondergang"), icoon: "sunset" },
+  // Alleen als de beheerder een lichtsensor op de kaart zette (sinds 0.103.0); zie `automatisering/licht.py`.
+  { sleutel: "licht", label: nt("Lichtsterkte"), icoon: "lux" },
 ];
+
+/** De stappen van de grens in lux: licht is logaritmisch, dus geen vaste stap. */
+export const LUX_STAPPEN = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+export const LUX_STANDAARD = 100;
+
+/** Eén stap op de stapper: naar de volgende of vorige waarde in `LUX_STAPPEN`, ook als de grens er tussenin staat. */
+export function stapLux(lux, richting) {
+  const nu = Number(lux) || 0;
+  if (richting > 0) return LUX_STAPPEN.find((x) => x > nu) ?? LUX_STAPPEN.at(-1);
+  return [...LUX_STAPPEN].reverse().find((x) => x < nu) ?? LUX_STAPPEN[0];
+}
+
+/**
+ * Welke kant een nieuw moment op de lichtsterkte op gaat. Een lamp gaat aan als het donker wordt, een rolluik open als het
+ * licht wordt; uit is andersom.
+ */
+export function standaardRichting(wat, lampen) {
+  const licht = alleenRolluiken(lampen) ? wat === "aan" : wat !== "aan";
+  return licht ? "licht" : "donker";
+}
 
 /** Stappen en grens van de verschuiving; de server toetst dezelfde grens. */
 export const VERSCHIL_STAP = 15;
@@ -417,9 +439,13 @@ export function verschilTekst(verschil) {
   return verschil < 0 ? t("{duur} ervoor", { duur }) : t("{duur} erna", { duur });
 }
 
-/** Een moment in een zin: "om 07:00", "bij zonsondergang", "30 min voor zonsopkomst". */
+/** Een moment in een zin: "om 07:00", "bij zonsondergang", "30 min voor zonsopkomst", "als het donker wordt (onder 100 lx)". */
 export function momentTekst(moment) {
   if (!moment) return "";
+  if (moment.soort === "licht") {
+    const lux = Number(moment.lux ?? 0).toLocaleString(locale());
+    return moment.richting === "licht" ? t("als het licht wordt (boven {lux} lx)", { lux }) : t("als het donker wordt (onder {lux} lx)", { lux });
+  }
   if (moment.soort === "tijd") return t("om {tijd}", { tijd: moment.tijd });
   const zon = moment.soort === "zonsopkomst" ? t("zonsopkomst") : t("zonsondergang");
   const v = moment.verschil ?? 0;
@@ -472,6 +498,7 @@ export function deelVolgorde(deel) {
     const [u, min] = String(m.tijd ?? "").split(":").map(Number);
     return Number.isFinite(u) && Number.isFinite(min) ? u * 60 + min : 24 * 60;
   }
+  if (m.soort === "licht") return m.richting === "licht" ? 8 * 60 : 18 * 60;
   return (m.soort === "zonsopkomst" ? 7 * 60 : 19 * 60) + (m.verschil ?? 0);
 }
 
@@ -710,9 +737,10 @@ export function favorietNaarServer(favoriet, dimt = () => true) {
   };
 }
 
-/** Andere soort kiezen in het scherm; "geen" is null. */
-export function metSoort(sleutel) {
+/** Andere soort kiezen in het scherm; "geen" is null. De lichtsterkte heeft de sensor van de kaart nodig, en een richting. */
+export function metSoort(sleutel, { sensor = null, richting = "donker" } = {}) {
   if (sleutel === "geen") return null;
+  if (sleutel === "licht") return sensor ? { soort: "licht", sensor, lux: LUX_STANDAARD, richting } : null;
   return sleutel === "tijd" ? { soort: "tijd", tijd: "18:00" } : { soort: sleutel, verschil: 0 };
 }
 

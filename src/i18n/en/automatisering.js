@@ -159,4 +159,15 @@ export const AUTOMATISERING = {
   "Onderdeel {n}": "Part {n}",
   "Onderdeel {n}: {reden}": "Part {n}: {reden}",
   "Nog niets gekozen": "Nothing chosen yet",
+  // Lichtsterkte (0.103.0)
+  "als het donker wordt (onder {lux} lx)": "when it gets dark (below {lux} lx)",
+  "als het licht wordt (boven {lux} lx)": "when it gets light (above {lux} lx)",
+  "Als het donker wordt": "When it gets dark",
+  "Als het licht wordt": "When it gets light",
+  "Donkerder dan {lux} lx": "Darker than {lux} lx",
+  "Lichter dan {lux} lx": "Lighter than {lux} lx",
+  "Nu {lux} lx": "Now {lux} lx",
+  "De lichtsensor geeft nu geen meting.": "The light sensor is not giving a reading right now.",
+  "Lichtsensor": "Light sensor",
+  "Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt.": "Where the light level comes from, for example the weather station. The customer can then also choose: when it gets dark, or when it gets light.",
 };

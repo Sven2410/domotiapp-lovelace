@@ -56,7 +56,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.sun import get_astral_event_date
 from homeassistant.util import dt as dt_util
 
-from .const import SOORT_TIJD, SOORT_ZONSOPKOMST, VAKANTIE_WISSEL_MIN
+from .const import SOORT_LICHT, SOORT_TIJD, SOORT_ZONSOPKOMST, VAKANTIE_WISSEL_MIN
 
 
 def helderheid_van(regel: dict[str, Any], lamp: str) -> int | None:
@@ -106,7 +106,12 @@ def wissel(regel_id: str, dag: date, wat: str) -> int:
 
 
 def moment_op(hass: HomeAssistant, moment: dict[str, Any], dag: date) -> datetime | None:
-    """Dit moment op deze dag, in UTC. None als de zon die dag niet opkomt of ondergaat."""
+    """Dit moment op deze dag, in UTC. None als de zon die dag niet opkomt of ondergaat.
+
+    Ook None bij de lichtsterkte: die heeft geen tijdstip, die volgt de motor zelf (licht.py).
+    """
+    if moment["soort"] == SOORT_LICHT:
+        return None
     if moment["soort"] == SOORT_TIJD:
         uur, minuut = (int(x) for x in moment["tijd"].split(":")[:2])
         return dt_util.as_utc(datetime.combine(dag, time(uur, minuut), dt_util.get_default_time_zone()))

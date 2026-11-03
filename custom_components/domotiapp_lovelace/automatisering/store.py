@@ -7,6 +7,7 @@
 | `vakantie` | staat de vakantiemodus aan? |
 | `laatst` | tot waar de klok is gekomen; zie hieronder |
 | `brandt` | de regels die hun lamp aan zetten en nog niet uit |
+| `licht` | per moment op de lichtsterkte: wat de sensor de vorige keer zei (`was`) en de dag dat het gebeurde (`gedaan`); zie licht.py |
 
 **`laatst` wordt niet elke minuut weggeschreven**, want dat is elke minuut naar de
 schijf van een Raspberry Pi. Hij gaat mee zodra er iets uitgevoerd of gewijzigd
@@ -47,7 +48,7 @@ class AutomatiseringOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": []}
+        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -64,6 +65,8 @@ class AutomatiseringOpslag:
             self._data["laatst"] = rauw["laatst"]
         if isinstance(rauw.get("brandt"), list):
             self._data["brandt"] = [str(x) for x in rauw["brandt"]]
+        if isinstance(rauw.get("licht"), dict):
+            self._data["licht"] = {str(k): v for k, v in rauw["licht"].items() if isinstance(v, dict)}
 
     @callback
     def _bewaar(self) -> None:
@@ -93,6 +96,7 @@ class AutomatiseringOpslag:
         delen = regel.get("delen") if isinstance(regel.get("delen"), list) else []
         nog = {regel["id"]} | {f"{regel['id']}:{d.get('id')}" for d in delen if isinstance(d, dict)}
         self._data["brandt"] = [x for x in self._data["brandt"] if not _van(x, regel["id"]) or x in nog]
+        self._data["licht"] = {k: v for k, v in self._data["licht"].items() if not _van(k.split("|")[0], regel["id"]) or k.split("|")[0] in nog}
         self._bewaar()
 
     @callback
@@ -103,6 +107,7 @@ class AutomatiseringOpslag:
             return False
         self._data["regels"] = over
         self._data["brandt"] = [x for x in self._data["brandt"] if not _van(x, regel_id)]
+        self._data["licht"] = {k: v for k, v in self._data["licht"].items() if not _van(k.split("|")[0], regel_id)}
         self._bewaar()
         return True
 
@@ -166,4 +171,33 @@ class AutomatiseringOpslag:
         if aan:
             lijst.append(regel_id)
         self._data["brandt"] = lijst
+        self._bewaar()
+
+    # ------------------------------------------------------------ lichtsterkte
+
+    @callback
+    def licht_was(self, sleutel: str) -> bool | None:
+        """Was de grens de vorige keer voorbij? None als de motor het nog nooit zag."""
+        was = self._data["licht"].get(sleutel, {}).get("was")
+        return was if isinstance(was, bool) else None
+
+    @callback
+    def zet_licht_was(self, sleutel: str, was: bool) -> None:
+        """Alleen bij een wijziging, dus twee keer per dag: geen schrijven elke minuut."""
+        self._data["licht"][sleutel] = {**self._data["licht"].get(sleutel, {}), "was": was}
+        self._bewaar()
+
+    @callback
+    def licht_gedaan(self, sleutel: str) -> str | None:
+        return self._data["licht"].get(sleutel, {}).get("gedaan")
+
+    @callback
+    def zet_licht_gedaan(self, sleutel: str, dag: str) -> None:
+        self._data["licht"][sleutel] = {**self._data["licht"].get(sleutel, {}), "gedaan": dag}
+        self._bewaar()
+
+    @callback
+    def vergeet_licht(self, regel_id: str) -> None:
+        """Na een wijziging begint de regel opnieuw te kijken, net als een nieuwe; een andere grens is een ander moment."""
+        self._data["licht"] = {k: v for k, v in self._data["licht"].items() if not _van(k.split("|")[0], regel_id)}
         self._bewaar()
