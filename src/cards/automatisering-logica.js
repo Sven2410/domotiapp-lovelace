@@ -70,6 +70,18 @@ export function lampenUit(config) {
       omgekeerd: lijstVan(config.omgekeerd).includes(entity),
     });
   }
+  // Zonneschermen (sinds 0.104.0): een rolluik voor de motor, met een windgrens; zie `automatisering/wind.py`.
+  for (const item of lijstVan(config?.zonneschermen)) {
+    const entity = typeof item === "string" ? item : item?.entity;
+    if (typeof entity !== "string" || !entity.startsWith("cover.") || uit.has(entity)) continue;
+    uit.set(entity, {
+      entity,
+      naam: typeof item === "object" ? String(item.name ?? "") : "",
+      rolluik: true,
+      zonnescherm: true,
+      omgekeerd: lijstVan(config.omgekeerd).includes(entity),
+    });
+  }
   for (const item of lijstVan(config?.speakers)) {
     const entity = typeof item === "string" ? item : item?.entity;
     if (typeof entity !== "string" || !entity.startsWith("media_player.") || uit.has(entity)) continue;
@@ -132,7 +144,8 @@ export function speeltAf(regel) {
 export function lijstKopVan(lampen) {
   const delen = [];
   if (lampen.some((l) => !l.rolluik && !l.speaker)) delen.push(t("Lampen"));
-  if (lampen.some((l) => l.rolluik)) delen.push(t("Rolluiken"));
+  if (lampen.some((l) => l.rolluik && !l.zonnescherm)) delen.push(t("Rolluiken"));
+  if (lampen.some((l) => l.zonnescherm)) delen.push(t("Zonneschermen"));
   if (lampen.some((l) => l.speaker)) delen.push(t("Speakers"));
   if (!delen.length) return t("Lampen");
   const zin = new Intl.ListFormat(locale(), { type: "conjunction" }).format(delen.map((d, i) => (i ? d.toLowerCase() : d)));
@@ -349,11 +362,12 @@ export function lampStand(st) {
  * Wat elke lamp in het voorbeeld hoort te doen: een percentage, of null voor gewoon
  * aan. Een lamp die er niet is, doet niet mee.
  */
-export function voorbeeldDoelen(lampen, helderheden, dimt, states) {
+export function voorbeeldDoelen(lampen, helderheden, dimt, states, zonneschermen = []) {
   const doelen = {};
   for (const lamp of lampen ?? []) {
-    // Een speaker doet niet mee: wat hij speelde is na het voorbeeld niet terug te zetten.
-    if (isSpeaker(lamp) || weg(states?.[lamp])) continue;
+    // Een speaker doet niet mee: wat hij speelde is na het voorbeeld niet terug te zetten. Een zonnescherm ook niet: het
+    // voorbeeld kent de windgrens niet, en een proef is geen reden om in de storm uit te rollen.
+    if (isSpeaker(lamp) || zonneschermen.includes(lamp) || weg(states?.[lamp])) continue;
     const pct = helderheden?.[lamp] ?? 100;
     // 0 is uit of dicht, ook voor iets zonder schuif.
     doelen[lamp] = pct === 0 ? 0 : dimt(lamp) ? pct : null;
@@ -629,7 +643,8 @@ function delenVan(lampen, buiten) {
   return {
     binnen: lichten.filter((id) => !buiten(id)),
     buiten: lichten.filter((id) => buiten(id)),
-    rolluiken: lampen.filter((l) => l.rolluik).map((l) => l.entity),
+    rolluiken: lampen.filter((l) => l.rolluik && !l.zonnescherm).map((l) => l.entity),
+    zonneschermen: lampen.filter((l) => l.zonnescherm).map((l) => l.entity),
     speakers: lampen.filter((l) => l.speaker).map((l) => l.entity),
   };
 }
@@ -670,6 +685,9 @@ export function favorietVinkjes(favoriet, lampen, buiten, naamVan = (id) => id) 
     rij.push(vinkje("rolluikenDicht", t("Rolluiken dicht"), aantal, allemaal(d.rolluiken, uit)));
     rij.push(vinkje("rolluikenOpen", t("Rolluiken open"), aantal, allemaal(d.rolluiken, (pct) => pct === 100)));
   }
+  if (d.zonneschermen.length) {
+    rij.push(vinkje("zonneschermenIn", t("Zonneschermen in"), tn(d.zonneschermen.length, "{n} zonnescherm", "{n} zonneschermen"), allemaal(d.zonneschermen, uit)));
+  }
   if (d.speakers.length) {
     rij.push(vinkje("muziekUit", t("Muziek uit"), tn(d.speakers.length, "{n} speaker", "{n} speakers"), allemaal(d.speakers, uit)));
   }
@@ -706,6 +724,9 @@ export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
   } else if (sleutel === "rolluikenDicht" || sleutel === "rolluikenOpen") {
     if (aan) zet(d.rolluiken, sleutel === "rolluikenOpen" ? 100 : 0);
     else weg(d.rolluiken);
+  } else if (sleutel === "zonneschermenIn") {
+    if (aan) zet(d.zonneschermen, 0);
+    else weg(d.zonneschermen);
   } else if (sleutel === "muziekUit") {
     if (aan) zet(d.speakers, 0);
     else weg(d.speakers);
