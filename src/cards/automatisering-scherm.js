@@ -696,8 +696,10 @@ class AutomatiseringScherm extends HTMLElement {
     if (alleenSpeakers(lampen)) {
       kop = wat === "aan" ? t("Afspelen") : t("Stoppen");
       icoon = wat === "aan" ? "play" : "power";
-    } else if (alleenRolluiken(lampen)) kop = wat === "aan" ? t("Open") : t("Dicht");
-    else if (rolluik) kop = wat === "aan" ? t("Aan of open") : t("Uit of dicht");
+    } else if (alleenRolluiken(lampen)) {
+      kop = wat === "aan" ? t("Open") : t("Dicht");
+      icoon = wat === "aan" ? "shutterOpen" : "shutter";
+    } else if (rolluik) kop = wat === "aan" ? t("Aan of open") : t("Uit of dicht");
     return `<div class="groep">${this.kop_(icoon, kop)}<div class="opties" role="radiogroup" aria-label="${veilig(kop)}">${keuzes}</div>${verder}</div>`;
   }
 
@@ -877,8 +879,11 @@ class AutomatiseringScherm extends HTMLElement {
       : opAanUit.some((id) => id.startsWith("cover."))
         ? t("Alleen aan en uit, of open en dicht")
         : t("Alleen aan en uit");
+    // Het power-icoon zegt aan en uit; een rolluik gaat open en dicht.
+    const schermen = new Set(this.bron.lampen_().filter((l) => l.zonnescherm).map((l) => l.entity));
+    const vastIcoon = !alleenRolluiken(opAanUit) ? "power" : opAanUit.every((id) => schermen.has(id)) ? "awning" : "shutter";
     const vast = opAanUit.length
-      ? `<div class="groep">${this.kop_("power", vastKop)}<div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
+      ? `<div class="groep">${this.kop_(vastIcoon, vastKop)}<div class="hlampen">${opAanUit.map(lampje).join("")}</div></div>`
       : "";
     if (!groepen && !vast) return "";
     const heeftLeeg = this.groepen_.some((g) => !g.lampen.length);
