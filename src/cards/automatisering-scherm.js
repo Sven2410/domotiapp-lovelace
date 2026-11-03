@@ -835,9 +835,9 @@ class AutomatiseringScherm extends HTMLElement {
     }
     this.$(".lampenlijst").innerHTML = lijst.length
       ? lijst
-          .map(({ entity, rolluik, speaker }) => {
+          .map(({ entity, rolluik, zonnescherm, speaker }) => {
             const aan = c.lampen.includes(entity);
-            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve(speaker ? "speaker" : rolluik ? "shutter" : "bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
+            return `<button type="button" class="keus" role="checkbox" aria-checked="${aan}" data-k="lamp:${veilig(entity)}">${resolve(speaker ? "speaker" : zonnescherm ? "awning" : rolluik ? "shutter" : "bulb")}<span class="tk">${veilig(this.bron.naamVanLamp_(entity))}</span></button>`;
           })
           .join("")
       : `<span class="niets">${veilig(t("Geen lamp gevonden."))}</span>`;
@@ -1026,7 +1026,8 @@ class AutomatiseringScherm extends HTMLElement {
       return;
     }
     const hass = this.bron.hass;
-    const doelen = voorbeeldDoelen(c.lampen, c.helderheden, (id) => this.dimbaar_(id), hass?.states);
+    const schermen = this.bron.lampen_().filter((l) => l.zonnescherm).map((l) => l.entity);
+    const doelen = voorbeeldDoelen(c.lampen, c.helderheden, (id) => this.dimbaar_(id), hass?.states, schermen);
     const eruit = Object.keys(v.gezet).filter((id) => !(id in doelen));
     this.stuur_(hass, terugOproepen(Object.fromEntries(eruit.map((id) => [id, this.standen_[id]]))));
     for (const id of Object.keys(doelen)) {
@@ -1203,7 +1204,11 @@ class AutomatiseringScherm extends HTMLElement {
       return;
     }
     if (veld.dataset.naam) {
+      // Wel nakijken: een favoriet zonder naam kan niet opgeslagen worden, en wie de naam als laatste typt, hoort Opslaan
+      // dan aan te zien gaan. Tot 0.104.0 bleef hij grijs tot er ergens anders getikt werd.
       c.naam = veld.value;
+      this.foutTekst_ = "";
+      this.kijkNa_();
       return;
     }
     if (veld.dataset.groep != null) {

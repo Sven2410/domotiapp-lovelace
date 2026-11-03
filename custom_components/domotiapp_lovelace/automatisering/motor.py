@@ -50,7 +50,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
 from ..meldingen import kaarten as dashboards
-from . import licht, regels as regelmaker
+from . import licht, regels as regelmaker, wind
 from .const import (
     HERLEES_INTERVAL_MIN,
     INHAAL_AAN_UUR,
@@ -69,9 +69,14 @@ EVENT_LOVELACE_UPDATED = "lovelace_updated"
 
 
 def lampen_uit(kaart: dict[str, Any]) -> list[str]:
-    """De lampen, rolluiken en speakers op deze kaart: een entity_id of `{entity, name}`."""
+    """De lampen, rolluiken, zonneschermen en speakers op deze kaart: een entity_id of `{entity, name}`."""
     uit: list[str] = []
-    for sleutel, begin in (("lampen", "light."), ("rolluiken", "cover."), ("speakers", "media_player.")):
+    for sleutel, begin in (
+        ("lampen", "light."),
+        ("rolluiken", "cover."),
+        ("zonneschermen", "cover."),
+        ("speakers", "media_player."),
+    ):
         for item in kaart.get(sleutel) or []:
             ident = item.get("entity") if isinstance(item, dict) else item
             if isinstance(ident, str) and ident.startswith(begin) and ident not in uit:
@@ -93,6 +98,11 @@ class Motor:
         self.lichtsensoren: set[str] = set()
         # Sinds wanneer een grens voorbij is, en hoe lang de motor daarvoor niet keek. Met opzet niet in de opslag.
         self._licht_sinds: dict[str, tuple[datetime, timedelta]] = {}
+        # Zonneschermen en hun windgrens; zie wind.py.
+        self.zonneschermen: set[str] = set()
+        self.wind_sensor: str | None = None
+        self.wind_max: float = wind.WIND_MAX_STANDAARD
+        self._wind_uit: CALLBACK_TYPE | None = None
         self.gekoppeld: str | None = None
         self._uit: list[CALLBACK_TYPE] = []
         self._koppeling_uit: CALLBACK_TYPE | None = None
@@ -114,6 +124,7 @@ class Motor:
         while self._uit:
             self._uit.pop()()
         self._koppel_los()
+        self._volg_wind(None)
 
     @callback
     def _gestart(self, _hass: HomeAssistant) -> None:
@@ -123,6 +134,9 @@ class Motor:
         def nu(_: datetime) -> None:
             self._klaar = True
             self._neem_koppeling_over()
+            # Wat er tijdens de herstart met de wind gebeurde, weet niemand: bij harde wind gaan ze één keer in.
+            if self.wind_sensor and (kmh := wind.kmh_van(self.hass, self.wind_sensor)) is not None and kmh > self.wind_max:
+                self._trek_in(kmh)
             self._tik(dt_util.utcnow())
 
         self._uit.append(async_call_later(self.hass, INHAAL_NA_SEC, nu))
@@ -143,6 +157,22 @@ class Motor:
         self.lichtsensoren = {
             str(kaart["lichtsensor"]) for _, kaart in gelezen if str(kaart.get("lichtsensor") or "").startswith("sensor.")
         }
+        self.zonneschermen = {
+            ident
+            for _, kaart in gelezen
+            for ident in lampen_uit({"zonneschermen": kaart.get("zonneschermen") or []})
+        }
+        # Eén windsensor voor het hele huis, net als de vakantiestand: de eerste kaart die er een heeft.
+        met_wind = next(
+            (kaart for _, kaart in gelezen if str(kaart.get("wind_sensor") or "").startswith("sensor.")), None
+        )
+        try:
+            self.wind_max = float(met_wind.get("wind_max") or wind.WIND_MAX_STANDAARD) if met_wind else wind.WIND_MAX_STANDAARD
+        except (TypeError, ValueError):
+            self.wind_max = wind.WIND_MAX_STANDAARD
+        sensor = str(met_wind["wind_sensor"]) if met_wind else None
+        if sensor != self.wind_sensor:
+            self._volg_wind(sensor)
         koppel = next(
             (
                 str(kaart["vakantie_entiteit"])
@@ -277,6 +307,8 @@ class Motor:
                 else:
                     spelen.setdefault(pct, []).append(ident)
             elif ident.startswith("cover."):
+                if pct != 0 and ident in self.zonneschermen and not self._mag_uitrollen(ident):
+                    continue
                 dienst, stand = self._rolluik_dienst(ident, pct)
                 samen.setdefault(("cover", dienst, stand), []).append(ident)
             elif pct == 0:
@@ -308,6 +340,51 @@ class Motor:
             await self._roep_aan("music_assistant", "play_media", data)
         else:
             await self._roep_aan("media_player", "media_play", {"entity_id": alle})
+
+    # ----------------------------------------------------------------- de wind
+
+    @callback
+    def _mag_uitrollen(self, ident: str) -> bool:
+        """Een zonnescherm rolt niet uit bij harde wind, en ook niet zonder meting; zie wind.py."""
+        if not self.wind_sensor:
+            return True
+        kmh = wind.kmh_van(self.hass, self.wind_sensor)
+        if wind.te_hard(kmh, self.wind_max):
+            _LOGGER.info("Zonnescherm %s rolt niet uit: wind %s km/h, grens %s", ident, None if kmh is None else round(kmh, 1), self.wind_max)
+            return False
+        return True
+
+    @callback
+    def _volg_wind(self, sensor: str | None) -> None:
+        if self._wind_uit is not None:
+            self._wind_uit()
+            self._wind_uit = None
+        self.wind_sensor = sensor
+        if sensor is None:
+            return
+
+        @callback
+        def veranderd(event: Event) -> None:
+            if not self._klaar or not self.wind_sensor:
+                return
+            nu = wind.kmh_van(self.hass, self.wind_sensor)
+            if nu is None or nu <= self.wind_max:
+                return
+            # Alleen bij het overschrijden: wie een scherm daarna zelf uitrolt, wordt niet elke minuut overruled.
+            voor = wind.kmh_uit(event.data.get("old_state"))
+            if voor is not None and voor > self.wind_max:
+                return
+            self._trek_in(nu)
+
+        self._wind_uit = async_track_state_change_event(self.hass, [sensor], veranderd)
+
+    @callback
+    def _trek_in(self, kmh: float) -> None:
+        schermen = sorted(ident for ident in self.zonneschermen if self.hass.states.get(ident) is not None)
+        if not schermen:
+            return
+        _LOGGER.info("Wind %s km/h boven de grens van %s: zonneschermen in: %s", round(kmh, 1), self.wind_max, schermen)
+        self._schakel(dict.fromkeys(schermen, 0))
 
     @callback
     def _rolluik_dienst(self, ident: str, pct: int | None) -> tuple[str, int | None]:

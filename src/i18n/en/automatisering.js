@@ -130,7 +130,6 @@ export const AUTOMATISERING = {
   "Geen icoon gevonden.": "No icon found.",
 
   // Speakers van Music Assistant (0.101.0)
-  "Kies minstens één lamp, rolluik of speaker.": "Choose at least one light, shutter or speaker.",
   "Speakers die de klant kan kiezen": "Speakers the customer can choose",
   "Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen.":
     "Music Assistant players. The customer chooses what plays and how loud; off is stop.",
@@ -170,4 +169,16 @@ export const AUTOMATISERING = {
   "De lichtsensor geeft nu geen meting.": "The light sensor is not giving a reading right now.",
   "Lichtsensor": "Light sensor",
   "Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt.": "Where the light level comes from, for example the weather station. The customer can then also choose: when it gets dark, or when it gets light.",
+  // Zonneschermen (0.104.0)
+  "Zonneschermen": "Awnings",
+  "Zonneschermen in": "Awnings in",
+  "{n} zonnescherm": "{n} awning",
+  "{n} zonneschermen": "{n} awnings",
+  "Zonneschermen die de klant kan kiezen": "Awnings the customer can choose",
+  "Windsensor": "Wind sensor",
+  "Windgrens": "Wind limit",
+  "Net als een rolluik: aan is uitrollen, uit is inrollen. Met een windsensor eronder rollen ze niet uit bij harde wind.": "Like a shutter: on extends, off retracts. With a wind sensor below, they do not extend in strong wind.",
+  "Bij voorkeur de windstoten. Zegt hij niets bruikbaars, dan rollen de zonneschermen niet uit. Leeg laten: geen windgrens.": "Preferably the gusts. If it gives no usable reading, the awnings do not extend. Leave empty: no wind limit.",
+  "Boven deze wind rollen de zonneschermen niet uit, en gaan ze in als ze uit stonden. Leeg laten: 30 km/h.": "Above this wind the awnings do not extend, and they retract if they were out. Leave empty: 30 km/h.",
+  "Kies minstens één lamp, rolluik, zonnescherm of speaker.": "Choose at least one light, shutter, awning or speaker.",
 };

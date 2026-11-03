@@ -662,7 +662,8 @@ Sinds 2 november 2026 staat er ook een **nagebootste Music Assistant** in
 `9.0.0` om valkuil 72): `music_assistant.search` met een antwoord in emmers, de entiteitsdienst `music_assistant.play_media`, en twee
 spelers met `mass_player_type`, `media_player.keuken` en `media_player.badkamer`. Elke aanroep komt als `nep_ma` op de bus. De
 automatiseringskaarten op `kaart-test` hebben die twee als `speakers`, en sinds 3 november 2026 de lichtsterkte van het nagebootste
-weerstation als `lichtsensor` (`sensor.weather_station_illuminance`; schemer nadoen met `nep_weerstation.zet {illuminance: 30}`). Het bibliotheekdeel van de mediakaart werkt er niet mee:
+weerstation als `lichtsensor` (`sensor.weather_station_illuminance`; schemer nadoen met `nep_weerstation.zet {illuminance: 30}`), en
+de demo-`cover.kitchen_window` als zonnescherm met `wind_sensor: sensor.weather_station_speed_2` (m/s; storm met `{speed_2: 10}`). Het bibliotheekdeel van de mediakaart werkt er niet mee:
 dat gaat via de client van de echte integratie.
 
 Sinds 31 oktober 2026 staat er ook een **nagebootste Atlantic** in
@@ -972,6 +973,11 @@ je niet hoort terug te draaien zonder het te vragen:
   hooguit één keer per dag. `was` en `gedaan` staan in de opslag (`licht`), zodat een overschrijding tijdens een herstart wordt
   ingehaald; het wachten van vijf minuten staat er met opzet niet in. Een nieuwe of gewijzigde regel kijkt eerst (`vergeet_licht`), en
   een regel die uit staat kijkt mee: anders gaan de lampen aan op het moment dat iemand hem aanzet.
+- **Zonneschermen staan apart op de kaart, met een windgrens** (sinds 0.104.0, `automatisering/wind.py`). De eigenaar wilde ze kunnen
+  kiezen; de windgrens kwam van de beheersessie. `zonneschermen` is voor de motor een rolluik (in `lampen` van de regel), met
+  `wind_sensor` en `wind_max` (km/h, standaard 30) op de kaart. Niet uitrollen boven de grens of zonder bruikbare meting; intrekken
+  één keer bij het overschrijden, en bij harde wind na een herstart. Het voorbeeld laat ze met rust. Zonder windsensor geen grens: dat
+  is de keuze van de beheerder.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.

@@ -129,7 +129,7 @@ class AutomatiseringCard extends DacCard {
 
   validate(config) {
     const c = { ...config };
-    if (!lampenUit(c).length) c[INCOMPLETE] = t("Kies minstens één lamp, rolluik of speaker.");
+    if (!lampenUit(c).length) c[INCOMPLETE] = t("Kies minstens één lamp, rolluik, zonnescherm of speaker.");
     return c;
   }
 
@@ -424,9 +424,12 @@ class AutomatiseringEditor extends DacEditor {
     const flat = { ...config };
     const lijst = lampenUit(config);
     flat.lampen = lijst.filter((l) => !l.rolluik && !l.speaker).map((l) => l.entity);
-    const rolluiken = lijst.filter((l) => l.rolluik).map((l) => l.entity);
+    const rolluiken = lijst.filter((l) => l.rolluik && !l.zonnescherm).map((l) => l.entity);
     if (rolluiken.length) flat.rolluiken = rolluiken;
     else delete flat.rolluiken;
+    const zonneschermen = lijst.filter((l) => l.zonnescherm).map((l) => l.entity);
+    if (zonneschermen.length) flat.zonneschermen = zonneschermen;
+    else delete flat.zonneschermen;
     const speakers = lijst.filter((l) => l.speaker).map((l) => l.entity);
     if (speakers.length) flat.speakers = speakers;
     else delete flat.speakers;
@@ -444,10 +447,18 @@ class AutomatiseringEditor extends DacEditor {
     const rolluiken = (uit.rolluiken ?? []).map(metNaam);
     if (rolluiken.length) uit.rolluiken = rolluiken;
     else delete uit.rolluiken;
+    const zonneschermen = (uit.zonneschermen ?? []).map(metNaam);
+    if (zonneschermen.length) uit.zonneschermen = zonneschermen;
+    else delete uit.zonneschermen;
+    // De windgrens hoort bij de zonneschermen; zonder schermen is hij er niet.
+    if (!zonneschermen.length) {
+      delete uit.wind_sensor;
+      delete uit.wind_max;
+    }
     const speakers = (uit.speakers ?? []).map(metNaam);
     if (speakers.length) uit.speakers = speakers;
     else delete uit.speakers;
-    const omgekeerd = (uit.omgekeerd ?? []).filter((id) => (config.rolluiken ?? []).includes(id));
+    const omgekeerd = (uit.omgekeerd ?? []).filter((id) => [...(config.rolluiken ?? []), ...(config.zonneschermen ?? [])].includes(id));
     if (omgekeerd.length) uit.omgekeerd = omgekeerd;
     else delete uit.omgekeerd;
     for (const k of Object.keys(uit)) if (k.startsWith("naam:")) delete uit[k];
@@ -463,12 +474,23 @@ class AutomatiseringEditor extends DacEditor {
 
   schema() {
     const ids = (this.config_?.lampen ?? []).filter((x) => typeof x === "string");
-    const rolluiken = (this.config_?.rolluiken ?? []).filter((x) => typeof x === "string");
+    const rolluiken = [...(this.config_?.rolluiken ?? []), ...(this.config_?.zonneschermen ?? [])].filter((x) => typeof x === "string");
+    const schermen = (this.config_?.zonneschermen ?? []).filter((x) => typeof x === "string");
     const speakers = (this.config_?.speakers ?? []).filter((x) => typeof x === "string");
     return [
       { name: "name", selector: sel.text() },
       { name: "lampen", selector: { entity: { domain: "light", multiple: true } } },
       { name: "rolluiken", selector: { entity: { domain: "cover", multiple: true } } },
+      { name: "zonneschermen", selector: { entity: { domain: "cover", multiple: true } } },
+      ...(schermen.length
+        ? [
+            {
+              name: "wind_sensor",
+              selector: { entity: { filter: [{ domain: "sensor", device_class: "wind_speed" }, { domain: "sensor", device_class: "speed" }] } },
+            },
+            { name: "wind_max", selector: { number: { min: 5, max: 100, step: 1, mode: "box", unit_of_measurement: "km/h" } } },
+          ]
+        : []),
       // Alleen spelers van Music Assistant: daar komt het zoeken vandaan, net als op de mediakaart.
       { name: "speakers", selector: { entity: { domain: "media_player", integration: "music_assistant", multiple: true } } },
       ...[...ids, ...rolluiken, ...speakers].map((id) => ({ name: `naam:${id}`, selector: sel.text() })),
@@ -493,6 +515,9 @@ class AutomatiseringEditor extends DacEditor {
         name: t("Titel"),
         lampen: t("Lampen die de klant kan kiezen"),
         rolluiken: t("Rolluiken die de klant kan kiezen"),
+        zonneschermen: t("Zonneschermen die de klant kan kiezen"),
+        wind_sensor: t("Windsensor"),
+        wind_max: t("Windgrens"),
         speakers: t("Speakers die de klant kan kiezen"),
         alleen_aan_uit: t("Alleen aan en uit"),
         omgekeerd: t("Motor omgekeerd"),
@@ -509,6 +534,9 @@ class AutomatiseringEditor extends DacEditor {
       name: t("Leeg laten: Automatiseringen."),
       lampen: t("Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten."),
       rolluiken: t("Aan is open op de gekozen stand, uit is dicht. Een rolluik dat zijn stand niet kent, gaat alleen open en dicht."),
+      zonneschermen: t("Net als een rolluik: aan is uitrollen, uit is inrollen. Met een windsensor eronder rollen ze niet uit bij harde wind."),
+      wind_sensor: t("Bij voorkeur de windstoten. Zegt hij niets bruikbaars, dan rollen de zonneschermen niet uit. Leeg laten: geen windgrens."),
+      wind_max: t("Boven deze wind rollen de zonneschermen niet uit, en gaan ze in als ze uit stonden. Leeg laten: 30 km/h."),
       speakers: t("Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen."),
       lichtsensor: t("Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt."),
       omgekeerd: t("Rolluiken waarvan de motor andersom is aangesloten, net als het vinkje op de rolluikkaart."),
