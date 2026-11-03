@@ -960,6 +960,11 @@ je niet hoort terug te draaien zonder het te vragen:
   eerst het volume en speelt dan via `music_assistant.play_media`. **Gemiste muziek wordt niet ingehaald** (`MEDIA_INHAAL_MIN`, 5
   minuten): een wekkerlijst die na een herstart om half tien alsnog begint, is erger dan stilte. De lampen wel. Het voorbeeld laat de
   speakers met rust, want wat er speelde is niet terug te zetten.
+- **Een regel kan uit onderdelen bestaan** (sinds 0.102.0). De eigenaar: "ik wil dat dat kan in 1 regel dus eigenlijk een
+  automatisering net als in HA". Een onderdeel is een PAAR aan en uit met eigen lampen (`delen`), geen losse stap: zo blijft het
+  inhalen per onderdeel kloppen. Naam, dagen, vakantie en `actief` zijn van de regel. Eén onderdeel staat er zonder `delen`, in de vorm
+  van voor 0.102.0; daar is dus niets om te zetten, en zo hoort het te blijven. `brandt` en de verschuiving gaan per onderdeel
+  (`regel-id:deel-id`). Het scherm wijzigt één onderdeel tegelijk in `concept`; `volledig_()` geeft de hele regel.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.

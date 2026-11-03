@@ -151,4 +151,12 @@ export const AUTOMATISERING = {
   "Wijzigen": "Change",
   "Typ een naam en kies uit wat Music Assistant kent.": "Type a name and choose from what Music Assistant knows.",
   "Home Assistant start nog op. Probeer het zo opnieuw.": "Home Assistant is still starting. Try again in a moment.",
+  // Onderdelen (0.102.0)
+  "Onderdelen": "Parts",
+  "Onderdeel toevoegen": "Add a part",
+  "Onderdeel toevoegen, met eigen tijden": "Add a part with its own times",
+  "Onderdeel weghalen": "Remove part",
+  "Onderdeel {n}": "Part {n}",
+  "Onderdeel {n}: {reden}": "Part {n}: {reden}",
+  "Nog niets gekozen": "Nothing chosen yet",
 };

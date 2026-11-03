@@ -25,6 +25,7 @@ from .const import (
     DATA_MOTOR,
     DATA_OPSLAG,
     DATA_WS_REGISTERED,
+    MAX_DELEN,
     MAX_FAVORIETEN,
     MAX_LAMPEN_PER_REGEL,
     MAX_NAAM,
@@ -77,16 +78,30 @@ _FAVORIET = vol.Schema(
     }
 )
 
+# Een onderdeel van een regel (sinds 0.102.0): wat er gebeurt en wanneer. Zie de kop van regels.py.
+_DEEL = vol.Schema(
+    {
+        vol.Optional("id"): vol.All(cv.string, vol.Length(max=40)),
+        vol.Required("lampen"): _APPARATEN,
+        vol.Optional("helderheden"): {_APPARAAT: vol.All(int, vol.Range(min=1, max=100))},
+        vol.Optional("aan"): _MOMENT,
+        vol.Optional("uit"): _MOMENT,
+        vol.Optional("media"): vol.Any(None, _MEDIA),
+    }
+)
+
 _REGEL = vol.Schema(
     {
         # Geen `id` als sleutel op het bericht zelf (valkuil 41); binnen de regel kan dat wel.
         vol.Optional("id"): cv.string,
         vol.Optional("naam"): vol.All(cv.string, vol.Length(max=MAX_NAAM)),
-        vol.Required("lampen"): _APPARATEN,
+        # Of `lampen` met aan en uit, of `delen`: dat toetst ws_opslaan.
+        vol.Optional("lampen"): _APPARATEN,
         vol.Optional("helderheid", default=100): vol.All(int, vol.Range(min=1, max=100)),
         vol.Optional("helderheden"): {_APPARAAT: vol.All(int, vol.Range(min=1, max=100))},
         vol.Optional("aan"): _MOMENT,
         vol.Optional("uit"): _MOMENT,
+        vol.Optional("delen"): vol.All([_DEEL], vol.Length(min=1, max=MAX_DELEN)),
         vol.Required("dagen"): vol.All([vol.All(int, vol.Range(min=0, max=6))], vol.Length(min=1, max=7), vol.Unique()),
         vol.Optional("vakantie", default=False): bool,
         vol.Optional("media"): vol.Any(None, _MEDIA),
@@ -99,6 +114,35 @@ def _met_media(nieuw: dict[str, Any]) -> dict[str, Any]:
     if nieuw.get("media") and any(lamp.startswith("media_player.") for lamp in nieuw["lampen"]):
         return {"media": nieuw["media"]}
     return {"media": None} if "media" in nieuw else {}
+
+
+def _deel(nieuw: dict[str, Any]) -> dict[str, Any]:
+    """Wat er van één onderdeel (of een regel zonder onderdelen) in de opslag komt."""
+    return {
+        "lampen": nieuw["lampen"],
+        "aan": nieuw.get("aan"),
+        "uit": nieuw.get("uit"),
+        **(
+            {"helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]}}
+            if "helderheden" in nieuw
+            else {}
+        ),
+        **_met_media(nieuw),
+    }
+
+
+def _delen(nieuw: dict[str, Any]) -> list[dict[str, Any]]:
+    """De onderdelen met een vast id: dat van de kaart als het er een is, anders een nieuw."""
+    uit: list[dict[str, Any]] = []
+    gezien: set[str] = set()
+    for deel in nieuw["delen"]:
+        deel_id = str(deel.get("id") or "")
+        # Een id dat dubbel komt of vreemde tekens heeft, wordt een nieuw; anders botsen twee onderdelen in `brandt`.
+        if not deel_id or deel_id in gezien or not deel_id.isalnum():
+            deel_id = uuid4().hex[:8]
+        gezien.add(deel_id)
+        uit.append({"id": deel_id, **_deel(deel)})
+    return uit
 
 
 @callback
@@ -188,31 +232,46 @@ def ws_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     motor = _motor_of_fout(hass, connection, msg)
     if motor is None:
         return
-    nieuw = msg["regel"]
-    if not (nieuw.get("aan") or nieuw.get("uit")):
+    nieuw = dict(msg["regel"])
+    # Eén onderdeel is een gewone regel; zo staat een regel maar op één manier in de opslag.
+    if len(nieuw.get("delen") or []) == 1:
+        enig = nieuw.pop("delen")[0]
+        enig.pop("id", None)
+        nieuw = {**{k: v for k, v in nieuw.items() if k not in ("helderheden", "media")}, **enig}
+        nieuw.setdefault("aan", None)
+        nieuw.setdefault("uit", None)
+    delen = nieuw.get("delen")
+    if delen is None and "lampen" not in nieuw:
+        connection.send_error(msg["id"], "invalid_format", t(hass, "Kies minstens één lamp"))
+        return
+    if not all(d.get("aan") or d.get("uit") for d in delen or [nieuw]):
         connection.send_error(msg["id"], "invalid_format", t(hass, "Kies een moment om aan of uit te gaan"))
         return
+    lampen = list(dict.fromkeys(lamp for d in delen or [nieuw] for lamp in d["lampen"]))
     # Een lamp die al in deze regel stond mag blijven: anders is een regel niet
     # meer aan te passen zodra één van zijn lampen van de kaart gehaald is.
     bestaand = next((r for r in motor.opslag.regels if r["id"] == nieuw.get("id")), None)
     mag = motor.toegestaan | set(bestaand["lampen"] if bestaand else [])
-    if not set(nieuw["lampen"]) <= mag:
+    if not set(lampen) <= mag:
         connection.send_error(msg["id"], "not_allowed", t(hass, "Deze lamp staat niet op de kaart"))
         return
     if bestaand is None and len(motor.opslag.regels) >= MAX_REGELS:
         connection.send_error(msg["id"], "not_allowed", t(hass, "Er staan te veel automatiseringen"))
         return
+    if delen is None:
+        inhoud = {**nieuw, **_deel(nieuw)}
+    else:
+        # Met onderdelen staat er bovenaan alleen wat voor de hele regel geldt, en `lampen` voor de kaart.
+        inhoud = {
+            **{k: v for k, v in nieuw.items() if k not in ("helderheid", "helderheden", "media")},
+            "lampen": lampen,
+            "aan": None,
+            "uit": None,
+            "delen": _delen(nieuw),
+        }
     regel = {
-        **nieuw,
-        "aan": nieuw.get("aan"),
-        "uit": nieuw.get("uit"),
+        **inhoud,
         "dagen": sorted(nieuw["dagen"]),
-        **(
-            {"helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]}}
-            if "helderheden" in nieuw
-            else {}
-        ),
-        **_met_media(nieuw),
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
         "actief": bestaand.get("actief", True) if bestaand else True,
         # Een bestaande regel wisselt niet van groep: zijn plek op de kaart zegt het.

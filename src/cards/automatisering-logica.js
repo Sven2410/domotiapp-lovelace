@@ -441,29 +441,86 @@ export function helderheidTekst(regel) {
   return laag === hoog ? `${laag}%` : `${laag}-${hoog}%`;
 }
 
-/** De regel in één zin: "Aan bij zonsondergang · uit om 23:00 · 60% · Elke dag". */
-export function regelTekst(regel) {
+/**
+ * Onderdelen (sinds 0.102.0). De eigenaar, 3 november 2026, over drie vakantieregels voor de rolluiken: "ik wil dat dat
+ * kan in 1 regel dus eigenlijk een automatisering net als in HA". Een onderdeel heeft eigen lampen, een eigen stand en een
+ * eigen aan en uit; naam, dagen en vakantie zijn van de hele regel. Zie de kop van `automatisering/regels.py`.
+ */
+
+/** Wat bij een onderdeel hoort; de rest is van de regel. */
+export const DEEL_VELDEN = ["lampen", "helderheden", "helderheid", "aan", "uit", "media"];
+
+/** De onderdelen van een regel. Een regel zonder `delen` is er één. */
+export function onderdelenVan(regel) {
+  if (Array.isArray(regel?.delen) && regel.delen.length) return regel.delen;
+  return [Object.fromEntries(DEEL_VELDEN.filter((k) => regel?.[k] !== undefined).map((k) => [k, regel[k]]))];
+}
+
+/** Een nieuw onderdeel: dezelfde tijden als een nieuwe regel, nog zonder lampen. */
+export const nieuwOnderdeel = () => ({
+  lampen: [],
+  helderheden: {},
+  aan: { soort: "zonsondergang", verschil: 0 },
+  uit: { soort: "tijd", tijd: "23:00" },
+});
+
+/** Ongeveer wanneer een onderdeel begint, in minuten na middernacht: om ze op tijd te zetten. De zon telt als 07:00 en 19:00. */
+export function deelVolgorde(deel) {
+  const m = deel?.aan ?? deel?.uit;
+  if (!m) return 24 * 60;
+  if (m.soort === "tijd") {
+    const [u, min] = String(m.tijd ?? "").split(":").map(Number);
+    return Number.isFinite(u) && Number.isFinite(min) ? u * 60 + min : 24 * 60;
+  }
+  return (m.soort === "zonsopkomst" ? 7 * 60 : 19 * 60) + (m.verschil ?? 0);
+}
+
+/** Meerdere momenten in een paar woorden: "om 09:30 en 11:30", "om 08:00 en bij zonsondergang". */
+export function momentenTekst(momenten) {
+  const goed = (momenten ?? []).filter(Boolean);
+  const tijden = [...new Set(goed.filter((m) => m.soort === "tijd").map((m) => m.tijd))].sort();
+  const zon = [...new Set(goed.filter((m) => m.soort !== "tijd").map(momentTekst))];
+  const lijst = (xs) => new Intl.ListFormat(locale(), { type: "conjunction" }).format(xs);
+  return lijst([...(tijden.length ? [t("om {tijd}", { tijd: lijst(tijden) })] : []), ...zon]);
+}
+
+/** "Open {moment}" en "dicht {moment}", met de woorden die bij deze lampen horen. */
+function momentZin(wat, moment, lampen, eerste) {
+  if (alleenSpeakers(lampen)) return wat === "aan" ? t("Afspelen {moment}", { moment }) : eerste ? t("Stoppen {moment}", { moment }) : t("stoppen {moment}", { moment });
+  if (alleenRolluiken(lampen)) return wat === "aan" ? t("Open {moment}", { moment }) : eerste ? t("Dicht {moment}", { moment }) : t("dicht {moment}", { moment });
+  return wat === "aan" ? t("Aan {moment}", { moment }) : eerste ? t("Uit {moment}", { moment }) : t("uit {moment}", { moment });
+}
+
+/** Eén onderdeel in een zin, zonder de dagen: "Open om 09:30 · dicht om 14:30". */
+export function deelTekst(regel) {
   const delen = [];
-  const rolluik = alleenRolluiken(regel.lampen);
-  const speaker = alleenSpeakers(regel.lampen);
-  if (regel.aan) {
-    const moment = momentTekst(regel.aan);
-    if (speaker) delen.push(t("Afspelen {moment}", { moment }));
-    else delen.push(rolluik ? t("Open {moment}", { moment }) : t("Aan {moment}", { moment }));
-  }
-  if (regel.uit) {
-    const moment = momentTekst(regel.uit);
-    if (speaker) delen.push(regel.aan ? t("stoppen {moment}", { moment }) : t("Stoppen {moment}", { moment }));
-    else if (rolluik) delen.push(regel.aan ? t("dicht {moment}", { moment }) : t("Dicht {moment}", { moment }));
-    else delen.push(regel.aan ? t("uit {moment}", { moment }) : t("Uit {moment}", { moment }));
-  }
+  if (regel.aan) delen.push(momentZin("aan", momentTekst(regel.aan), regel.lampen, true));
+  if (regel.uit) delen.push(momentZin("uit", momentTekst(regel.uit), regel.lampen, !regel.aan));
   if (regel.aan) {
     const tekst = helderheidTekst(regel);
     if (tekst) delen.push(tekst);
     if (regel.media?.naam && (regel.lampen ?? []).some(isSpeaker)) delen.push(regel.media.naam);
   }
-  delen.push(dagenTekst(regel.dagen));
   return delen.join(" · ");
+}
+
+/**
+ * De regel in één zin: "Aan bij zonsondergang · uit om 23:00 · 60% · Elke dag". Met onderdelen alleen de momenten:
+ * "Open om 09:30 en 11:30 · dicht om 14:30 en 20:00 · Elke dag".
+ */
+export function regelTekst(regel) {
+  const onderdelen = onderdelenVan(regel);
+  if (onderdelen.length > 1) {
+    const lampen = onderdelen.flatMap((d) => d.lampen ?? []);
+    const aan = momentenTekst(onderdelen.map((d) => d.aan));
+    const uit = momentenTekst(onderdelen.map((d) => d.uit));
+    return [
+      ...(aan ? [momentZin("aan", aan, lampen, true)] : []),
+      ...(uit ? [momentZin("uit", uit, lampen, !aan)] : []),
+      dagenTekst(regel.dagen),
+    ].join(" · ");
+  }
+  return [deelTekst(regel), dagenTekst(regel.dagen)].filter(Boolean).join(" · ");
 }
 
 /** De namen van de lampen in een regel; een lamp die niet op de kaart staat houdt zijn eigen naam. */
@@ -492,10 +549,9 @@ export function regelKop(regel, lampen, naamVan = (id) => id) {
 
 /** Een nieuwe regel: wat de meeste mensen willen, en één lamp staat er meteen in. */
 export const nieuweRegel = (lampen, vakantie = false) => ({
+  ...nieuwOnderdeel(),
   lampen: lampen.length === 1 ? [lampen[0].entity] : [],
   helderheden: lampen.length === 1 ? { [lampen[0].entity]: 100 } : {},
-  aan: { soort: "zonsondergang", verschil: 0 },
-  uit: { soort: "tijd", tijd: "23:00" },
   dagen: [...ALLE_DAGEN],
   vakantie: Boolean(vakantie),
 });
@@ -669,43 +725,64 @@ export function wissel(lijst, waarde) {
   return lijst.includes(waarde) ? lijst.filter((x) => x !== waarde) : [...lijst, waarde];
 }
 
-/** Waarom deze regel nog niet opgeslagen kan worden, of null. */
-export function waaromNiet(regel) {
-  if (regel.favoriet && !String(regel.naam ?? "").trim()) return t("Geef de favoriet een naam.");
-  if (!regel.lampen?.length) return t("Kies minstens één lamp.");
-  if (speeltAf(regel) && !regel.media?.uri) return t("Kies wat er moet spelen.");
-  if (regel.favoriet) return null;
-  if (!regel.aan && !regel.uit) return t("Kies wanneer hij aan of uit gaat.");
-  for (const m of [regel.aan, regel.uit]) {
+/** Waarom dit onderdeel nog niet kan, of null. */
+function deelWaaromNiet(deel) {
+  if (!deel.lampen?.length) return t("Kies minstens één lamp.");
+  if (speeltAf(deel) && !deel.media?.uri) return t("Kies wat er moet spelen.");
+  if (!deel.aan && !deel.uit) return t("Kies wanneer hij aan of uit gaat.");
+  for (const m of [deel.aan, deel.uit]) {
     if (m?.soort === "tijd" && !/^\d{2}:\d{2}$/.test(m.tijd ?? "")) return t("Vul een tijd in.");
+  }
+  return null;
+}
+
+/** Waarom deze regel nog niet opgeslagen kan worden, of null. Bij onderdelen zegt hij welk. */
+export function waaromNiet(regel) {
+  if (regel.favoriet) {
+    if (!String(regel.naam ?? "").trim()) return t("Geef de favoriet een naam.");
+    if (!regel.lampen?.length) return t("Kies minstens één lamp.");
+    if (speeltAf(regel) && !regel.media?.uri) return t("Kies wat er moet spelen.");
+    return null;
+  }
+  const delen = onderdelenVan(regel);
+  for (const [i, deel] of delen.entries()) {
+    const reden = deelWaaromNiet({ ...deel, favoriet: false });
+    if (reden) return delen.length > 1 ? t("Onderdeel {n}: {reden}", { n: i + 1, reden }) : reden;
   }
   if (!regel.dagen?.length) return t("Kies minstens één dag.");
   return null;
 }
 
+/** Eén onderdeel zoals de server het kent: lampen met hun helderheid, speakers met het volume, en wat er speelt. */
+function deelNaarServer(deel, dimt) {
+  const per = deel.helderheden ?? startHelderheden(deel);
+  const lampen = deel.lampen ?? [];
+  const volume = muziekVan(deel, false).volume;
+  const media = speeltAf({ ...deel, favoriet: false }) ? mediaUit(deel.media) : null;
+  return {
+    lampen,
+    helderheden: Object.fromEntries([
+      ...lampen.filter((l) => !isSpeaker(l) && dimt(l)).map((l) => [l, per[l] ?? 100]),
+      ...lampen.filter(isSpeaker).map((l) => [l, volume]),
+    ]),
+    ...(media ? { media } : {}),
+    aan: deel.aan ?? null,
+    uit: deel.uit ?? null,
+  };
+}
+
 /**
- * Wat er naar de server gaat.
+ * Wat er naar de server gaat. Eén onderdeel is een gewone regel; meer gaan als `delen`, op tijd gezet.
  *
  * @param {object} regel
  * @param {(entity: string) => boolean} [dimt] alleen deze lampen krijgen een helderheid
  */
 export function naarServer(regel, dimt = () => true) {
-  const per = regel.helderheden ?? startHelderheden(regel);
   const naam = String(regel.naam ?? "").trim();
-  const volume = muziekVan(regel, false).volume;
-  const media = speeltAf({ ...regel, favoriet: false }) ? mediaUit(regel.media) : null;
-  return {
-    ...(regel.id ? { id: regel.id } : {}),
-    ...(naam ? { naam } : {}),
-    lampen: regel.lampen,
-    helderheden: Object.fromEntries([
-      ...regel.lampen.filter((l) => !isSpeaker(l) && dimt(l)).map((l) => [l, per[l] ?? 100]),
-      ...regel.lampen.filter(isSpeaker).map((l) => [l, volume]),
-    ]),
-    ...(media ? { media } : {}),
-    aan: regel.aan ?? null,
-    uit: regel.uit ?? null,
-    dagen: [...regel.dagen].sort((a, b) => a - b),
-    vakantie: Boolean(regel.vakantie),
-  };
+  const delen = onderdelenVan(regel);
+  const kop = { ...(regel.id ? { id: regel.id } : {}), ...(naam ? { naam } : {}) };
+  const staart = { dagen: [...regel.dagen].sort((a, b) => a - b), vakantie: Boolean(regel.vakantie) };
+  if (delen.length === 1) return { ...kop, ...deelNaarServer(delen[0], dimt), ...staart };
+  const opTijd = [...delen].sort((a, b) => deelVolgorde(a) - deelVolgorde(b));
+  return { ...kop, delen: opTijd.map((d) => ({ ...(d.id ? { id: d.id } : {}), ...deelNaarServer(d, dimt) })), ...staart };
 }
