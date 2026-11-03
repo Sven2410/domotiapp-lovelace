@@ -29,6 +29,20 @@ zonder helderheid: hij kan niet dimmen. Een regel van daarvoor heeft geen
 `dagen` gaat over de dag waarop hij AAN gaat, met maandag als 0. Valt de uit-tijd
 vóór de aan-tijd, dan is dat de volgende dag: aan om 22:00, uit om 01:00. Een
 regel kan ook alleen aan of alleen uit hebben ("alles uit om 23:00").
+
+## Onderdelen
+
+Sinds 0.102.0 kan één regel uit meerdere onderdelen bestaan, elk met eigen lampen en
+eigen tijden. De eigenaar, 3 november 2026, over drie vakantieregels voor de rolluiken:
+"ik wil dat dat kan in 1 regel dus eigenlijk een automatisering net als in HA". Dan staat
+er `delen`: een lijst van `{id, lampen, helderheden, aan, uit, media}`, en is `lampen` op
+de regel alle lampen van de onderdelen samen. Naam, dagen, vakantie en `actief` blijven
+van de hele regel.
+
+Een onderdeel is een paar aan en uit, geen losse stap. Zo blijft het inhalen per
+onderdeel kloppen: stond Home Assistant uit tijdens zowel open als dicht, dan wordt het
+alleen dicht. Een regel met één onderdeel staat er zonder `delen`, zoals altijd; een
+regel van vóór 0.102.0 hoeft dus nergens omgezet te worden.
 """
 
 from __future__ import annotations
@@ -51,6 +65,32 @@ def helderheid_van(regel: dict[str, Any], lamp: str) -> int | None:
     if isinstance(per_lamp, dict):
         return per_lamp.get(lamp)
     return regel.get("helderheid")
+
+
+def deel_sleutel(regel_id: str, deel_id: str) -> str:
+    """Waaronder een onderdeel zijn `brandt` en zijn verschuiving heeft."""
+    return f"{regel_id}:{deel_id}"
+
+
+def delen_van(regel: dict[str, Any]) -> list[dict[str, Any]]:
+    """De onderdelen, elk als een regel op zich: met de dagen en de groep van de regel.
+
+    Een regel zonder `delen` is één onderdeel, met zijn eigen id. Dat houdt de verschuiving
+    van een vakantieregel en zijn `brandt` gelijk aan die van vóór 0.102.0.
+    """
+    delen = regel.get("delen")
+    if not isinstance(delen, list) or not delen:
+        return [regel]
+    return [
+        {
+            **deel,
+            "id": deel_sleutel(regel["id"], str(deel.get("id") or i)),
+            "dagen": regel["dagen"],
+            "vakantie": regel.get("vakantie", False),
+        }
+        for i, deel in enumerate(delen)
+        if isinstance(deel, dict)
+    ]
 
 
 def wissel(regel_id: str, dag: date, wat: str) -> int:

@@ -20,6 +20,7 @@ import { alleSleutels, zoekIconen } from "../editor/icoon-zoek.js";
 import { t, tn } from "../taal.js";
 import { nogNietGereed } from "../herkansing.js";
 import {
+  DEEL_VELDEN,
   FAVORIET_ICONEN,
   SOORTEN,
   alleenRolluiken,
@@ -30,6 +31,7 @@ import {
   metMuziek,
   muziekVan,
   dagNamen,
+  deelTekst,
   favorietNaarServer,
   favorietVinkjes,
   groepenUit,
@@ -37,13 +39,16 @@ import {
   isBuiten,
   lampStand,
   lampenGefilterd,
+  lampenKort,
   magDimmen,
   metLamp,
   metSoort,
   metVinkje,
   naarServer,
   nieuweGroep,
+  nieuwOnderdeel,
   niveauTekst,
+  onderdelenVan,
   randenVan,
   ruimtesVan,
   schuifNaar,
@@ -300,6 +305,21 @@ const css = /* css */ `
   .vrij .wat { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--dac-ink); }
   .vrij .wat .icon { width: 15px; height: 15px; flex: 0 0 auto; color: var(--dac-ink-2); }
 
+  /* De onderdelen van een regel: een rij per onderdeel, het gekozen met een rand. Wat eronder staat in het vak, hoort bij dat ene. */
+  .delen { display: flex; flex-direction: column; gap: 4px; }
+  .deel { display: flex; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: 12px; }
+  .deel[data-actief="true"] { border-color: color-mix(in srgb, var(--dac-accent-hi) 55%, transparent); }
+  .deel .treffer { flex: 1 1 auto; min-width: 0; border: 0; }
+  .deel .hoes { color: var(--dac-ink-2); }
+  .deel[data-actief="true"] .hoes { color: var(--dac-accent-hi); }
+  .deel .deelweg { flex: 0 0 auto; width: 36px; padding: 0; justify-content: center; margin-right: 6px; }
+  .deelvak {
+    display: flex; flex-direction: column; gap: 14px; padding: 12px;
+    border-radius: 12px; border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 55%, transparent);
+  }
+  .deelvak > .groep + .groep { padding-top: 14px; border-top: 1px solid var(--dac-border); }
+  .deelvak > .deelkop { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--dac-accent-hi); }
+
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-warn); }
   .knoppen { display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid var(--dac-border); }
   .knoppen button {
@@ -450,21 +470,17 @@ class AutomatiseringScherm extends HTMLElement {
     this.stopVoorbeeld_();
     this.bron = bron;
     this.concept = structuredClone(regel);
-    this.concept.helderheden = startHelderheden(regel);
-    const groepen = groepenUit(this.concept.lampen, this.concept.helderheden, (id) => this.inGroep_(id));
-    this.groepen_ = groepen;
-    this.actief_ = Math.max(0, groepen.length - 1);
+    // Een regel bestaat uit onderdelen; het scherm wijzigt er één tegelijk, en dat staat in `concept`.
+    this.delen_ = regel.favoriet ? null : structuredClone(onderdelenVan(regel));
+    delete this.concept.delen;
     this.filter_ = { zoek: "", ruimte: null };
     this.standen_ = {};
     this.foutTekst_ = "";
     this.bezig_ = false;
     this.icoonOpen_ = false;
     this.icoonZoek_ = "";
-    this.muziekZoek_ = "";
-    this.muziekTreffers_ = [];
-    this.muziekMelding_ = "";
-    this.muziekKiezen_ = !regel.media?.uri;
-    clearTimeout(this.muziekTimer_);
+    if (this.delen_) this.laadDeel_(0);
+    else this.beginDeel_();
     // Staat er al een vinkje aan, dan zijn de vinkjes het overzicht en de lampen een stap verder.
     this.aanpassen_ = !regel.favoriet || !this.vinkjes_().some((v) => v.aan);
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -490,6 +506,90 @@ class AutomatiseringScherm extends HTMLElement {
 
   isVan(kaart) {
     return this.hasAttribute("open") && this.bron === kaart;
+  }
+
+  /** De helderheden, groepen en muziek van wat er nu in `concept` staat. */
+  beginDeel_() {
+    this.concept.helderheden = startHelderheden(this.concept);
+    this.groepen_ = groepenUit(this.concept.lampen, this.concept.helderheden, (id) => this.inGroep_(id));
+    this.actief_ = Math.max(0, this.groepen_.length - 1);
+    this.muziekZoek_ = "";
+    this.muziekTreffers_ = [];
+    this.muziekMelding_ = "";
+    this.muziekKiezen_ = !this.concept.media?.uri;
+    clearTimeout(this.muziekTimer_);
+  }
+
+  /** Dit onderdeel in `concept`, om te wijzigen. */
+  laadDeel_(i) {
+    for (const k of DEEL_VELDEN) delete this.concept[k];
+    const deel = structuredClone(this.delen_[i]);
+    for (const k of DEEL_VELDEN) if (deel[k] !== undefined) this.concept[k] = deel[k];
+    this.concept.lampen = this.concept.lampen ?? [];
+    this.deel_ = i;
+    this.beginDeel_();
+  }
+
+  /** Wat er in `concept` gewijzigd is, terug in zijn onderdeel. Het id van het onderdeel blijft. */
+  bewaarDeel_() {
+    if (!this.delen_) return;
+    const oud = this.delen_[this.deel_];
+    const deel = oud?.id ? { id: oud.id } : {};
+    for (const k of DEEL_VELDEN) if (this.concept[k] !== undefined) deel[k] = this.concept[k];
+    this.delen_[this.deel_] = deel;
+  }
+
+  /** De hele regel, met alle onderdelen: om na te kijken en op te slaan. */
+  volledig_() {
+    if (!this.delen_) return this.concept;
+    this.bewaarDeel_();
+    const regel = { ...this.concept, delen: this.delen_ };
+    for (const k of DEEL_VELDEN) delete regel[k];
+    return regel;
+  }
+
+  /** Meer dan één onderdeel? Dan staat er een lijst bovenaan, en hoort wat eronder staat bij het gekozen. */
+  meerDelen_() {
+    return (this.delen_?.length ?? 0) > 1;
+  }
+
+  /** De lijst onderdelen, met het gekozen gemarkeerd en een knop om er een bij te maken. */
+  onderdelenHtml_() {
+    if (!this.meerDelen_()) return "";
+    return `<div class="groep">${this.kop_("keuzelijst", t("Onderdelen"))}
+      <div class="delen" role="radiogroup" aria-label="${veilig(t("Onderdelen"))}">${this.delenRijen_()}</div>
+      <button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(t("Onderdeel toevoegen"))}</button>
+    </div>`;
+  }
+
+  delenRijen_() {
+    const kaart = this.bron.lampen_();
+    const naamVan = (id) => this.bron.naamVanLamp_(id);
+    return this.delen_
+      .map((opgeslagen, i) => {
+        const deel = i === this.deel_ ? this.concept : opgeslagen;
+        const lampen = deel.lampen ?? [];
+        const naam = lampen.length ? lampenKort(deel, kaart, naamVan) : t("Nog niets gekozen");
+        const icoon = lampen.length && lampen.every(isSpeaker) ? "music" : lampen.length && alleenRolluiken(lampen) ? "shutter" : "bulb";
+        const onder = deelTekst(deel);
+        return `<div class="deel" data-actief="${i === this.deel_}">
+          <button type="button" class="treffer" role="radio" aria-checked="${i === this.deel_}" data-k="deel:${i}"><span class="hoes">${resolve(icoon)}</span><span class="vt"><b>${veilig(naam)}</b>${onder ? `<small>${veilig(onder)}</small>` : ""}</span></button>
+          <button type="button" class="keus deelweg" data-k="deelweg:${i}" aria-label="${veilig(t("Onderdeel weghalen"))}" title="${veilig(t("Onderdeel weghalen"))}">${resolve("bin")}</button>
+        </div>`;
+      })
+      .join("");
+  }
+
+  /** Alleen de rijen opnieuw, na typen in een tijdveld: het veld zelf blijft staan. */
+  werkDelen_() {
+    const rijen = this.$(".delen");
+    if (rijen) rijen.innerHTML = this.delenRijen_();
+  }
+
+  /** Bij één onderdeel: de knop om er nog een te maken, met eigen tijden. */
+  deelErbijHtml_() {
+    if (!this.delen_ || this.meerDelen_()) return "";
+    return `<div class="groep"><button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(t("Onderdeel toevoegen, met eigen tijden"))}</button></div>`;
   }
 
   /** Staat hij in een groep? Bij een favoriet alles: ook wat geen schuif kent, kan uit of dicht. Een speaker nooit: die heeft het blok Muziek. */
@@ -589,6 +689,8 @@ class AutomatiseringScherm extends HTMLElement {
       </div>
       ${c.favoriet ? this.iconenHtml_() : ""}
       ${c.favoriet ? this.vinkjesHtml_() : ""}
+      ${this.onderdelenHtml_()}
+      ${this.meerDelen_() ? `<div class="deelvak"><span class="deelkop">${veilig(t("Onderdeel {n}", { n: this.deel_ + 1 }))}</span>` : ""}
       ${
         this.aanpassen_
           ? `<div class="groep">
@@ -606,6 +708,8 @@ class AutomatiseringScherm extends HTMLElement {
           ? ""
           : `${this.momentHtml_("aan", c.aan)}
       ${this.momentHtml_("uit", c.uit)}
+      ${this.meerDelen_() ? "</div>" : ""}
+      ${this.deelErbijHtml_()}
       <div class="groep">${this.kop_("calendar", t("Dagen"))}<div class="dagen">${dagen}</div></div>`
       }`;
     // De focus terug op dezelfde knop: alles is opnieuw getekend, en zonder
@@ -941,7 +1045,7 @@ class AutomatiseringScherm extends HTMLElement {
 
   /** Opslaan alleen als het kan, en dan zegt de regel eronder waarom niet. */
   kijkNa_() {
-    const reden = waaromNiet(this.concept);
+    const reden = waaromNiet(this.volledig_());
     const fout = this.$(".fout");
     const tekst = this.foutTekst_ || reden || "";
     fout.textContent = tekst;
@@ -959,6 +1063,7 @@ class AutomatiseringScherm extends HTMLElement {
       this.zetConcept_(metVinkje(c, this.bron.lampen_(), (id) => this.buiten_(id), waarde, !nu?.aan));
     }
     else if (soort === "aanpassen") this.aanpassen_ = true;
+    else if (soort === "deel" || soort === "deelweg" || soort === "deelnieuw") this.wisselDeel_(soort, Number(waarde));
     else if (soort === "iconenmeer") this.icoonOpen_ = !this.icoonOpen_;
     else if (soort === "lamp" || soort === "weg") this.wisselLamp_(waarde);
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
@@ -999,6 +1104,26 @@ class AutomatiseringScherm extends HTMLElement {
     this.werkVoorbeeld_();
     this.teken_();
     if (soort === "ruimte") this.toonGekozen_();
+    // Een nieuw onderdeel staat onder de lijst; het vak eronder in beeld, anders gebeurt er voor het oog niets.
+    if (soort === "deelnieuw") this.$(".deelvak")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  /** Een ander onderdeel kiezen, er een weghalen of er een bij maken. Het voorbeeld stopt: dat hoorde bij het vorige. */
+  wisselDeel_(soort, i) {
+    if (!this.delen_ || this.bezig_) return;
+    this.bewaarDeel_();
+    this.stopVoorbeeld_();
+    if (soort === "deelnieuw") {
+      this.delen_.push(nieuwOnderdeel());
+      this.laadDeel_(this.delen_.length - 1);
+    } else if (soort === "deelweg") {
+      if (this.delen_.length < 2 || !this.delen_[i]) return;
+      this.delen_.splice(i, 1);
+      const nu = i < this.deel_ ? this.deel_ - 1 : Math.min(this.deel_, this.delen_.length - 1);
+      this.laadDeel_(nu);
+    } else if (this.delen_[i] && i !== this.deel_) {
+      this.laadDeel_(i);
+    }
   }
 
   /** Lampen en standen van buitenaf gezet (een vinkje): de groepen volgen. */
@@ -1058,6 +1183,7 @@ class AutomatiseringScherm extends HTMLElement {
       if (this.voorbeeld_) this.voorbeeldTimer_ = setTimeout(() => this.werkVoorbeeld_(), 250);
     } else if (veld.dataset.veld) {
       c[veld.dataset.veld] = { soort: "tijd", tijd: veld.value };
+      this.werkDelen_();
     } else {
       return;
     }
@@ -1066,13 +1192,13 @@ class AutomatiseringScherm extends HTMLElement {
   }
 
   async bewaar_() {
-    if (!this.concept || waaromNiet(this.concept) || this.bezig_) return;
+    if (!this.concept || waaromNiet(this.volledig_()) || this.bezig_) return;
     this.bezig_ = true;
     this.kijkNa_();
     try {
       const dimt = (id) => this.dimbaar_(id);
       if (this.concept.favoriet) await this.bron.opslaanFavoriet(favorietNaarServer(this.concept, dimt));
-      else await this.bron.opslaan(naarServer(this.concept, dimt));
+      else await this.bron.opslaan(naarServer(this.volledig_(), dimt));
       this.sluit();
     } catch (fout) {
       this.bezig_ = false;

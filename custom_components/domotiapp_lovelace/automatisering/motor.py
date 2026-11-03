@@ -162,19 +162,22 @@ class Motor:
         van = self.opslag.laatst or nu
         van = max(van, nu - timedelta(hours=INHAAL_UIT_UUR))
         self.opslag.zet_laatst(nu, bewaar=self.opslag.laatst is None)
-        for regel in self.opslag.regels:
-            if not regel.get("actief", True):
+        for heel in self.opslag.regels:
+            if not heel.get("actief", True):
                 continue
-            if (gevonden := regelmaker.laatste_tussen(self.hass, regel, van, nu)) is None:
-                continue
-            op, wat = gevonden
-            if wat == "aan" and nu - op > timedelta(hours=INHAAL_AAN_UUR):
-                _LOGGER.info("Regel %s: aan van %s is te lang geleden om in te halen", regel["id"], op)
-                continue
-            self._voer_uit(regel, wat, nu - op)
+            # Elk onderdeel op zich: een eigen aan en uit, en een eigen inhaalmoment.
+            for regel in regelmaker.delen_van(heel):
+                if (gevonden := regelmaker.laatste_tussen(self.hass, regel, van, nu)) is None:
+                    continue
+                op, wat = gevonden
+                if wat == "aan" and nu - op > timedelta(hours=INHAAL_AAN_UUR):
+                    _LOGGER.info("Regel %s: aan van %s is te lang geleden om in te halen", regel["id"], op)
+                    continue
+                self._voer_uit(regel, wat, nu - op)
 
     @callback
     def _voer_uit(self, regel: dict[str, Any], wat: str, laat: timedelta = timedelta(0)) -> None:
+        """Eén regel of één onderdeel ervan; `regel["id"]` is dan dat van het onderdeel."""
         # De groep van de regel moet de groep zijn die nu geldt; zie de kop.
         geldt = bool(regel.get("vakantie")) == self.vakantie
         if not geldt and not (wat == "uit" and self.opslag.brandt(regel["id"])):

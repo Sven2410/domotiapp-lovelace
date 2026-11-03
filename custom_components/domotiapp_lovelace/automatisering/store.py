@@ -14,7 +14,8 @@ is, en bij het afsluiten. Dat is genoeg: valt de stroom weg, dan staat er een ou
 tijdstip, maar tussen dat tijdstip en de stroomstoring is niets uitgevoerd, anders
 was het nieuwer geweest. Er komt dus niets dubbel, en er valt niets weg.
 
-`brandt` is er voor de pauze: zie `Motor._voer_uit`.
+`brandt` is er voor de pauze: zie `Motor._voer_uit`. Bij een regel met onderdelen staat
+het per onderdeel, als `regel-id:deel-id`.
 """
 
 from __future__ import annotations
@@ -34,6 +35,11 @@ _LOGGER = logging.getLogger(__name__)
 # Binnen een seconde weg: wie iets omzet en meteen de app sluit, hoort het bij
 # terugkomst nog zo te zien staan.
 OPSLAAN_NA = 1
+
+
+def _van(sleutel: str, regel_id: str) -> bool:
+    """Hoort deze sleutel in `brandt` bij deze regel: de regel zelf, of een onderdeel (`id:deel`)?"""
+    return sleutel == regel_id or sleutel.startswith(f"{regel_id}:")
 
 
 class AutomatiseringOpslag:
@@ -83,6 +89,10 @@ class AutomatiseringOpslag:
                 break
         else:
             lijst.append(regel)
+        # Een onderdeel dat er niet meer is, brandt ook niet meer.
+        delen = regel.get("delen") if isinstance(regel.get("delen"), list) else []
+        nog = {regel["id"]} | {f"{regel['id']}:{d.get('id')}" for d in delen if isinstance(d, dict)}
+        self._data["brandt"] = [x for x in self._data["brandt"] if not _van(x, regel["id"]) or x in nog]
         self._bewaar()
 
     @callback
@@ -92,7 +102,7 @@ class AutomatiseringOpslag:
         if len(over) == len(lijst):
             return False
         self._data["regels"] = over
-        self.zet_brandt(regel_id, False)
+        self._data["brandt"] = [x for x in self._data["brandt"] if not _van(x, regel_id)]
         self._bewaar()
         return True
 
