@@ -55,7 +55,13 @@ Testmateriaal). Als gewone gebruiker (Receptie), met echte kliks en toetsen. De 
 
 **De schemer, in het echt in de testinstance** (`nep_weerstation.zet`, en de motor zelf):
 
-SCHEMER_UITKOMST
+| Tijd | Wat |
+|---|---|
+| 12:34:32 | Kitchen Lights uit, 78.000 lux; de regel "Licht avond" (aan onder 50 lx) staat er |
+| 12:35:00 | de motor ziet het licht: in de opslag `licht: {"…\|aan": {"was": false}}` |
+| 12:35:47 | het weerstation op 30 lux |
+| 12:36:00 | de motor ziet het donker en begint te wachten |
+| 12:41:00 | **Kitchen Lights aan** (`last_changed` 11:41:00.342 UTC), precies vijf minuten later, zonder dat iemand iets deed |
 
 **Posities** (`getBoundingClientRect`, links en rechts in CSS-pixels):
 
