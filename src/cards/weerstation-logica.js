@@ -22,6 +22,7 @@
 
 import { locale, nt, t } from "../taal.js";
 import { productAfbeelding } from "./productfoto.js";
+import { naarWand } from "../wandklok.js";
 
 /**
  * Merk en type, met hun foto (zie de kop van `productfoto.js`).
@@ -194,6 +195,50 @@ export function drukTrend(punten) {
 
 export const trendWoord = (trend) =>
   ({ stijgt: t("stijgend"), daalt: t("dalend"), gelijk: t("gelijk") })[trend] ?? "";
+
+/* ------------------------------------------------------------------- zon */
+
+/**
+ * Zonsopkomst en zonsondergang (sinds 0.106.0). De eigenaar, 4 november 2026: "die 2 entiteiten gewoon kunnen invullen van
+ * de zon integratie". Ze hangen niet aan het station, dus de kaart zoekt ze niet zelf: leeg is niet op de kaart.
+ *
+ * Twee vormen: een sensor met een tijdstip (`sensor.sun_next_rising`) of `sun.sun`, met het tijdstip in een attribuut.
+ * Het is altijd de VOLGENDE: na zonsondergang staat er die van morgen, en dat zegt de kaart erbij.
+ */
+export const ZON = { zonsopkomst: "next_rising", zonsondergang: "next_setting" };
+
+/** Het tijdstip uit een zon-entiteit, of null. */
+export function zonTijdstip(st, rol) {
+  if (!st) return null;
+  const ruw = String(st.entity_id ?? "").startsWith("sun.") ? st.attributes?.[ZON[rol]] : st.state;
+  if (leeg(ruw)) return null;
+  const d = new Date(ruw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+const twee = (n) => String(n).padStart(2, "0");
+const dagVan = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+/**
+ * De tijd in de tijdzone van Home Assistant, niet die van het toestel (zie `wandklok.js`), en de dag als het niet
+ * vandaag is.
+ *
+ * @returns {{tijd: string, dag: string}|null}
+ */
+export function zonTekst(st, rol, tz, nu = new Date()) {
+  const d = zonTijdstip(st, rol);
+  if (!d) return null;
+  const w = naarWand(d, tz);
+  const vandaag = naarWand(nu, tz);
+  const morgen = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() + 1);
+  const dag =
+    dagVan(w) === dagVan(vandaag)
+      ? ""
+      : dagVan(w) === dagVan(morgen)
+        ? t("morgen")
+        : w.toLocaleDateString(locale(), { weekday: "long" });
+  return { tijd: `${twee(w.getHours())}:${twee(w.getMinutes())}`, dag };
+}
 
 /* ----------------------------------------------------------------- samen */
 

@@ -42,6 +42,12 @@ export const WEERSTATION = {
   "Leeg laten: de naam van de sensor.": "Leave empty: the name of the sensor.",
   "Een Shelly via BTHome meldt zijn merk niet, en dan toont Automatisch de thermometer. Kies daar zelf Shelly.":
     "A Shelly via BTHome does not report its brand, and then Automatic shows the thermometer. Choose Shelly yourself there.",
+  "Zonsopkomst": "Sunrise",
+  "Zonsondergang": "Sunset",
+  "Van de zon-integratie: sensor.sun_next_rising of sun.sun. Leeg laten: niet op de kaart.":
+    "From the Sun integration: sensor.sun_next_rising or sun.sun. Leave empty: not on the card.",
+  "Van de zon-integratie: sensor.sun_next_setting of sun.sun. Leeg laten: niet op de kaart.":
+    "From the Sun integration: sensor.sun_next_setting or sun.sun. Leave empty: not on the card.",
   "DomotiApp Weerstation": "DomotiApp Weather Station",
   "Wat het weerstation meet: temperatuur, wind met een kompas, regen, UV, licht en luchtdruk.":
     "What the weather station measures: temperature, wind with a compass, rain, UV, light and air pressure.",

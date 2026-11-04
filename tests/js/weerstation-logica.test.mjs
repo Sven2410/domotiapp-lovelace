@@ -205,3 +205,40 @@ describe("merk, type en foto", () => {
     assert.equal(inhoud.subarray(8, 12).toString(), "WEBP");
   });
 });
+
+describe("zonsopkomst en zonsondergang (NIEUW GEDRAG, 0.106.0)", () => {
+  // Zoals de zon-integratie ze geeft; gemeten in de testinstance op 4 november 2026.
+  const OP = { entity_id: "sensor.sun_next_rising", state: "2026-11-05T06:37:41+00:00", attributes: { device_class: "timestamp" } };
+  const ONDER = { entity_id: "sensor.sun_next_setting", state: "2026-11-04T16:01:53+00:00", attributes: { device_class: "timestamp" } };
+  const ZON = {
+    entity_id: "sun.sun",
+    state: "above_horizon",
+    attributes: { next_rising: "2026-11-05T06:37:41.535397+00:00", next_setting: "2026-11-04T16:01:53.131864+00:00" },
+  };
+  const NU = new Date("2026-11-04T10:00:00Z");
+
+  it("een sensor met een tijdstip, in de tijdzone van Home Assistant", () => {
+    assert.deepEqual(L.zonTekst(ONDER, "zonsondergang", "Europe/Amsterdam", NU), { tijd: "17:01", dag: "" });
+    assert.deepEqual(L.zonTekst(ONDER, "zonsondergang", "Europe/London", NU), { tijd: "16:01", dag: "" });
+  });
+
+  it("de volgende zonsopkomst is morgen, en dat staat erbij", () => {
+    assert.deepEqual(L.zonTekst(OP, "zonsopkomst", "Europe/Amsterdam", NU), { tijd: "07:37", dag: "morgen" });
+  });
+
+  it("sun.sun: het tijdstip uit het attribuut van die rol", () => {
+    assert.deepEqual(L.zonTekst(ZON, "zonsopkomst", "Europe/Amsterdam", NU), { tijd: "07:37", dag: "morgen" });
+    assert.deepEqual(L.zonTekst(ZON, "zonsondergang", "Europe/Amsterdam", NU), { tijd: "17:01", dag: "" });
+  });
+
+  it("vandaag en morgen volgen de dag van Home Assistant, niet die van het toestel", () => {
+    // 23:30 UTC is in Amsterdam al 5 november: een zonsopkomst op de 5e is dan vandaag.
+    assert.equal(L.zonTekst(OP, "zonsopkomst", "Europe/Amsterdam", new Date("2026-11-04T23:30:00Z")).dag, "");
+  });
+
+  it("niets bruikbaars: geen tegel", () => {
+    assert.equal(L.zonTekst(null, "zonsopkomst", "Europe/Amsterdam", NU), null);
+    assert.equal(L.zonTekst({ ...OP, state: "unavailable" }, "zonsopkomst", "Europe/Amsterdam", NU), null);
+    assert.equal(L.zonTekst({ ...ZON, attributes: {} }, "zonsopkomst", "Europe/Amsterdam", NU), null);
+  });
+});
