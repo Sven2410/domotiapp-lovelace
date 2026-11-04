@@ -16,6 +16,7 @@
 
 import { locale, t } from "../taal.js";
 import { isoDatum, isoDatumTijd, klok } from "./infoscherm-logica.js";
+import { naarWand } from "../wandklok.js";
 
 /** De duren om uit te kiezen op het scherm, in minuten. */
 export const DUREN = [30, 60, 90, 120];
@@ -36,26 +37,28 @@ export const lokaal = isoDatumTijd;
  * ("2026-10-17") is een hele dag en hoort LOKAAL om middernacht te beginnen;
  * `new Date("2026-10-17")` zou hem in UTC lezen.
  */
-function moment(waarde) {
+function moment(waarde, tz) {
   if (waarde instanceof Date) return waarde;
   const s = String(waarde ?? "");
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return Number.isNaN(d.getTime()) ? null : naarWand(d, tz);
 }
 
 /**
  * De afspraken uit een bericht van `calendar/event/subscribe`, op begintijd.
  * Een afspraak van Home Assistant is `{start, end, summary, uid,
  * recurrence_id, all_day, ...}`, met een datum voor een hele dag en een
- * tijdstip met tijdzone voor de rest.
+ * tijdstip met tijdzone voor de rest. Met `tz` (sinds 0.105.0) komt dat tijdstip
+ * terug als wandtijd in die tijdzone: de klok van Home Assistant, niet die van
+ * het toestel (zie src/wandklok.js).
  */
-export function afsprakenUit(events) {
+export function afsprakenUit(events, tz) {
   return (events ?? [])
     .map((ev) => {
-      const start = moment(ev?.start);
-      const eind = moment(ev?.end);
+      const start = moment(ev?.start, tz);
+      const eind = moment(ev?.end, tz);
       if (!start || !eind || eind <= start) return null;
       return {
         start,

@@ -11,6 +11,7 @@ afbreken; de inhoud staat in:
 | `feeds.py` | nieuws van buiten (RSS/Atom) |
 | `http.py` | uploaden en uitserveren |
 | `ruimtes.py` | een ruimte boeken en vrijgeven, met de code |
+| `weer.py` | het laatst bekende weer, en de weerintegratie herladen die blijft hangen |
 | `websocket.py` | de commando's en het abonnement voor de kaarten |
 """
 
@@ -23,10 +24,11 @@ from homeassistant.core import HomeAssistant, callback
 from ..const import DOMAIN
 from . import http as infoscherm_http
 from . import websocket as infoscherm_ws
-from .const import DATA_FEEDS, DATA_RUIMTES, DATA_STORE
+from .const import DATA_FEEDS, DATA_RUIMTES, DATA_STORE, DATA_WEER
 from .feeds import FeedLezer
 from .ruimtes import Ruimtes
 from .store import InfoStore
+from .weer import Weerwacht
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,12 +62,19 @@ async def async_zet_op(hass: HomeAssistant) -> None:
         data[DATA_FEEDS] = lezer
         await lezer.async_start()
 
+    if DATA_WEER not in data:
+        wacht = Weerwacht(hass, lambda: data[DATA_STORE].snapshot()["installatie"].get("weer"))
+        data[DATA_WEER] = wacht
+        await wacht.async_start()
+
 
 @callback
 def async_stop(hass: HomeAssistant) -> None:
-    """Laat de feedlezer los bij de laatste config entry."""
+    """Laat de feedlezer en de weerwacht los bij de laatste config entry."""
     data = hass.data.get(DOMAIN, {})
     if (lezer := data.pop(DATA_FEEDS, None)) is not None:
         lezer.async_stop()
+    if (wacht := data.pop(DATA_WEER, None)) is not None:
+        wacht.async_stop()
     data.pop(DATA_RUIMTES, None)
     data.pop(DATA_STORE, None)

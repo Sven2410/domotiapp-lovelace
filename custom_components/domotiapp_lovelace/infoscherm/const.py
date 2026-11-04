@@ -45,6 +45,7 @@ STORAGE_VERSION: Final = 1
 DATA_STORE: Final = "infoscherm_store"
 DATA_FEEDS: Final = "infoscherm_feeds"
 DATA_RUIMTES: Final = "infoscherm_ruimtes"
+DATA_WEER: Final = "infoscherm_weer"
 DATA_WS_REGISTERED: Final = "infoscherm_ws_registered"
 DATA_VIEW_REGISTERED: Final = "infoscherm_view_registered"
 DATA_ABONNEES: Final = "infoscherm_abonnees"

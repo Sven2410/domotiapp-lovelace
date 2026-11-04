@@ -1008,6 +1008,15 @@ Gemeten tegen HA 2026.8 op 12 oktober 2026, met drie echte accounts
   niet beheren." Beheren vanaf de iPad zelf kan dus niet; dat doet de receptie
   vanaf haar eigen pc of telefoon.
 
+**Het scherm rekent met de klok van Home Assistant, niet met die van de tablet** (sinds 0.105.0, `src/wandklok.js`). Bij een
+klant stond de tablet op een andere tijdzone en het scherm op 8:30 in plaats van 9:30; de eigenaar: "tijd van HA inderdaad".
+Elk "nu" in `infoscherm-card.js` is `this.nu_()`. Een tijdstip met tijdzone gaat erin met `wand_`, en wat naar Home Assistant
+gaat (een agenda, de recorder) eruit met `echt_`. Schrijf je er iets bij: nooit een kale `new Date()`.
+
+**Valt de weerentiteit weg, dan blijft het laatste weer staan** (sinds 0.105.0, `infoscherm/weer.py`), met "bijgewerkt ...".
+Na tien minuten herlaadt de server de integratie achter die ene entiteit, hooguit eens per uur. Dit geldt niet voor andere
+integraties.
+
 ### Iconen: `dai:` is van ons, `mdi:` is van Home Assistant
 
 `resolve()` in `icons.js` kent drie vormen, en de VOLGORDE luistert nauw:

@@ -4,6 +4,7 @@
 |---|---|
 | `infoscherm/get` | iedere ingelogde gebruiker |
 | `infoscherm/subscribe` | iedere ingelogde gebruiker |
+| `infoscherm/weer` | iedere ingelogde gebruiker: het laatst bekende weer, voor als de weerentiteit wegvalt (`weer.py`) |
 | `infoscherm/aanwezig` | iedere ingelogde gebruiker, ook kiosk |
 | `infoscherm/personen/save` | iedereen behalve kiosk |
 | `infoscherm/mededelingen/save` | idem |
@@ -56,6 +57,7 @@ from .const import (
     DATA_FEEDS,
     DATA_RUIMTES,
     DATA_STORE,
+    DATA_WEER,
     DATA_WS_REGISTERED,
     EVENT_FEEDS,
     EVENT_STAND,
@@ -92,6 +94,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_ruimte_code,
         ws_ruimte_nieuw,
         ws_ruimte_weg,
+        ws_weer,
     ):
         websocket_api.async_register_command(hass, commando)
     data[DATA_WS_REGISTERED] = True
@@ -189,6 +192,13 @@ def ws_get(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             **({"ruimte_code": store.ruimte_code} if rechten["mag_beheren"] else {}),
         },
     )
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/infoscherm/weer"})
+@callback
+def ws_weer(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    wacht = hass.data.get(DOMAIN, {}).get(DATA_WEER)
+    connection.send_result(msg["id"], {"laatst": wacht.laatst() if wacht else None})
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/infoscherm/subscribe"})

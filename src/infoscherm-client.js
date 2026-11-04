@@ -55,6 +55,9 @@ const roep = (hass, type, extra = {}) => hass.connection.sendMessagePromise({ ty
 /** Alles wat een kaart nodig heeft: de stand, de feeds en de rechten. */
 export const haalStand = (hass) => roep(hass, "get");
 
+/** Het laatst bekende weer, voor als de weerentiteit wegvalt (sinds 0.105.0; zie infoscherm/weer.py). */
+export const haalWeerLaatst = (hass) => roep(hass, "weer");
+
 /**
  * Blijf op de hoogte: `cb({soort, ...})` krijgt `stand` of `feeds`. Een
  * abonnement dat een herstart van Home Assistant overleeft; zie
