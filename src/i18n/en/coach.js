@@ -61,6 +61,9 @@ export const COACH = {
   "Automatisch (merk en model van de paal)": "Automatic (make and model of the charger)",
   "Laadpaal bij de coach": "Charger in the coach",
   "Knoppen op deze kaart": "Buttons on this card",
+  "Instellingen op deze kaart": "Settings on this card",
+  "Uitgevinkt staat het niet op deze kaart, bijvoorbeeld waar de coach in de goedkope uren laadt en klaar om en laden tot niet tellen. Klaar om neemt de week mee. Het paneel van de coach houdt ze allemaal.":
+    "An unticked setting is not on this card, for example where the coach charges in the cheap hours and ready by and charge to do not count. Ready by includes the week. The coach panel keeps them all.",
   "Uitgevinkt staat de knop niet op deze kaart. Het paneel van de coach houdt ze allemaal, en staat een uitgevinkte stand daar aan, dan zegt de kaart dat.": "An unticked button is not on this card. The coach panel keeps them all, and if an unticked mode is on there, the card says so.",
   "Leeg laten: de naam die de laadpaal bij de coach heeft.": "Leave empty: the name the charger has in the coach.",
   "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.":

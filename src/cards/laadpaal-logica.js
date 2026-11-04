@@ -94,6 +94,30 @@ export function zonderVolleKnoppen(config) {
   return rest;
 }
 
+/**
+ * Wat er naast de knoppen per kaart uit kan (sinds 0.107.0). De eigenaar, 4 november 2026, over een klant die laadt in de
+ * goedkope uren zonder auto: Schema, Klaar om en Laden tot tellen daar niet, "ik wil er niet in hebben dat ik dat kan
+ * aanvinken. alleen nu starten bijvoorbeeld."
+ *
+ * Een eigen lijst en niet in `knoppen`: een kaart die daar al iets had uitgevinkt, zou deze drie anders kwijt zijn.
+ * Klaar om neemt de week mee; die is Klaar om per dag.
+ */
+export const KAARTVELDEN = [
+  { sleutel: "schema", label: nt("Schema") },
+  { sleutel: "klaar_om", label: nt("Klaar om") },
+  { sleutel: "laden_tot", label: nt("Laden tot") },
+];
+
+/** Staat dit veld op de kaart? Geen lijst is allemaal, net als bij `knoppen`. */
+export const veldOpKaart = (config, sleutel) => !Array.isArray(config?.velden) || config.velden.includes(sleutel);
+
+/** Alles aangevinkt is geen `velden`, zoals `zonderVolleKnoppen`. */
+export function zonderVolleVelden(config) {
+  if (!KAARTVELDEN.every((k) => config.velden?.includes(k.sleutel))) return config;
+  const { velden: _alles, ...rest } = config;
+  return rest;
+}
+
 const LEEG = new Set(["", "unknown", "unavailable"]);
 
 /** Een tijdstip met zone als `Date`, of null. */
