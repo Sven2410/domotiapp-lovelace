@@ -53,6 +53,7 @@ import {
 } from "./coach-logica.js";
 import {
   KAARTKNOPPEN,
+  KAARTVELDEN,
   LAADPAAL_FOTOS,
   LAADPAAL_MODELLEN,
   MODI,
@@ -72,7 +73,9 @@ import {
   stapWaarde,
   vermogenTekst,
   weekSchema,
+  veldOpKaart,
   zonderVolleKnoppen,
+  zonderVolleVelden,
 } from "./laadpaal-logica.js";
 import { veldWaarde, zetOproep } from "./tijdveld.js";
 import { nt, t } from "../taal.js";
@@ -780,12 +783,13 @@ class LaadpaalCard extends DacCard {
     }
     // Wat er geldt zonder knop. Nog een keer de knop kiezen die aan staat zet
     // hem terug naar de voorkeur (coach 0.112.3); daar hoeft de kaart niets
-    // voor te doen, want een tik stuurt altijd de optie van de knop.
+    // voor te doen, want een tik stuurt altijd de optie van de knop. Met Klaar om
+    // uitgevinkt staat de tijd er ook hier niet.
     const regel = modusRegel(modusSt, s, stateOf(this.hass, r.klaar_om), keuze);
     const rEl = this.$(".modusregel");
     rEl.hidden = !regel;
     const rHtml = regel
-      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd ? ` · ${t("klaar om {tijd}", { tijd: escapeHtml(regel.tijd) })}` : ""}</span>`
+      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd && veldOpKaart(this.config, "klaar_om") ? ` · ${t("klaar om {tijd}", { tijd: escapeHtml(regel.tijd) })}` : ""}</span>`
       : "";
     if (rEl.dataset.html !== rHtml) {
       rEl.dataset.html = rHtml;
@@ -804,7 +808,7 @@ class LaadpaalCard extends DacCard {
     };
     // Uitgevinkt en toch gepauzeerd: dat zeggen de stand en de zin eronder.
     const metPauze = schakel("pauze", knopOpKaart(keuze, "pauze") ? r.pauze : null);
-    const metSchema = schakel("schema", r.schema);
+    const metSchema = schakel("schema", veldOpKaart(this.config, "schema") ? r.schema : null);
     this.$(".schakels").hidden = !metPauze && !metSchema;
 
     // Wat er per beurt geldt, in één zin onder de knoppen.
@@ -821,7 +825,8 @@ class LaadpaalCard extends DacCard {
 
     // ----- klaar om, laden tot, of de week
     const klaarSt = stateOf(this.hass, r.klaar_om);
-    const metKlaar = Boolean(klaarSt) && klaarSt.state !== "unavailable" && !s?.perDag;
+    const klaarOpKaart = veldOpKaart(this.config, "klaar_om");
+    const metKlaar = klaarOpKaart && Boolean(klaarSt) && klaarSt.state !== "unavailable" && !s?.perDag;
     this.$(".veld.klaar").hidden = !metKlaar;
     const tijd = this.$(".tijd");
     if (metKlaar && this.shadowRoot.activeElement !== tijd) {
@@ -830,7 +835,7 @@ class LaadpaalCard extends DacCard {
     }
 
     const totSt = stateOf(this.hass, r.laden_tot);
-    const metTot = Boolean(totSt) && totSt.state !== "unavailable";
+    const metTot = veldOpKaart(this.config, "laden_tot") && Boolean(totSt) && totSt.state !== "unavailable";
     this.$(".veld.tot").hidden = !metTot;
     if (metTot) {
       const v = this.pending_ ?? Number(totSt.state);
@@ -849,7 +854,7 @@ class LaadpaalCard extends DacCard {
     // halve regel naast een leeg vak te staan.
     velden.style.gridTemplateColumns = metKlaar && metTot ? "" : "1fr";
 
-    const week = s?.perDag ? weekSchema(s.schemaDagen) : [];
+    const week = klaarOpKaart && s?.perDag ? weekSchema(s.schemaDagen) : [];
     const wEl = this.$(".week");
     wEl.hidden = !week.length;
     const wSig = JSON.stringify(week);
@@ -935,7 +940,7 @@ const AFBEELDING_KEUZES = [
 
 class LaadpaalEditor extends DacEditor {
   defaults() {
-    return { afbeelding: "auto", knoppen: KAARTKNOPPEN.map((k) => k.sleutel) };
+    return { afbeelding: "auto", knoppen: KAARTKNOPPEN.map((k) => k.sleutel), velden: KAARTVELDEN.map((k) => k.sleutel) };
   }
 
   /** De fotokiezer alleen bij "eigen afbeelding": anders is het een veld dat niets doet. */
@@ -964,6 +969,16 @@ class LaadpaalEditor extends DacEditor {
           },
         },
       },
+      {
+        name: "velden",
+        selector: {
+          select: {
+            multiple: true,
+            mode: "list",
+            options: KAARTVELDEN.map((k) => ({ value: k.sleutel, label: t(k.label) })),
+          },
+        },
+      },
     ];
   }
 
@@ -975,6 +990,7 @@ class LaadpaalEditor extends DacEditor {
         afbeelding: t("Afbeelding"),
         power: t("Vermogen"),
         knoppen: t("Knoppen op deze kaart"),
+        velden: t("Instellingen op deze kaart"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -990,11 +1006,14 @@ class LaadpaalEditor extends DacEditor {
       knoppen: t(
         "Uitgevinkt staat de knop niet op deze kaart. Het paneel van de coach houdt ze allemaal, en staat een uitgevinkte stand daar aan, dan zegt de kaart dat."
       ),
+      velden: t(
+        "Uitgevinkt staat het niet op deze kaart, bijvoorbeeld waar de coach in de goedkope uren laadt en klaar om en laden tot niet tellen. Klaar om neemt de week mee. Het paneel van de coach houdt ze allemaal."
+      ),
     }[s.name];
   }
 
   serialize(config) {
-    return zonderVolleKnoppen(config);
+    return zonderVolleVelden(zonderVolleKnoppen(config));
   }
 }
 
