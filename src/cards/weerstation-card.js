@@ -24,12 +24,14 @@ import {
   ROLLEN,
   WEERSTATIONS,
   WIND_EENHEDEN,
+  ZON,
   burenVan,
   drukTrend,
   trendWoord,
   weerRollen,
   weerStand,
   weerstationAfbeelding,
+  zonTekst,
 } from "./weerstation-logica.js";
 import { nt, t } from "../taal.js";
 
@@ -124,7 +126,7 @@ class WeerstationCard extends DacCard {
   }
 
   watched() {
-    return [this.config.entity, ...Object.values(this.rollen_())];
+    return [this.config.entity, ...Object.values(this.rollen_()), ...Object.keys(ZON).map((rol) => this.config[rol])].filter(Boolean);
   }
 
   template() {
@@ -228,12 +230,18 @@ class WeerstationCard extends DacCard {
       ? `<span class="stip" style="--stip:${TONES[s.uvSchaal.tone]}"></span>${escapeHtml(s.uvSchaal.woord)}`
       : "";
     const trend = trendWoord(this.trend_);
+    const zon = (rol, wat) => {
+      const z = zonTekst(this.hass?.states?.[this.config[rol]], rol, this.hass?.config?.time_zone);
+      return z ? tegel(this.config[rol], wat, z.tijd, escapeHtml(z.dag)) : "";
+    };
     return [
       wind,
       tegel(r.neerslag, t("Neerslag"), s.neerslag),
       tegel(r.uv, t("UV-index"), s.uv, uvExtra),
       tegel(r.licht, t("Lichtsterkte"), s.licht),
       tegel(r.druk, t("Luchtdruk"), s.druk, trend ? escapeHtml(trend) : ""),
+      zon("zonsopkomst", t("Zonsopkomst")),
+      zon("zonsondergang", t("Zonsondergang")),
     ].join("");
   }
 
@@ -354,6 +362,9 @@ class WeerstationEditor extends DacEditor {
         name: "wind_eenheid",
         selector: sel.select(WIND_EENHEDEN.map((k) => ({ value: k.value, label: k.value === "kmh" || k.value === "ms" ? k.label : t(k.label) }))),
       },
+      // Niet op het apparaat van het station, dus niet bij de sensoren die de kaart zelf zoekt.
+      { name: "zonsopkomst", selector: sel.entity(["sensor", "sun"]) },
+      { name: "zonsondergang", selector: sel.entity(["sensor", "sun"]) },
       section(
         t("Sensoren met de hand kiezen"),
         "mdi:tune",
@@ -374,6 +385,8 @@ class WeerstationEditor extends DacEditor {
         merk: t("Merk"),
         model: t("Type"),
         wind_eenheid: t("Eenheid van de wind"),
+        zonsopkomst: t("Zonsopkomst"),
+        zonsondergang: t("Zonsondergang"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -383,6 +396,8 @@ class WeerstationEditor extends DacEditor {
       entity: t("De temperatuursensor van het weerstation. De rest zoekt de kaart zelf op hetzelfde apparaat."),
       name: t("Leeg laten: de naam van de sensor."),
       merk: t("Een Shelly via BTHome meldt zijn merk niet, en dan toont Automatisch de thermometer. Kies daar zelf Shelly."),
+      zonsopkomst: t("Van de zon-integratie: sensor.sun_next_rising of sun.sun. Leeg laten: niet op de kaart."),
+      zonsondergang: t("Van de zon-integratie: sensor.sun_next_setting of sun.sun. Leeg laten: niet op de kaart."),
     }[s.name];
   }
 }
