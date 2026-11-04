@@ -8,6 +8,7 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import * as L from "../../src/cards/laadpaal-logica.js";
@@ -45,5 +46,24 @@ describe("modus_bron", () => {
     assert.equal(stand({ modus_actief: "snel", modus_bron: "app" }).modusBron, "app");
     assert.equal(stand({ modus_bron: "" }).modusBron, "");
     assert.equal(stand({}).modusBron, "");
+  });
+});
+
+describe("de echte dump van coach v0.197.0 (een paal in de goedkope uren, zonder auto)", () => {
+  const [dump] = JSON.parse(readFileSync(new URL("./vaste-invoer/coach-0.197.0-laadpaal.json", import.meta.url), "utf8"));
+  const s = L.laadpaalStand(dump);
+
+  it("velden en modus_bron staan er in de vorm die de kaart leest", () => {
+    assert.deepEqual(s.velden, ["modus", "pauze"]);
+    assert.equal(s.modusBron, "");
+  });
+
+  it("Schema, Klaar om en Laden tot vallen weg", () => {
+    for (const v of VELDEN) assert.equal(L.veldVanCoach(s, v), false, v);
+  });
+
+  it("REGRESSIEWACHT: de modus blijft wat hij was", () => {
+    assert.equal(s.modusActief, "planning");
+    assert.deepEqual(s.modusKeuzes, ["snel", "continu", "zon"]);
   });
 });

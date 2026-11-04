@@ -1,0 +1,89 @@
+[
+  {
+    "entity_id": "sensor.ev_charger_coach",
+    "translation_key": "coach",
+    "state": "Geen auto",
+    "attributes": {
+      "contract": 1,
+      "taal": "nl",
+      "type": "laadpaal",
+      "stand": "geen_auto",
+      "rule": "",
+      "amps": null,
+      "reason": "",
+      "brand": "easee",
+      "paal_fabrikant": "Easee",
+      "paal_model": "Charge Max",
+      "soc": null,
+      "soc_geschat": false,
+      "actieradius_km": null,
+      "target_percent": null,
+      "doel_beurt": false,
+      "modus": "planning",
+      "modus_beurt": false,
+      "modus_actief": "planning",
+      "modus_keuzes": [
+        "snel",
+        "continu",
+        "zon"
+      ],
+      "modus_bron": "",
+      "velden": [
+        "modus",
+        "pauze"
+      ],
+      "planning_nu": false,
+      "pauze": false,
+      "expected_done": null,
+      "kwh_needed": null,
+      "plan": [],
+      "sessie": null,
+      "schema_aan": false,
+      "per_dag": false,
+      "schema_dagen": [
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        },
+        {
+          "aan": true,
+          "klaar_om": "14:51"
+        }
+      ],
+      "klaar_om_volgende": null,
+      "entiteiten": {
+        "status": "sensor.ev_charger_status",
+        "no_current_reason": "sensor.ev_charger_reason_for_no_current",
+        "max_limit": "sensor.ev_charger_max_charger_limit",
+        "dynamic_limit": "sensor.ev_charger_dynamic_charger_limit",
+        "circuit_limit": "sensor.ev_charger_dynamic_circuit_limit",
+        "circuit_max": "sensor.ev_charger_max_circuit_limit",
+        "current": "sensor.ev_charger_current",
+        "power": "sensor.ev_charger_power",
+        "energy": "sensor.ev_charger_lifetime_energy"
+      },
+      "icon": "mdi:ev-station",
+      "friendly_name": "EV Charger Coach"
+    }
+  }
+]

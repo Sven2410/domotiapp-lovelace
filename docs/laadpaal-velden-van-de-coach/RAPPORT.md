@@ -17,10 +17,23 @@ erbij op de sensor van de laadpaal (CONTRACT blijft 1):
   - De namen van de coach zijn `klaar_tijd`, `doel` en `schema`; die van de kaart `klaar_om`, `laden_tot` en `schema`.
 - **Snel uit de app staat erbij**, in de zin onder de knoppen: "Snel uit de app van de paal: geldt tot de kabel eruit gaat."
 
+## De echte dump
+
+Van een klant op coach v0.197.0, kort na de installatie (4 november 2026): een Easee Charge Max in de goedkope uren,
+zonder auto. Geanonimiseerd (geen device-id, unique_id of context) in
+`tests/js/vaste-invoer/coach-0.197.0-laadpaal.json`, met drie proeven erop:
+
+- `velden: ["modus", "pauze"]`, en `modus_bron: ""`;
+- daaruit volgt dat Schema, Klaar om en Laden tot wegvallen;
+- `modus_actief` blijft `planning`, met de keuzes `snel`, `continu` en `zon` (REGRESSIEWACHT).
+
+Daar staan ook `target_percent: null` en zeven dagen met `klaar_om: "14:51"`, terwijl `schema_aan` en `per_dag` uit
+staan. Die klaar-tijd kwam zonder deze ronde dus op de kaart, terwijl hij niet gold.
+
 ## Gemeten
 
-**De proeven.** `tests/js/laadpaal-velden-van-de-coach.test.mjs`: 5 nieuw (4 NIEUW GEDRAG, 1 REGRESSIEWACHT). Op 0.107.0
-falen ze alle 5.
+**De proeven.** `tests/js/laadpaal-velden-van-de-coach.test.mjs`: 8 nieuw (6 NIEUW GEDRAG, 2 REGRESSIEWACHT), waarvan 3 op de echte
+dump. Op 0.107.0 falen er 7; de REGRESSIEWACHT op de modus slaagt daar ook, zoals bedoeld.
 
 | | |
 |---|---|
@@ -40,10 +53,8 @@ oude. De bundel in de pagina (`171a9168a8f0`) was gelijk aan die op schijf, en e
 
 ## Wat niet lukte
 
-- **Er is nog geen echte dump van coach v0.197.0.** De vorm komt uit de bron van de coach (`sensor.py` en `entiteit.py`
-  op `origin/main`, v0.197.0). De afspraak is dat er niets uitgaat dat een attribuut leest dat nog niet in een echte dump
-  stond. Deze PR wacht daarom op de dump van een klant. Die komt als vaste invoer in `tests/js/vaste-invoer/`, met een
-  proef erop.
+- `modus_bron: "app"` is nog niet in het echt gezien. Het staat in de bron van de coach (`sensor.py`, v0.197.0) en is
+  in de testinstance gemeten.
 - "Nu laden" vooraan als de coach wacht, met wanneer hij anders begint, staat ook in de werkbon. Het is hier niet
   gebouwd: Snel staat er al, en een knop die van naam wisselt is een eigen ronde.
 
