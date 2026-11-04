@@ -56,6 +56,7 @@ export const COACH = {
   "Laadpaal": "Charger",
   "verwacht klaar <b>{klok}</b>": "expected done <b>{klok}</b>",
   "nog <b>{kwh} kWh</b>": "<b>{kwh} kWh</b> to go",
+  "{modus} uit de app van de paal": "{modus} from the charger's app",
   "{wat}: geldt tot de kabel eruit gaat.": "{wat}: applies until the cable is unplugged.",
   "Weekschema, te wijzigen in DomotiApp Coach": "Weekly schedule, change it in DomotiApp Coach",
   "Automatisch (merk en model van de paal)": "Automatic (make and model of the charger)",

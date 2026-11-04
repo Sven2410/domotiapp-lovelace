@@ -118,6 +118,15 @@ export function zonderVolleVelden(config) {
   return rest;
 }
 
+/**
+ * Wat de coach zegt dat bij deze paal te zetten is (coach v0.197.0, `velden`). Met Zonder accustand in de goedkope uren
+ * (`goedkoop_blok`) is dat alleen de modus en de pauze, en dan vallen Schema, Klaar om en Laden tot vanzelf weg, ook met
+ * het vinkje aan. Een coach zonder `velden` (van daarvoor): alles.
+ */
+const COACH_VELD = { schema: "schema", klaar_om: "klaar_tijd", laden_tot: "doel" };
+
+export const veldVanCoach = (stand, sleutel) => !Array.isArray(stand?.velden) || stand.velden.includes(COACH_VELD[sleutel]);
+
 const LEEG = new Set(["", "unknown", "unavailable"]);
 
 /** Een tijdstip met zone als `Date`, of null. */
@@ -180,6 +189,9 @@ export function laadpaalStand(st) {
     modusKeuzes: Array.isArray(a.modus_keuzes) ? a.modus_keuzes : null,
     planningNu: a.planning_nu === true,
     modusBeurt: a.modus_beurt === true,
+    // "app" als Snel uit de app van de paal kwam (coach v0.197.0), anders leeg.
+    modusBron: String(a.modus_bron ?? ""),
+    velden: Array.isArray(a.velden) ? a.velden : null,
     pauze: a.pauze === true,
     // Zonder auto rekent de coach toch door: wat er zou gebeuren als er nu een
     // auto aan ging, met de laatst bekende accustand. In de echte dump van

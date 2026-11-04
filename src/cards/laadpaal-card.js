@@ -74,6 +74,7 @@ import {
   vermogenTekst,
   weekSchema,
   veldOpKaart,
+  veldVanCoach,
   zonderVolleKnoppen,
   zonderVolleVelden,
 } from "./laadpaal-logica.js";
@@ -760,6 +761,11 @@ class LaadpaalCard extends DacCard {
     this.text(".vraag .uitleg", veld.uitleg);
   }
 
+  /** Staat dit veld op de kaart: aangevinkt, en volgens de coach te zetten. */
+  toon_(s, sleutel) {
+    return veldOpKaart(this.config, sleutel) && veldVanCoach(s, sleutel);
+  }
+
   paintBediening_(r, s) {
     // ----- modus
     const modusSt = stateOf(this.hass, r.modus);
@@ -789,7 +795,7 @@ class LaadpaalCard extends DacCard {
     const rEl = this.$(".modusregel");
     rEl.hidden = !regel;
     const rHtml = regel
-      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd && veldOpKaart(this.config, "klaar_om") ? ` · ${t("klaar om {tijd}", { tijd: escapeHtml(regel.tijd) })}` : ""}</span>`
+      ? `${resolve(regel.icoon)}<span class="wat"><b>${escapeHtml(regel.woord)}</b>${regel.tijd && this.toon_(s, "klaar_om") ? ` · ${t("klaar om {tijd}", { tijd: escapeHtml(regel.tijd) })}` : ""}</span>`
       : "";
     if (rEl.dataset.html !== rHtml) {
       rEl.dataset.html = rHtml;
@@ -808,14 +814,16 @@ class LaadpaalCard extends DacCard {
     };
     // Uitgevinkt en toch gepauzeerd: dat zeggen de stand en de zin eronder.
     const metPauze = schakel("pauze", knopOpKaart(keuze, "pauze") ? r.pauze : null);
-    const metSchema = schakel("schema", veldOpKaart(this.config, "schema") ? r.schema : null);
+    const metSchema = schakel("schema", this.toon_(s, "schema") ? r.schema : null);
     this.$(".schakels").hidden = !metPauze && !metSchema;
 
     // Wat er per beurt geldt, in één zin onder de knoppen.
     const perBeurt = [];
     if (s?.pauze) perBeurt.push(t("pauze"));
     else if (s?.modusBeurt && (s.modusActief ?? s.modus) && (s.modusActief ?? s.modus) !== "planning")
-      perBeurt.push(modusWoord(s.modusActief ?? s.modus));
+      perBeurt.push(
+        s.modusBron === "app" ? t("{modus} uit de app van de paal", { modus: modusWoord(s.modusActief ?? s.modus) }) : modusWoord(s.modusActief ?? s.modus)
+      );
     if (s?.doelBeurt && s.doel != null) perBeurt.push(t("laden tot {pct}%", { pct: Math.round(s.doel) }));
     const noot = perBeurt.length
       ? t("{wat}: geldt tot de kabel eruit gaat.", { wat: perBeurt.join(` ${t("en")} `).replace(/^./, (x) => x.toUpperCase()) })
@@ -825,7 +833,7 @@ class LaadpaalCard extends DacCard {
 
     // ----- klaar om, laden tot, of de week
     const klaarSt = stateOf(this.hass, r.klaar_om);
-    const klaarOpKaart = veldOpKaart(this.config, "klaar_om");
+    const klaarOpKaart = this.toon_(s, "klaar_om");
     const metKlaar = klaarOpKaart && Boolean(klaarSt) && klaarSt.state !== "unavailable" && !s?.perDag;
     this.$(".veld.klaar").hidden = !metKlaar;
     const tijd = this.$(".tijd");
@@ -835,7 +843,7 @@ class LaadpaalCard extends DacCard {
     }
 
     const totSt = stateOf(this.hass, r.laden_tot);
-    const metTot = veldOpKaart(this.config, "laden_tot") && Boolean(totSt) && totSt.state !== "unavailable";
+    const metTot = this.toon_(s, "laden_tot") && Boolean(totSt) && totSt.state !== "unavailable";
     this.$(".veld.tot").hidden = !metTot;
     if (metTot) {
       const v = this.pending_ ?? Number(totSt.state);
