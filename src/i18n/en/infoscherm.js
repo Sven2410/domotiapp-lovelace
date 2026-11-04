@@ -99,6 +99,7 @@ export const INFOSCHERM = {
 
   // Weer
   "{pct}% vochtig": "{pct}% humidity",
+  "bijgewerkt {wanneer}": "updated {wanneer}",
 
   // Energie
   "Bezig met ophalen…": "Fetching…",

@@ -60,10 +60,12 @@ import {
   bestandUrl,
   boekRuimte,
   haalStand,
+  haalWeerLaatst,
   nogNietGereed,
   zetAanwezig,
 } from "../infoscherm-client.js";
 import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
+import { naarWand, vanWand } from "../wandklok.js";
 import { afvalKomend, afvalLijst, afvalWanneer } from "./infoscherm-afval.js";
 import { eersteOphaaldag } from "./afval-logica.js";
 import { opsomming } from "./meldingen-logica.js";
@@ -1086,6 +1088,9 @@ export class InfoschermCard extends DacCard {
     this.pagina_ = "welkom";
     this.uren_ = [];
     this.dagen_ = [];
+    // Het weer dat de server het laatst zag, als de weerentiteit wegvalt; en wanneer we het vroegen.
+    this.weerLaatst_ = null;
+    this.weerLaatstGevraagd_ = 0;
     this.afspraken_ = [];
     this.herkansing_ = new Herkansing(() => this.haal_());
     // Een eigen herkansing voor het energiedashboard: `energy/get_prefs` en de
@@ -1496,7 +1501,7 @@ export class InfoschermCard extends DacCard {
    */
   abonneerRuimtes_() {
     const ruimtes = this.installatie_().ruimtes.map((r) => r.entity);
-    const nu = new Date();
+    const nu = this.nu_();
     const dag = isoDatum(nu);
     const nieuweDag = dag !== this.ruimteDag_;
     this.ruimteDag_ = dag;
@@ -1512,10 +1517,10 @@ export class InfoschermCard extends DacCard {
     const tot = plusDagen(van, DAGEN_VOORUIT);
     for (const entity of ruimtes) {
       if (this.ruimteAbos_.has(entity)) continue;
-      const abo = new AgendaAbonnement(entity, van, tot, (events) => {
+      const abo = new AgendaAbonnement(entity, this.echt_(van), this.echt_(tot), (events) => {
         if (this.ruimteAbos_.get(entity) !== abo) return;
         // Kon de agenda niet gelezen worden, dan houden we wat er stond.
-        if (events) this.ruimteAfspraken_.set(entity, afsprakenUit(events));
+        if (events) this.ruimteAfspraken_.set(entity, afsprakenUit(events, this.hass?.config?.time_zone));
         this.paintRaster_();
         this.paintPagina_("ruimtes");
         if (this.boek_?.ruimte === entity && !this.boek_.bezig && !this.boek_.klaar) this.paintBoek_();
@@ -1538,7 +1543,7 @@ export class InfoschermCard extends DacCard {
       return;
     }
     this.agendaSleutel_ = agendas.join(",");
-    const nu = new Date();
+    const nu = this.nu_();
     const start = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
     const eind = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 1);
     try {
@@ -1546,7 +1551,7 @@ export class InfoschermCard extends DacCard {
         type: "call_service",
         domain: "calendar",
         service: "get_events",
-        service_data: { entity_id: agendas, start_date_time: start.toISOString(), end_date_time: eind.toISOString() },
+        service_data: { entity_id: agendas, start_date_time: this.echt_(start).toISOString(), end_date_time: this.echt_(eind).toISOString() },
         return_response: true,
       });
       const antwoord = r?.response ?? {};
@@ -1578,7 +1583,7 @@ export class InfoschermCard extends DacCard {
     const eind = new Date();
     // Vanaf een uur vóór middernacht: de laatste meting van gisteren is de
     // waarde waarmee de lijn om 00:00 begint.
-    const start = new Date(dagVenster(eind.getTime()).van - 3600000);
+    const start = new Date(this.dagVenster_().van - 3600000);
     try {
       const r = await this.hass.connection.sendMessagePromise({
         type: "history/history_during_period",
@@ -1678,7 +1683,7 @@ export class InfoschermCard extends DacCard {
 
     const d = this.dash_;
     const ids = statistiekIds(d.bronnen);
-    const v = energieVenster(d.periode, d.offset);
+    const v = energieVenster(d.periode, d.offset, this.nu_());
     const sleutel = `${d.periode}|${d.offset}|${ids.join(",")}`;
     if (!forceer && sleutel === d.sleutel && d.gehaald) return;
     if (d.bezig) return;
@@ -1687,8 +1692,8 @@ export class InfoschermCard extends DacCard {
     try {
       const r = await this.hass.connection.sendMessagePromise({
         type: "recorder/statistics_during_period",
-        start_time: v.van.toISOString(),
-        end_time: v.tot.toISOString(),
+        start_time: this.echt_(v.van).toISOString(),
+        end_time: this.echt_(v.tot).toISOString(),
         statistic_ids: ids,
         period: v.periode,
         types: ["change"],
@@ -1696,7 +1701,9 @@ export class InfoschermCard extends DacCard {
       // Tussen vragen en antwoorden kan er op een andere knop getikt zijn.
       const nogSteeds = `${this.dash_.periode}|${this.dash_.offset}|${statistiekIds(this.dash_.bronnen).join(",")}`;
       if (nogSteeds !== sleutel) return;
-      d.stats = r ?? {};
+      d.stats = Object.fromEntries(
+        Object.entries(r ?? {}).map(([id, rijen]) => [id, (rijen ?? []).map((rij) => ({ ...rij, start: this.wand_(rij.start).getTime() }))])
+      );
       d.sleutel = sleutel;
       d.gehaald = Date.now();
       d.fout = null;
@@ -1732,7 +1739,7 @@ export class InfoschermCard extends DacCard {
    */
   htmlDashboard_() {
     const d = this.dash_;
-    const v = energieVenster(d.periode, d.offset);
+    const v = energieVenster(d.periode, d.offset, this.nu_());
     const sam = energieSam(d.bronnen, d.stats);
     const rijen = staven(d.bronnen, d.stats, v);
     const geld = energieKosten(d.bronnen, d.stats, d.prijzen);
@@ -1819,7 +1826,7 @@ export class InfoschermCard extends DacCard {
         </div>
         <div class="ed-stap">
           <button type="button" data-stap="-1" aria-label="${t("Vorige periode")}">${resolve("chevronLeft")}</button>
-          <span class="ed-wanneer">${escapeHtml(vensterNaam(d.periode, d.offset))}</span>
+          <span class="ed-wanneer">${escapeHtml(vensterNaam(d.periode, d.offset, this.nu_()))}</span>
           <button type="button" data-stap="1" aria-label="${t("Volgende periode")}"${d.offset >= 0 ? " disabled" : ""}>${resolve("chevronRight")}</button>
         </div>
       </div>
@@ -1907,7 +1914,7 @@ export class InfoschermCard extends DacCard {
     const eenheid = a.unit_of_measurement ?? "W";
     const teller = isTellerstand(a);
     const nu = Date.now();
-    const dag = dagVenster(nu);
+    const dag = this.dagVenster_();
     const reeks = energieReeks(this.energie_.punten, { nu, tellerstand: teller, van: dag.van, tot: dag.tot });
     const sam = energieSamenvatting(reeks);
     // De pagina tekent elke meting; het blok een vloeiende lijn door het
@@ -1924,7 +1931,7 @@ export class InfoschermCard extends DacCard {
     const stipLinks = laatste ? ((laatste.t - reeks.van) / (reeks.tot - reeks.van)) * 100 : 100;
     const ticks = (n) => {
       const uit = [];
-      for (let i = 0; i < n; i += 1) uit.push(klok(new Date(reeks.van + ((reeks.tot - reeks.van) * i) / (n - 1))));
+      for (let i = 0; i < n; i += 1) uit.push(klok(this.wand_(reeks.van + ((reeks.tot - reeks.van) * i) / (n - 1))));
       // Het eind van de as is de volgende middernacht, en die heet op een
       // klok 00:00. Onder een grafiek van één dag leest 24:00 als het eind.
       uit[n - 1] = "24:00";
@@ -1982,7 +1989,7 @@ export class InfoschermCard extends DacCard {
   }
 
   gaNaar_(pagina) {
-    const beschikbaar = paginas(this.standNu_(), this.feeds_, isoDatumTijd(new Date()));
+    const beschikbaar = paginas(this.standNu_(), this.feeds_, isoDatumTijd(this.nu_()));
     this.pagina_ = beschikbaar.includes(pagina) ? pagina : "welkom";
     this.paintPaginas_();
     this.paintPagina_(this.pagina_);
@@ -2291,7 +2298,7 @@ export class InfoschermCard extends DacCard {
     const laag = this.$(".detail");
     this.text(".d-bron", item.bron ?? "");
     this.text(".d-titel", item.titel);
-    this.text(".d-datum", relatieveTijd(item.datum, new Date()));
+    this.text(".d-datum", relatieveTijd(item.datum && this.wand_(item.datum), this.nu_()));
     this.text(".d-tekst", item.tekst || "");
     const foto = this.$(".d-foto");
     foto.replaceChildren();
@@ -2399,7 +2406,7 @@ export class InfoschermCard extends DacCard {
   }
 
   paintKlok_() {
-    const nu = new Date();
+    const nu = this.nu_();
     for (const el of this.$$(".klok")) this.text(el, klok(nu));
     for (const el of this.$$(".datum")) this.text(el, datumLang(nu));
   }
@@ -2409,7 +2416,7 @@ export class InfoschermCard extends DacCard {
     const raster = this.$(".raster");
     if (!raster || !this.stand_) return;
     const indeling = this.stand_.indeling?.blokken?.length ? this.stand_.indeling : standaardIndeling();
-    const nu = isoDatumTijd(new Date());
+    const nu = isoDatumTijd(this.nu_());
     const stand = this.standNu_();
     const wens = new Map();
     for (const blok of indeling.blokken) {
@@ -2638,7 +2645,7 @@ export class InfoschermCard extends DacCard {
         break;
       }
       case "mededeling": {
-        const lijst = actieveMededelingen(this.stand_?.mededelingen, isoDatumTijd(new Date()));
+        const lijst = actieveMededelingen(this.stand_?.mededelingen, isoDatumTijd(this.nu_()));
         if (!lijst.length) {
           clearInterval(this.mTimer_);
           zet(`<div class="leeg">${t("Er zijn op dit moment geen mededelingen.")}</div>`, "");
@@ -2662,7 +2669,7 @@ export class InfoschermCard extends DacCard {
       }
       case "openingstijden": {
         const p = this.stand_?.praktijk ?? {};
-        const nu = new Date();
+        const nu = this.nu_();
         const regels = openingsRegels(p, nu);
         // Twee kolommen als het blok breed is en laag: maandag t/m donderdag
         // links, de rest rechts. Het raster vult van links naar rechts, dus
@@ -2691,7 +2698,7 @@ export class InfoschermCard extends DacCard {
         break;
       }
       case "verjaardagen": {
-        const lijst = komendeVerjaardagen(this.stand_?.verjaardagen, new Date());
+        const lijst = komendeVerjaardagen(this.stand_?.verjaardagen, this.nu_());
         const tonen = aantal > 0 ? lijst.slice(0, aantal) : lijst;
         el.dataset.meer = String(lijst.length - tonen.length);
         const jarig = lijst.filter((v) => v.dagen === 0).length;
@@ -2748,7 +2755,7 @@ export class InfoschermCard extends DacCard {
         const ruimtes = this.installatie_().ruimtes;
         const tonen = aantal > 0 ? ruimtes.slice(0, aantal) : ruimtes;
         el.dataset.meer = String(ruimtes.length - tonen.length);
-        const nu = new Date();
+        const nu = this.nu_();
         const statussen = ruimtes
           .filter((r) => this.ruimteAfspraken_.has(r.entity))
           .map((r) => ruimteStatus(this.ruimteAfspraken_.get(r.entity), nu));
@@ -2812,6 +2819,7 @@ export class InfoschermCard extends DacCard {
       ids,
       (id) => stateOf(this.hass, id),
       (id) => attrsOf(this.hass, id).friendly_name ?? id,
+      this.nu_()
     );
   }
 
@@ -2850,7 +2858,7 @@ export class InfoschermCard extends DacCard {
     // Rechts staat "morgen"; links hoort dan de DATUM te staan en niet nog een
     // keer hetzelfde woord. Bij een bak die verder weg is zegt relativeDay al
     // een dag met een datum, en dan is dat precies goed.
-    const regel = dagen <= 1 && rij.datum ? shortDate(rij.datum) : afvalWanneer(rij);
+    const regel = dagen <= 1 && rij.datum ? shortDate(rij.datum) : afvalWanneer(rij, this.nu_());
     const vlak = rijen.length > 1 ? "var(--dac-ink-3)" : this.afvalKleur_(rij.naam);
     const iconen = rijen
       .map((r) => `<span class="af-ico" style="--bak:${this.afvalKleur_(r.naam)}">${resolve("bin")}</span>`)
@@ -2871,11 +2879,33 @@ export class InfoschermCard extends DacCard {
     return `<div class="af-rij" data-stil="${ver}" style="--bak:${this.afvalKleur_(rij.naam)}">
       <i></i>
       <span class="af-n">${escapeHtml(rij.naam)}</span>
-      <span class="af-w">${escapeHtml(afvalWanneer(rij))}${voluit && rij.dagen > 1 ? ` · ${t("over {n} dagen", { n: rij.dagen })}` : ""}</span>
+      <span class="af-w">${escapeHtml(afvalWanneer(rij, this.nu_()))}${voluit && rij.dagen > 1 ? ` · ${t("over {n} dagen", { n: rij.dagen })}` : ""}</span>
     </div>`;
   }
 
   /* ------------------------------------------------------------ stukjes html */
+
+  /*
+   * De klok van Home Assistant, niet die van het toestel (sinds 0.105.0; zie src/wandklok.js). Elk "nu" in deze kaart is een
+   * wandtijd. Een tijdstip met tijdzone gaat erin met wand_, en wat naar Home Assistant gaat eruit met echt_.
+   */
+  nu_() {
+    return naarWand(new Date(), this.hass?.config?.time_zone);
+  }
+
+  wand_(tijdstip) {
+    return naarWand(new Date(tijdstip), this.hass?.config?.time_zone);
+  }
+
+  echt_(wand) {
+    return vanWand(wand, this.hass?.config?.time_zone);
+  }
+
+  /** Vandaag van middernacht tot middernacht in de tijd van Home Assistant, als echte tijdstippen (ms). */
+  dagVenster_() {
+    const w = dagVenster(this.nu_().getTime());
+    return { van: this.echt_(new Date(w.van)).getTime(), tot: this.echt_(new Date(w.tot)).getTime() };
+  }
 
   nacht_() {
     return stateOf(this.hass, "sun.sun")?.state === "below_horizon";
@@ -2897,15 +2927,47 @@ export class InfoschermCard extends DacCard {
     </div>`;
   }
 
-  htmlWeerNu_() {
+  /**
+   * Het laatst bekende weer als de weerentiteit nu niets zegt, of null. Ontbreekt het nog, dan vragen we het de server,
+   * hooguit eens per halve minuut: deze functie draait bij elke keer tekenen.
+   */
+  weerTerugval_() {
     const entiteit = this.installatie_().weer;
     const st = stateOf(this.hass, entiteit);
-    const a = attrsOf(this.hass, entiteit);
+    if (st && st.state !== "unavailable" && st.state !== "unknown") {
+      this.weerLaatst_ = null;
+      return null;
+    }
+    if (this.weerLaatst_?.entiteit === entiteit) return this.weerLaatst_;
+    if (entiteit && this.hass?.connection && Date.now() - this.weerLaatstGevraagd_ > 30000) {
+      this.weerLaatstGevraagd_ = Date.now();
+      haalWeerLaatst(this.hass)
+        .then((r) => {
+          this.weerLaatst_ = r?.laatst ?? null;
+          if (this.weerLaatst_) {
+            this.paintRaster_();
+            this.paintPagina_("weer");
+          }
+        })
+        .catch(() => {
+          // Na een herstart kent Home Assistant het commando even niet; de volgende keer tekenen vraagt het opnieuw.
+        });
+    }
+    return null;
+  }
+
+  htmlWeerNu_() {
+    const entiteit = this.installatie_().weer;
+    const laatst = this.weerTerugval_();
+    // Valt de weerentiteit weg, dan het weer dat de server het laatst zag, met wanneer dat was.
+    const st = laatst ? { entity_id: entiteit, state: laatst.nu.state, attributes: laatst.nu } : stateOf(this.hass, entiteit);
+    const a = laatst ? laatst.nu : attrsOf(this.hass, entiteit);
     const temp = a.temperature;
     const delen = [];
     if (st) delen.push(WEER_NAAM[st.state] ? t(WEER_NAAM[st.state]) : localizeState(this.hass, st));
     if (typeof a.humidity === "number") delen.push(t("{pct}% vochtig", { pct: Math.round(a.humidity) }));
     if (typeof a.wind_speed === "number") delen.push(`${t("wind")} ${fmtNumber(this.hass, a.wind_speed, 0)} ${a.wind_speed_unit ?? "km/h"}`);
+    if (laatst) delen.push(t("bijgewerkt {wanneer}", { wanneer: relatieveTijd(this.wand_(laatst.tijd), this.nu_()) }));
     return `<div class="w-nu"><div class="w-icoon">${weerAnimatie(st?.state, this.nacht_())}</div><div><div class="temp">${
       typeof temp === "number" ? `${fmtNumber(this.hass, temp, 0)}°` : "--°"
     }</div><div class="w-tekst">${escapeHtml(delen.join(" · "))}</div></div></div>`;
@@ -2913,11 +2975,12 @@ export class InfoschermCard extends DacCard {
 
   htmlUren_(n) {
     const nu = Date.now();
-    const komende = this.uren_.filter((f) => new Date(f.datetime).getTime() > nu - 30 * 60000).slice(0, n);
+    const uren = this.uren_.length ? this.uren_ : (this.weerTerugval_()?.uren ?? []);
+    const komende = uren.filter((f) => new Date(f.datetime).getTime() > nu - 30 * 60000).slice(0, n);
     if (!komende.length) return "";
     return `<div class="uren" style="grid-template-columns: repeat(${komende.length}, minmax(0, 1fr))">${komende
       .map((f) => {
-        const tijd = new Date(f.datetime);
+        const tijd = this.wand_(f.datetime);
         return `<div class="uur"><span class="u">${klok(tijd)}</span>${weerAnimatie(f.condition, tijd.getHours() < 7 || tijd.getHours() >= 21)}<span class="t">${
           typeof f.temperature === "number" ? `${Math.round(f.temperature)}°` : "--"
         }</span></div>`;
@@ -2926,12 +2989,12 @@ export class InfoschermCard extends DacCard {
   }
 
   htmlDagen_() {
-    const nu = new Date();
-    const dagen = this.dagen_.slice(0, 7);
+    const nu = this.nu_();
+    const dagen = (this.dagen_.length ? this.dagen_ : (this.weerTerugval_()?.dagen ?? [])).slice(0, 7);
     if (!dagen.length) return "";
     return `<div class="dagen">${dagen
       .map((f) => {
-        const d = new Date(f.datetime);
+        const d = this.wand_(f.datetime);
         return `<div class="dag"><span class="u">${escapeHtml(dagKort(d, nu))}</span>${weerAnimatie(f.condition)}<span class="t">${
           typeof f.temperature === "number" ? `${Math.round(f.temperature)}°` : "--"
         }</span>${typeof f.templow === "number" ? `<span class="t2">${Math.round(f.templow)}°</span>` : ""}</div>`;
@@ -2955,7 +3018,7 @@ export class InfoschermCard extends DacCard {
     return `<div class="bericht" role="button" tabindex="0" data-id="${escapeHtml(n.id)}">
       <div class="foto"></div>
       <div class="b-tekst">
-        <div class="b-bron">${escapeHtml(bron)}${n.datum ? ` · ${escapeHtml(relatieveTijd(n.datum, new Date()))}` : ""}</div>
+        <div class="b-bron">${escapeHtml(bron)}${n.datum ? ` · ${escapeHtml(relatieveTijd(this.wand_(n.datum), this.nu_()))}` : ""}</div>
         <div class="b-titel">${escapeHtml(n.titel)}</div>
         ${groot && n.tekst ? `<div class="b-samenvatting">${escapeHtml(n.tekst)}</div>` : ""}
       </div>
@@ -3100,7 +3163,7 @@ export class InfoschermCard extends DacCard {
 
   htmlAfspraak_(ev) {
     const heleDag = !String(ev.start).includes("T");
-    const tijd = heleDag ? t("hele dag") : `${klok(new Date(ev.start))}${ev.end ? ` – ${klok(new Date(ev.end))}` : ""}`;
+    const tijd = heleDag ? t("hele dag") : `${klok(this.wand_(ev.start))}${ev.end ? ` – ${klok(this.wand_(ev.end))}` : ""}`;
     const naam = attrsOf(this.hass, ev.kalender).friendly_name ?? ev.kalender;
     const meerdere = this.installatie_().agendas.length > 1;
     return `<div class="afspraak"><span class="a-tijd">${escapeHtml(tijd)}</span><span class="a-tekst">${escapeHtml(ev.summary ?? "")}</span>${
@@ -3208,7 +3271,7 @@ export class InfoschermCard extends DacCard {
   openBoek_(entity) {
     if (!this.stand_?.boeken_op_scherm) return;
     clearTimeout(this.boekTimer_);
-    const nu = new Date();
+    const nu = this.nu_();
     const afspraken = this.ruimteAfspraken_.get(entity) ?? [];
     const eerste = eersteKeuze(afspraken, beginKeuzes(nu));
     this.boek_ = {
@@ -3235,7 +3298,7 @@ export class InfoschermCard extends DacCard {
    * De dagen en de begintijden van het boekscherm, voor de dag die gekozen is.
    * Is die dag voorbij (het scherm stond over middernacht open), dan vandaag.
    */
-  boekKeuzes_(nu = new Date()) {
+  boekKeuzes_(nu = this.nu_()) {
     const b = this.boek_;
     const dagen = boekDagen(nu);
     let d = dagen.findIndex((x) => x.waarde === b.dag);
@@ -3263,7 +3326,7 @@ export class InfoschermCard extends DacCard {
     b.fout = "";
     const afspraken = this.ruimteAfspraken_.get(b.ruimte) ?? [];
     if (actie === "dag-eerder" || actie === "dag-later") {
-      const nu = new Date();
+      const nu = this.nu_();
       const { dagen, d } = this.boekKeuzes_(nu);
       const j = Math.min(dagen.length - 1, Math.max(0, d + (actie === "dag-later" ? 1 : -1)));
       if (j !== d) {
@@ -3305,7 +3368,7 @@ export class InfoschermCard extends DacCard {
       await boekRuimte(this.hass, { ruimte: b.ruimte, start: lokaal(begin), eind: lokaal(eind), code: b.code });
       if (this.boek_ !== b) return;
       b.bezig = false;
-      b.klaar = geboektTekst(begin, eind, new Date());
+      b.klaar = geboektTekst(begin, eind, this.nu_());
       this.paintBoek_();
       this.boekTimer_ = setTimeout(() => this.sluitBoek_(), 4000);
     } catch (fout) {
@@ -3323,7 +3386,7 @@ export class InfoschermCard extends DacCard {
     const b = this.boek_;
     if (!laag || !b) return;
     const r = this.installatie_().ruimtes.find((x) => x.entity === b.ruimte) ?? { entity: b.ruimte, naam: "" };
-    const nu = new Date();
+    const nu = this.nu_();
     const { naam, tekst } = this.ruimteNu_(r, nu);
     const sluit = `<button class="sluit" type="button" data-b="sluit">${ICOON.back}<span>${b.klaar ? t("Klaar") : t("Annuleren")}</span></button>`;
     if (b.klaar) {
@@ -3395,7 +3458,7 @@ export class InfoschermCard extends DacCard {
   /* ------------------------------------------------------------ de pagina's */
 
   paintPaginas_() {
-    const lijst = paginas(this.standNu_(), this.feeds_, isoDatumTijd(new Date()));
+    const lijst = paginas(this.standNu_(), this.feeds_, isoDatumTijd(this.nu_()));
     if (!lijst.includes(this.pagina_)) this.pagina_ = "welkom";
     for (const sec of this.$$(".pagina")) sec.classList.toggle("actief", sec.dataset.p === this.pagina_);
   }
@@ -3461,7 +3524,7 @@ export class InfoschermCard extends DacCard {
         break;
       }
       case "verjaardagen": {
-        const lijst = komendeVerjaardagen(this.stand_?.verjaardagen, new Date());
+        const lijst = komendeVerjaardagen(this.stand_?.verjaardagen, this.nu_());
         this.vul_(vak, lijst.length ? `<div class="vj-raster">${lijst.map((v) => this.htmlVerjaardag_(v)).join("")}</div>` : `<div class="leeg">${t("Geen verjaardagen.")}</div>`, false);
         break;
       }
@@ -3470,7 +3533,7 @@ export class InfoschermCard extends DacCard {
         // uitgeschreven; daaronder wat er klaarstaat. Gevraagd op
         // 10 september 2026: "een ander tabblad waar alle meldingen op staan,
         // overzichtelijk."
-        const nu = isoDatumTijd(new Date());
+        const nu = isoDatumTijd(this.nu_());
         const actief = actieveMededelingen(this.stand_?.mededelingen, nu);
         const komend = komendeMededelingen(this.stand_?.mededelingen, nu);
         const item = (m) => `<div class="m-item">${
@@ -3490,7 +3553,7 @@ export class InfoschermCard extends DacCard {
         this.vul_(vak, this.htmlWifi_(true), false);
         break;
       case "ruimtes": {
-        const nu = new Date();
+        const nu = this.nu_();
         const boeken = Boolean(this.stand_?.boeken_op_scherm);
         this.text(
           ".pagina[data-p='ruimtes'] .onder",
