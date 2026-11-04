@@ -29,10 +29,13 @@ DAGEN = [{"datetime": f"2026-11-{d:02d}T11:00:00+00:00", "condition": "rainy", "
 
 @pytest.fixture
 def met(hass: HomeAssistant) -> MockConfigEntry:
-    """Een weerintegratie met zijn entiteit, en een nagebootste `weather.get_forecasts`."""
-    entry = MockConfigEntry(domain="met", title="Home", state=ConfigEntryState.LOADED)
+    """Een weerintegratie met zijn entiteit, en een nagebootste `weather.get_forecasts`.
+
+    Een domein dat niet bestaat: met `met` laadt Home Assistant bij het afsluiten de echte, en in CI ontbreekt `metno`.
+    """
+    entry = MockConfigEntry(domain="nep_weer", title="Home", state=ConfigEntryState.LOADED)
     entry.add_to_hass(hass)
-    er.async_get(hass).async_get_or_create("weather", "met", "home", config_entry=entry, suggested_object_id="forecast_home")
+    er.async_get(hass).async_get_or_create("weather", "nep_weer", "home", config_entry=entry, suggested_object_id="forecast_home")
 
     async def voorspel(call: ServiceCall) -> dict[str, Any]:
         return {call.data["entity_id"]: {"forecast": UREN if call.data["type"] == "hourly" else DAGEN}}
@@ -112,7 +115,7 @@ async def test_herladen_na_tien_minuten_en_hooguit_eens_per_uur(hass: HomeAssist
         assert herlaad.await_count == 0
         await _minuten(hass, freezer, 2)
         assert [c.args for c in herlaad.await_args_list] == [(met.entry_id,)]
-        assert "is al 10 minuten niet beschikbaar: integratie Home (met) wordt herladen" in caplog.text
+        assert "is al 10 minuten niet beschikbaar: integratie Home (nep_weer) wordt herladen" in caplog.text
         # Blijft hij weg, dan pas na een uur opnieuw.
         await _minuten(hass, freezer, 55)
         assert herlaad.await_count == 1
@@ -147,9 +150,9 @@ async def test_niet_herladen_als_home_assistant_al_opnieuw_probeert(hass: HomeAs
 
 async def test_alleen_de_weerintegratie_van_het_infoscherm(hass: HomeAssistant, opgezet, met, freezer) -> None:
     """Een andere entiteit die wegvalt, herlaadt niets: ook niet als hij bij een andere integratie hoort."""
-    ander = MockConfigEntry(domain="zha", title="Zigbee", state=ConfigEntryState.LOADED)
+    ander = MockConfigEntry(domain="nep_zigbee", title="Zigbee", state=ConfigEntryState.LOADED)
     ander.add_to_hass(hass)
-    er.async_get(hass).async_get_or_create("light", "zha", "lamp", config_entry=ander, suggested_object_id="keuken")
+    er.async_get(hass).async_get_or_create("light", "nep_zigbee", "lamp", config_entry=ander, suggested_object_id="keuken")
     with patch.object(hass.config_entries, "async_reload", AsyncMock(return_value=True)) as herlaad:
         hass.states.async_set("light.keuken", "unavailable", {})
         await _minuten(hass, freezer, 15)
