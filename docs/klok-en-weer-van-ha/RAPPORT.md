@@ -82,7 +82,17 @@ kioskaccount), met Playwright headless, in een browser op de tijdzone `Europe/Lo
 
 De opslag stond er binnen een minuut na de start: `weather.forecast_thuis`, 48 uren en 6 dagen.
 
-HERLADEN
+**Het herladen, in de testinstance zelf.** De weerentiteit bleef `unavailable` vanaf 09:42:08. Daarna:
+
+| Tijd | Wat er gebeurde |
+|---|---|
+| 09:53:01.044 | log (WARNING): "Het weer van het infoscherm (weather.forecast_thuis) is al 10 minuten niet beschikbaar: integratie Home (met) wordt herladen" |
+| 09:53:01.166 | `weather.forecast_thuis` weer `partlycloudy`, 5,3° |
+
+Dat is 10 minuten en 53 seconden: tien minuten, plus de minuut waarin de server kijkt. Verder werd niets herladen.
+
+**CI** viel eerst om op de weerproeven. Een nagebootste integratie heette `met`, en bij het afsluiten van de proef laadt Home
+Assistant dan de echte, waarvoor in CI `metno` ontbreekt. Lokaal stond die er toevallig wel. Nu heet hij `nep_weer`.
 
 ## Wat niet lukte
 
