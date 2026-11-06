@@ -2198,7 +2198,7 @@ class CameraEditor extends DacEditor {
       snapshot_wachttijd:
         nt("Wacht zoveel seconden na de detectie voordat het beeld genomen wordt. Op nul krijg je het moment zelf; op een of twee seconden staat degene meestal beter in beeld dan met zijn rug ernaartoe. Deze wachttijd verandert niets aan de rustperiode."),
       snapshot_ontvangers:
-        nt("De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje."),
+        nt("De personen die een melding op hun telefoon krijgen, met het beeld erbij. De kaart zoekt zelf de mobiele app van die persoon op. Buitenshuis heeft de telefoon een extern adres nodig (Nabu Casa of een eigen domein) om de foto te laden; zonder dat komt de melding wél aan, maar zonder plaatje. Staat er een meldingenkaart met Camerameldingen, dan kiest ieder die daarop staat het zelf, per camera en waarover; dit is dan wat hij krijgt zolang hij niets koos."),
       snapshot_alleen_afwezig:
         nt("Dan blijft de telefoon stil zolang er iemand thuis is. Het beeld komt nog steeds in de timeline te staan — alleen de melding blijft achterwege. Dit scheelt in de praktijk meer meldingen dan de rustperiode."),
       snapshot_stil:

@@ -11,6 +11,7 @@
  */
 
 import { nt, t } from "../taal.js";
+import { ALLE_SOORTEN } from "./camera-filters.js";
 
 /** Wat een ophaalsensor zegt als er niets is. Zie `GEEN` in afval.py. */
 const GEEN = new Set([
@@ -121,7 +122,7 @@ export function personenUit(config) {
 /**
  * De soorten meldingen, in de volgorde waarin ze in de pop-up staan.
  *
- * Afval, en sinds 0.85.0 de robotstofzuiger. De kaart is sinds 0.50.0 ALGEMEEN: hij toont de personen, en
+ * Afval, sinds 0.85.0 de robotstofzuiger en sinds 0.109.0 de camera. De kaart is sinds 0.50.0 ALGEMEEN: hij toont de personen, en
  * wat iemand kan krijgen staat in de pop-up achter het potlood. Gevraagd op
  * 26 september 2026: *"Nu staat daar alleen afval meldingen dan maar in de
  * toekomst moeten er meerdere dingen bij komen."* Een nieuwe soort is een regel
@@ -131,7 +132,69 @@ export const SOORTEN = [
   { id: "afval", naam: nt("Afvalmeldingen"), icoon: "bin" },
   // Sinds 0.85.0. Wat er gemeld wordt staat in meldingen/stofzuiger.py.
   { id: "stofzuiger", naam: nt("Robotstofzuiger"), icoon: "stofzuiger" },
+  // Sinds 0.109.0: de meldingen van de camerakaart. Wie wat krijgt staat in meldingen/camera.py.
+  { id: "camera", naam: nt("Camerameldingen"), icoon: "cctv" },
 ];
+
+/* ------------------------------------------------------ de camera (0.109.0) */
+
+/**
+ * Wat deze persoon van de camera krijgt: welke camera's en waarover.
+ *
+ * De server rekent het uit en stuurt het mee (`stand.keuzes`), ook voor wie nog
+ * niets koos. De standaard volgt daar de camerakaart: wie daar ontvanger was,
+ * krijgt die camera's (zie de kop van meldingen/camera.py). De kaart kent die
+ * regels niet, en rekent het dus niet zelf na.
+ *
+ * @returns {{cameras: string[], soorten: string[]}}
+ */
+export function cameraKeuze(stand, persoon) {
+  const k = stand?.keuzes?.[persoon] ?? {};
+  const cameras = stand?.cameras ?? [];
+  const soorten = stand?.soorten ?? [];
+  return {
+    cameras: Array.isArray(k.cameras) ? cameras.filter((c) => k.cameras.includes(c)) : [],
+    soorten: Array.isArray(k.soorten) ? soorten.filter((s) => k.soorten.includes(s)) : soorten,
+  };
+}
+
+/**
+ * De nieuwe lijst na een tik op een camera of een soort.
+ *
+ * Camera's altijd als hele lijst: "alles" (`null`) valt op de server terug op
+ * de standaard, en die is niet altijd alles. Soorten mogen wel `null` zijn:
+ * daar is de standaard alles, en een soort die later bij een camera komt, krijgt
+ * wie alles had er dan vanzelf bij.
+ *
+ * @param {"cameras"|"soorten"} groep
+ */
+export function nieuweCameraKeuze(stand, persoon, groep, waarde, aan) {
+  const alle = (groep === "cameras" ? stand?.cameras : stand?.soorten) ?? [];
+  const nu = cameraKeuze(stand, persoon)[groep];
+  const nieuw = alle.filter((x) => (x === waarde ? aan : nu.includes(x)));
+  return groep === "soorten" && nieuw.length === alle.length ? null : nieuw;
+}
+
+/** De naam van een soort melder, zoals op de filterknoppen van de camerakaart. */
+export const cameraSoortNaam = (sleutel) => t(ALLE_SOORTEN.find((s) => s.sleutel === sleutel)?.label ?? sleutel);
+
+/**
+ * De regel onder de camera in de pop-up: waarover, en van welke camera.
+ *
+ * "Mens, voertuig en aanbellen · Oprit en Voordeur". Met `persoon` wat hij krijgt.
+ *
+ * @param {object} p
+ * @param {object} [p.stand] van de server
+ * @param {(id: string) => string} [p.naam] de naam van een camera
+ */
+export function cameraRegel({ stand, persoon, naam = (id) => id } = {}) {
+  if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
+  if (!stand?.cameras?.length) return t("Nog geen camera met snapshots en meldingen");
+  const k = persoon ? cameraKeuze(stand, persoon) : { cameras: stand.cameras, soorten: stand.soorten ?? [] };
+  if (!k.cameras.length || !k.soorten.length) return t("Niets gekozen om te melden");
+  const woorden = k.soorten.map((s, i) => (i ? cameraSoortNaam(s).toLocaleLowerCase() : cameraSoortNaam(s)));
+  return `${opsomming(woorden)} · ${opsomming(k.cameras.map(naam))}`;
+}
 
 /**
  * Waarover de robotstofzuiger meldt, in de volgorde van de editor. Dezelfde

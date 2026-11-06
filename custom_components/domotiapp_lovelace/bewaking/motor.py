@@ -54,6 +54,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
 from homeassistant.util.ulid import ulid_now
 
+from ..const import DOMAIN
 from . import beelden as beeldopslag
 from . import meldingen
 from .const import (
@@ -351,8 +352,25 @@ class Motor:
         _LOGGER.debug("Beeld %s van %s vastgelegd (%d bytes)", beeld_id, regel.camera, len(inhoud))
         return beeld
 
+    @callback
+    def _ontvangers(self, regel, melder: str | None) -> tuple[list[str], dict[str, str]]:
+        """Wie de melding krijgt, en hun telefoons uit de YAML.
+
+        Sinds 0.109.0 kan dat de meldingenkaart beslissen, met per persoon een
+        keuze (`meldingen/camera.py`). Zonder die kaart, of als de meldingen
+        niet geladen zijn, zijn het de ontvangers van de camerakaart.
+        """
+        # Hier en niet bovenaan: de meldingen importeren de bewaking al.
+        from ..meldingen.const import DATA_MOTOR as MELDINGEN_MOTOR  # noqa: PLC0415
+
+        meldingen_motor = self._hass.data.get(DOMAIN, {}).get(MELDINGEN_MOTOR)
+        if meldingen_motor is None:
+            return list(regel.ontvangers), dict(regel.diensten)
+        return meldingen_motor.camera_ontvangers(regel, melder), meldingen_motor.camera_diensten(regel)
+
     async def _async_meld(self, regel, beeld: dict[str, Any]) -> None:
-        if not regel.ontvangers:
+        ontvangers, diensten = self._ontvangers(regel, beeld.get("melder"))
+        if not ontvangers:
             return
         if regel.alleen_afwezig and self._iemand_thuis():
             _LOGGER.debug(
@@ -374,8 +392,8 @@ class Motor:
 
         await meldingen.async_stuur(
             self._hass,
-            ontvangers=regel.ontvangers,
-            diensten=regel.diensten,
+            ontvangers=ontvangers,
+            diensten=diensten,
             titel=camera_naam,
             tekst=beeld["naam"],
             beeld_id=beeld["id"],

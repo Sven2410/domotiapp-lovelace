@@ -203,6 +203,13 @@ async def ws_save(
         motor.async_herzie()
 
     async_meld_aan_abonnees(hass, EVENT_REGELS, {"camera": regel.camera})
+    # Een open meldingenkaart toont de camera's om uit te kiezen (sinds 0.109.0);
+    # die zijn net veranderd. Hier geïmporteerd: de meldingen importeren de
+    # bewaking al.
+    from ..meldingen.const import SOORT_CAMERA  # noqa: PLC0415
+    from ..meldingen.websocket import async_meld_aan_abonnees as meld_meldingen  # noqa: PLC0415
+
+    meld_meldingen(hass, SOORT_CAMERA)
     connection.send_result(msg["id"], {"regel": regel.als_dict()})
 
 

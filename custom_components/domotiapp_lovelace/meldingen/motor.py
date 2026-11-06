@@ -63,8 +63,10 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from ..bewaking import meldingen as telefoons
+from ..bewaking.const import DATA_INDEX as BEWAKING_INDEX, DATA_REGELS as BEWAKING_REGELS
+from ..const import DOMAIN
 from ..taal import t, taal_van
-from . import afval, kaarten, stofzuiger
+from . import afval, camera, kaarten, stofzuiger
 from .const import (
     ACTIE_BUITEN,
     EVENT_ACTIE,
@@ -72,6 +74,7 @@ from .const import (
     MOMENT_VANDAAG,
     MOMENTEN,
     SOORT_AFVAL,
+    SOORT_CAMERA,
     SOORT_STOFZUIGER,
 )
 from .kaarten import Melding
@@ -240,6 +243,10 @@ class Motor:
             if not proef:
                 return {"reden": t(self.hass, "Een stofzuigermelding komt niet op een tijd")}
             return await self.async_proef_stofzuiger(melding, alleen)
+        if melding.soort == SOORT_CAMERA:
+            if not proef:
+                return {"reden": t(self.hass, "Een cameramelding komt niet op een tijd")}
+            return await self.async_proef_camera(melding, alleen)
         if melding.soort != SOORT_AFVAL:
             return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
 
@@ -638,6 +645,83 @@ class Motor:
             oppervlak.state if oppervlak else None, duur.state if duur else None, taal_van(self.hass)
         )
         return await self._stuur_robot(robot, stofzuiger.SOORT_KLAAR, "klaar", tekst, alleen=alleen, proef=True)
+
+
+    # ------------------------------------------------------------- de camera
+
+    @callback
+    def camera_regels(self) -> list[Any]:
+        """De regels van de bewaking die aan staan: daaruit valt te kiezen."""
+        regels = self.hass.data.get(DOMAIN, {}).get(BEWAKING_REGELS)
+        return regels.actieve() if regels is not None else []
+
+    @callback
+    def camera_keuze(self, persoon: str) -> dict[str, Any]:
+        """Wat deze persoon van de camera krijgt. Zie camera.py."""
+        return camera.keuze(self.opslag, SOORT_CAMERA, persoon, self.camera_regels())
+
+    @callback
+    def camera_ontvangers(self, regel: Any, melder: str | None) -> list[str]:
+        """Wie de melding van deze regel krijgt. De bewakingsmotor vraagt dit.
+
+        Zonder meldingenkaart met `camera: true` de ontvangers van de
+        camerakaart, zoals voor 0.109.0.
+        """
+        melding = self.meldingen.get(SOORT_CAMERA)
+        if melding is None or melding.soort != SOORT_CAMERA:
+            return list(regel.ontvangers)
+        return camera.ontvangers(
+            regel,
+            melder,
+            personen=melding.personen,
+            opslag=self.opslag,
+            melding=SOORT_CAMERA,
+            regels=self.camera_regels(),
+        )
+
+    @callback
+    def camera_diensten(self, regel: Any) -> dict[str, str]:
+        """De telefoons uit de YAML: die van de meldingenkaart, aangevuld met die van de camera."""
+        melding = self.meldingen.get(SOORT_CAMERA)
+        return {**(regel.diensten or {}), **(melding.diensten if melding is not None else {})}
+
+    async def async_proef_camera(self, melding: kaarten.Melding, alleen: str | None) -> dict[str, Any]:
+        """Een proef: het laatste beeld van een camera die deze persoon krijgt.
+
+        Alleen naar `alleen`, en met een eigen tag, zodat hij een echte melding
+        op de telefoon niet vervangt. Is er nog geen beeld, dan gaat hij zonder.
+        """
+        regels = self.camera_regels()
+        if not regels:
+            return {"reden": t(self.hass, "Nog geen camera met snapshots en meldingen")}
+        if alleen is None:
+            return {"reden": t(self.hass, "Een proef gaat naar één persoon")}
+        gekozen = self.camera_keuze(alleen)["cameras"] or camera.cameras(regels)
+        index = self.hass.data.get(DOMAIN, {}).get(BEWAKING_INDEX)
+        beelden = index.voor(gekozen, 1) if index is not None else []
+        beeld = beelden[0] if beelden else None
+        cam = beeld["camera"] if beeld else gekozen[0]
+        st = self.hass.states.get(cam)
+        naam = (st.attributes.get("friendly_name") if st else None) or cam
+        titel = t(self.hass, "Proef · {titel}", titel=naam)
+        tekst = (beeld or {}).get("naam") or t(self.hass, "Proefmelding van de camera")
+        regel = next((r for r in regels if r.camera == cam), None)
+        gelukt = await telefoons.async_stuur(
+            self.hass,
+            ontvangers=[alleen],
+            diensten=self.camera_diensten(regel) if regel is not None else dict(melding.diensten),
+            titel=titel,
+            tekst=tekst,
+            beeld_id=beeld["id"] if beeld else None,
+            camera=cam,
+            melder=PROEF,
+        )
+        return {
+            "verstuurd": [alleen] if gelukt else [],
+            "zonder_telefoon": [] if gelukt else [alleen],
+            "titel": titel,
+            "tekst": tekst,
+        }
 
 
 def robot_tag(robot: str, sleutel: str) -> str:

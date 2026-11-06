@@ -26,6 +26,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    MELDER_SOORTEN,
     MAX_RUSTPERIODE,
     MAX_WACHTTIJD,
     MIN_RUSTPERIODE,
@@ -68,6 +69,11 @@ class Regel:
     # en een melding die "Persoon" zegt in plaats van
     # "binary_sensor.oprit_persoon" is dezelfde afspraak op de telefoon.
     namen: dict[str, str] = field(default_factory=dict)
+    # De soort per melder (mens, voertuig, aanbellen...), zoals de filterknoppen
+    # op de camerakaart hem kennen. Sinds 0.109.0, zodat ieder op de
+    # meldingenkaart kan kiezen waarover hij een melding krijgt
+    # (`meldingen/camera.py`). Een melder zonder soort staat er niet in.
+    soorten: dict[str, str] = field(default_factory=dict)
     # Per camera ingesteld, per melder geteld. Zie const.py.
     rustperiode: int = STANDAARD_RUSTPERIODE
     wachttijd: int = STANDAARD_WACHTTIJD
@@ -123,6 +129,17 @@ def valideer_regel(rauw: Any) -> Regel:
         if isinstance(naam, str) and naam.strip()
     }
 
+    soorten_rauw = rauw.get("soorten") or {}
+    if not isinstance(soorten_rauw, dict):
+        raise RegelFout("'soorten' is een object van melder naar soort")
+    # Soepel: een soort die deze versie niet kent (een kaart die nieuwer is dan
+    # de server) is geen fout, die melder telt dan als beweging.
+    soorten = {
+        str(melder): soort
+        for melder, soort in soorten_rauw.items()
+        if isinstance(soort, str) and soort in MELDER_SOORTEN
+    }
+
     diensten_rauw = rauw.get("diensten") or {}
     if not isinstance(diensten_rauw, dict):
         raise RegelFout("'diensten' is een object van persoon naar dienst")
@@ -143,6 +160,7 @@ def valideer_regel(rauw: Any) -> Regel:
         aan=bool(rauw.get("aan", False)),
         melders=melders,
         namen=namen,
+        soorten=soorten,
         rustperiode=_getal(
             rauw.get("rustperiode"), STANDAARD_RUSTPERIODE, MIN_RUSTPERIODE, MAX_RUSTPERIODE, "rustperiode"
         ),
