@@ -934,6 +934,8 @@ je niet hoort terug te draaien zonder het te vragen:
   van `automatisering/store.py` waarom dat ook bij een stroomstoring klopt.
 - **De vakantiemodus staat apart.** De eigenaar, nadrukkelijk: niets over vakantie op
   een gewone regel. Gewone regels pauzeren, vakantieregels wisselen tot 15 minuten.
+  Sinds 0.110.0 staan de vakantieregels er pas als de schakelaar aan staat (`vakantieOpen`); de eigenaar: "als
+  vakantiemodus uit staat moet hij alle regels verbergen tot je hem aan zet".
 - **De wissel wordt afgeleid, niet geloot** (`wissel` in `regels.py`), anders geldt na
   een herstart een andere tijd.
 - **De helderheid is per lamp** (sinds 0.94.0, `helderheden`). Een regel van daarvoor heeft
