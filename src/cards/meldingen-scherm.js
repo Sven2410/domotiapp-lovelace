@@ -11,6 +11,8 @@
  *
  * Alleen wat deze persoon zelf beslist: aan of uit, en sinds 0.86.0 bij de
  * robotstofzuiger ook waarover en van welke robot (de keuzes onder het vinkje).
+ * Sinds 0.111.0 staan die keuzes dicht tot je op het pijltje naast het vinkje
+ * tikt (`klapStand`): met afval, stofzuiger en camera werd het één lange lijst.
  * De instellingen van een soort -- welke sensor, hoe laat, wat er te kiezen
  * valt -- staan in de editor van de kaart, want die gelden voor iedereen. Onder elke soort staat wel wat er komt ("Morgen GFT ·
  * melding om 19:30"): dat stond eerst in de kop van de kaart, en die kop is
@@ -49,6 +51,7 @@ import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
 import { t } from "../taal.js";
+import { klapStand } from "./meldingen-logica.js";
 
 const css = /* css */ `
   ${themaCss}
@@ -164,6 +167,19 @@ const css = /* css */ `
     background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi);
   }
 
+  /* Het pijltje dat de keuzes open- en dichtklapt (0.111.0). Rond en stil, net als
+     het sluitknopje: het is een ingang, geen toestand. */
+  .klap {
+    width: 30px; height: 30px; flex: 0 0 auto; padding: 0; cursor: pointer;
+    display: grid; place-items: center; border-radius: var(--dac-radius-pill);
+    background: var(--dac-surface); border: 1px solid var(--dac-border);
+    color: var(--dac-ink-2); font: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .klap:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
+  .klap .icon { width: 16px; height: 16px; transition: transform 160ms ease; }
+  .klap[aria-expanded="true"] .icon { transform: rotate(180deg); }
+
   /* De keuzes onder een soort (sinds 0.86.0): alleen als die soort aan staat.
      Rondjes met een eigen vinkje; dat vinkje draagt de toestand, de tekst niet. */
   .blok { display: flex; flex-direction: column; gap: 8px; }
@@ -235,6 +251,7 @@ class MeldingenScherm extends HTMLElement {
     this.shadowRoot.adoptedStyleSheets = sheets;
     this.bron = null;
     this.persoon = null;
+    this.open_ = new Set();
   }
 
   connectedCallback() {
@@ -273,6 +290,8 @@ class MeldingenScherm extends HTMLElement {
 
     const lijst = this.$(".lijst");
     const tik = (doel) => {
+      const klap = doel.closest(".klap");
+      if (klap) return this.klap_(klap.closest(".soort"));
       const keus = doel.closest(".keus");
       if (keus) return this.kies_(keus);
       return this.vink_(doel.closest(".soort"));
@@ -298,6 +317,8 @@ class MeldingenScherm extends HTMLElement {
     if (!this.gebouwd_) this.bouw_();
     this.bron = bron;
     this.persoon = persoon;
+    // Elke opening begint dichtgeklapt: wat open stond hoorde bij de vorige keer.
+    this.open_ = new Set();
     // De lijst leeg EN vergeten dat hij gebouwd was. Alleen leegmaken liet de
     // lijst de tweede keer leeg: `teken()` zag dezelfde soorten als de vorige
     // persoon en bouwde niets opnieuw. Gevonden bij het meten.
@@ -372,6 +393,7 @@ class MeldingenScherm extends HTMLElement {
             <div class="soort" role="checkbox" tabindex="0" data-soort="${veilig(s.id)}" aria-checked="false">
               <span class="ico">${resolve(s.icoon)}</span>
               <span class="txt"><span class="nm">${veilig(t(s.naam))}</span><span class="rg"></span></span>
+              <button class="klap" type="button" aria-expanded="false" hidden>${resolve("chevronDown")}</button>
               <span class="vink">${resolve("check")}</span>
             </div>
             <div class="keuzes" data-voor="${veilig(s.id)}" hidden>${(s.keuzes ?? [])
@@ -406,10 +428,16 @@ class MeldingenScherm extends HTMLElement {
         `${s.aan ? t("{soort} voor {naam}: aan", waarden) : t("{soort} voor {naam}: uit", waarden)}${s.regel ? `. ${s.regel}` : ""}`
       );
 
-      // De keuzes alleen als de soort aan staat: wie hem uit heeft, krijgt toch niets.
+      // De keuzes alleen als de soort aan staat (wie hem uit heeft, krijgt toch
+      // niets), en sinds 0.111.0 pas als iemand ze openklapt.
       const keuzes = lijst.querySelector(`.keuzes[data-voor="${CSS.escape(s.id)}"]`);
       if (!keuzes) continue;
-      keuzes.hidden = !s.aan || s.laden || !(s.keuzes ?? []).length;
+      const klap = klapStand(s, this.open_.has(s.id));
+      const pijl = regel.querySelector(".klap");
+      pijl.hidden = !klap.pijl;
+      pijl.setAttribute("aria-expanded", String(klap.keuzes));
+      pijl.setAttribute("aria-label", klap.keuzes ? t("Keuzes verbergen") : t("Keuzes tonen"));
+      keuzes.hidden = !klap.keuzes;
       for (const g of s.keuzes ?? []) {
         for (const o of g.opties) {
           const keus = keuzes.querySelector(
@@ -439,6 +467,15 @@ class MeldingenScherm extends HTMLElement {
     knop.disabled = false;
     uit.dataset.soort = fout ? "fout" : "";
     uit.textContent = tekst;
+  }
+
+  /** Klap de keuzes onder deze soort open of dicht. Alleen voor dit scherm; de server weet er niets van. */
+  klap_(regel) {
+    const id = regel?.dataset.soort;
+    if (!id) return;
+    if (this.open_.has(id)) this.open_.delete(id);
+    else this.open_.add(id);
+    this.teken();
   }
 
   kies_(keus) {

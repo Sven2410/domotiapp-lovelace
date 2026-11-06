@@ -156,6 +156,8 @@ export const MELDINGEN = {
   "{soort} voor {naam}: aan": "{soort} for {naam}: on",
   "{soort} voor {naam}: uit": "{soort} for {naam}: off",
   "Versturen…": "Sending…",
+  "Keuzes tonen": "Show choices",
+  "Keuzes verbergen": "Hide choices",
 
   // De robotstofzuiger (0.85.0)
   "Robots en meldingen": "Robots and notifications",
