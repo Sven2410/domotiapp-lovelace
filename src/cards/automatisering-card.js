@@ -12,7 +12,8 @@
  * De eigenaar, nadrukkelijk: het plusje maakt een gewone automatisering, en er
  * staat niet bij elke regel iets over vakantie. Vakantie is een eigen blok met een
  * schakelaar en een eigen plusje. Staat hij aan, dan pauzeren de gewone regels, en
- * lopen de vakantieregels elke dag tot een kwartier vroeger of later.
+ * lopen de vakantieregels elke dag tot een kwartier vroeger of later. Sinds 0.110.0
+ * staan de vakantieregels er pas als de schakelaar aan staat (`vakantieOpen`).
  *
  * ## Wat de kaart doet en wat niet
  *
@@ -39,6 +40,7 @@ import {
   regelKop,
   regelTekst,
   regelsVoor,
+  vakantieOpen,
 } from "./automatisering-logica.js";
 import { automatiseringScherm, toonAutomatiseringScherm } from "./automatisering-scherm.js";
 import { nt, t } from "../taal.js";
@@ -112,6 +114,8 @@ class AutomatiseringCard extends DacCard {
       display: flex; flex-direction: column; gap: 8px;
       padding-top: 10px; border-top: 1px solid var(--dac-border);
     }
+    /* De vakantieregels klappen open als de vakantiemodus aan gaat (0.110.0, vakantieOpen). */
+    .vakblok { display: flex; flex-direction: column; gap: 8px; }
 
     ${toggleCss}
     .toggle { width: 42px; height: 24px; flex: 0 0 auto; }
@@ -192,12 +196,14 @@ class AutomatiseringCard extends DacCard {
                   ${titel("beach", t("Vakantiemodus"))}
                   ${toggleHtml({ label: t("Vakantiemodus") })}
                 </div>
-                <div class="kop">
-                  ${titel("calendar", t("Vakantieregels"))}
-                  ${plus("vakantie", t("Nieuwe vakantieregel"))}
+                <div class="vakblok" hidden>
+                  <div class="kop">
+                    ${titel("calendar", t("Vakantieregels"))}
+                    ${plus("vakantie", t("Nieuwe vakantieregel"))}
+                  </div>
+                  <div class="lijst" data-groep="vakantie"></div>
+                  <div class="uitleg">${escapeHtml(t("Elke dag tot 15 minuten vroeger of later, zodat het huis bewoond lijkt."))}</div>
                 </div>
-                <div class="lijst" data-groep="vakantie"></div>
-                <div class="uitleg">${escapeHtml(t("Elke dag tot 15 minuten vroeger of later, zodat het huis bewoond lijkt."))}</div>
               </div>`
             : ""
         }
@@ -386,6 +392,7 @@ class AutomatiseringCard extends DacCard {
         const schakelaar = this.$(".vrij .toggle");
         setToggle(schakelaar, stand.vakantie === true);
         this.$(".vrij").dataset.aan = String(stand.vakantie === true);
+        this.$(".vakblok").hidden = !vakantieOpen(stand);
       }
       this.$(".pauze").hidden = !(stand.vakantie === true && gewoon.length);
     }

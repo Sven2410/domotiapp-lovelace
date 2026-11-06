@@ -176,6 +176,15 @@ export function regelsVoor(regels, lampen, vakantie) {
   return (regels ?? []).filter((r) => Boolean(r.vakantie) === Boolean(vakantie) && r.lampen?.some((l) => hier.has(l)));
 }
 
+/**
+ * Staat het blok Vakantieregels open? Alleen als de vakantiemodus aan staat (sinds 0.110.0).
+ *
+ * De eigenaar, 6 november 2026: "als vakantiemodus uit staat moet hij alle regels verbergen tot je hem aan zet en
+ * dan kan je hem openklappen". De vorm van de vormregels: een schakelaar op één regel, en het blok eronder alleen als
+ * hij aan staat. Zolang de server nog niets zei: dicht.
+ */
+export const vakantieOpen = (stand) => stand?.vakantie === true;
+
 /** Een lamp kan dimmen, tenzij hij zelf zegt van niet. Een lamp die even weg is, weet het niet. */
 export function kanDimmen(st) {
   const standen = st?.attributes?.supported_color_modes;
