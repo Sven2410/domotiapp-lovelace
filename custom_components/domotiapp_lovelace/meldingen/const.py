@@ -41,7 +41,10 @@ KAART_TYPE = "custom:domotiapp-meldingen-card"
 SOORT_AFVAL = "afval"
 # Sinds 0.85.0: wat de robotstofzuiger meldt. Zie `stofzuiger.py`.
 SOORT_STOFZUIGER = "stofzuiger"
-SOORTEN = (SOORT_AFVAL, SOORT_STOFZUIGER)
+# Sinds 0.109.0: de meldingen van de camerakaart, met per persoon een keuze.
+# Zie `camera.py`.
+SOORT_CAMERA = "camera"
+SOORTEN = (SOORT_AFVAL, SOORT_STOFZUIGER, SOORT_CAMERA)
 
 # De twee momenten van een afvalmelding. "morgen" is de avond ervoor, over wat
 # er de volgende dag opgehaald wordt; "vandaag" is de ochtend zelf.

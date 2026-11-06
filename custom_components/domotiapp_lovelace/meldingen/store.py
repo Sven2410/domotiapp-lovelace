@@ -9,7 +9,7 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `buiten` | per melding: voor welke ophaaldag iemand "Staat buiten" tikte, en wie |
 | `verstuurd` | per melding, per moment: op welke dag hij al is uitgegaan |
 | `leidend` | per melding: van welk dashboard de instellingen gelden |
-| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval) |
+| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval; sinds 0.109.0 de camera) |
 | `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
 
 `keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
@@ -79,6 +79,16 @@ class MeldingOpslag:
     def aan(self, melding: str, persoon: str) -> bool:
         """Krijgt deze persoon deze melding? Wie nog nooit is omgezet: ja."""
         return bool(self._data["aan"].get(melding, {}).get(persoon, True))
+
+    @callback
+    def aan_gezet(self, melding: str, persoon: str) -> bool | None:
+        """Wat deze persoon zelf koos, of None als hij nooit iets omzette.
+
+        Voor de camera (sinds 0.109.0), waar de standaard niet "ja" is maar
+        volgt uit de camerakaart; zie camera.py.
+        """
+        waarde = self._data["aan"].get(melding, {}).get(persoon)
+        return None if waarde is None else bool(waarde)
 
     @callback
     def alle_aan(self, melding: str) -> dict[str, bool]:

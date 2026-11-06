@@ -66,7 +66,15 @@ from homeassistant.core import HomeAssistant
 STANDAARD = ("lovelace", "")
 
 from .afval import soorten as afval_soorten, tijd_geldig
-from .const import KAART_TYPE, MOMENT_MORGEN, MOMENT_VANDAAG, SOORT_AFVAL, SOORT_STOFZUIGER, STANDAARD_TIJD
+from .const import (
+    KAART_TYPE,
+    MOMENT_MORGEN,
+    MOMENT_VANDAAG,
+    SOORT_AFVAL,
+    SOORT_CAMERA,
+    SOORT_STOFZUIGER,
+    STANDAARD_TIJD,
+)
 from .stofzuiger import GEBEURTENISSEN
 
 _LOGGER = logging.getLogger(__name__)
@@ -215,6 +223,25 @@ def stofzuiger_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None
     )
 
 
+def camera_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
+    """De cameramelding uit één kaartconfig, of None als die daar niet aan staat.
+
+    Sinds 0.109.0. `camera: true` zet hem aan; meer staat er niet op de kaart.
+    Welke camera's en melders er zijn, staat in de regels van de camerakaart
+    (zie camera.py). Het id is altijd `camera`: één melding per huis.
+    """
+    if kaart.get(SOORT_CAMERA) is not True:
+        return None
+    return Melding(
+        id=SOORT_CAMERA,
+        soort=SOORT_CAMERA,
+        titel=str(kaart.get("name") or ""),
+        personen=_personen(kaart),
+        diensten=_diensten(kaart),
+        dashboards=[dashboard],
+    )
+
+
 def _personen(kaart: dict[str, Any]) -> list[str]:
     personen: list[str] = []
     for p in kaart.get("personen") or []:
@@ -238,7 +265,7 @@ def meldingen_per_kaart(kaarten: list[tuple[str, dict[str, Any]]]) -> list[Meldi
     """Elke soort op elke kaart als melding, in de volgorde waarin ze staan."""
     uit: list[Melding] = []
     for dashboard, kaart in kaarten:
-        for lees in (melding_uit, stofzuiger_uit):
+        for lees in (melding_uit, stofzuiger_uit, camera_uit):
             if (m := lees(kaart, dashboard)) is not None:
                 uit.append(m)
     return uit

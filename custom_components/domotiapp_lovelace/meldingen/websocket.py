@@ -4,7 +4,7 @@
 |---|---|
 | `meldingen/subscribe` | iedere ingelogde gebruiker |
 | `meldingen/aan` | iedere ingelogde gebruiker |
-| `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0) |
+| `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0; sinds 0.109.0 ook de camera) |
 | `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
 
 Omzetten mag iedereen: de kaart hangt op een tablet met een kioskaccount, en
@@ -27,7 +27,8 @@ from homeassistant.helpers import config_validation as cv
 from ..taal import t
 from ..bewaking import meldingen as telefoons
 from ..const import DOMAIN
-from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN
+from . import camera
+from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN, SOORT_CAMERA
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
     motor = data.get(DATA_MOTOR)
     melding = motor.meldingen.get(ident) if motor else None
     buiten = opslag.buiten(ident) if opslag else None
-    return {
+    uit = {
         "id": ident,
         "bekend": melding is not None,
         "aan": opslag.alle_aan(ident) if opslag else {},
@@ -79,6 +80,19 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
             for p in telefoons.overzicht(hass)
         },
     }
+    if ident == SOORT_CAMERA and motor is not None:
+        # Wat er te kiezen is komt van de camerakaarten, niet van deze kaart. En
+        # `aan` en `keuzes` zijn hier wat iemand KRIJGT, ook als hij nooit iets
+        # koos: de standaard volgt de camerakaart (zie camera.py), en de kaart
+        # kan die niet zelf uitrekenen.
+        regels = motor.camera_regels()
+        uit["cameras"] = camera.cameras(regels)
+        uit["soorten"] = camera.soorten(regels)
+        personen = melding.personen if melding else []
+        keuzes = {p: motor.camera_keuze(p) for p in personen}
+        uit["aan"] = {p: k["aan"] for p, k in keuzes.items()}
+        uit["keuzes"] = {p: {"cameras": k["cameras"], "soorten": k["soorten"]} for p, k in keuzes.items()}
+    return uit
 
 
 @callback
@@ -142,8 +156,11 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         vol.Required("type"): f"{DOMAIN}/meldingen/keuze",
         vol.Required("melding"): cv.string,
         vol.Required("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
-        # gebeurtenissen/robots: de stofzuiger; momenten/bakken_niet: afval (0.87.0).
-        vol.Required("soort"): vol.In(("gebeurtenissen", "robots", "momenten", "bakken_niet")),
+        # gebeurtenissen/robots: de stofzuiger; momenten/bakken_niet: afval (0.87.0);
+        # cameras/soorten: de camera (0.109.0).
+        vol.Required("soort"): vol.In(
+            ("gebeurtenissen", "robots", "momenten", "bakken_niet", "cameras", "soorten")
+        ),
         # None: alles (weer de standaard).
         vol.Required("waarden"): vol.Any(None, [cv.string]),
     }

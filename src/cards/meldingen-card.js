@@ -18,7 +18,9 @@
  * - het potlood (of de hele rij) opent `meldingen-scherm.js`: die persoon, met
  *   per soort melding een vinkje;
  * - welke soorten er zijn, staat in de editor: per soort een schakelaar met de
- *   instellingen eronder. Afval, en sinds 0.85.0 de robotstofzuiger.
+ *   instellingen eronder. Afval, sinds 0.85.0 de robotstofzuiger, en sinds
+ *   0.109.0 de camera: de meldingen van de camerakaart, met per persoon een
+ *   keuze van welke camera en waarover (zie meldingen/camera.py).
  *
  * ## Wat de kaart doet en wat niet
  *
@@ -53,6 +55,10 @@ import {
   afvalKeuze,
   afvalMomenten,
   afvalRegel,
+  cameraKeuze,
+  cameraRegel,
+  cameraSoortNaam,
+  nieuweCameraKeuze,
   nieuwNiet,
   krijgtIets,
   meldingId,
@@ -290,9 +296,9 @@ class MeldingenCard extends DacCard {
    * robot aan of uit (sinds 0.86.0). De pop-up roept dit aan; net als `zet`
    * meteen bewaard, zonder Opslaan.
    *
-   * @param {string} soort  "stofzuiger" of "afval"
+   * @param {string} soort  "stofzuiger", "afval" of "camera"
    * @param {string} persoon
-   * @param {"gebeurtenissen"|"robots"|"momenten"|"bakken_niet"} groep
+   * @param {"gebeurtenissen"|"robots"|"momenten"|"bakken_niet"|"cameras"|"soorten"} groep
    * @param {string} waarde
    * @param {boolean} aan
    */
@@ -301,7 +307,9 @@ class MeldingenCard extends DacCard {
     if (!vorig || !this.hass?.connection) return;
     const c = this.config;
     let waarden;
-    if (groep === "bakken_niet") {
+    if (soort === "camera") {
+      waarden = nieuweCameraKeuze(vorig, persoon, groep, waarde, aan);
+    } else if (groep === "bakken_niet") {
       waarden = nieuwNiet(afvalKeuze(c, vorig, persoon).bakkenNiet, waarde, aan);
     } else if (groep === "momenten") {
       waarden = nieuweKeuze(afvalMomenten(c), afvalKeuze(c, vorig, persoon).momenten, waarde, aan);
@@ -337,6 +345,7 @@ class MeldingenCard extends DacCard {
   keuzes_(soort, stand, persoon) {
     const c = this.config;
     if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
+    if (soort === "camera") return this.cameraKeuzes_(stand, persoon);
     const nu = persoonKeuze(c, stand, persoon);
     const groepen = [];
     const aangeboden = stofzuigerGebeurtenissen(c);
@@ -395,6 +404,33 @@ class MeldingenCard extends DacCard {
     return groepen;
   }
 
+  /**
+   * De keuzes onder de camera (0.109.0): van welke camera's, en waarover. Wat er
+   * te kiezen is komt van de server, uit de camerakaarten met snapshots en
+   * meldingen; een groep met één keuze staat er niet.
+   */
+  cameraKeuzes_(stand, persoon) {
+    const nu = cameraKeuze(stand, persoon);
+    const groepen = [];
+    const cameras = stand?.cameras ?? [];
+    if (cameras.length > 1) {
+      groepen.push({
+        groep: "cameras",
+        kop: t("Van welke camera"),
+        opties: cameras.map((id) => ({ id, naam: nameOf(this.hass, id), aan: nu.cameras.includes(id) })),
+      });
+    }
+    const soorten = stand?.soorten ?? [];
+    if (soorten.length > 1) {
+      groepen.push({
+        groep: "soorten",
+        kop: t("Waarover"),
+        opties: soorten.map((id) => ({ id, naam: cameraSoortNaam(id), aan: nu.soorten.includes(id) })),
+      });
+    }
+    return groepen;
+  }
+
   /** Heeft deze persoon GEEN telefoon, volgens de server? Null = onbekend. */
   zonderTelefoon_(persoon) {
     const stand = Object.values(this.standen_).find((s) => s?.telefoons);
@@ -423,7 +459,12 @@ class MeldingenCard extends DacCard {
           ...soort,
           aan: staatAan(stand, persoon),
           laden: !stand,
-          regel: soort.id === "afval" ? this.afvalRegel_(stand, persoon) : this.stofzuigerRegel_(stand, persoon),
+          regel:
+            soort.id === "afval"
+              ? this.afvalRegel_(stand, persoon)
+              : soort.id === "camera"
+                ? cameraRegel({ stand, persoon, naam: (id) => nameOf(this.hass, id) })
+                : this.stofzuigerRegel_(stand, persoon),
           keuzes: stand?.bekend ? this.keuzes_(soort.id, stand, persoon) : [],
         };
       }),
@@ -436,7 +477,7 @@ class MeldingenCard extends DacCard {
    *
    * Afval over het moment van de avond als die er is: dat is de melding die het
    * vaakst komt, en die met de knop "Staat buiten". De robotstofzuiger stuurt
-   * "klaar" van de eerste robot.
+   * "klaar" van de eerste robot, de camera het laatste beeld.
    */
   async proef(persoon) {
     const naam = voornaam(nameOf(this.hass, persoon));
@@ -640,6 +681,9 @@ class MeldingenEditor extends DacEditor {
             ),
           ]
         : []),
+      // Sinds 0.109.0. Geen blok eronder: welke camera's en melders er zijn,
+      // staat op de camerakaart (Snapshots en meldingen).
+      { name: "camera", selector: sel.bool() },
     ];
   }
 
@@ -656,6 +700,7 @@ class MeldingenEditor extends DacEditor {
         stofzuiger: t("Robotstofzuiger"),
         stofzuigers: t("Robots"),
         stofzuiger_meldingen: t("Te kiezen"),
+        camera: t("Camerameldingen"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -686,6 +731,9 @@ class MeldingenEditor extends DacEditor {
       stofzuiger_meldingen: t(
         "Wat iedereen in zijn pop-up kan kiezen. Ieder kiest daar zelf waarover en van welke robot; wie niets kiest krijgt alles wat hier aan staat. Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
       ),
+      camera: t(
+        "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt."
+      ),
     }[s.name];
   }
 }
@@ -694,7 +742,7 @@ registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
   name: nt("DomotiApp Meldingen"),
   description: nt(
-    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval en de robotstofzuiger."
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger en de camera."
   ),
 });
 

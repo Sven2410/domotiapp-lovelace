@@ -33,6 +33,7 @@
  */
 
 import { hoortBij } from "./camera-logica.js";
+import { ALLE_SOORTEN, raadSoort } from "./camera-filters.js";
 
 /** Alle camera's van deze kaart, hoofdcamera vooraan, zonder dubbelen. */
 export function camerasVan(config) {
@@ -75,6 +76,20 @@ export function regelsVoorKaart(hass, config) {
       if (typeof naam === "string" && naam.trim()) namen[melder] = naam.trim();
     }
 
+    // De soort per melder, zoals de filterknoppen hem kennen (`melders_` in
+    // camera-card.js): wat je zelf koos, anders geraden. Sinds 0.109.0, voor de
+    // keuze "waarover" op de meldingenkaart. Zonder soort staat hij er niet in.
+    const soorten = {};
+    for (const melder of eigen) {
+      const st = hass?.states?.[melder];
+      const naam = namen[melder] || st?.attributes?.friendly_name || "";
+      const gekozen = config?.[`meldersoort:${melder}`];
+      const soort = ALLE_SOORTEN.some((s) => s.sleutel === gekozen)
+        ? gekozen
+        : raadSoort(melder, naam, st?.attributes?.device_class);
+      if (soort) soorten[melder] = soort;
+    }
+
     return {
       camera,
       // Zonder melders valt er niets te detecteren; dan staat de regel er wel,
@@ -82,6 +97,7 @@ export function regelsVoorKaart(hass, config) {
       aan: aanVinkje && eigen.length > 0,
       melders: eigen,
       namen,
+      soorten,
       rustperiode: getal(config?.snapshot_rustperiode, 60),
       wachttijd: getal(config?.snapshot_wachttijd, 0),
       ontvangers: lijstVan(config?.snapshot_ontvangers).filter((p) =>

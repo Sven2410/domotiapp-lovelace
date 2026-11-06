@@ -63,6 +63,12 @@ DATA_WS_REGISTERED: Final = "bewaking_ws_registered"
 DATA_VIEW_REGISTERED: Final = "bewaking_view_registered"
 DATA_ABONNEES: Final = "bewaking_abonnees"
 
+# --- soorten melders ------------------------------------------------------
+# Dezelfde sleutels en volgorde als `ALLE_SOORTEN` in camera-filters.js. De
+# kaart stuurt ze per melder mee (sinds 0.109.0), voor de keuze "waarover" op
+# de meldingenkaart; zie meldingen/camera.py.
+MELDER_SOORTEN: Final = ("mens", "dier", "voertuig", "aanbellen", "ontgrendeling", "beweging")
+
 # --- standaardwaarden -----------------------------------------------------
 # 60 seconden, op verzoek: *"By default ook 1 min per camera hoe ik het had."*
 # Ingesteld per camera, maar geteld per melder -- zie de kop hierboven.

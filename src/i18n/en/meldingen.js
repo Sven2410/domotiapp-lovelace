@@ -168,8 +168,8 @@ export const MELDINGEN = {
     "What everyone can choose in their pop-up. Each person picks what about and which robot there; whoever picks nothing gets everything switched on here. Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
   "Te kiezen": "To choose from",
   "Van welke robot": "Which robot",
-  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval en de robotstofzuiger.":
-    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste and the robot vacuum.",
+  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger en de camera.":
+    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste, the robot vacuum and the camera.",
   "Klaar met schoonmaken": "Finished cleaning",
   "klaar": "finished",
   "Water en stofzak": "Water and dust bag",
@@ -186,4 +186,11 @@ export const MELDINGEN = {
     "Each person picks when and which bins in their own pop-up. The card learns the bins as soon as the sensor mentions them; fill them in here to be able to pick them right away.",
   "De avond ervoor": "The evening before",
   "De ochtend zelf": "That morning",
+
+  // De camera (0.109.0)
+  "Camerameldingen": "Camera notifications",
+  "Van welke camera": "Which camera",
+  "Nog geen camera met snapshots en meldingen": "No camera with snapshots and notifications yet",
+  "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt.":
+    "The notifications of the camera cards with Snapshots and notifications. Each person ticks in their own pop-up whether they get them, from which camera and what about (person, vehicle, doorbell...). Whoever has not chosen yet gets what the camera card already gave them. Whoever is not on this card keeps what the camera card says.",
 };

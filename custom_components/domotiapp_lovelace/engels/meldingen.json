@@ -47,5 +47,8 @@
   "Klaar met schoonmaken: {m2} m².": "Finished cleaning: {m2} m².",
   "Klaar met schoonmaken.": "Finished cleaning.",
   "{u} uur {m} min": "{u} h {m} min",
-  "{u} uur": "{u} h"
+  "{u} uur": "{u} h",
+  "Een cameramelding komt niet op een tijd": "A camera notification is not sent at a set time",
+  "Nog geen camera met snapshots en meldingen": "No camera with snapshots and notifications yet",
+  "Proefmelding van de camera": "Test notification from the camera"
 }
