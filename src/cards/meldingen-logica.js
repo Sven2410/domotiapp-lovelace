@@ -136,6 +136,22 @@ export const SOORTEN = [
   { id: "camera", naam: nt("Camerameldingen"), icoon: "cctv" },
 ];
 
+/**
+ * Staan de keuzes onder een soort in de pop-up open? (sinds 0.111.0)
+ *
+ * De eigenaar, 6 november 2026: "ik wil de meldingen kunnen dichtklappen dadelijk staat alles heel veel onder elkaar
+ * en wordt het onoverzichtelijk". Dicht tot je op het pijltje tikt: de regel onder de soort zegt al wat je krijgt. Een
+ * soort die uit staat of niets te kiezen heeft, heeft geen keuzes en geen pijltje.
+ *
+ * @param {{aan: boolean, laden?: boolean, keuzes?: Array}} soort zoals `inhoud()` hem geeft
+ * @param {boolean} open heeft hij op het pijltje getikt
+ * @returns {{pijl: boolean, keuzes: boolean}} staat het pijltje er, en staan de keuzes open
+ */
+export function klapStand(soort, open) {
+  const pijl = Boolean(soort?.aan && !soort.laden && soort.keuzes?.length);
+  return { pijl, keuzes: pijl && Boolean(open) };
+}
+
 /* ------------------------------------------------------ de camera (0.109.0) */
 
 /**
