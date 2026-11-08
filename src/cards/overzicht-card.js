@@ -8,7 +8,9 @@
  * links komen dan de favorieten en rechts moet een soort info scherm komen met weer en belangrijke dingen".
  *
  * Links staat de favorietenkaart zelf (`domotiapp-favorieten-card`, als kind in deze kaart), en niet een tweede
- * uitvoering ervan: wat de klant op de automatiseringskaart maakt, staat hier precies zo.
+ * uitvoering ervan: wat de klant op de automatiseringskaart maakt, staat hier precies zo. Behalve de regel "Nog geen
+ * favorieten. Maak ze in de woninginstellingen.": die staat hier niet, op zijn verzoek van 8 november 2026. Zonder
+ * favorieten is er geen linkerhelft, en staat het overzicht over de hele breedte.
  *
  * Rechts, van boven naar onder:
  *   - de begroeting, de datum en de klok, op de tijd van Home Assistant (src/wandklok.js);
@@ -69,6 +71,11 @@ class OverzichtCard extends DacCard {
     }
     :host([bare]) .achter { background: none; }
     .info { position: relative; min-width: 0; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* Zonder favorieten geen lege linkerhelft: het overzicht over de hele breedte. */
+    .rij:has(domotiapp-favorieten-card[leeg]) { grid-template-columns: minmax(0, 1fr); }
+    .rij:has(domotiapp-favorieten-card[leeg]) .links { display: none; }
+    .rij:has(domotiapp-favorieten-card[leeg]) .achter { width: 100%; }
 
     /* Smal: het overzicht boven de favorieten, en het vlak om het overzicht zelf. */
     @container (max-width: 599px) {
@@ -190,7 +197,7 @@ class OverzichtCard extends DacCard {
     let fav = this.$("domotiapp-favorieten-card");
     if (!fav) {
       fav = document.createElement("domotiapp-favorieten-card");
-      fav.setConfig(c.favorieten_pad ? { pad: c.favorieten_pad } : {});
+      fav.setConfig({ verberg_leeg: true });
       this.$(".links").append(fav);
     }
     if (this.hass) fav.hass = this.hass;
@@ -454,7 +461,6 @@ class OverzichtEditor extends DacEditor {
       { name: "weer", selector: sel.entity("weather") },
       { name: "dagen", selector: sel.number(0, DAGEN_MAX) },
       { name: "naam", selector: sel.text() },
-      { name: "favorieten_pad", selector: sel.text() },
       { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
       { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
       { name: "alarmen", selector: sel.bool() },
@@ -468,7 +474,6 @@ class OverzichtEditor extends DacEditor {
         weer: t("Weerentiteit"),
         dagen: t("Dagen vooruit"),
         naam: t("Naam in de begroeting"),
-        favorieten_pad: t("Woninginstellingen"),
         agenda: t("Agenda's"),
         letop: t("Let op als dit open staat"),
         alarmen: t("Rook, gas en lekkage melden"),
@@ -481,7 +486,6 @@ class OverzichtEditor extends DacEditor {
     return {
       dagen: t("0 laat de rij met dagen weg."),
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
-      favorieten_pad: t("Leeg laten: geen link. Bijvoorbeeld #instellingen: een tik op de lege favorieten gaat daarheen."),
       agenda: t("De afspraken van vandaag en morgen."),
       letop: t("Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn."),
       alarmen: t("Elke rook-, gas-, koolmonoxide-, lek- of hittemelder in huis die afgaat, en een alarm dat afgaat. Daar hoeft niets voor gekozen te worden."),

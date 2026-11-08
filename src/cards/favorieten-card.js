@@ -17,6 +17,10 @@
  * Zonder favorieten zegt de kaart waar je ze maakt, op zijn verzoek: "Heb je nog geen favorieten
  * gemaakt moet er komen te staan iets van maak je favorieten in de woning instellingen". Waar
  * dat is, verschilt per dashboard: `pad` maakt van die regel een link.
+ *
+ * Op de overzichtskaart staat die regel er niet (`verberg_leeg`, alleen voor de overzichtskaart, niet in de editor). De
+ * eigenaar, 8 november 2026: "nog geen favorieten maak ze in woninginstellingen die moet ook niet op het overzicht". Zonder
+ * favorieten staat er dan niets, en `leeg` op de kaart zegt het de overzichtskaart, die het overzicht dan breed zet.
  */
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -152,6 +156,7 @@ class FavorietenCard extends DacCard {
     const raster = this.$(".raster");
     const favorieten = this.favorieten_;
     if (favorieten) {
+      this.toggleAttribute("leeg", !favorieten.length);
       const sig = JSON.stringify(favorieten.map((f) => [f.id, f.naam, f.icoon]));
       if (raster.dataset.sig !== sig) {
         raster.dataset.sig = sig;
@@ -164,6 +169,8 @@ class FavorietenCard extends DacCard {
                 </div>`
               )
               .join("")
+          : this.config.verberg_leeg
+          ? ""
           : `<div class="leeg surface" style="grid-column:1/-1"${this.config.pad ? ` role="button" tabindex="0"` : ""}>${escapeHtml(t("Nog geen favorieten. Maak ze in de woninginstellingen."))}</div>`;
       }
     }

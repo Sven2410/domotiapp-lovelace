@@ -21,8 +21,6 @@ export const OVERZICHT = {
   "Rook, gas en lekkage melden": "Report smoke, gas and leaks",
   "Batterij bijna leeg onder (%)": "Battery almost empty below (%)",
   "0 laat de rij met dagen weg.": "0 leaves out the row of days.",
-  "Leeg laten: geen link. Bijvoorbeeld #instellingen: een tik op de lege favorieten gaat daarheen.":
-    "Leave empty: no link. For example #instellingen: a tap on the empty favourites goes there.",
   "De afspraken van vandaag en morgen.": "The appointments of today and tomorrow.",
   "Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn.":
     "Doors, windows, locks, the garage. They only show when they are open or unlocked.",
