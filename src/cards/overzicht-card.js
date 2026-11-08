@@ -1,6 +1,9 @@
 /**
  * De overzichtskaart voor een tablet: links de favorieten, rechts het weer en wat er belangrijk is.
  *
+ * Afval, lampen en wie er thuis is staan er sinds 0.113.0 niet meer op: die heeft de eigenaar al op een eigen kaart of
+ * badge (zie de kop van overzicht-logica.js).
+ *
  * De eigenaar, 8 november 2026: "ik ben toch niet tevreden met die header kaart. Ik wil een nieuwe kaart maken. Voor ipad
  * links komen dan de favorieten en rechts moet een soort info scherm komen met weer en belangrijke dingen".
  *
@@ -29,9 +32,8 @@ import { AgendaAbonnement } from "../infoscherm-client.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
-import { afvalKomend, afvalLijst } from "./infoscherm-afval.js";
 import { afsprakenUit } from "./ruimtes-logica.js";
-import { BATTERIJ_GRENS, alarmen, batterijenLeeg, groet, komendeAfspraken, lampenAan, regels, staatOpen, wieThuis } from "./overzicht-logica.js";
+import { BATTERIJ_GRENS, alarmen, batterijenLeeg, groet, komendeAfspraken, regels, staatOpen } from "./overzicht-logica.js";
 
 const DAGEN_STANDAARD = 5;
 const DAGEN_MAX = 7;
@@ -151,7 +153,7 @@ class OverzichtCard extends DacCard {
 
   watched() {
     const c = this.config;
-    return [c.weer, ...lijst(c.afval), ...lijst(c.agenda), ...lijst(c.letop), ...lijst(c.personen)].filter(Boolean);
+    return [c.weer, ...lijst(c.agenda), ...lijst(c.letop)].filter(Boolean);
   }
 
   template() {
@@ -265,7 +267,7 @@ class OverzichtCard extends DacCard {
       this.weerAbo_?.start(hass);
       for (const abo of this.agendaAbos_.values()) abo.start(hass);
     }
-    // De regels hangen ook af van entiteiten die niemand aanwees (alle lampen, alle melders), dus niet alleen van watched().
+    // De regels hangen ook af van entiteiten die niemand aanwees (alle melders, alle batterijen), dus niet alleen van watched().
     if (vorige?.states !== hass?.states) {
       this.paintLijst_();
       meetRaster(this.$(".card"));
@@ -407,10 +409,7 @@ class OverzichtCard extends DacCard {
       alarmen: c.alarmen === false ? [] : alarmen(states, verborgen),
       open: lijst(c.letop).map((id) => states[id]).filter(staatOpen),
       afspraken: komendeAfspraken([...this.afspraken_.values()].flat(), nu),
-      afval: afvalKomend(afvalLijst(lijst(c.afval), (id) => states[id], naamVan, nu)),
       batterijen: batterijenLeeg(states, c.batterij_grens ?? BATTERIJ_GRENS, { verborgen, telefoon: (id) => reg[id]?.platform === "mobile_app" }),
-      lampen: c.lampen === false ? null : lampenAan(states, verborgen),
-      thuis: c.thuis === false ? null : wieThuis(states, lijst(c.personen)).map((id) => voornaam(naamVan(id))),
     });
 
     const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity]));
@@ -447,7 +446,7 @@ class OverzichtCard extends DacCard {
 
 class OverzichtEditor extends DacEditor {
   defaults() {
-    return { dagen: DAGEN_STANDAARD, batterij_grens: BATTERIJ_GRENS, lampen: true, thuis: true, alarmen: true };
+    return { dagen: DAGEN_STANDAARD, batterij_grens: BATTERIJ_GRENS, alarmen: true };
   }
 
   schema() {
@@ -457,12 +456,8 @@ class OverzichtEditor extends DacEditor {
       { name: "naam", selector: sel.text() },
       { name: "favorieten_pad", selector: sel.text() },
       { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
-      { name: "afval", selector: { entity: { domain: "sensor", multiple: true } } },
       { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
       { name: "alarmen", selector: sel.bool() },
-      { name: "lampen", selector: sel.bool() },
-      { name: "thuis", selector: sel.bool() },
-      ...(this.config_?.thuis === false ? [] : [{ name: "personen", selector: { entity: { domain: "person", multiple: true } } }]),
       { name: "batterij_grens", selector: sel.number(0, 50) },
     ];
   }
@@ -475,12 +470,8 @@ class OverzichtEditor extends DacEditor {
         naam: t("Naam in de begroeting"),
         favorieten_pad: t("Woninginstellingen"),
         agenda: t("Agenda's"),
-        afval: t("Afvalsensoren"),
         letop: t("Let op als dit open staat"),
         alarmen: t("Rook, gas en lekkage melden"),
-        lampen: t("Lampen die aan zijn tellen"),
-        thuis: t("Wie er thuis is"),
-        personen: t("Personen"),
         batterij_grens: t("Batterij bijna leeg onder (%)"),
       }[s.name] ?? super.label(s)
     );
@@ -492,11 +483,8 @@ class OverzichtEditor extends DacEditor {
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
       favorieten_pad: t("Leeg laten: geen link. Bijvoorbeeld #instellingen: een tik op de lege favorieten gaat daarheen."),
       agenda: t("De afspraken van vandaag en morgen."),
-      afval: t("Dezelfde sensoren als op de afvalkaart. De eerstvolgende ophaaldag staat erbij, tot een week van tevoren."),
       letop: t("Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn."),
       alarmen: t("Elke rook-, gas-, koolmonoxide-, lek- of hittemelder in huis die afgaat, en een alarm dat afgaat. Daar hoeft niets voor gekozen te worden."),
-      lampen: t("Lichtgroepen tellen niet mee, anders telt een lamp dubbel."),
-      personen: t("Leeg laten: iedereen."),
       batterij_grens: t("Telefoons tellen niet mee. 0 zet het uit."),
     }[s.name];
   }
