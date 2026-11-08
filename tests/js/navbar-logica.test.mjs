@@ -28,6 +28,7 @@ import {
   BALK_STANDAARD,
   ITEMS_MAX,
   SUB_MAX,
+  kolommenVoor,
   VOORAF,
   actieVoor,
   asItem,
@@ -222,6 +223,16 @@ describe("subknoppen", () => {
       items: [{ name: "Boven", items: [{ name: "Zolder", path: "/zolder" }] }],
     });
     assert.deepEqual(item.items[0].items, []);
+  });
+
+  it("negen subknoppen blijven allemaal staan, in twee kolommen; tot en met acht in één", () => {
+    // NIEUW GEDRAG (8 november 2026). Tot 0.115.0 viel de negende stil weg: de Wekker van de eigenaar, toen Nieuws erbij kwam.
+    const negen = Array.from({ length: 9 }, (_, i) => ({ name: `s${i}`, path: `/s${i}` }));
+    assert.equal(asItem({ name: "Meer", items: negen }).items.length, 9);
+    assert.equal(SUB_MAX, 16);
+    assert.equal(kolommenVoor(8), 1);
+    assert.equal(kolommenVoor(9), 2);
+    assert.equal(kolommenVoor(16), 2);
   });
 
   it("kapt af op SUB_MAX", () => {

@@ -34,8 +34,18 @@ export const ITEMS_MAX = 20;
  *
  * Ze klappen boven de knop open, en die lijst mag het scherm niet vullen: dan
  * is het geen menu meer maar een pagina, en dan hoort het een pagina te zijn.
+ *
+ * Tot 0.115.0 was dat 8, en de negende viel zonder melding weg. Zo verdween
+ * op 8 november 2026 de Wekker uit het menu van de eigenaar toen hij Nieuws
+ * erbij zette. Zijn woorden: "2 rijen naast elkaar met een subtile
+ * scheidingslijn". Sindsdien staan er boven de 8 twee kolommen naast elkaar
+ * (`kolommenVoor`), van elk hooguit 8: samen 16.
  */
-export const SUB_MAX = 8;
+export const KOLOM_MAX = 8;
+export const SUB_MAX = 2 * KOLOM_MAX;
+
+/** Eén kolom tot en met 8 subknoppen, daarboven twee. */
+export const kolommenVoor = (n) => (n > KOLOM_MAX ? 2 : 1);
 
 /** Houd het aantal binnen de grenzen; alles onleesbaars wordt de standaard. */
 export function klemBalk(waarde) {

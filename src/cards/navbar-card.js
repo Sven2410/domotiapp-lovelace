@@ -48,6 +48,7 @@ import {
   isBewerkTag,
   itemsVan,
   klemBalk,
+  kolommenVoor,
   subVan,
   verdeel,
 } from "./navbar-logica.js";
@@ -275,8 +276,25 @@ class NavbarCard extends DacCard {
        midden van de balk terug -- dan staat hij misschien niet onder de goede
        knop, maar wel in beeld. */
     .menu.submenu { left: var(--x, 50%); transform: translateX(-50%); }
+    /* Meer dan 8 subknoppen: twee kolommen, de linker eerst van boven naar
+       onder, met een dunne lijn ertussen. De eigenaar, 8 november 2026: "2
+       rijen naast elkaar met een subtile scheidingslijn". De lijn is een
+       tweede achtergrond, zodat hij de hele hoogte meeloopt zonder een eigen
+       element in het raster. */
+    .menu.twee {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(var(--rijen, 5), auto);
+      grid-auto-flow: column;
+      column-gap: 13px; row-gap: 2px;
+      min-width: min(340px, calc(100vw - 32px));
+      max-width: min(460px, calc(100vw - 32px));
+      background:
+        linear-gradient(var(--dac-border), var(--dac-border)) center / 1px calc(100% - 24px) no-repeat,
+        color-mix(in srgb, var(--dac-bg-raise) 96%, transparent);
+    }
 
     .menu[open] { display: flex; }
+    .menu.twee[open] { display: grid; }
     .menu.meermenu[open] { animation: opkomen 160ms ease-out; }
     .menu.submenu[open] { animation: opkomen-mid 160ms ease-out; }
     @keyframes opkomen {
@@ -401,7 +419,9 @@ class NavbarCard extends DacCard {
         const sub = subVan(item);
         if (!sub.length) return "";
         const i = vol.indexOf(item);
-        return `<div class="menu submenu" data-id="s${i}" role="menu">${sub
+        const twee = kolommenVoor(sub.length) === 2;
+        const kolommen = twee ? ` twee" style="--rijen:${Math.ceil(sub.length / 2)}` : "";
+        return `<div class="menu submenu${kolommen}" data-id="s${i}" role="menu">${sub
           .map((s, j) => regel(s, i, j))
           .join("")}</div>`;
       })
