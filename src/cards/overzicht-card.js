@@ -35,7 +35,19 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
 import { afsprakenUit } from "./ruimtes-logica.js";
-import { BATTERIJ_GRENS, alarmen, batterijenLeeg, groet, komendeAfspraken, regels, staatOpen } from "./overzicht-logica.js";
+import {
+  AGENDA_DAGEN,
+  AGENDA_DAGEN_MAX,
+  ALARMEN,
+  BATTERIJ_GRENS,
+  agendaTot,
+  alarmen,
+  batterijenLeeg,
+  groet,
+  komendeAfspraken,
+  regels,
+  staatOpen,
+} from "./overzicht-logica.js";
 
 const DAGEN_STANDAARD = 5;
 const DAGEN_MAX = 7;
@@ -154,13 +166,20 @@ class OverzichtCard extends DacCard {
   }
 
   validate(config) {
-    const dagen = config.dagen === "" || config.dagen == null ? NaN : Number(config.dagen);
-    return { ...config, dagen: Number.isFinite(dagen) ? Math.min(Math.max(0, Math.round(dagen)), DAGEN_MAX) : DAGEN_STANDAARD };
+    const getal = (waarde, min, max, standaard) => {
+      const n = waarde === "" || waarde == null ? NaN : Number(waarde);
+      return Number.isFinite(n) ? Math.min(Math.max(min, Math.round(n)), max) : standaard;
+    };
+    return {
+      ...config,
+      dagen: getal(config.dagen, 0, DAGEN_MAX, DAGEN_STANDAARD),
+      agenda_dagen: getal(config.agenda_dagen, 1, AGENDA_DAGEN_MAX, AGENDA_DAGEN),
+    };
   }
 
   watched() {
     const c = this.config;
-    return [c.weer, ...lijst(c.agenda), ...lijst(c.letop)].filter(Boolean);
+    return [c.weer, ...lijst(c.agenda), ...lijst(c.letop), ...lijst(c.melders), ...lijst(c.batterijen)].filter(Boolean);
   }
 
   template() {
@@ -299,7 +318,7 @@ class OverzichtCard extends DacCard {
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
 
-  /** Per agenda een abonnement van vandaag tot en met morgen; na middernacht opnieuw. */
+  /** Per agenda een abonnement van vandaag tot `agenda_dagen` vooruit; na middernacht opnieuw. */
   abonneerAgendas_() {
     for (const abo of this.agendaAbos_.values()) abo.stop();
     this.agendaAbos_.clear();
@@ -307,7 +326,7 @@ class OverzichtCard extends DacCard {
     this.dag_ = this.vandaag_();
     const nu = this.nu_();
     const van = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
-    const tot = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 2);
+    const tot = agendaTot(nu, this.config.agenda_dagen);
     for (const entity of lijst(this.config.agenda)) {
       const abo = new AgendaAbonnement(entity, vanWand(van, this.tz_()), vanWand(tot, this.tz_()), (events) => {
         if (this.agendaAbos_.get(entity) !== abo) return;
@@ -405,18 +424,16 @@ class OverzichtCard extends DacCard {
     if (!el || !this.hass) return;
     const c = this.config;
     const states = this.hass.states ?? {};
-    const reg = this.hass.entities ?? {};
-    const verborgen = (id) => reg[id]?.hidden === true;
     const naamVan = (id) => nameOf(this.hass, id);
     const nu = this.nu_();
 
     const rijen = regels({
       nu,
       naamVan,
-      alarmen: c.alarmen === false ? [] : alarmen(states, verborgen),
+      alarmen: alarmen(states, lijst(c.melders)),
       open: lijst(c.letop).map((id) => states[id]).filter(staatOpen),
-      afspraken: komendeAfspraken([...this.afspraken_.values()].flat(), nu),
-      batterijen: batterijenLeeg(states, c.batterij_grens ?? BATTERIJ_GRENS, { verborgen, telefoon: (id) => reg[id]?.platform === "mobile_app" }),
+      afspraken: komendeAfspraken([...this.afspraken_.values()].flat(), nu, c.agenda_dagen),
+      batterijen: batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS),
     });
 
     const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity]));
@@ -453,7 +470,7 @@ class OverzichtCard extends DacCard {
 
 class OverzichtEditor extends DacEditor {
   defaults() {
-    return { dagen: DAGEN_STANDAARD, batterij_grens: BATTERIJ_GRENS, alarmen: true };
+    return { dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, batterij_grens: BATTERIJ_GRENS };
   }
 
   schema() {
@@ -462,8 +479,18 @@ class OverzichtEditor extends DacEditor {
       { name: "dagen", selector: sel.number(0, DAGEN_MAX) },
       { name: "naam", selector: sel.text() },
       { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
+      { name: "agenda_dagen", selector: sel.number(1, AGENDA_DAGEN_MAX) },
       { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
-      { name: "alarmen", selector: sel.bool() },
+      {
+        name: "melders",
+        selector: {
+          entity: {
+            multiple: true,
+            filter: [{ domain: "binary_sensor", device_class: Object.keys(ALARMEN) }, { domain: "alarm_control_panel" }],
+          },
+        },
+      },
+      { name: "batterijen", selector: { entity: { multiple: true, filter: [{ domain: ["sensor", "binary_sensor"], device_class: "battery" }] } } },
       { name: "batterij_grens", selector: sel.number(0, 50) },
     ];
   }
@@ -476,7 +503,9 @@ class OverzichtEditor extends DacEditor {
         naam: t("Naam in de begroeting"),
         agenda: t("Agenda's"),
         letop: t("Let op als dit open staat"),
-        alarmen: t("Rook, gas en lekkage melden"),
+        agenda_dagen: t("Agenda: dagen vooruit"),
+        melders: t("Melders"),
+        batterijen: t("Batterijen"),
         batterij_grens: t("Batterij bijna leeg onder (%)"),
       }[s.name] ?? super.label(s)
     );
@@ -486,10 +515,12 @@ class OverzichtEditor extends DacEditor {
     return {
       dagen: t("0 laat de rij met dagen weg."),
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
-      agenda: t("De afspraken van vandaag en morgen."),
+      agenda: t("De afspraken in deze agenda's, vanaf nu."),
+      agenda_dagen: t("1 is alleen vandaag, 7 een week."),
       letop: t("Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn."),
-      alarmen: t("Elke rook-, gas-, koolmonoxide-, lek- of hittemelder in huis die afgaat, en een alarm dat afgaat. Daar hoeft niets voor gekozen te worden."),
-      batterij_grens: t("Telefoons tellen niet mee. 0 zet het uit."),
+      melders: t("Rook-, gas-, koolmonoxide-, lek- en hittemelders en alarmsystemen. Ze staan er alleen als ze afgaan."),
+      batterijen: t("Ze staan er alleen als ze onder de grens zijn."),
+      batterij_grens: t("0 zet het uit."),
     }[s.name];
   }
 }

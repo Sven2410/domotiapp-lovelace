@@ -4,12 +4,16 @@
  * NIEUW GEDRAG (8 november 2026; afval, lampen en thuis eruit op dezelfde dag, 0.113.0). `overzicht-logica.js` bestond niet vóór deze ronde; op de code van ervoor faalt dit
  * bestand bij het importeren. Zijn woorden: "links komen dan de favorieten en rechts moet een soort info scherm komen met
  * weer en belangrijke dingen".
+ *
+ * NIEUW GEDRAG in 0.115.0: melders en batterijen alleen als ze gekozen zijn ("ik wil dat je alles moet kiezen in de GUI
+ * editor"), en de agenda een instelbaar aantal dagen vooruit, standaard een week. Die tests falen op 0.114.1.
  */
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  AGENDA_DAGEN,
   alarmen,
   batterijenLeeg,
   beperk,
@@ -37,7 +41,9 @@ describe("groet", () => {
 });
 
 describe("alarmen", () => {
-  it("vindt elke rook-, gas- en lekmelder die afgaat, zonder dat er iets gekozen is", () => {
+  const melders = ["binary_sensor.rook_keuken", "binary_sensor.lek_wasmachine", "binary_sensor.rook_zolder", "alarm_control_panel.huis", "alarm_control_panel.schuur"];
+
+  it("van de gekozen melders wat afgaat", () => {
     const states = huis(
       st("binary_sensor.rook_keuken", "on", { device_class: "smoke" }),
       st("binary_sensor.lek_wasmachine", "on", { device_class: "moisture" }),
@@ -47,7 +53,7 @@ describe("alarmen", () => {
       st("alarm_control_panel.schuur", "armed_away")
     );
     assert.deepEqual(
-      alarmen(states).map((a) => [a.id, a.woord]),
+      alarmen(states, melders).map((a) => [a.id, a.woord]),
       [
         ["alarm_control_panel.huis", "Alarm gaat af"],
         ["binary_sensor.lek_wasmachine", "Lekkage"],
@@ -56,9 +62,10 @@ describe("alarmen", () => {
     );
   });
 
-  it("slaat verborgen entiteiten over", () => {
-    const states = huis(st("binary_sensor.rook_test", "on", { device_class: "smoke" }));
-    assert.deepEqual(alarmen(states, (id) => id === "binary_sensor.rook_test"), []);
+  it("niets uit zichzelf: een melder die afgaat maar niet gekozen is, staat er niet", () => {
+    const states = huis(st("binary_sensor.rook_keuken", "on", { device_class: "smoke" }), st("alarm_control_panel.huis", "triggered"));
+    assert.deepEqual(alarmen(states, []), []);
+    assert.deepEqual(alarmen(states, ["binary_sensor.rook_keuken", "binary_sensor.weg"]).map((a) => a.id), ["binary_sensor.rook_keuken"]);
   });
 });
 
@@ -93,11 +100,11 @@ describe("batterijenLeeg", () => {
     st("sensor.kapot_batterij", "unavailable", { device_class: "battery", unit_of_measurement: "%" }),
     st("binary_sensor.slot_batterij", "on", { device_class: "battery" })
   );
-  const telefoon = (id) => id.includes("telefoon");
+  const gekozen = ["sensor.melder_badkamer_batterij", "sensor.knop_gang_batterij", "sensor.deur_batterij", "sensor.kapot_batterij", "binary_sensor.slot_batterij"];
 
-  it("de leegste eerst, een melder zonder getal vooraan, telefoons niet", () => {
+  it("van de gekozen de leegste eerst, een melder zonder getal vooraan", () => {
     assert.deepEqual(
-      batterijenLeeg(states, 15, { telefoon }).map((b) => [b.id, b.pct]),
+      batterijenLeeg(states, gekozen, 15).map((b) => [b.id, b.pct]),
       [
         ["binary_sensor.slot_batterij", null],
         ["sensor.knop_gang_batterij", 4],
@@ -106,8 +113,13 @@ describe("batterijenLeeg", () => {
     );
   });
 
+  it("niets uit zichzelf: een lege batterij die niet gekozen is, staat er niet", () => {
+    assert.deepEqual(batterijenLeeg(states, [], 15), []);
+    assert.deepEqual(batterijenLeeg(states, ["sensor.telefoon_bram_batterij"], 15).map((b) => b.id), ["sensor.telefoon_bram_batterij"]);
+  });
+
   it("0 zet het uit", () => {
-    assert.deepEqual(batterijenLeeg(states, 0, { telefoon }), []);
+    assert.deepEqual(batterijenLeeg(states, gekozen, 0), []);
   });
 });
 
@@ -122,15 +134,26 @@ describe("afspraken", () => {
     a("Eten", new Date(2026, 10, 8, 18), new Date(2026, 10, 8, 20)),
   ];
 
-  it("van nu tot en met morgen, op begintijd, een hele dag vooraan", () => {
+  it("standaard een week vooruit, op begintijd, een hele dag vooraan", () => {
+    assert.equal(AGENDA_DAGEN, 7);
     assert.deepEqual(
-      komendeAfspraken(lijst, NU).map((x) => x.titel),
-      ["Verjaardag", "Voetbal", "Eten", "Tandarts"]
+      komendeAfspraken([...lijst, a("Over een week", new Date(2026, 10, 15, 9), new Date(2026, 10, 15, 10))], NU).map((x) => x.titel),
+      ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]
     );
   });
 
+  it("zoveel dagen als ingesteld: 2 is vandaag en morgen, 60 haalt een afspraak van weken later", () => {
+    assert.deepEqual(komendeAfspraken(lijst, NU, 2).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts"]);
+    assert.deepEqual(komendeAfspraken(lijst, NU, 1).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten"]);
+    const later = a("Kerstdiner", new Date(2026, 11, 17, 18), new Date(2026, 11, 17, 21));
+    assert.deepEqual(komendeAfspraken([later], NU).map((x) => x.titel), []);
+    assert.deepEqual(komendeAfspraken([later], NU, 60).map((x) => x.titel), ["Kerstdiner"]);
+  });
+
   it("zegt wanneer", () => {
-    const [verjaardag, voetbal, eten, tandarts] = komendeAfspraken(lijst, NU);
+    const [verjaardag, voetbal, eten, tandarts, overmorgen] = komendeAfspraken(lijst, NU);
+    assert.equal(afspraakWanneer(overmorgen, NU), "overmorgen 09:00");
+    assert.equal(afspraakWanneer(a("Kerstdiner", new Date(2026, 11, 17, 18), new Date(2026, 11, 17, 21)), NU), "do 17 dec 18:00");
     assert.equal(afspraakWanneer(verjaardag, NU), "vandaag");
     assert.equal(afspraakWanneer(voetbal, NU), "nu, tot 15:00");
     assert.equal(afspraakWanneer(eten, NU), "18:00");

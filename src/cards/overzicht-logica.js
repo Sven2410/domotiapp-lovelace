@@ -7,10 +7,15 @@
  * "Belangrijk" is hier een lijst regels, en een regel staat er alleen als er iets te melden is (Vormregels: statusregels
  * weglaten als er niets te melden is). De volgorde is die van de urgentie:
  *
- *   1. alarm      rook, gas, koolmonoxide, lekkage of hitte, en een alarmsysteem dat afgaat; zonder instelling
+ *   1. alarm      een gekozen melder (rook, gas, koolmonoxide, lekkage, hitte) of alarmsysteem dat afgaat
  *   2. open       wat de installateur onder "Let op" zette en nu open of niet op slot staat
- *   3. agenda     de afspraken van nu tot en met morgen
- *   4. batterij   een batterij onder de grens (telefoons tellen niet: die gaan elke dag leeg)
+ *   3. agenda     de afspraken van nu tot en met `agenda_dagen` dagen vooruit (standaard een week)
+ *   4. batterij   een gekozen batterij onder de grens
+ *
+ * **Alles wat erop staat is gekozen in de editor.** Tot 0.115.0 zocht de kaart zelf alle melders en alle batterijen in
+ * huis bij elkaar. De eigenaar, 8 november 2026: "nu pakt hij alle batterij sensoren ik wil dat je alles moet kiezen in de
+ * GUI editor". Niets meer uit zichzelf dus, ook de melders niet. En de agenda keek tot dan alleen naar vandaag en morgen;
+ * bij hem stond de eerstvolgende afspraak weken later, en dan lijkt de agenda kapot.
  *
  * Afval, lampen die aan zijn en wie er thuis is stonden er in 0.112.0 ook, en zijn er in 0.113.0 met opzet af. De eigenaar:
  * "Afval heb ik links bij favorieten al staan (...) Lampen aan ook niet dat is een badge. Wie er thuis is ook niet dat is de
@@ -46,13 +51,14 @@ export const ALARMEN = {
 };
 
 /**
- * Wat er nu alarm slaat, over het hele huis: daar hoeft niemand iets voor aan te wijzen.
+ * Wat er van de gekozen melders nu alarm slaat.
  * @returns {Array<{id: string, woord: string, icoon: string}>}
  */
-export function alarmen(states, verborgen = () => false) {
+export function alarmen(states, gekozen = []) {
   const uit = [];
-  for (const st of Object.values(states ?? {})) {
-    if (verborgen(st.entity_id)) continue;
+  for (const id of new Set(gekozen)) {
+    const st = states?.[id];
+    if (!st) continue;
     const domein = domainOf(st.entity_id);
     if (domein === "binary_sensor" && st.state === "on" && ALARMEN[st.attributes?.device_class]) {
       const a = ALARMEN[st.attributes.device_class];
@@ -104,21 +110,17 @@ export function openIcoon(st) {
 }
 
 /**
- * Batterijen onder de grens, de leegste eerst. Een sensor in procenten (`device_class: battery`) of een melder die
- * "batterij bijna leeg" zegt (een binary_sensor met dezelfde klasse die aan staat).
- *
- * `telefoon(id)` zegt of het een telefoon is (de Companion-app, `mobile_app`): die gaat elke avond leeg, en dat is geen
- * nieuws op een scherm in de gang.
+ * Van de gekozen batterijen die onder de grens, de leegste eerst. Een sensor in procenten of een melder die "batterij
+ * bijna leeg" zegt (een binary_sensor die aan staat).
  */
-export function batterijenLeeg(states, grens, { verborgen = () => false, telefoon = () => false } = {}) {
+export function batterijenLeeg(states, gekozen, grens) {
   if (!(grens > 0)) return [];
   const uit = [];
-  for (const st of Object.values(states ?? {})) {
-    if (st.attributes?.device_class !== "battery") continue;
-    if (verborgen(st.entity_id) || telefoon(st.entity_id)) continue;
+  for (const id of new Set(gekozen ?? [])) {
+    const st = states?.[id];
+    if (!st) continue;
     const domein = domainOf(st.entity_id);
     if (domein === "sensor") {
-      if (st.attributes.unit_of_measurement !== "%") continue;
       const pct = Number(st.state);
       if (st.state === "" || !Number.isFinite(pct) || pct >= grens) continue;
       uit.push({ id: st.entity_id, pct });
@@ -129,21 +131,30 @@ export function batterijenLeeg(states, grens, { verborgen = () => false, telefoo
   return uit.sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1) || a.id.localeCompare(b.id));
 }
 
+/** Standaard een week vooruit. */
+export const AGENDA_DAGEN = 7;
+export const AGENDA_DAGEN_MAX = 60;
+
+/** Het einde van het venster: middernacht na `dagen` dagen, waarbij 1 alleen vandaag is. */
+export function agendaTot(nu, dagen = AGENDA_DAGEN) {
+  return new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + dagen);
+}
+
 /**
- * De afspraken die ertoe doen: wat nu loopt en wat er nog komt, tot en met morgen.
+ * De afspraken die ertoe doen: wat nu loopt en wat er nog komt, tot en met `dagen` dagen vooruit (1 is alleen vandaag).
  * @param {Array<{start: Date, eind: Date, heleDag: boolean, titel: string, agenda?: string}>} afspraken
  */
-export function komendeAfspraken(afspraken, nu) {
-  const eindMorgen = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + 2);
+export function komendeAfspraken(afspraken, nu, dagen = AGENDA_DAGEN) {
+  const tot = agendaTot(nu, dagen);
   return (afspraken ?? [])
-    .filter((a) => a.eind > nu && a.start < eindMorgen)
+    .filter((a) => a.eind > nu && a.start < tot)
     .sort((a, b) => a.start - b.start || Number(b.heleDag) - Number(a.heleDag));
 }
 
 const twee = (n) => String(n).padStart(2, "0");
 const klok = (d) => `${twee(d.getHours())}:${twee(d.getMinutes())}`;
 
-/** "nu, tot 15:00", "14:30", "morgen 09:00", "morgen" of "vandaag". */
+/** "nu, tot 15:00", "14:30", "morgen 09:00", "morgen", "vandaag", of verder weg "donderdag 09:00" en "do 17 dec". */
 export function afspraakWanneer(a, nu) {
   const dag = daysBetween(nu, a.start);
   if (a.heleDag) return dag <= 0 ? t("vandaag") : relativeDay(a.start, nu);

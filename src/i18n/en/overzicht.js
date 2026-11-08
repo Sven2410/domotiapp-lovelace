@@ -18,15 +18,19 @@ export const OVERZICHT = {
   "Naam in de begroeting": "Name in the greeting",
   "Agenda's": "Calendars",
   "Let op als dit open staat": "Warn when this is open",
-  "Rook, gas en lekkage melden": "Report smoke, gas and leaks",
   "Batterij bijna leeg onder (%)": "Battery almost empty below (%)",
   "0 laat de rij met dagen weg.": "0 leaves out the row of days.",
-  "De afspraken van vandaag en morgen.": "The appointments of today and tomorrow.",
   "Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn.":
     "Doors, windows, locks, the garage. They only show when they are open or unlocked.",
-  "Elke rook-, gas-, koolmonoxide-, lek- of hittemelder in huis die afgaat, en een alarm dat afgaat. Daar hoeft niets voor gekozen te worden.":
-    "Every smoke, gas, carbon monoxide, leak or heat detector in the house that goes off, and an alarm that is triggered. Nothing needs to be chosen for this.",
-  "Telefoons tellen niet mee. 0 zet het uit.": "Phones are not counted. 0 turns it off.",
+  "Agenda: dagen vooruit": "Calendar: days ahead",
+  "Melders": "Detectors",
+  "Batterijen": "Batteries",
+  "De afspraken in deze agenda's, vanaf nu.": "The appointments in these calendars, from now on.",
+  "1 is alleen vandaag, 7 een week.": "1 is only today, 7 is a week.",
+  "Rook-, gas-, koolmonoxide-, lek- en hittemelders en alarmsystemen. Ze staan er alleen als ze afgaan.":
+    "Smoke, gas, carbon monoxide, leak and heat detectors and alarm systems. They only show when they go off.",
+  "Ze staan er alleen als ze onder de grens zijn.": "They only show when they are below the threshold.",
+  "0 zet het uit.": "0 turns it off.",
   "DomotiApp Overzicht": "DomotiApp Overview",
   "Voor een tablet: links de favorieten, rechts de klok, het weer en wat er belangrijk is.":
     "For a tablet: favourites on the left, the clock, the weather and what matters on the right.",
