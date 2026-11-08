@@ -10,23 +10,20 @@
  *   1. alarm      rook, gas, koolmonoxide, lekkage of hitte, en een alarmsysteem dat afgaat; zonder instelling
  *   2. open       wat de installateur onder "Let op" zette en nu open of niet op slot staat
  *   3. agenda     de afspraken van nu tot en met morgen
- *   4. afval      de eerstvolgende ophaaldag, binnen een week
- *   5. batterij   een batterij onder de grens (telefoons tellen niet: die gaan elke dag leeg)
- *   6. lampen     hoeveel lampen er aan zijn
- *   7. thuis      wie er thuis is
+ *   4. batterij   een batterij onder de grens (telefoons tellen niet: die gaan elke dag leeg)
  *
- * Alleen taal.js, ha.js en afval-logica.js als import, zodat het in een gewone Node-test past.
+ * Afval, lampen die aan zijn en wie er thuis is stonden er in 0.112.0 ook, en zijn er in 0.113.0 met opzet af. De eigenaar:
+ * "Afval heb ik links bij favorieten al staan (...) Lampen aan ook niet dat is een badge. Wie er thuis is ook niet dat is de
+ * person kaart". Wat al op een eigen kaart of badge staat, hoort hier niet nog een keer. Zet ze niet terug zonder het te vragen.
+ *
+ * Alleen taal.js en ha.js als import, zodat het in een gewone Node-test past.
  */
 
 import { daysBetween, domainOf, relativeDay } from "../ha.js";
-import { nt, t, tn } from "../taal.js";
-import { eersteOphaaldag } from "./afval-logica.js";
+import { nt, t } from "../taal.js";
 
 /** Zoveel regels van één soort, daarna "en n meer". */
 export const MAX_PER_SOORT = 3;
-
-/** De afvalregel staat er tot een week van tevoren; verder weg is het geen nieuws. */
-export const AFVAL_DAGEN = 6;
 
 /** Standaard: een batterij onder 15% staat erbij. */
 export const BATTERIJ_GRENS = 15;
@@ -107,21 +104,6 @@ export function openIcoon(st) {
 }
 
 /**
- * Hoeveel lampen er aan zijn. Een lichtgroep telt niet: die zou dezelfde lamp twee keer tellen. Een groep herken je aan
- * zijn ledenlijst (`entity_id`), net als in light-logica.
- */
-export function lampenAan(states, verborgen = () => false) {
-  let n = 0;
-  for (const st of Object.values(states ?? {})) {
-    if (domainOf(st.entity_id) !== "light" || st.state !== "on") continue;
-    if (Array.isArray(st.attributes?.entity_id)) continue;
-    if (verborgen(st.entity_id)) continue;
-    n += 1;
-  }
-  return n;
-}
-
-/**
  * Batterijen onder de grens, de leegste eerst. Een sensor in procenten (`device_class: battery`) of een melder die
  * "batterij bijna leeg" zegt (een binary_sensor met dezelfde klasse die aan staat).
  *
@@ -147,12 +129,6 @@ export function batterijenLeeg(states, grens, { verborgen = () => false, telefoo
   return uit.sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1) || a.id.localeCompare(b.id));
 }
 
-/** Wie er thuis is, in de volgorde van de lijst. Zonder lijst: elke persoon. */
-export function wieThuis(states, ids) {
-  const lijst = ids?.length ? ids : Object.keys(states ?? {}).filter((id) => domainOf(id) === "person").sort();
-  return lijst.filter((id) => states?.[id]?.state === "home");
-}
-
 /**
  * De afspraken die ertoe doen: wat nu loopt en wat er nog komt, tot en met morgen.
  * @param {Array<{start: Date, eind: Date, heleDag: boolean, titel: string, agenda?: string}>} afspraken
@@ -176,12 +152,6 @@ export function afspraakWanneer(a, nu) {
   return `${relativeDay(a.start, nu)} ${klok(a.start)}`;
 }
 
-/** "Papier", "GFT en Papier", "GFT, Papier en Rest". */
-export function opsomming(namen) {
-  if (namen.length <= 1) return namen[0] ?? "";
-  return t("{lijst} en {laatste}", { lijst: namen.slice(0, -1).join(", "), laatste: namen.at(-1) });
-}
-
 /** Knip een soort af op `max` regels, met "en n meer" als laatste. */
 export function beperk(rijen, max = MAX_PER_SOORT) {
   if (rijen.length <= max) return rijen;
@@ -197,13 +167,10 @@ export function beperk(rijen, max = MAX_PER_SOORT) {
  * @param {Array} p.alarmen          uit `alarmen`
  * @param {Array} p.open             toestanden van "Let op" die open staan
  * @param {Array} p.afspraken        uit `komendeAfspraken`
- * @param {Array} p.afval            uit `afvalKomend` (infoscherm-afval.js)
  * @param {Array} p.batterijen       uit `batterijenLeeg`
- * @param {number|null} p.lampen     null: niet tonen
- * @param {Array<string>|null} p.thuis  namen; null: niet tonen
  * @param {(id: string) => string} p.naamVan
  */
-export function regels({ nu, alarmen: alarm = [], open = [], afspraken = [], afval = [], batterijen = [], lampen = null, thuis = null, naamVan = (id) => id }) {
+export function regels({ nu, alarmen: alarm = [], open = [], afspraken = [], batterijen = [], naamVan = (id) => id }) {
   const uit = [];
 
   for (const a of alarm) {
@@ -218,34 +185,9 @@ export function regels({ nu, alarmen: alarm = [], open = [], afspraken = [], afv
     ...beperk(afspraken.map((a) => ({ soort: "agenda", toon: "accent", icoon: "calendar", tekst: a.titel || t("Afspraak"), bij: afspraakWanneer(a, nu), entity: a.agenda })))
   );
 
-  const bakken = eersteOphaaldag(afval, (b) => b.dagen);
-  if (bakken.length && bakken[0].dagen <= AFVAL_DAGEN) {
-    const dagen = bakken[0].dagen;
-    uit.push({
-      soort: "afval",
-      toon: dagen <= 1 ? "warn" : "neutral",
-      icoon: "bin",
-      tekst: opsomming(bakken.map((b) => b.naam)),
-      bij: relativeDay(bakken[0].datum, nu),
-      entity: bakken[0].id,
-    });
-  }
-
   uit.push(
     ...beperk(batterijen.map((b) => ({ soort: "batterij", toon: "warn", icoon: "battery", tekst: naamVan(b.id), bij: b.pct == null ? t("bijna leeg") : `${Math.round(b.pct)}%`, entity: b.id })))
   );
-
-  if (lampen != null && lampen > 0) {
-    uit.push({ soort: "lampen", toon: "lit", icoon: "bulb", tekst: tn(lampen, "{n} lamp aan", "{n} lampen aan") });
-  }
-
-  if (thuis != null) {
-    uit.push(
-      thuis.length
-        ? { soort: "thuis", toon: "accent", icoon: "people", tekst: opsomming(thuis), bij: t("thuis") }
-        : { soort: "thuis", toon: "neutral", icoon: "away", tekst: t("Niemand thuis") }
-    );
-  }
 
   return uit;
 }

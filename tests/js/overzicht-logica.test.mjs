@@ -1,7 +1,7 @@
 /**
  * Wat er rechts op de overzichtskaart staat onder het weer.
  *
- * NIEUW GEDRAG (8 november 2026). `overzicht-logica.js` bestond niet vóór deze ronde; op de code van ervoor faalt dit
+ * NIEUW GEDRAG (8 november 2026; afval, lampen en thuis eruit op dezelfde dag, 0.113.0). `overzicht-logica.js` bestond niet vóór deze ronde; op de code van ervoor faalt dit
  * bestand bij het importeren. Zijn woorden: "links komen dan de favorieten en rechts moet een soort info scherm komen met
  * weer en belangrijke dingen".
  */
@@ -16,12 +16,9 @@ import {
   groet,
   komendeAfspraken,
   afspraakWanneer,
-  lampenAan,
   openWoord,
-  opsomming,
   regels,
   staatOpen,
-  wieThuis,
 } from "../../src/cards/overzicht-logica.js";
 
 const st = (entity_id, state, attributes = {}) => ({ entity_id, state, attributes });
@@ -87,19 +84,6 @@ describe("staatOpen en openWoord", () => {
   });
 });
 
-describe("lampenAan", () => {
-  it("telt lampen die aan zijn, zonder lichtgroepen", () => {
-    const states = huis(
-      st("light.bank", "on"),
-      st("light.tafel", "on"),
-      st("light.gang", "off"),
-      st("light.woonkamer", "on", { entity_id: ["light.bank", "light.tafel"] }),
-      st("switch.koffie", "on")
-    );
-    assert.equal(lampenAan(states), 2);
-  });
-});
-
 describe("batterijenLeeg", () => {
   const states = huis(
     st("sensor.melder_badkamer_batterij", "8", { device_class: "battery", unit_of_measurement: "%" }),
@@ -124,18 +108,6 @@ describe("batterijenLeeg", () => {
 
   it("0 zet het uit", () => {
     assert.deepEqual(batterijenLeeg(states, 0, { telefoon }), []);
-  });
-});
-
-describe("wieThuis", () => {
-  const states = huis(st("person.bram", "home"), st("person.anna", "not_home"), st("person.tom", "home"));
-
-  it("zonder lijst iedereen, op entity_id", () => {
-    assert.deepEqual(wieThuis(states, []), ["person.bram", "person.tom"]);
-  });
-
-  it("met een lijst in die volgorde", () => {
-    assert.deepEqual(wieThuis(states, ["person.tom", "person.anna", "person.bram"]), ["person.tom", "person.bram"]);
   });
 });
 
@@ -166,14 +138,7 @@ describe("afspraken", () => {
   });
 });
 
-describe("opsomming en beperk", () => {
-  it("met 'en' voor de laatste", () => {
-    assert.equal(opsomming([]), "");
-    assert.equal(opsomming(["GFT"]), "GFT");
-    assert.equal(opsomming(["GFT", "Papier"]), "GFT en Papier");
-    assert.equal(opsomming(["GFT", "Papier", "Rest"]), "GFT, Papier en Rest");
-  });
-
+describe("beperk", () => {
   it("drie regels van een soort, daarna 'en n meer'", () => {
     const vijf = [1, 2, 3, 4, 5].map((n) => ({ soort: "open", tekst: `Raam ${n}` }));
     assert.deepEqual(beperk(vijf).map((r) => r.tekst), ["Raam 1", "Raam 2", "en 3 meer"]);
@@ -186,7 +151,6 @@ describe("regels", () => {
 
   it("alleen wat er te melden is: niets is een lege lijst", () => {
     assert.deepEqual(regels({ nu: NU, naamVan }), []);
-    assert.deepEqual(regels({ nu: NU, naamVan, lampen: 0 }), []);
   });
 
   it("in de volgorde van de urgentie", () => {
@@ -196,14 +160,7 @@ describe("regels", () => {
       alarmen: [{ id: "binary_sensor.rook_keuken", woord: "Rook", icoon: "smoke" }],
       open: [st("lock.voordeur", "unlocked")],
       afspraken: [{ titel: "Tandarts", start: new Date(2026, 10, 9, 9), eind: new Date(2026, 10, 9, 10), heleDag: false, agenda: "calendar.gezin" }],
-      afval: [
-        { id: "sensor.gft", naam: "GFT", datum: new Date(2026, 10, 9), dagen: 1 },
-        { id: "sensor.papier", naam: "Papier", datum: new Date(2026, 10, 9), dagen: 1 },
-        { id: "sensor.rest", naam: "Rest", datum: new Date(2026, 10, 12), dagen: 4 },
-      ],
       batterijen: [{ id: "sensor.knop", pct: 4 }],
-      lampen: 3,
-      thuis: ["Bram", "Anna"],
     });
     assert.deepEqual(
       uit.map((r) => [r.soort, r.toon, r.tekst, r.bij ?? null]),
@@ -211,24 +168,20 @@ describe("regels", () => {
         ["alarm", "bad", "Rookmelder keuken", "Rook"],
         ["open", "warn", "Voordeur", "niet op slot"],
         ["agenda", "accent", "Tandarts", "morgen 09:00"],
-        ["afval", "warn", "GFT en Papier", "morgen"],
         ["batterij", "warn", "sensor.knop", "4%"],
-        ["lampen", "lit", "3 lampen aan", null],
-        ["thuis", "accent", "Bram en Anna", "thuis"],
       ]
     );
     assert.equal(uit.find((r) => r.soort === "agenda").entity, "calendar.gezin");
   });
 
-  it("afval verder dan een week weg staat er niet; binnen de week zonder waarschuwing", () => {
-    const bak = (dagen) => [{ id: "sensor.gft", naam: "GFT", datum: new Date(2026, 10, 8 + dagen), dagen }];
-    assert.equal(regels({ nu: NU, afval: bak(7) }).length, 0);
-    assert.equal(regels({ nu: NU, afval: bak(3) })[0].toon, "neutral");
-    assert.equal(regels({ nu: NU, afval: bak(0) })[0].bij, "vandaag");
-  });
-
-  it("niemand thuis is ook iets om te zeggen, en een lamp is enkelvoud", () => {
-    assert.deepEqual(regels({ nu: NU, thuis: [] }).map((r) => r.tekst), ["Niemand thuis"]);
-    assert.deepEqual(regels({ nu: NU, lampen: 1 }).map((r) => r.tekst), ["1 lamp aan"]);
+  it("afval, lampen en wie er thuis is staan er niet op, ook niet als ze worden meegegeven", () => {
+    // NIEUW GEDRAG in 0.113.0: de eigenaar heeft die al op een eigen kaart of badge. Faalt op 0.112.0.
+    const uit = regels({
+      nu: NU,
+      afval: [{ id: "sensor.gft", naam: "GFT", datum: new Date(2026, 10, 9), dagen: 1 }],
+      lampen: 3,
+      thuis: ["Bram"],
+    });
+    assert.deepEqual(uit, []);
   });
 });
