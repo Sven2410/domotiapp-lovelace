@@ -58,6 +58,7 @@ import "./cards/meldingen-card.js";
 import "./cards/automatisering-card.js";
 import "./cards/favorieten-card.js";
 import "./cards/overzicht-card.js";
+import "./cards/nieuws-card.js";
 import "./cards/weerstation-card.js";
 import "./cards/printer-card.js";
 import "./cards/auto-card.js";

@@ -35,7 +35,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import loader, migratie, resource, websocket
-from . import automatisering, bewaking, infoscherm, meldingen
+from . import automatisering, bewaking, infoscherm, meldingen, nieuws
 from .alarm import afvuren as alarm_afvuren
 from .alarm import meldingen as alarm_meldingen
 from .alarm import planner as alarm_planner_mod
@@ -140,6 +140,9 @@ async def _async_zet_commandos_klaar(hass: HomeAssistant, data: dict) -> None:
 
     # De automatiseringskaart: de regels van de klant, en een klok die ze uitvoert.
     await automatisering.async_zet_op(hass)
+
+    # De nieuwskaart: vaste rubrieken van de NOS, een kwartier in het geheugen.
+    nieuws.async_zet_op(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

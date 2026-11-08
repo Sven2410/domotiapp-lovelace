@@ -26,8 +26,9 @@ import { BEHEER } from "./en/beheer.js";
 import { AUTOMATISERING } from "./en/automatisering.js";
 import { WEERSTATION } from "./en/weerstation.js";
 import { OVERZICHT } from "./en/overzicht.js";
+import { NIEUWS } from "./en/nieuws.js";
 
 /** De delen apart, voor de toets die kijkt of een zin overal hetzelfde vertaald is. */
-export const DELEN = { ALGEMEEN, COACH, BATTERIJ, PROGRAMMA, ENTITEITEN, SCENE, KLIMAAT, MEDIA, INDELING, MELDINGEN, GEDEELD, CAMERA, APPARATEN, APPARATUUR, WEKKER, INFOSCHERM, BEHEER, AUTOMATISERING, WEERSTATION, OVERZICHT };
+export const DELEN = { ALGEMEEN, COACH, BATTERIJ, PROGRAMMA, ENTITEITEN, SCENE, KLIMAAT, MEDIA, INDELING, MELDINGEN, GEDEELD, CAMERA, APPARATEN, APPARATUUR, WEKKER, INFOSCHERM, BEHEER, AUTOMATISERING, WEERSTATION, OVERZICHT, NIEUWS };
 
 export const EN = Object.assign({}, ...Object.values(DELEN));
