@@ -37,7 +37,7 @@ export const GROEPEN = [
   [nt("Licht en stroom"), ["bulb", "bulbGroup", "switchOn", "power", "plug", "bolt", "battery"]],
   [nt("Personen"), ["person", "people", "away", "dier"]],
   [nt("Apparaten"), ["tv", "speaker", "camera", "cctv", "car", "van", "washer", "dishwasher", "stofzuiger", "koelkast", "oven", "magnetron", "printer", "printer3d", "fan", "airco", "radio", "boiler"]],
-  [nt("Media"), ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music"]],
+  [nt("Media"), ["play", "pause", "next", "prev", "volume", "volumeMute", "shuffle", "repeat", "repeatOne", "search", "speakers", "music", "nieuws"]],
   [nt("Afval"), ["bin", "binWheeled", "calendar"]],
   [nt("Verwarming en klimaat"), ["airco", "flame", "snowflake", "floorHeating", "heatPump", "circulatiepomp", "boiler", "thermo", "homeThermo", "celsius", "gas", "pressure", "refill"]],
   [nt("Auto en tanken"), ["car", "petrol", "diesel", "gas", "fuelStation", "raceCar", "plug"]],
@@ -186,6 +186,7 @@ export const TERMEN = {
   bin: [nt("afval"), "vuilnis", "prullenbak", "bak", "container", "waste", "trash", "kliko", "bin", "rubbish"],
   binWheeled: [nt("kliko"), "container", "afval", "vuilnisbak", "rolcontainer", "ophaaldag", "waste", "wheelie bin", "bin", "collection day"],
   calendar: [nt("agenda"), "kalender", "datum", "afspraak", "planning", "calendar", "dag", "date", "appointment"],
+  nieuws: [nt("nieuws"), "krant", "nos", "journaal", "berichten", "news", "newspaper", "headlines"],
 
   /* Weer */
   sun: [nt("zon"), "zonnig", "helder", "sun", "zonnepanelen", "dag", "weer", "buiten", "sunny", "clear", "solar", "weather"],

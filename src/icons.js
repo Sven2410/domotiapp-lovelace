@@ -268,6 +268,11 @@ export const icons = {
   calendar: draw(`<rect x="3.6" y="5.4" width="16.8" height="15" rx="2"/>
     <path d="M3.6 10h16.8M8.4 3.4v3.6M15.6 3.4v3.6"/>`),
 
+  /* Een krant met een vouw rechts: de nieuwskaart, en een knop ernaartoe in de navigatiebalk. */
+  nieuws: draw(`<path d="M17.4 19.8H6a2 2 0 0 1-2-2V5.2a1 1 0 0 1 1-1h11.4a1 1 0 0 1 1 1v12.6a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.4a1 1 0 0 0-1-1h-1"/>
+    <rect x="7" y="7.4" width="4.4" height="4" rx=".5"/>
+    <path d="M13.8 7.8h1.6M13.8 10.8h1.6M7 14.4h8.4M7 17.2h8.4"/>`),
+
   /* ---- weather, used by the header ---- */
   sun: draw(`<circle cx="12" cy="12" r="4.1"/>
     <path d="M12 2.4v2.3M12 19.3v2.3M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.4 12h2.3M19.3 12h2.3M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>`),

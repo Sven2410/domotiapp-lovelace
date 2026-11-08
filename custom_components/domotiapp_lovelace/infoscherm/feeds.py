@@ -235,22 +235,27 @@ class FeedLezer:
         self._meld()
 
     async def _haal(self, url: str, naam: str) -> list[dict[str, Any]]:
-        sessie = async_get_clientsession(self._hass)
-        async with sessie.get(
-            url,
-            timeout=aiohttp.ClientTimeout(total=FEED_TIMEOUT),
-            headers={"User-Agent": "DomotiApp Infoscherm (Home Assistant)"},
-        ) as antwoord:
-            if antwoord.status != 200:
-                raise ValueError(f"HTTP {antwoord.status}")
-            # In stukken lezen tot het einde. `content.read(n)` geeft wat er
-            # TOEVALLIG binnen is en niet de hele feed; zo kwam de NOS-feed op
-            # 9 september 2026 half aan, met "unclosed CDATA section" als fout.
-            delen: list[bytes] = []
-            totaal = 0
-            async for stuk in antwoord.content.iter_chunked(64 * 1024):
-                totaal += len(stuk)
-                if totaal > MAX_FEED_BYTES:
-                    raise ValueError("de feed is groter dan 2 MB")
-                delen.append(stuk)
-        return parse_feed(b"".join(delen).decode("utf-8", errors="replace"), naam)
+        return await async_haal_feed(self._hass, url, naam)
+
+
+async def async_haal_feed(hass: HomeAssistant, url: str, naam: str) -> list[dict[str, Any]]:
+    """Eén feed ophalen en lezen. Gooit bij een fout; ook gebruikt door de nieuwskaart (`nieuws.py`)."""
+    sessie = async_get_clientsession(hass)
+    async with sessie.get(
+        url,
+        timeout=aiohttp.ClientTimeout(total=FEED_TIMEOUT),
+        headers={"User-Agent": "DomotiApp Infoscherm (Home Assistant)"},
+    ) as antwoord:
+        if antwoord.status != 200:
+            raise ValueError(f"HTTP {antwoord.status}")
+        # In stukken lezen tot het einde. `content.read(n)` geeft wat er
+        # TOEVALLIG binnen is en niet de hele feed; zo kwam de NOS-feed op
+        # 9 september 2026 half aan, met "unclosed CDATA section" als fout.
+        delen: list[bytes] = []
+        totaal = 0
+        async for stuk in antwoord.content.iter_chunked(64 * 1024):
+            totaal += len(stuk)
+            if totaal > MAX_FEED_BYTES:
+                raise ValueError("de feed is groter dan 2 MB")
+            delen.append(stuk)
+    return parse_feed(b"".join(delen).decode("utf-8", errors="replace"), naam)
