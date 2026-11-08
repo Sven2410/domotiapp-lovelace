@@ -37,7 +37,7 @@ export const lokaal = isoDatumTijd;
  * ("2026-10-17") is een hele dag en hoort LOKAAL om middernacht te beginnen;
  * `new Date("2026-10-17")` zou hem in UTC lezen.
  */
-function moment(waarde, tz) {
+export function moment(waarde, tz) {
   if (waarde instanceof Date) return waarde;
   const s = String(waarde ?? "");
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
