@@ -649,6 +649,10 @@ allebei "Speed" heten. De dienst `nep_weerstation.zet` zet een waarde
 (`{speed: 8, speed_2: 14, moisture: true}`). De geschiedenis van de luchtdruk is met de
 hand in `home-assistant_v2.db` gezet. Op `kaart-test` staat een view `weerstation`.
 
+Sinds 8 november 2026 staat er ook een view `overzicht` met de overzichtskaart, en een Lokale agenda `calendar.gezin` met
+afspraken voor die kaart (in `.storage`). De afvalsensoren, de lekkage in de kelder en de personen thuis zijn er met
+`POST /api/states` gezet en zijn na een herstart weg.
+
 Op `kaart-test` staat sinds 31 oktober 2026 ook een view `favorieten`. De automatiseringskaart op view `automatisering`
 heeft de demo-rolluiken `cover.hall_window`, `cover.kitchen_window` (geen stand) en `cover.living_room_window`.
 
@@ -2157,7 +2161,7 @@ met **drieëndertig kaarttypes** en sinds 0.43.0 ook een **badge**:
 
 | | |
 |---|---|
-| Kop en indeling | header, separator, **navbalk**, **tabbladen**, **terug** (een chip die naar een vast pad gaat of een stap terug; ook in een pop-up, waar een badge niet kan staan) |
+| Kop en indeling | header, separator, **navbalk**, **tabbladen**, **terug** (een chip die naar een vast pad gaat of een stap terug; ook in een pop-up, waar een badge niet kan staan), **overzicht** (sinds 0.112.0: voor een tablet, links de favorietenkaart zelf en rechts begroeting, klok, weer met de dagen erna en wat er belangrijk is; een regel staat er alleen als er iets te melden is, zie de kop van `overzicht-logica.js`) |
 | Bediening | entiteiten (rij/tegel/compact, schuifschakelaar, tijdveld, keuzelijst), verlichting, klimaat, **HVAC** (airco, warmtepomp, ventilatie, boiler op één kaart), rolluiken (ook poorten, en motoren die omgekeerd hangen) |
 | Media | media (rij en groot), scene, wekker |
 | Meldingen | rookmelder, personen, afval, weersvoorspelling, **vaatwasser** (sinds 0.70.0 de kaart voor elk apparaat met een programma: ook wasmachine en droger, met merk, type en foto; bij Miele zoekt hij de rest van het apparaat zelf, zie `programma-logica.js`. Het `type` bleef `domotiapp-dishwasher-card`) |
