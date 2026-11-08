@@ -1,0 +1,15 @@
+{
+  "Geef de agenda een naam.": "Give the calendar a name.",
+  "Deze agenda staat er al.": "This calendar is already there.",
+  "Apple ID of wachtwoord klopt niet. Gebruik een app-specifiek wachtwoord.": "Apple ID or password is wrong. Use an app-specific password.",
+  "De agenda is niet te bereiken. Kijk het adres na.": "The calendar cannot be reached. Check the address.",
+  "Op dit adres staat geen agenda.": "There is no calendar at this address.",
+  "Deze agenda is niet te lezen. Gebruik het geheime adres.": "This calendar cannot be read. Use the secret address.",
+  "De agenda kon niet toegevoegd worden ({reden}).": "The calendar could not be added ({reden}).",
+  "Dit is geen iCal-adres van Google Agenda. Het begint met https://calendar.google.com/calendar/ical/.": "This is not an iCal address of Google Calendar. It starts with https://calendar.google.com/calendar/ical/.",
+  "Vul je Apple ID en een app-specifiek wachtwoord in.": "Enter your Apple ID and an app-specific password.",
+  "iCloud gaf geen toegang. Kijk je Apple ID en het app-specifieke wachtwoord na.": "iCloud did not allow access. Check your Apple ID and the app-specific password.",
+  "Onbekende soort agenda.": "Unknown kind of calendar.",
+  "Deze agenda is niet via de kaart toegevoegd.": "This calendar was not added through the card.",
+  "Agenda's toevoegen staat uit op deze kaart.": "Adding calendars is turned off on this card."
+}

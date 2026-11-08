@@ -193,7 +193,7 @@ export function regels({ nu, alarmen: alarm = [], open = [], afspraken = [], bat
   );
 
   uit.push(
-    ...beperk(afspraken.map((a) => ({ soort: "agenda", toon: "accent", icoon: "calendar", tekst: a.titel || t("Afspraak"), bij: afspraakWanneer(a, nu), entity: a.agenda })))
+    ...beperk(afspraken.map((a) => ({ soort: "agenda", toon: "accent", icoon: "calendar", tekst: a.titel || t("Afspraak"), bij: afspraakWanneer(a, nu), entity: a.agenda, afspraak: a })))
   );
 
   uit.push(

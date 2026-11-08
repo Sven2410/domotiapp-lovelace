@@ -34,7 +34,9 @@ import { AgendaAbonnement } from "../infoscherm-client.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
-import { afsprakenUit } from "./ruimtes-logica.js";
+import { afsprakenVan, agendaInfo, agendasVan } from "./agenda-logica.js";
+import { ToegevoegdAbonnement } from "./agenda-client.js";
+import { agendaScherm, toonAgendaScherm } from "./agenda-scherm.js";
 import {
   AGENDA_DAGEN,
   AGENDA_DAGEN_MAX,
@@ -163,6 +165,8 @@ class OverzichtCard extends DacCard {
     this.voorspelling_ = null;
     this.agendaAbos_ = new Map();
     this.afspraken_ = new Map();
+    this.toegevoegd_ = [];
+    this.rijen_ = [];
   }
 
   validate(config) {
@@ -179,7 +183,7 @@ class OverzichtCard extends DacCard {
 
   watched() {
     const c = this.config;
-    return [c.weer, ...lijst(c.agenda), ...lijst(c.letop), ...lijst(c.melders), ...lijst(c.batterijen)].filter(Boolean);
+    return [c.weer, ...this.agendaIds_(), ...lijst(c.letop), ...lijst(c.melders), ...lijst(c.batterijen)].filter(Boolean);
   }
 
   template() {
@@ -238,7 +242,11 @@ class OverzichtCard extends DacCard {
     const lijstEl = this.$(".lijst");
     const open = (e) => {
       const regel = e.target.closest(".regel[data-entity]");
-      if (regel) moreInfo(this, regel.dataset.entity);
+      if (!regel) return;
+      // Een afspraak opent het scherm van de agendakaart, met Wijzigen en Verwijderen als de agenda dat kan.
+      const afspraak = this.rijen_[Number(regel.dataset.i)]?.afspraak;
+      if (afspraak) toonAgendaScherm(this.agendaBron_(), "afspraak", afspraak);
+      else moreInfo(this, regel.dataset.entity);
     };
     this.on(lijstEl, "click", open);
     this.on(lijstEl, "keydown", (e) => {
@@ -272,8 +280,18 @@ class OverzichtCard extends DacCard {
       });
     }
 
+    // Agenda's die de klant via de agendakaart toevoegde, staan hier ook: hij kan dit dashboard niet wijzigen.
+    this.toegevoegdAbo_ = new ToegevoegdAbonnement((agendas) => {
+      const voor = this.agendaIds_().join();
+      this.toegevoegd_ = agendas;
+      if (this.agendaIds_().join() !== voor) this.abonneerAgendas_();
+      agendaScherm()?.ververs();
+    });
+    this.toegevoegdAbo_.start(this.hass);
+
     this.abonneerAgendas_();
     this.teardown_.push(() => {
+      this.toegevoegdAbo_?.stop();
       for (const abo of this.agendaAbos_.values()) abo.stop();
       this.agendaAbos_.clear();
       this.afspraken_.clear();
@@ -291,6 +309,7 @@ class OverzichtCard extends DacCard {
     if (terug || this.zonderHass_) {
       this.zonderHass_ = false;
       this.weerAbo_?.start(hass);
+      this.toegevoegdAbo_?.start(hass);
       for (const abo of this.agendaAbos_.values()) abo.start(hass);
     }
     // De regels hangen ook af van entiteiten die niemand aanwees (alle melders, alle batterijen), dus niet alleen van watched().
@@ -318,6 +337,20 @@ class OverzichtCard extends DacCard {
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
 
+  /** De agenda's: die uit de editor, plus wat de klant via de agendakaart toevoegde. */
+  agendaIds_() {
+    return agendasVan({ agendas: lijst(this.config?.agenda) }, this.toegevoegd_);
+  }
+
+  /** Wat het agendascherm wil weten. Agenda's toevoegen kan hier niet: dat hoort bij de agendakaart. */
+  agendaBron_() {
+    return {
+      hass: () => this.hass,
+      agendas: () => agendaInfo(this.hass?.states, this.agendaIds_(), this.toegevoegd_, (id) => nameOf(this.hass, id)).map((x) => ({ ...x, kleur: TONES[x.toon] })),
+      toevoegen: false,
+    };
+  }
+
   /** Per agenda een abonnement van vandaag tot `agenda_dagen` vooruit; na middernacht opnieuw. */
   abonneerAgendas_() {
     for (const abo of this.agendaAbos_.values()) abo.stop();
@@ -327,10 +360,10 @@ class OverzichtCard extends DacCard {
     const nu = this.nu_();
     const van = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
     const tot = agendaTot(nu, this.config.agenda_dagen);
-    for (const entity of lijst(this.config.agenda)) {
+    for (const entity of this.agendaIds_()) {
       const abo = new AgendaAbonnement(entity, vanWand(van, this.tz_()), vanWand(tot, this.tz_()), (events) => {
         if (this.agendaAbos_.get(entity) !== abo) return;
-        if (events) this.afspraken_.set(entity, afsprakenUit(events, this.tz_()).map((a) => ({ ...a, agenda: entity })));
+        if (events) this.afspraken_.set(entity, afsprakenVan(events, this.tz_(), entity));
         this.paintLijst_();
         meetRaster(this.$(".card"));
       });
@@ -436,12 +469,13 @@ class OverzichtCard extends DacCard {
       batterijen: batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS),
     });
 
+    this.rijen_ = rijen;
     const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity]));
     if (el.dataset.sig === sig) return;
     el.dataset.sig = sig;
     el.innerHTML = rijen
       .map(
-        (r) => `<div class="regel" data-soort="${r.soort}" data-toon="${r.toon}"${r.entity ? ` data-entity="${escapeHtml(r.entity)}" role="button" tabindex="0"` : ""}>
+        (r, i) => `<div class="regel" data-i="${i}" data-soort="${r.soort}" data-toon="${r.toon}"${r.entity ? ` data-entity="${escapeHtml(r.entity)}" role="button" tabindex="0"` : ""}>
           <span class="chip" style="--tone:${toneValue(r.toon)}">${resolve(r.icoon, "dots")}</span>
           <span class="tekst">${escapeHtml(r.tekst)}</span>
           ${r.bij ? `<span class="bij">${escapeHtml(r.bij)}</span>` : ""}
