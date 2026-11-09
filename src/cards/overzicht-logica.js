@@ -28,6 +28,20 @@
 import { daysBetween, domainOf, relativeDay } from "../ha.js";
 import { nt, t } from "../taal.js";
 
+/**
+ * Wat er op de kaart staat, elk met een schakelaar in de editor (sinds 0.120.0). De eigenaar, 9 november 2026: "ik wil ook
+ * de mogelijkheid hebben om de agenda te verbergen op de overzichtkaart. Eigenlijk alle opties kunnen weergeven en
+ * verbergen". In de config `toon_<deel>`; zonder die sleutel staat het deel er, zoals het voor 0.120.0 altijd stond.
+ */
+export const ONDERDELEN = ["begroeting", "datum", "klok", "weer", "agenda", "agenda_knoppen", "letop", "melders", "batterijen"];
+
+/** Per deel of het getoond wordt. De knoppen van de agenda staan er alleen bij als de agenda er ook staat. */
+export function zichtbaar(config) {
+  const uit = Object.fromEntries(ONDERDELEN.map((deel) => [deel, config?.[`toon_${deel}`] !== false]));
+  uit.agenda_knoppen = uit.agenda && uit.agenda_knoppen;
+  return uit;
+}
+
 /** Zoveel regels van één soort, daarna "en n meer". */
 export const MAX_PER_SOORT = 3;
 
