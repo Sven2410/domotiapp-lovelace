@@ -26,7 +26,10 @@ export const OVERZICHT = {
   "Melders": "Detectors",
   "Batterijen": "Batteries",
   "De afspraken in deze agenda's, vanaf nu.": "The appointments in these calendars, from now on.",
-  "1 is alleen vandaag, 7 een week.": "1 is only today, 7 is a week.",
+  "1 is alleen vandaag, 7 een week. Staat er niets in, dan de eerstvolgende afspraak.":
+    "1 is only today, 7 is a week. If there is nothing in it, the next appointment.",
+  "Agenda's toevoegen": "Add calendars",
+  "De klant voegt zelf een agenda toe: een nieuwe, Google of Apple.": "The customer adds a calendar: a new one, Google or Apple.",
   "Rook-, gas-, koolmonoxide-, lek- en hittemelders en alarmsystemen. Ze staan er alleen als ze afgaan.":
     "Smoke, gas, carbon monoxide, leak and heat detectors and alarm systems. They only show when they go off.",
   "Ze staan er alleen als ze onder de grens zijn.": "They only show when they are below the threshold.",
