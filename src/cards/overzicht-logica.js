@@ -10,7 +10,7 @@
  *   1. alarm      een gekozen melder (rook, gas, koolmonoxide, lekkage, hitte) of alarmsysteem dat afgaat
  *   2. open       wat de installateur onder "Let op" zette en nu open of niet op slot staat
  *   3. agenda     de afspraken van nu tot en met `agenda_dagen` dagen vooruit (standaard een week); is die leeg, de
- *                 eerstvolgende afspraak daarna (sinds 0.117.0)
+ *                 eerstvolgende afspraak daarna, hoe ver ook (sinds 0.117.0, zonder grens sinds 0.117.1)
  *   4. batterij   een gekozen batterij onder de grens
  *
  * **Alles wat erop staat is gekozen in de editor.** Tot 0.115.0 zocht de kaart zelf alle melders en alle batterijen in
@@ -152,18 +152,25 @@ export function komendeAfspraken(afspraken, nu, dagen = AGENDA_DAGEN) {
     .sort((a, b) => a.start - b.start || Number(b.heleDag) - Number(a.heleDag));
 }
 
-/** Zo ver kijkt de kaart in de agenda: genoeg voor het venster en voor de eerstvolgende afspraak daarna. */
+/** Zo ver haalt de kaart de afspraken zelf op, met alles erbij om ze te wijzigen. */
 export const AGENDA_VOORUIT = AGENDA_DAGEN_MAX;
 
 /**
- * Wat er op de kaart komt: de afspraken in het venster, en staat daar niets, de eerstvolgende daarna. De eigenaar,
- * 9 november 2026, met een lege week en de kerstborrel op 17 december: "Zie jij (...) de agenda op de nieuwe overzicht
- * kaart?". Niets tonen las als een agenda die het niet doet.
+ * Wat er op de kaart komt: de afspraken in het venster, en staat daar niets, de eerstvolgende daarna, hoe ver ook. De
+ * eigenaar, 9 november 2026, met een lege week en de kerstborrel op 17 december: "Zie jij (...) de agenda op de nieuwe
+ * overzicht kaart?", en na 0.117.0 (tot 60 dagen): "ik wil dat hij altijd de eerstvolgende afspraak laat zien mits het
+ * eerder is". Wat in het venster staat gaat dus voor; de eerstvolgende komt er alleen bij een leeg venster.
+ *
+ * `volgende` is per agenda de eerstvolgende uit zijn toestand (`volgendeUitToestand`), zonder grens in de tijd. Wat de
+ * kaart zelf ophaalde gaat bij dezelfde begintijd voor, want daar kan de klant hem wijzigen.
  */
-export function afsprakenOpKaart(afspraken, nu, dagen = AGENDA_DAGEN) {
+export function afsprakenOpKaart(afspraken, nu, dagen = AGENDA_DAGEN, volgende = []) {
   const komend = komendeAfspraken(afspraken, nu, dagen);
   if (komend.length) return komend;
-  return komendeAfspraken(afspraken, nu, AGENDA_VOORUIT).slice(0, 1);
+  return [...(afspraken ?? []), ...(volgende ?? []).filter(Boolean)]
+    .filter((a) => a.eind > nu)
+    .sort((a, b) => a.start - b.start || Number(Boolean(b.uid)) - Number(Boolean(a.uid)))
+    .slice(0, 1);
 }
 
 const twee = (n) => String(n).padStart(2, "0");

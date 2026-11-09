@@ -160,8 +160,21 @@ describe("afspraken", () => {
     assert.deepEqual(afsprakenOpKaart([nieuwjaar, kerst], NU).map((x) => x.titel), ["Kerstborrel"]);
     assert.deepEqual(afsprakenOpKaart([...lijst, kerst], NU).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]);
     assert.deepEqual(afsprakenOpKaart([a("Al geweest", new Date(2026, 10, 8, 9), new Date(2026, 10, 8, 10))], NU), []);
-    assert.deepEqual(afsprakenOpKaart([a("Pasen", new Date(2027, 2, 28), new Date(2027, 2, 29), true)], NU), []);
     assert.equal(afspraakWanneer(afsprakenOpKaart([kerst], NU)[0], NU), "do 17 dec 19:00");
+  });
+
+  // NIEUW GEDRAG in 0.117.1: "altijd de eerstvolgende afspraak (...) mits het eerder is". Faalt op 0.117.0: daar viel Pasen
+  // buiten de 60 dagen en kende afsprakenOpKaart geen vierde argument.
+  it("de eerstvolgende uit de toestand van de agenda, zonder grens; wat in het venster staat gaat voor", () => {
+    const pasen = { ...a("Pasen", new Date(2027, 2, 28), new Date(2027, 2, 29), true), uid: null };
+    assert.deepEqual(afsprakenOpKaart([], NU, 7, [null, pasen]).map((x) => x.titel), ["Pasen"]);
+    assert.deepEqual(afsprakenOpKaart(lijst, NU, 7, [pasen]).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]);
+    // Dezelfde afspraak uit het abonnement (met uid) gaat voor die uit de toestand.
+    const kerst = a("Kerstborrel", new Date(2026, 11, 17, 19), new Date(2026, 11, 17, 23));
+    const opgehaald = { ...kerst, uid: "abc" };
+    assert.equal(afsprakenOpKaart([opgehaald], NU, 7, [{ ...kerst, uid: null }, pasen])[0].uid, "abc");
+    // Een die al voorbij is telt niet.
+    assert.deepEqual(afsprakenOpKaart([], NU, 7, [{ ...a("Gisteren", new Date(2026, 10, 7, 9), new Date(2026, 10, 7, 10)), uid: null }]), []);
   });
 
   it("zegt wanneer", () => {

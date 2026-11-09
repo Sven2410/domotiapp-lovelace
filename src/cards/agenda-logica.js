@@ -91,6 +91,36 @@ export function afsprakenVan(events, tz, agenda) {
     .filter(Boolean);
 }
 
+/**
+ * De eerstvolgende afspraak uit de TOESTAND van een agenda, zonder grens in de tijd. Home Assistant zet de lopende of
+ * eerstvolgende afspraak in de attributen (`message`, `start_time`, `end_time`, `all_day`, `location`, `description`),
+ * met de tijden als "2026-12-17 19:00:00" in zijn eigen tijdzone: dat is al wandtijd. Er staat geen `uid` bij, dus het
+ * scherm toont hem zonder Wijzigen en Verwijderen. `null` als er geen is.
+ */
+export function volgendeUitToestand(st, agenda) {
+  const at = st?.attributes;
+  if (!at?.start_time || !at?.end_time) return null;
+  const wand = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(s));
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] ?? 0)) : null;
+  };
+  const start = wand(at.start_time);
+  const eind = wand(at.end_time);
+  if (!start || !eind || eind <= start) return null;
+  return {
+    agenda,
+    start,
+    eind,
+    heleDag: at.all_day === true,
+    titel: at.message ?? "",
+    plaats: at.location ?? "",
+    omschrijving: at.description ?? "",
+    uid: null,
+    recurrence_id: null,
+    herhaalt: false,
+  };
+}
+
 const hoofdletter = (s) => (s ? s[0].toLocaleUpperCase(locale()) + s.slice(1) : s);
 
 /** "Vandaag", "Morgen", "Overmorgen", en verder "Donderdag 19 november". */
