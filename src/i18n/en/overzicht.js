@@ -35,6 +35,8 @@ export const OVERZICHT = {
   "Ze staan er alleen als ze onder de grens zijn.": "They only show when they are below the threshold.",
   "0 zet het uit.": "0 turns it off.",
   "DomotiApp Overzicht": "DomotiApp Overview",
-  "Voor een tablet: links de favorieten, rechts de klok, het weer en wat er belangrijk is.":
-    "For a tablet: favourites on the left, the clock, the weather and what matters on the right.",
+  "Voor een tablet: de klok, het weer en wat er belangrijk is, met de agenda erbij.":
+    "For a tablet: the clock, the weather and what matters, with the calendar.",
+  "Favorieten links op de kaart": "Favourites on the left of the card",
+  "Uit: alleen het overzicht, en de favorieten op hun eigen kaart ernaast.": "Off: only the overview, with the favourites on their own card next to it.",
 };

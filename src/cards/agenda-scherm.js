@@ -18,19 +18,49 @@
  *
  * ## Wat een agenda kan
  *
- * Alleen wat Home Assistant zegt (`kan`): een Wijzigen-knop staat er alleen als de agenda het kan. Een agenda die alleen te
- * lezen is (het iCal-adres van Google) zegt dat, met waar je hem dan wel wijzigt.
+ * Alleen wat Home Assistant zegt (`kan`): een Wijzigen-knop staat er alleen als de agenda het kan. Kan het niet, dan zegt
+ * het scherm waar het wel kan (`nietTeWijzigen`): bij iCloud de Agenda-app op de iPhone.
+ *
+ * ## De kalender
+ *
+ * Sinds 0.118.0 is er ook een stand `kalender`: alles per dag, per maand en per jaar. De eigenaar, 9 november 2026: "voor
+ * de calendar wil ik een optie hebben om de calender helemaal te laten zien per dag per maand en per jaar". Het scherm
+ * haalt daarvoor zelf op, met een eigen abonnement per agenda op wat er in beeld is, zolang het open is. Een afspraak die
+ * je in de kalender opent, gaat met Terug weer naar de kalender.
+ *
+ * Na maken, wijzigen of weghalen meldt het scherm dat (`meldGewijzigd`), en dan halen de kaarten en de kalender opnieuw
+ * op: een agenda van iCloud meldt een wijziging zelf niet.
  */
 
 import { meldAan } from "../registratie.js";
 import { resolve } from "../icons.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
-import { t } from "../taal.js";
+import { locale, t } from "../taal.js";
 import { vraagBevestiging } from "../vraag.js";
-import { naarWand } from "../wandklok.js";
-import { afspraakUit, formulierVan, googleAdres, nieuwFormulier, wanneerVoluit } from "./agenda-logica.js";
-import { haalAfspraakWeg, haalAgendaWeg, maakAfspraak, voegAgendaToe, wijzigAfspraak } from "./agenda-client.js";
+import { AgendaAbonnement } from "../infoscherm-client.js";
+import { naarWand, vanWand } from "../wandklok.js";
+import {
+  WEERGAVEN,
+  afspraakUit,
+  afsprakenVan,
+  eersteWeekdag,
+  formulierVan,
+  googleAdres,
+  kalenderBereik,
+  kalenderTitel,
+  maandRaster,
+  nietTeWijzigen,
+  nieuwFormulier,
+  opDag,
+  tijdOp,
+  verschuif,
+  wanneerVoluit,
+  weekdagNamen,
+} from "./agenda-logica.js";
+import { bijWijziging, haalAfspraakWeg, haalAgendaWeg, maakAfspraak, meldGewijzigd, voegAgendaToe, wijzigAfspraak } from "./agenda-client.js";
+import { isoDatum, klok } from "./infoscherm-logica.js";
+import { dagBegin } from "./ruimtes-logica.js";
 
 const APPLE_WACHTWOORD = "https://account.apple.com";
 
@@ -66,13 +96,13 @@ const css = /* css */ `
   header .kop { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
   header b { font-size: 16px; font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
   header .onder { font-size: 12px; color: var(--dac-ink-2); }
-  .sluit {
+  .sluit, .rond {
     flex: 0 0 auto; width: 36px; height: 36px; padding: 0; cursor: pointer;
     display: grid; place-items: center; border-radius: var(--dac-radius-pill);
     background: var(--dac-surface); border: 1px solid var(--dac-border); color: var(--dac-ink-2); font: inherit;
   }
-  @media (hover: hover) { .sluit:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
-  .sluit .icon { width: 17px; height: 17px; }
+  @media (hover: hover) { .sluit:hover, .rond:hover { background: var(--dac-surface-hi); color: var(--dac-ink); } }
+  .sluit .icon, .rond .icon { width: 17px; height: 17px; }
 
   /* ---- één afspraak ---- */
   .gegevens { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; line-height: 1.45; }
@@ -170,11 +200,89 @@ const css = /* css */ `
   .fout { font-size: 12.5px; line-height: 1.4; color: var(--dac-bad); }
   .fout:empty { display: none; }
 
+  /* ---- de kalender ---- */
+  .vak.breed { width: min(860px, 100%); container-type: inline-size; }
+  .vak.breed header .kop b { font-size: 17px; }
+  .wissel { display: flex; gap: 4px; padding: 3px; border-radius: var(--dac-radius-pill); background: rgba(var(--dac-tint), .06); align-self: flex-start; }
+  .wissel button {
+    min-height: 30px; padding: 0 14px; border: 0; border-radius: var(--dac-radius-pill); cursor: pointer; background: none;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--dac-ink-2); -webkit-tap-highlight-color: transparent;
+  }
+  .wissel button[aria-selected="true"] { background: var(--dac-accent); color: var(--dac-on-accent); }
+  @media (hover: hover) { .wissel button:not([aria-selected="true"]):hover { color: var(--dac-ink); } }
+  .balk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .balk .wissel { margin-right: auto; }
+
+  .maand { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .wd { font-size: 11px; font-weight: 600; color: var(--dac-ink-3); text-align: center; padding: 2px 0 4px; }
+  .cel {
+    min-height: 88px; min-width: 0; padding: 4px; border-radius: 10px; cursor: pointer; overflow: hidden;
+    display: flex; flex-direction: column; gap: 2px;
+    background: rgba(var(--dac-tint), .035); -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .cel:hover { background: var(--dac-hover); } }
+  .cel.buiten { opacity: .45; }
+  .cel .nr { align-self: flex-start; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+  .cel.vandaag .nr { background: var(--dac-accent); color: var(--dac-on-accent); }
+  .evs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ev {
+    display: flex; align-items: center; gap: 4px; min-width: 0; padding: 1px 4px; border-radius: 5px; cursor: pointer;
+    font-size: 11px; line-height: 1.35; background: color-mix(in srgb, var(--tone) 16%, transparent);
+  }
+  .ev .stip { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+  .ev .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev .tm { flex: 0 0 auto; color: var(--dac-ink-2); }
+  .meer { font-size: 11px; color: var(--dac-ink-2); padding: 0 4px; }
+  /* Smal (een telefoon): stippen in plaats van titels. */
+  @container (max-width: 560px) {
+    .cel { min-height: 54px; padding: 3px 2px; align-items: center; }
+    .cel .nr { align-self: center; }
+    .evs { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
+    .ev { padding: 0; background: none; }
+    .ev .nm, .ev .tm, .meer { display: none; }
+  }
+
+  .daglijst { display: flex; flex-direction: column; gap: 2px; }
+  .af {
+    display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 5px 8px 5px 4px; cursor: pointer;
+    border-radius: var(--dac-radius-sm); -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .af:hover { background: var(--dac-hover); } }
+  .af .streep { flex: 0 0 auto; align-self: stretch; width: 4px; border-radius: 2px; background: var(--tone); }
+  .af .tijd { flex: 0 0 auto; width: 100px; font-size: 12.5px; color: var(--dac-ink-2); }
+  .af .txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .af .tt { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+  .af .pl { font-size: 12px; color: var(--dac-ink-3); overflow-wrap: anywhere; }
+
+  .jaar { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 14px 16px; }
+  .mini { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .mini .mnaam {
+    align-self: flex-start; border: 0; background: none; padding: 2px 4px; margin-left: -4px; border-radius: 6px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--dac-ink);
+  }
+  @media (hover: hover) { .mini .mnaam:hover { background: var(--dac-hover); } }
+  .mini .mraster { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; }
+  .mini .mwd { font-size: 9.5px; font-weight: 600; color: var(--dac-ink-3); text-align: center; }
+  .md {
+    position: relative; height: 24px; display: grid; place-items: center; border-radius: 12px; cursor: pointer;
+    font-size: 11px; color: var(--dac-ink-2); -webkit-tap-highlight-color: transparent;
+  }
+  .md:empty { cursor: default; }
+  .md.heeft { color: var(--dac-ink); font-weight: 600; background: var(--dac-accent-soft); }
+  .md.vandaag { background: var(--dac-accent); color: var(--dac-on-accent); font-weight: 600; }
+  @media (hover: hover) { .md:not(:empty):not(.vandaag):hover { background: var(--dac-hover); } }
+
   :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .laag, .vak { animation: none; } }
 `;
 
 let sheets = null;
+
+/** "2026-11-09" als lokale middernacht. */
+const opIso = (s) => {
+  const [j, m, d] = String(s).split("-").map(Number);
+  return new Date(j, m - 1, d);
+};
 
 const veilig = (tekst) =>
   String(tekst ?? "")
@@ -213,7 +321,7 @@ class AgendaScherm extends HTMLElement {
     const vak = this.$(".vak");
     vak.addEventListener("click", (e) => this.tik_(e));
     vak.addEventListener("keydown", (e) => {
-      if ((e.key === " " || e.key === "Enter") && e.target.closest('[role="radio"], [role="switch"]')) {
+      if ((e.key === " " || e.key === "Enter") && e.target.closest('[role="radio"], [role="switch"], [data-dag], [data-ev]')) {
         e.preventDefault();
         this.tik_(e);
       }
@@ -226,19 +334,34 @@ class AgendaScherm extends HTMLElement {
     return this.shadowRoot.querySelector(s);
   }
 
-  /** Open in een stand: `afspraak` (met `a`), `formulier` (met of zonder `a`), `toevoegen` of `agendas`. */
+  /**
+   * Open in een stand: `afspraak` (met `a`), `formulier` (met of zonder `a`), `toevoegen`, `agendas` of `kalender` (met
+   * eventueel `{weergave, dag}` als `a`).
+   */
   open(bron, modus, a = null) {
     volgThema(this);
+    this.stopKalender_();
     this.bron = bron;
+    this.vanKalender_ = false;
     this.setAttribute("open", "");
+    if (modus === "kalender") {
+      this.k_ = { weergave: a?.weergave ?? "maand", dag: dagBegin(a?.dag ?? this.nu_()) };
+      a = null;
+    }
     this.ga_(modus, a);
     setTimeout(() => this.$(".vak")?.focus(), 40);
   }
 
   sluit() {
     this.removeAttribute("open");
+    this.stopKalender_();
     this.bron = null;
     this.bezig_ = false;
+    this.vanKalender_ = false;
+  }
+
+  nu_() {
+    return naarWand(new Date(), this.hass_?.config?.time_zone);
   }
 
   get hass_() {
@@ -258,9 +381,10 @@ class AgendaScherm extends HTMLElement {
     this.a = a;
     this.bezig_ = false;
     if (modus === "formulier") {
-      const tz = this.hass_?.config?.time_zone;
       const schrijfbaar = this.agendas_().filter((x) => x.kan.maken);
-      this.f_ = a ? formulierVan(a) : nieuwFormulier(naarWand(new Date(), tz), schrijfbaar[0]?.id);
+      // Uit de dag of de maand van de kalender: een nieuwe afspraak op de dag die daar gekozen is.
+      const dag = this.vanKalender_ && this.k_?.weergave !== "jaar" ? this.k_.dag : null;
+      this.f_ = a ? formulierVan(a) : nieuwFormulier(this.nu_(), schrijfbaar[0]?.id, dag);
     }
     if (modus === "toevoegen") this.t_ = { soort: "nieuw", naam: "", adres: "", gebruiker: "", wachtwoord: "" };
     this.teken_();
@@ -268,24 +392,178 @@ class AgendaScherm extends HTMLElement {
 
   /** Bijwerken als de kaart iets nieuws weet (een agenda erbij), maar niet midden in een formulier. */
   ververs() {
-    if (this.hasAttribute("open") && (this.modus === "agendas" || this.modus === "afspraak")) this.teken_();
+    if (!this.hasAttribute("open")) return;
+    if (this.modus === "agendas" || this.modus === "afspraak") this.teken_();
+    else if (this.modus === "kalender") {
+      this.abonneerKalender_();
+      this.teken_();
+    }
   }
 
   teken_() {
     const vak = this.$(".vak");
     const sluit = `<button class="sluit" type="button" data-doe="sluit" aria-label="${veilig(t("Sluiten"))}">${resolve("close")}</button>`;
+    // Wat er binnenkomt terwijl de kalender open is, tekent hem opnieuw; de plek waar je naartoe scrolde blijft.
+    const scroll = vak.scrollTop;
+    vak.classList.toggle("breed", this.modus === "kalender");
     if (this.modus === "afspraak") vak.innerHTML = this.afspraakHtml_(sluit);
     else if (this.modus === "formulier") vak.innerHTML = this.formulierHtml_(sluit);
     else if (this.modus === "toevoegen") vak.innerHTML = this.toevoegenHtml_(sluit);
-    else vak.innerHTML = this.agendasHtml_(sluit);
+    else if (this.modus === "kalender") {
+      this.abonneerKalender_();
+      vak.innerHTML = this.kalenderHtml_(sluit);
+      vak.scrollTop = scroll;
+    } else vak.innerHTML = this.agendasHtml_(sluit);
+  }
+
+  /* ------------------------------------------------------------- de kalender */
+
+  eerste_() {
+    return eersteWeekdag(this.hass_?.locale, locale());
+  }
+
+  /** Per agenda een abonnement op wat er in beeld is. Alleen opnieuw als het bereik of de agenda's veranderden. */
+  abonneerKalender_() {
+    const hass = this.hass_;
+    if (!hass || !this.k_) return;
+    const tz = hass.config?.time_zone;
+    const { van, tot } = kalenderBereik(this.k_.weergave, this.k_.dag, this.eerste_());
+    const ids = this.agendas_().map((x) => x.id);
+    const sleutel = `${isoDatum(van)}|${isoDatum(tot)}|${ids.join()}`;
+    if (sleutel === this.kSleutel_) return;
+    this.stopKalender_();
+    this.kSleutel_ = sleutel;
+    this.kAfspraken_ = new Map();
+    this.kAbos_ = new Map();
+    for (const id of ids) {
+      const abo = new AgendaAbonnement(id, vanWand(van, tz), vanWand(tot, tz), (events) => {
+        if (this.kAbos_?.get(id) !== abo) return;
+        if (events) this.kAfspraken_.set(id, afsprakenVan(events, this.hass_?.config?.time_zone, id));
+        if (this.modus === "kalender" && this.hasAttribute("open")) this.teken_();
+      });
+      this.kAbos_.set(id, abo);
+      abo.start(hass);
+    }
+    this.kWacht_ ??= bijWijziging((agenda) => {
+      for (const [id, abo] of this.kAbos_ ?? []) if (!agenda || id === agenda) abo.start(this.hass_);
+    });
+  }
+
+  stopKalender_() {
+    for (const abo of this.kAbos_?.values() ?? []) abo.stop();
+    this.kAbos_ = null;
+    this.kAfspraken_ = null;
+    this.kSleutel_ = null;
+    this.kWacht_?.();
+    this.kWacht_ = null;
+  }
+
+  kalenderHtml_(sluit) {
+    const k = this.k_;
+    const nu = this.nu_();
+    const info = new Map(this.agendas_().map((x) => [x.id, x]));
+    const alle = [...(this.kAfspraken_?.values() ?? [])].flat();
+    this.kZichtbaar_ = [];
+    const ev = (a, dag, metTijd) => {
+      const i = this.kZichtbaar_.push(a) - 1;
+      const tm = metTijd && !a.heleDag && a.start >= dag ? `<span class="tm tnum">${klok(a.start)}</span>` : "";
+      return `<span class="ev" data-ev="${i}" style="--tone:${info.get(a.agenda)?.kleur ?? "var(--dac-accent-hi)"}" title="${veilig(a.titel || t("Afspraak"))}"><span class="stip"></span>${tm}<span class="nm">${veilig(a.titel || t("Afspraak"))}</span></span>`;
+    };
+    const wissel = WEERGAVEN.map(
+      (w) => `<button type="button" role="tab" data-weergave="${w}" aria-selected="${w === k.weergave}">${veilig({ dag: t("Dag"), maand: t("Maand"), jaar: t("Jaar") }[w])}</button>`
+    ).join("");
+
+    let lijf = "";
+    if (k.weergave === "maand") {
+      const kop = weekdagNamen(this.eerste_()).map((n) => `<div class="wd">${veilig(n)}</div>`).join("");
+      const cellen = maandRaster(k.dag, this.eerste_())
+        .map((dag) => {
+          const op = opDag(alle, dag);
+          const meer = op.length > 3 ? `<span class="meer">${veilig(t("+{n} meer", { n: op.length - 3 }))}</span>` : "";
+          const klassen = ["cel", dag.getMonth() !== k.dag.getMonth() ? "buiten" : "", isoDatum(dag) === isoDatum(nu) ? "vandaag" : ""].filter(Boolean).join(" ");
+          const label = dag.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
+          return `<div class="${klassen}" role="button" tabindex="0" data-dag="${isoDatum(dag)}" aria-label="${veilig(label)}"><span class="nr tnum">${dag.getDate()}</span><span class="evs">${op
+            .slice(0, op.length > 3 ? 2 : 3)
+            .map((a) => ev(a, dag, true))
+            .join("")}${meer}</span></div>`;
+        })
+        .join("");
+      lijf = `<div class="maand">${kop}${cellen}</div>`;
+    } else if (k.weergave === "dag") {
+      const op = opDag(alle, k.dag);
+      lijf = op.length
+        ? `<div class="daglijst">${op
+            .map((a) => {
+              const i = this.kZichtbaar_.push(a) - 1;
+              const ag = info.get(a.agenda);
+              const onder = [a.plaats, info.size > 1 ? ag?.naam : ""].filter(Boolean).join(" · ");
+              return `<div class="af" role="button" tabindex="0" data-ev="${i}" style="--tone:${ag?.kleur ?? "var(--dac-accent-hi)"}"><span class="streep"></span><span class="tijd tnum">${veilig(tijdOp(a, k.dag))}</span><span class="txt"><span class="tt">${veilig(a.titel || t("Afspraak"))}</span>${onder ? `<span class="pl">${veilig(onder)}</span>` : ""}</span></div>`;
+            })
+            .join("")}</div>`
+        : `<div class="leeg">${veilig(t("Geen afspraken op deze dag."))}</div>`;
+    } else {
+      const namen = weekdagNamen(this.eerste_(), "narrow");
+      const dagenMet = new Set();
+      for (const a of alle) {
+        // Elke dag die de afspraak beslaat; een hele dag eindigt om middernacht, en die dag telt niet mee.
+        for (let d = dagBegin(a.start); d < a.eind && dagenMet.size < 4000; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) dagenMet.add(isoDatum(d));
+      }
+      lijf = `<div class="jaar">${Array.from({ length: 12 }, (_, m) => {
+        const eerste = new Date(k.dag.getFullYear(), m, 1);
+        const raster = maandRaster(eerste, this.eerste_());
+        const naam = eerste.toLocaleDateString(locale(), { month: "long" });
+        const dagen = raster
+          .map((dag) => {
+            if (dag.getMonth() !== m) return `<span class="md"></span>`;
+            const sl = isoDatum(dag);
+            const klassen = ["md", "tnum", dagenMet.has(sl) ? "heeft" : "", sl === isoDatum(nu) ? "vandaag" : ""].filter(Boolean).join(" ");
+            return `<span class="${klassen}" role="button" tabindex="0" data-dag="${sl}">${dag.getDate()}</span>`;
+          })
+          .join("");
+        return `<div class="mini"><button class="mnaam" type="button" data-maand="${isoDatum(eerste)}">${veilig(naam.charAt(0).toLocaleUpperCase(locale()) + naam.slice(1))}</button><div class="mraster">${namen
+          .map((n) => `<span class="mwd">${veilig(n)}</span>`)
+          .join("")}${dagen}</div></div>`;
+      }).join("")}</div>`;
+    }
+
+    const kanMaken = this.agendas_().some((x) => x.kan.maken);
+    return `
+      <header>
+        <button class="rond" type="button" data-doe="vorige" aria-label="${veilig(t("Vorige"))}">${resolve("chevronLeft")}</button>
+        <span class="kop"><b>${veilig(kalenderTitel(k.weergave, k.dag))}</b></span>
+        <button class="rond" type="button" data-doe="volgende" aria-label="${veilig(t("Volgende"))}">${resolve("chevronRight")}</button>
+        ${sluit}
+      </header>
+      <div class="balk">
+        <div class="wissel" role="tablist">${wissel}</div>
+        <button class="btn klein" type="button" data-doe="vandaag">${veilig(t("Vandaag"))}</button>
+      </div>
+      ${lijf}
+      <div class="fout" role="alert"></div>
+      <footer>
+        <button class="btn links" type="button" data-doe="naarAgendas">${resolve("cog")}${veilig(t("Agenda's"))}</button>
+        ${kanMaken ? `<button class="btn eerste" type="button" data-doe="nieuwInKalender">${resolve("plus")}${veilig(t("Afspraak"))}</button>` : ""}
+      </footer>`;
+  }
+
+  /** Naar een andere weergave of dag in de kalender. */
+  kalenderNaar_(weergave, dag) {
+    this.k_ = { weergave, dag: dagBegin(dag) };
+    this.ga_("kalender");
+    this.$(".vak")?.focus();
   }
 
   afspraakHtml_(sluit) {
     const a = this.a;
     const info = this.info_(a.agenda);
     const knoppen = [];
-    if (info.kan.weghalen && a.uid) knoppen.push(`<button class="btn weg links" type="button" data-doe="weghalen">${veilig(t("Verwijderen"))}</button>`);
+    if (this.vanKalender_) knoppen.push(`<button class="btn links" type="button" data-doe="naarKalender">${resolve("chevronLeft")}${veilig(t("Terug"))}</button>`);
+    if (info.kan.weghalen && a.uid) knoppen.push(`<button class="btn weg${this.vanKalender_ ? "" : " links"}" type="button" data-doe="weghalen">${veilig(t("Verwijderen"))}</button>`);
     if (info.kan.wijzigen && a.uid) knoppen.push(`<button class="btn eerste" type="button" data-doe="wijzigen">${resolve("pencil")}${veilig(t("Wijzigen"))}</button>`);
+    // De eerstvolgende van ver weg komt uit de toestand van de agenda, zonder uid. In de kalender staat hij er met alles.
+    const zonderUid = !a.uid && (info.kan.wijzigen || info.kan.weghalen);
+    if (zonderUid && !this.vanKalender_) knoppen.push(`<button class="btn eerste" type="button" data-doe="inKalender">${resolve("calendar")}${veilig(t("Wijzigen in de kalender"))}</button>`);
+    const uitleg = zonderUid ? null : nietTeWijzigen(info);
     return `
       <header style="--tone:${info.kleur}">
         <span class="stip"></span>
@@ -298,11 +576,7 @@ class AgendaScherm extends HTMLElement {
         ${a.omschrijving ? `<div class="regel">${resolve("dots")}<span class="omschrijving">${veilig(a.omschrijving)}</span></div>` : ""}
         ${a.herhaalt ? `<div class="regel">${resolve("repeat")}<span>${veilig(t("Herhaalt. Wijzigen en verwijderen gaat alleen over deze keer."))}</span></div>` : ""}
       </div>
-      ${
-        knoppen.length
-          ? ""
-          : `<div class="uitleg">${veilig(t("Deze agenda is hier alleen te lezen. Wijzig de afspraak waar hij vandaan komt, zoals in Google Agenda."))}</div>`
-      }
+      ${uitleg ? `<div class="uitleg">${veilig(uitleg)}</div>` : ""}
       <div class="fout" role="alert"></div>
       ${knoppen.length ? `<footer>${knoppen.join("")}</footer>` : ""}`;
   }
@@ -339,7 +613,7 @@ class AgendaScherm extends HTMLElement {
       ${wijzig && this.a.herhaalt ? `<div class="uitleg">${veilig(t("Herhaalt. Dit wijzigt alleen deze keer."))}</div>` : ""}
       <div class="fout" role="alert"></div>
       <footer>
-        <button class="btn" type="button" data-doe="${wijzig ? "terug" : "sluit"}">${veilig(t("Annuleren"))}</button>
+        <button class="btn" type="button" data-doe="${wijzig ? "terug" : this.vanKalender_ ? "naarKalender" : "sluit"}">${veilig(t("Annuleren"))}</button>
         <button class="btn eerste" type="button" data-doe="bewaar">${veilig(t("Opslaan"))}</button>
       </footer>`;
   }
@@ -373,7 +647,7 @@ class AgendaScherm extends HTMLElement {
       <div class="soorten" role="radiogroup">
         ${soort("nieuw", "calendar", t("Nieuwe agenda"), t("In Home Assistant. Hier maak en wijzig je de afspraken."))}
         ${soort("google", "calendar", t("Google Agenda"), t("Je afspraken uit Google, alleen om te lezen. Afspraken maak je in Google zelf."))}
-        ${soort("apple", "calendar", t("Apple iCloud"), t("Je afspraken uit iCloud. Hier kun je er ook een bij maken."))}
+        ${soort("apple", "calendar", t("Apple iCloud"), t("Je afspraken uit iCloud. Hier kun je er een bij maken; wijzigen doe je op je iPhone."))}
       </div>
       ${velden}
       <div class="fout" role="alert"></div>
@@ -398,7 +672,13 @@ class AgendaScherm extends HTMLElement {
       <header><span class="kop"><b>${veilig(t("Agenda's"))}</b></span>${sluit}</header>
       <div class="agendas">${lijst || `<div class="leeg">${veilig(t("Nog geen agenda op deze kaart."))}</div>`}</div>
       <div class="fout" role="alert"></div>
-      ${this.bron?.toevoegen ? `<footer><button class="btn eerste" type="button" data-doe="naarToevoegen">${resolve("plus")}${veilig(t("Agenda toevoegen"))}</button></footer>` : ""}`;
+      ${
+        this.bron?.toevoegen || this.vanKalender_
+          ? `<footer>${this.vanKalender_ ? `<button class="btn links" type="button" data-doe="naarKalender">${resolve("chevronLeft")}${veilig(t("Terug"))}</button>` : ""}${
+              this.bron?.toevoegen ? `<button class="btn eerste" type="button" data-doe="naarToevoegen">${resolve("plus")}${veilig(t("Agenda toevoegen"))}</button>` : ""
+            }</footer>`
+          : ""
+      }`;
   }
 
   fout_(tekst, veld) {
@@ -433,6 +713,20 @@ class AgendaScherm extends HTMLElement {
   tik_(e) {
     const doe = e.target.closest("[data-doe]");
     if (doe && !doe.disabled) return this.doe_(doe.dataset.doe, doe);
+    if (this.modus === "kalender") {
+      const wg = e.target.closest("[data-weergave]");
+      if (wg) return this.kalenderNaar_(wg.dataset.weergave, this.k_.dag);
+      const ev = e.target.closest("[data-ev]");
+      if (ev) {
+        this.vanKalender_ = true;
+        return this.ga_("afspraak", this.kZichtbaar_[Number(ev.dataset.ev)]);
+      }
+      const maand = e.target.closest("[data-maand]");
+      if (maand) return this.kalenderNaar_("maand", opIso(maand.dataset.maand));
+      const dag = e.target.closest("[data-dag]");
+      if (dag) return this.kalenderNaar_("dag", opIso(dag.dataset.dag));
+      return;
+    }
     const pil = e.target.closest(".pil");
     if (pil && pil.getAttribute("aria-disabled") !== "true" && this.f_) {
       this.f_.agenda = pil.dataset.agenda;
@@ -460,7 +754,21 @@ class AgendaScherm extends HTMLElement {
     if (wat === "terug") return this.ga_("afspraak", this.a);
     if (wat === "wijzigen") return this.ga_("formulier", this.a);
     if (wat === "naarToevoegen") return this.ga_("toevoegen");
-    if (wat === "naarAgendas") return this.ga_("agendas");
+    if (wat === "naarAgendas") {
+      if (this.modus === "kalender") this.vanKalender_ = true;
+      return this.ga_("agendas");
+    }
+    if (wat === "naarKalender") return this.ga_("kalender");
+    if (wat === "vorige" || wat === "volgende") return this.kalenderNaar_(this.k_.weergave, verschuif(this.k_.weergave, this.k_.dag, wat === "vorige" ? -1 : 1));
+    if (wat === "vandaag") return this.kalenderNaar_(this.k_.weergave, this.nu_());
+    if (wat === "inKalender") {
+      this.k_ = { weergave: "maand", dag: dagBegin(this.a.start) };
+      return this.ga_("kalender");
+    }
+    if (wat === "nieuwInKalender") {
+      this.vanKalender_ = true;
+      return this.ga_("formulier");
+    }
     if (this.bezig_) return;
     if (wat === "bewaar") return this.bewaar_(knop);
     if (wat === "weghalen") return this.weghalen_(knop);
@@ -494,8 +802,9 @@ class AgendaScherm extends HTMLElement {
     if (uit.fout) return this.fout_(uit.fout, uit.veld);
     this.fout_("");
     const a = this.a;
-    const gelukt = await this.metKnop_(knop, t("Opslaan…"), () => (a ? wijzigAfspraak(hass, a, uit.event) : maakAfspraak(hass, this.f_.agenda, uit.event)));
-    if (gelukt) this.sluit();
+    const agenda = a ? a.agenda : this.f_.agenda;
+    const gelukt = await this.metKnop_(knop, t("Opslaan…"), () => (a ? wijzigAfspraak(hass, a, uit.event) : maakAfspraak(hass, agenda, uit.event)));
+    if (gelukt) this.klaar_(agenda);
   }
 
   async weghalen_(knop) {
@@ -507,7 +816,14 @@ class AgendaScherm extends HTMLElement {
     });
     if (!ja || !this.hasAttribute("open")) return;
     const gelukt = await this.metKnop_(knop, t("Verwijderen…"), () => haalAfspraakWeg(this.hass_, a));
-    if (gelukt) this.sluit();
+    if (gelukt) this.klaar_(a.agenda);
+  }
+
+  /** Na maken, wijzigen of weghalen: iedereen opnieuw laten ophalen, en terug naar de kalender of dicht. */
+  klaar_(agenda) {
+    meldGewijzigd(agenda);
+    if (this.vanKalender_) this.ga_("kalender");
+    else this.sluit();
   }
 
   async voegToe_(knop) {
@@ -552,7 +868,7 @@ meldAan("domotiapp-agenda-scherm", AgendaScherm);
 /**
  * Open het ene agendascherm van deze pagina.
  * @param {{hass: () => object, agendas: () => Array, toevoegen: boolean}} bron
- * @param {"afspraak"|"formulier"|"toevoegen"|"agendas"} modus
+ * @param {"afspraak"|"formulier"|"toevoegen"|"agendas"|"kalender"} modus
  */
 export function toonAgendaScherm(bron, modus, a = null) {
   let scherm = document.querySelector("domotiapp-agenda-scherm");
