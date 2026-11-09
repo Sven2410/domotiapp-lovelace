@@ -34,7 +34,7 @@ import { AgendaAbonnement } from "../infoscherm-client.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
-import { afsprakenVan, agendaInfo, agendasVan, kan } from "./agenda-logica.js";
+import { afsprakenVan, agendaInfo, agendasVan, kan, volgendeUitToestand } from "./agenda-logica.js";
 import { ToegevoegdAbonnement } from "./agenda-client.js";
 import { agendaScherm, toonAgendaScherm } from "./agenda-scherm.js";
 import {
@@ -498,7 +498,12 @@ class OverzichtCard extends DacCard {
       naamVan,
       alarmen: alarmen(states, lijst(c.melders)),
       open: lijst(c.letop).map((id) => states[id]).filter(staatOpen),
-      afspraken: afsprakenOpKaart([...this.afspraken_.values()].flat(), nu, c.agenda_dagen),
+      afspraken: afsprakenOpKaart(
+        [...this.afspraken_.values()].flat(),
+        nu,
+        c.agenda_dagen,
+        this.agendaIds_().map((id) => volgendeUitToestand(states[id], id))
+      ),
       batterijen: batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS),
     });
 

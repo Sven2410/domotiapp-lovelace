@@ -23,6 +23,7 @@ import {
   perDag,
   tijdOp,
   wanneerVoluit,
+  volgendeUitToestand,
 } from "../../src/cards/agenda-logica.js";
 
 // zondag 8 november 2026, 14:30, in Amsterdam (de testmachine kan in een andere zone staan: daarom tz).
@@ -174,5 +175,33 @@ describe("googleAdres", () => {
     assert.equal(googleAdres(geheim.replace("https://", "webcal://")), geheim);
     assert.equal(googleAdres("https://calendar.google.com/calendar/embed?src=x"), null);
     assert.equal(googleAdres("http://192.168.1.1/basic.ics"), null);
+  });
+});
+
+// NIEUW GEDRAG in 0.117.1; faalt op 0.117.0 (volgendeUitToestand bestond niet). De vorm is die van state_attributes in
+// homeassistant/components/calendar/__init__.py (2026.8): de tijden in de tijdzone van Home Assistant, zonder zone erbij.
+describe("volgendeUitToestand", () => {
+  it("leest de eerstvolgende afspraak uit de attributen, als wandtijd", () => {
+    const st = { state: "off", attributes: { message: "Kerstborrel", all_day: false, start_time: "2026-12-17 19:00:00", end_time: "2026-12-17 23:00:00", location: "Kantoor", description: "" } };
+    const a = volgendeUitToestand(st, "calendar.werk");
+    assert.equal(a.titel, "Kerstborrel");
+    assert.equal(a.agenda, "calendar.werk");
+    assert.equal(a.plaats, "Kantoor");
+    assert.equal(a.uid, null);
+    assert.equal(a.heleDag, false);
+    assert.deepEqual([a.start.getMonth(), a.start.getDate(), a.start.getHours()], [11, 17, 19]);
+    assert.equal(a.eind.getHours(), 23);
+  });
+
+  it("een hele dag", () => {
+    const a = volgendeUitToestand({ attributes: { message: "Pasen", all_day: true, start_time: "2027-03-28 00:00:00", end_time: "2027-03-29 00:00:00" } }, "calendar.x");
+    assert.equal(a.heleDag, true);
+    assert.equal(a.start.getDate(), 28);
+  });
+
+  it("geen afspraak, of iets onleesbaars, is null", () => {
+    assert.equal(volgendeUitToestand({ state: "off", attributes: { friendly_name: "Werk" } }, "calendar.x"), null);
+    assert.equal(volgendeUitToestand(undefined, "calendar.x"), null);
+    assert.equal(volgendeUitToestand({ attributes: { message: "x", start_time: "morgen", end_time: "overmorgen" } }, "calendar.x"), null);
   });
 });
