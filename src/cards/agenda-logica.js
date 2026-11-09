@@ -176,7 +176,8 @@ export function dagKop(dag, nu) {
 
 /**
  * De afspraken per dag, van nu tot `dagen` dagen vooruit. Wat al begonnen is, staat onder vandaag; elke afspraak één
- * keer, op de dag waarop hij (voor ons) begint. Een hele dag gaat voor, daarna op begintijd.
+ * keer, op de dag waarop hij (voor ons) begint. Eerst op begintijd wat op een tijd staat, daarna een hele dag (sinds
+ * 0.119.1). De eigenaar, 9 november 2026: "ik vind afspraken op tijd belangrijker als afspraken voor een hele dag".
  * @returns {Array<{dag: Date, sleutel: string, afspraken: Array}>}
  */
 export function perDag(afspraken, nu, dagen = DAGEN_STANDAARD) {
@@ -192,7 +193,7 @@ export function perDag(afspraken, nu, dagen = DAGEN_STANDAARD) {
   }
   const uit = [...dagenMap.values()].sort((a, b) => a.dag - b.dag);
   for (const d of uit) {
-    d.afspraken.sort((a, b) => Number(b.heleDag) - Number(a.heleDag) || a.start - b.start || a.titel.localeCompare(b.titel));
+    d.afspraken.sort((a, b) => Number(a.heleDag) - Number(b.heleDag) || a.start - b.start || a.titel.localeCompare(b.titel));
   }
   return uit;
 }
@@ -271,13 +272,13 @@ export function verschuif(weergave, d, stap) {
   return new Date(jaar, maand, Math.min(d.getDate(), laatste));
 }
 
-/** De afspraken die (een deel van) deze dag beslaan: een hele dag eerst, dan op begintijd. */
+/** De afspraken die (een deel van) deze dag beslaan: eerst op begintijd wat op een tijd staat, dan een hele dag (zie `perDag`). */
 export function opDag(afspraken, dag) {
   const van = dagBegin(dag);
   const tot = plusDagen(van, 1);
   return (afspraken ?? [])
     .filter((a) => a.start < tot && a.eind > van)
-    .sort((a, b) => Number(b.heleDag) - Number(a.heleDag) || a.start - b.start || String(a.titel).localeCompare(String(b.titel)));
+    .sort((a, b) => Number(a.heleDag) - Number(b.heleDag) || a.start - b.start || String(a.titel).localeCompare(String(b.titel)));
 }
 
 /** "Maandag 9 november 2026", "November 2026" of "2026". */

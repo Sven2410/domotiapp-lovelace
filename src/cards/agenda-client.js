@@ -6,6 +6,7 @@
  */
 
 import { BlijvendAbonnement } from "../herkansing.js";
+import { vanWand } from "../wandklok.js";
 
 const PREFIX = "domotiapp_lovelace/agenda";
 
@@ -24,11 +25,21 @@ export const wijzigAfspraak = (hass, a, event) =>
     event,
   });
 
+/**
+ * Waar de afspraak NU staat, in UTC: de server zoekt hem in dat tijdvak, want iCloud weigert zoeken op de uid (zie de kop
+ * van agenda_caldav.py). De tijden op de kaart zijn wandtijd in de tijdzone van Home Assistant.
+ */
+const tijdvak = (hass, a) => {
+  const tz = hass?.config?.time_zone;
+  return { start: vanWand(a.start, tz).toISOString(), end: vanWand(a.eind, tz).toISOString() };
+};
+
 /** Een afspraak in een CalDAV-agenda (iCloud) wijzigen: dat doet onze server, Home Assistant kan het daar niet. */
-export const wijzigViaServer = (hass, a, event) => stuur(hass, { type: `${PREFIX}/caldav_wijzig`, entity_id: a.agenda, uid: a.uid, event });
+export const wijzigViaServer = (hass, a, event) =>
+  stuur(hass, { type: `${PREFIX}/caldav_wijzig`, entity_id: a.agenda, uid: a.uid, event, ...tijdvak(hass, a) });
 
 /** Een afspraak uit een CalDAV-agenda (iCloud) weghalen, via onze server. */
-export const haalWegViaServer = (hass, a) => stuur(hass, { type: `${PREFIX}/caldav_weg`, entity_id: a.agenda, uid: a.uid });
+export const haalWegViaServer = (hass, a) => stuur(hass, { type: `${PREFIX}/caldav_weg`, entity_id: a.agenda, uid: a.uid, ...tijdvak(hass, a) });
 
 /** Deze afspraak weghalen. Bij een herhalende alleen deze keer. */
 export const haalAfspraakWeg = (hass, a) =>

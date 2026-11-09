@@ -11,6 +11,7 @@ hier niet; in de testinstance is het nagemeten met een eigen CalDAV-server (zie 
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -67,8 +68,10 @@ class Agenda:
     """Een `caldav.Calendar` die één afspraak kent. Opslaan gaat door de echte `save` van de bibliotheek (die ook SEQUENCE
     ophoogt); alleen het versturen (`_create`) en weghalen worden opgenomen."""
 
-    def __init__(self, ics: str | None) -> None:
+    def __init__(self, ics: str | None, icloud: bool = False) -> None:
         self.obj = None
+        self.icloud = icloud
+        self.gezocht: list[dict[str, Any]] = []
         self.opgeslagen: list[str] = []
         self.weg = 0
         if ics is not None:
@@ -81,9 +84,16 @@ class Agenda:
             self.obj.delete = delete
 
     def event_by_uid(self, uid: str) -> Any:
+        # Zo antwoordt iCloud op een zoekvraag op de uid (0.119.0, bij de eigenaar).
+        if self.icloud:
+            raise caldav.lib.error.ReportError("412 Precondition Failed ")
         if self.obj is None or uid != UID:
             raise caldav.lib.error.NotFoundError("niet gevonden")
         return self.obj
+
+    def search(self, **zoek: Any) -> list[Any]:
+        self.gezocht.append(zoek)
+        return [] if self.obj is None else [self.obj]
 
 
 NIEUW = {"summary": "Tandarts Anna en Tom", "dtstart": "2026-11-21T09:00:00.000Z", "dtend": "2026-11-21T10:00:00.000Z", "description": "Controle"}
@@ -187,3 +197,49 @@ async def test_de_commandos(hass: HomeAssistant, agenda_op, hass_ws_client) -> N
         assert fout["success"] is False
         assert fout["error"]["code"] == "failed"
         assert "Agenda-app" in fout["error"]["message"]
+
+
+# NIEUW GEDRAG (0.119.1). Op 0.119.0 faalt dit: `wijzigen` kende geen tijdvak, en zocht op de uid. De eigenaar, bij de
+# eerste proef met iCloud: "De agenda gaf een fout: ReportError at '412 Precondition Failed ', reason no reason".
+VAN = datetime(2026, 11, 20, 8, 0, tzinfo=UTC)
+TOT = datetime(2026, 11, 20, 8, 30, tzinfo=UTC)
+
+
+async def test_icloud_zoeken_op_een_tijdvak_in_plaats_van_de_uid(hass: HomeAssistant) -> None:
+    agenda = Agenda(TANDARTS, icloud=True)
+    await hass.async_add_executor_job(wijzigen, hass, agenda, UID, NIEUW, VAN, TOT)
+    assert "SUMMARY:Tandarts Anna en Tom" in agenda.opgeslagen[0]
+    assert agenda.gezocht == [{"start": VAN - timedelta(days=1), "end": TOT + timedelta(days=1), "event": True, "expand": False}]
+
+    await hass.async_add_executor_job(weghalen, hass, agenda, UID, VAN, TOT)
+    assert agenda.weg == 1
+
+
+async def test_icloud_zonder_tijdvak_geeft_de_fout_van_icloud(hass: HomeAssistant) -> None:
+    with pytest.raises(CaldavFout, match="412 Precondition Failed"):
+        await hass.async_add_executor_job(weghalen, hass, Agenda(TANDARTS, icloud=True), UID)
+
+
+async def test_icloud_niet_in_het_tijdvak_is_weg(hass: HomeAssistant) -> None:
+    with pytest.raises(CaldavFout, match="staat niet meer in de agenda"):
+        await hass.async_add_executor_job(weghalen, hass, Agenda(None, icloud=True), UID, VAN, TOT)
+
+
+async def test_een_herhalende_ook_via_het_tijdvak_niet(hass: HomeAssistant) -> None:
+    agenda = Agenda(VOETBAL, icloud=True)
+    with pytest.raises(CaldavFout, match="herhalende afspraak"):
+        await hass.async_add_executor_job(weghalen, hass, agenda, UID, VAN, TOT)
+    assert agenda.weg == 0
+
+
+async def test_de_kaart_stuurt_het_tijdvak_mee(hass: HomeAssistant, agenda_op, hass_ws_client) -> None:  # noqa: F811
+    agenda = Agenda(TANDARTS, icloud=True)
+    entiteit = SimpleNamespace(coordinator=SimpleNamespace(async_request_refresh=AsyncMock()))
+    client = await hass_ws_client(hass)
+    with patch.object(agenda_caldav, "caldav_agenda", return_value=(agenda, entiteit)):
+        antwoord = await stuur(
+            client, "caldav_weg", entity_id="calendar.werk", uid=UID, start="2026-11-20T08:00:00.000Z", end="2026-11-20T08:30:00.000Z"
+        )
+    assert antwoord["success"] is True, antwoord
+    assert agenda.weg == 1
+    assert agenda.gezocht[0]["start"] == VAN - timedelta(days=1)
