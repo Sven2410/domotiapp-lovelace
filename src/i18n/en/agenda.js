@@ -55,8 +55,6 @@ export const AGENDA = {
   "Je afspraken uit Google, alleen om te lezen. Afspraken maak je in Google zelf.":
     "Your appointments from Google, read only. You create appointments in Google itself.",
   "Apple iCloud": "Apple iCloud",
-  "Je afspraken uit iCloud. Hier kun je er een bij maken; wijzigen doe je op je iPhone.":
-    "Your appointments from iCloud. You can add one here; changes are made on your iPhone.",
   "Afspraak verwijderen?": "Delete appointment?",
   "{titel} verdwijnt, alleen deze keer.": "{titel} disappears, only this time.",
   "{titel} verdwijnt uit de agenda.": "{titel} disappears from the calendar.",
@@ -70,13 +68,15 @@ export const AGENDA = {
   "{naam} gaat weg uit Home Assistant, met alle afspraken erin.": "{naam} is removed from Home Assistant, with all its appointments.",
   "{naam} staat dan niet meer op de kaart. De agenda zelf blijft bestaan.": "{naam} will no longer be on the card. The calendar itself remains.",
   "Weghalen…": "Removing…",
-  "Een afspraak in iCloud kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de Agenda-app op je iPhone, iPad of Mac.":
-    "Home Assistant cannot change or delete an appointment in iCloud. Do that in the Calendar app on your iPhone, iPad or Mac.",
-  "Een afspraak in deze agenda kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de app van de agenda zelf; bij iCloud is dat de Agenda-app op je iPhone, iPad of Mac.":
-    "Home Assistant cannot change or delete an appointment in this calendar. Do that in the calendar's own app; for iCloud that is the Calendar app on your iPhone, iPad or Mac.",
   "In deze agenda kun je hier wel afspraken maken, maar niet wijzigen. Dat doe je in de app van de agenda zelf.":
     "You can create appointments in this calendar here, but not change them. Do that in the calendar's own app.",
   "+{n} meer": "+{n} more",
   "Geen afspraken op deze dag.": "No appointments on this day.",
   "Wijzigen in de kalender": "Change in the calendar",
+  "Een herhalende afspraak uit iCloud wijzig of verwijder je in de Agenda-app op je iPhone, iPad of Mac.":
+    "Change or delete a recurring iCloud appointment in the Calendar app on your iPhone, iPad or Mac.",
+  "Een herhalende afspraak in deze agenda wijzig of verwijder je in de app van de agenda zelf.":
+    "Change or delete a recurring appointment in this calendar in the calendar's own app.",
+  "Herhaalt.": "Repeats.",
+  "Je afspraken uit iCloud. Hier maak, wijzig en verwijder je ze ook.": "Your appointments from iCloud. You can also create, change and delete them here.",
 };

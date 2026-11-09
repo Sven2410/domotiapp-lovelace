@@ -24,6 +24,12 @@ export const wijzigAfspraak = (hass, a, event) =>
     event,
   });
 
+/** Een afspraak in een CalDAV-agenda (iCloud) wijzigen: dat doet onze server, Home Assistant kan het daar niet. */
+export const wijzigViaServer = (hass, a, event) => stuur(hass, { type: `${PREFIX}/caldav_wijzig`, entity_id: a.agenda, uid: a.uid, event });
+
+/** Een afspraak uit een CalDAV-agenda (iCloud) weghalen, via onze server. */
+export const haalWegViaServer = (hass, a) => stuur(hass, { type: `${PREFIX}/caldav_weg`, entity_id: a.agenda, uid: a.uid });
+
 /** Deze afspraak weghalen. Bij een herhalende alleen deze keer. */
 export const haalAfspraakWeg = (hass, a) =>
   stuur(hass, {
