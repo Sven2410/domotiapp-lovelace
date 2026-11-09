@@ -34,19 +34,20 @@ import { AgendaAbonnement } from "../infoscherm-client.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
-import { afsprakenVan, agendaInfo, agendasVan } from "./agenda-logica.js";
+import { afsprakenVan, agendaInfo, agendasVan, kan } from "./agenda-logica.js";
 import { ToegevoegdAbonnement } from "./agenda-client.js";
 import { agendaScherm, toonAgendaScherm } from "./agenda-scherm.js";
 import {
   AGENDA_DAGEN,
   AGENDA_DAGEN_MAX,
+  AGENDA_VOORUIT,
   ALARMEN,
   BATTERIJ_GRENS,
+  afsprakenOpKaart,
   agendaTot,
   alarmen,
   batterijenLeeg,
   groet,
-  komendeAfspraken,
   regels,
   staatOpen,
 } from "./overzicht-logica.js";
@@ -155,6 +156,21 @@ class OverzichtCard extends DacCard {
     .regel[data-toon="bad"] .bij { color: var(--dac-bad); font-weight: 600; }
     .regel[data-toon="warn"] .bij { color: var(--dac-warn); }
 
+    /* ---- agenda: bekijken, toevoegen, een afspraak maken ---- */
+    .acties { display: flex; justify-content: flex-end; gap: 8px; }
+    .lijst:empty + .acties { border-top: 1px solid var(--dac-border); padding-top: 10px; }
+    .knop {
+      flex: 0 0 auto; height: 32px; min-width: 32px; padding: 0 11px 0 9px; border-radius: var(--dac-radius-pill); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      font: inherit; font-size: 12.5px; font-weight: 600; color: var(--dac-ink-2);
+      background: var(--dac-surface); border: 1px solid var(--dac-border);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .knop .icon { width: 16px; height: 16px; }
+    @media (hover: hover) { .knop:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); color: var(--dac-ink); } }
+    .knop.plus { background: var(--dac-accent); border-color: var(--dac-accent); color: var(--dac-on-accent); }
+    @media (hover: hover) { .knop.plus:hover { background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent); } }
+
     .unavailable { opacity: .42; }
     :focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 2px; }
   `;
@@ -178,6 +194,7 @@ class OverzichtCard extends DacCard {
       ...config,
       dagen: getal(config.dagen, 0, DAGEN_MAX, DAGEN_STANDAARD),
       agenda_dagen: getal(config.agenda_dagen, 1, AGENDA_DAGEN_MAX, AGENDA_DAGEN),
+      agenda_toevoegen: config.agenda_toevoegen !== false,
     };
   }
 
@@ -208,6 +225,10 @@ class OverzichtCard extends DacCard {
               <div class="dagen"></div>
             </div>
             <div class="lijst"></div>
+            <div class="acties" hidden>
+              <button class="knop" type="button" data-doe="agendas">${resolve("calendar")}<span>${escapeHtml(t("Agenda's"))}</span></button>
+              <button class="knop plus" type="button" data-doe="nieuw">${resolve("plus")}<span>${escapeHtml(t("Afspraak"))}</span></button>
+            </div>
           </div>
         </div>
       </div>`;
@@ -253,6 +274,18 @@ class OverzichtCard extends DacCard {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault();
       open(e);
+    });
+
+    // Dezelfde knoppen als op de agendakaart. De eigenaar, 9 november 2026, op het overzicht zonder agendakaart ernaast:
+    // "ik kan niet zelf een agenda maken hoe kan dat?"
+    this.on(this.$(".acties"), "click", (e) => {
+      const doe = e.target.closest("[data-doe]")?.dataset.doe;
+      if (!doe) return;
+      const bron = this.agendaBron_();
+      if (doe === "agendas") return toonAgendaScherm(bron, "agendas");
+      // Nog geen agenda om in te schrijven: dan eerst er een toevoegen.
+      if (!bron.agendas().some((x) => x.kan.maken)) return toonAgendaScherm(bron, c.agenda_toevoegen ? "toevoegen" : "agendas");
+      toonAgendaScherm(bron, "formulier");
     });
 
     // De klok op de minuut, net als de headerkaart: niet elke zestig seconden vanaf het laden.
@@ -342,16 +375,16 @@ class OverzichtCard extends DacCard {
     return agendasVan({ agendas: lijst(this.config?.agenda) }, this.toegevoegd_);
   }
 
-  /** Wat het agendascherm wil weten. Agenda's toevoegen kan hier niet: dat hoort bij de agendakaart. */
+  /** Wat het agendascherm wil weten. Agenda's toevoegen mag hier sinds 0.117.0 ook, tenzij het in de editor uit staat. */
   agendaBron_() {
     return {
       hass: () => this.hass,
       agendas: () => agendaInfo(this.hass?.states, this.agendaIds_(), this.toegevoegd_, (id) => nameOf(this.hass, id)).map((x) => ({ ...x, kleur: TONES[x.toon] })),
-      toevoegen: false,
+      toevoegen: this.config.agenda_toevoegen,
     };
   }
 
-  /** Per agenda een abonnement van vandaag tot `agenda_dagen` vooruit; na middernacht opnieuw. */
+  /** Per agenda een abonnement van vandaag tot twee maanden vooruit, voor de eerstvolgende na het venster; na middernacht opnieuw. */
   abonneerAgendas_() {
     for (const abo of this.agendaAbos_.values()) abo.stop();
     this.agendaAbos_.clear();
@@ -359,7 +392,7 @@ class OverzichtCard extends DacCard {
     this.dag_ = this.vandaag_();
     const nu = this.nu_();
     const van = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
-    const tot = agendaTot(nu, this.config.agenda_dagen);
+    const tot = agendaTot(nu, AGENDA_VOORUIT);
     for (const entity of this.agendaIds_()) {
       const abo = new AgendaAbonnement(entity, vanWand(van, this.tz_()), vanWand(tot, this.tz_()), (events) => {
         if (this.agendaAbos_.get(entity) !== abo) return;
@@ -465,11 +498,16 @@ class OverzichtCard extends DacCard {
       naamVan,
       alarmen: alarmen(states, lijst(c.melders)),
       open: lijst(c.letop).map((id) => states[id]).filter(staatOpen),
-      afspraken: komendeAfspraken([...this.afspraken_.values()].flat(), nu, c.agenda_dagen),
+      afspraken: afsprakenOpKaart([...this.afspraken_.values()].flat(), nu, c.agenda_dagen),
       batterijen: batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS),
     });
 
     this.rijen_ = rijen;
+    const ids = this.agendaIds_();
+    const knoppen = this.$(".acties");
+    knoppen.hidden = !ids.length && !c.agenda_toevoegen;
+    // Afspraak maken kan alleen in een agenda die het kan, of na het toevoegen van een.
+    this.$(".plus").hidden = !c.agenda_toevoegen && !ids.some((id) => kan(states[id]).maken);
     const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity]));
     if (el.dataset.sig === sig) return;
     el.dataset.sig = sig;
@@ -504,7 +542,7 @@ class OverzichtCard extends DacCard {
 
 class OverzichtEditor extends DacEditor {
   defaults() {
-    return { dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, batterij_grens: BATTERIJ_GRENS };
+    return { dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, agenda_toevoegen: true, batterij_grens: BATTERIJ_GRENS };
   }
 
   schema() {
@@ -514,6 +552,7 @@ class OverzichtEditor extends DacEditor {
       { name: "naam", selector: sel.text() },
       { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
       { name: "agenda_dagen", selector: sel.number(1, AGENDA_DAGEN_MAX) },
+      { name: "agenda_toevoegen", selector: sel.bool() },
       { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
       {
         name: "melders",
@@ -538,6 +577,7 @@ class OverzichtEditor extends DacEditor {
         agenda: t("Agenda's"),
         letop: t("Let op als dit open staat"),
         agenda_dagen: t("Agenda: dagen vooruit"),
+        agenda_toevoegen: t("Agenda's toevoegen"),
         melders: t("Melders"),
         batterijen: t("Batterijen"),
         batterij_grens: t("Batterij bijna leeg onder (%)"),
@@ -550,7 +590,8 @@ class OverzichtEditor extends DacEditor {
       dagen: t("0 laat de rij met dagen weg."),
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
       agenda: t("De afspraken in deze agenda's, vanaf nu."),
-      agenda_dagen: t("1 is alleen vandaag, 7 een week."),
+      agenda_dagen: t("1 is alleen vandaag, 7 een week. Staat er niets in, dan de eerstvolgende afspraak."),
+      agenda_toevoegen: t("De klant voegt zelf een agenda toe: een nieuwe, Google of Apple."),
       letop: t("Deuren, ramen, sloten, de garage. Ze staan er alleen als ze open of niet op slot zijn."),
       melders: t("Rook-, gas-, koolmonoxide-, lek- en hittemelders en alarmsystemen. Ze staan er alleen als ze afgaan."),
       batterijen: t("Ze staan er alleen als ze onder de grens zijn."),

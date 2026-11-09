@@ -14,6 +14,8 @@ import { describe, it } from "node:test";
 
 import {
   AGENDA_DAGEN,
+  AGENDA_VOORUIT,
+  afsprakenOpKaart,
   alarmen,
   batterijenLeeg,
   beperk,
@@ -148,6 +150,18 @@ describe("afspraken", () => {
     const later = a("Kerstdiner", new Date(2026, 11, 17, 18), new Date(2026, 11, 17, 21));
     assert.deepEqual(komendeAfspraken([later], NU).map((x) => x.titel), []);
     assert.deepEqual(komendeAfspraken([later], NU, 60).map((x) => x.titel), ["Kerstdiner"]);
+  });
+
+  // NIEUW GEDRAG in 0.117.0: een lege week toont de eerstvolgende afspraak. Faalt op 0.116.0 (afsprakenOpKaart bestond niet).
+  it("een lege week: de eerstvolgende afspraak daarna, tot twee maanden vooruit", () => {
+    const kerst = a("Kerstborrel", new Date(2026, 11, 17, 19), new Date(2026, 11, 17, 23));
+    const nieuwjaar = a("Nieuwjaar", new Date(2027, 0, 1), new Date(2027, 0, 2), true);
+    assert.equal(AGENDA_VOORUIT, 60);
+    assert.deepEqual(afsprakenOpKaart([nieuwjaar, kerst], NU).map((x) => x.titel), ["Kerstborrel"]);
+    assert.deepEqual(afsprakenOpKaart([...lijst, kerst], NU).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]);
+    assert.deepEqual(afsprakenOpKaart([a("Al geweest", new Date(2026, 10, 8, 9), new Date(2026, 10, 8, 10))], NU), []);
+    assert.deepEqual(afsprakenOpKaart([a("Pasen", new Date(2027, 2, 28), new Date(2027, 2, 29), true)], NU), []);
+    assert.equal(afspraakWanneer(afsprakenOpKaart([kerst], NU)[0], NU), "do 17 dec 19:00");
   });
 
   it("zegt wanneer", () => {

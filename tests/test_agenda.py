@@ -21,7 +21,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
 
-from custom_components.domotiapp_lovelace.agenda import DATA_AGENDA, ICLOUD, KAART_TYPE, Agendas, google_adres
+from custom_components.domotiapp_lovelace.agenda import DATA_AGENDA, ICLOUD, KAART_TYPE, OVERZICHT_TYPE, Agendas, google_adres
 from custom_components.domotiapp_lovelace.const import DOMAIN
 
 from .conftest import zet_integratie_op
@@ -53,9 +53,9 @@ async def klant(hass: HomeAssistant, hass_ws_client):
     return lambda: hass_ws_client(hass, token)
 
 
-async def zet_kaart(hass: HomeAssistant, **config: Any) -> None:
+async def zet_kaart(hass: HomeAssistant, kaart_type: str = KAART_TYPE, **config: Any) -> None:
     await hass.data[LOVELACE_DATA].dashboards[None].async_save(
-        {"views": [{"type": "sections", "sections": [{"type": "grid", "cards": [{"type": KAART_TYPE, **config}]}]}]}
+        {"views": [{"type": "sections", "sections": [{"type": "grid", "cards": [{"type": kaart_type, **config}]}]}]}
     )
     await hass.async_block_till_done()
 
@@ -200,4 +200,16 @@ async def test_een_gewone_gebruiker_mag_alleen_als_er_een_agendakaart_staat_met_
     assert hass.config_entries.async_entries("local_calendar") == []
 
     await zet_kaart(hass)
+    assert (await stuur(klant, "toevoegen", soort="nieuw", naam="Gezin"))["success"] is True
+
+
+async def test_een_gewone_gebruiker_mag_het_ook_vanaf_de_overzichtskaart(hass: HomeAssistant, agenda_op, klant) -> None:
+    """NIEUW GEDRAG in 0.117.0. De eigenaar, 9 november 2026, met alleen een overzichtskaart op zijn dashboard: "ik kan
+    niet zelf een agenda maken hoe kan dat?". Faalt op 0.116.0: OVERZICHT_TYPE bestond niet, en de server las alleen
+    agendakaarten."""
+    klant = await klant()
+    await zet_kaart(hass, OVERZICHT_TYPE, agenda_toevoegen=False)
+    assert (await stuur(klant, "toevoegen", soort="nieuw", naam="Gezin"))["error"]["code"] == "unauthorized"
+
+    await zet_kaart(hass, OVERZICHT_TYPE, weer="weather.thuis")
     assert (await stuur(klant, "toevoegen", soort="nieuw", naam="Gezin"))["success"] is True

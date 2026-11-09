@@ -28,7 +28,8 @@ kan sturen, mag Home Assistant geen willekeurig adres laten ophalen. Google mag 
 `calendar.google.com/calendar/ical/`, Apple gaat altijd naar `caldav.icloud.com`.
 
 **Wie het mag:** een beheerder altijd; een ander alleen als er op een dashboard een agendakaart staat waarop toevoegen
-niet uit staat (`toevoegen: false`). Dezelfde grens als bij de automatiseringskaart: de server leest de dashboards zelf.
+niet uit staat (`toevoegen: false`), of sinds 0.117.0 een overzichtskaart (`agenda_toevoegen: false`). Dezelfde grens als
+bij de automatiseringskaart: de server leest de dashboards zelf.
 
 **Wat de klant toevoegde, onthoudt de server** (`STORE_KEY`), zodat de kaarten het laten zien zonder dat iemand het
 dashboard hoeft te wijzigen; dat kan de klant niet. Weghalen kan alleen wat via de kaart kwam, en een gekoppelde Lokale
@@ -60,6 +61,7 @@ from .taal import t
 _LOGGER = logging.getLogger(__name__)
 
 KAART_TYPE = "custom:domotiapp-agenda-card"
+OVERZICHT_TYPE = "custom:domotiapp-overzicht-card"
 
 DATA_AGENDA = "agenda"
 DATA_WS = "agenda_ws_registered"
@@ -248,10 +250,12 @@ class Agendas:
 
 
 async def async_mag(hass: HomeAssistant, connection) -> bool:
-    """Een beheerder altijd; een ander alleen als er een agendakaart staat waarop toevoegen niet uit staat."""
+    """Een beheerder altijd; een ander alleen als er een agenda- of overzichtskaart staat waarop toevoegen niet uit staat."""
     if connection.user.is_admin:
         return True
-    return any(kaart.get("toevoegen") is not False for _, kaart in await async_lees_kaarten(hass, KAART_TYPE))
+    if any(kaart.get("toevoegen") is not False for _, kaart in await async_lees_kaarten(hass, KAART_TYPE)):
+        return True
+    return any(kaart.get("agenda_toevoegen") is not False for _, kaart in await async_lees_kaarten(hass, OVERZICHT_TYPE))
 
 
 async def async_zet_op(hass: HomeAssistant) -> None:
