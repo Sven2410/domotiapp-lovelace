@@ -49,6 +49,7 @@ import {
   itemsVan,
   klemBalk,
   kolommenVoor,
+  menuMidden,
   subVan,
   verdeel,
 } from "./navbar-logica.js";
@@ -539,7 +540,8 @@ class NavbarCard extends DacCard {
    * De klemming houdt het menu binnen de balk. Zonder dat schuift het menu van
    * de eerste knop links buiten beeld -- precies waar de duim hem niet meer
    * kan raken. Is de balk smaller dan het menu, dan wint het midden: dan is er
-   * niets te klemmen en is scheef staan erger dan gecentreerd.
+   * niets te klemmen en is scheef staan erger dan gecentreerd. Twee kolommen
+   * staan altijd in het midden (`menuMidden`).
    */
   plaatsMenu_(menu, knop) {
     if (!menu.classList.contains("submenu")) return;
@@ -547,11 +549,7 @@ class NavbarCard extends DacCard {
     const r = knop.getBoundingClientRect();
     if (!balk?.width) return;
 
-    const halve = menu.offsetWidth / 2;
-    const midden = r.left + r.width / 2 - balk.left;
-    const min = halve + 6;
-    const max = balk.width - halve - 6;
-    const x = max < min ? balk.width / 2 : Math.min(Math.max(midden, min), max);
+    const x = menuMidden(balk.width, r.left + r.width / 2 - balk.left, menu.offsetWidth, menu.classList.contains("twee"));
     menu.style.setProperty("--x", `${Math.round(x)}px`);
   }
 

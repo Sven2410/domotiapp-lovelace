@@ -47,6 +47,24 @@ export const SUB_MAX = 2 * KOLOM_MAX;
 /** Eén kolom tot en met 8 subknoppen, daarboven twee. */
 export const kolommenVoor = (n) => (n > KOLOM_MAX ? 2 : 1);
 
+/**
+ * Waar het midden van een submenu komt, gemeten vanaf de linkerrand van de balk.
+ *
+ * Eén kolom staat boven zijn knop, geklemd binnen de balk: zo wijst hij aan waar je tikte, en valt hij bij de eerste of
+ * de laatste knop niet buiten beeld. Is de balk smaller dan het menu, dan het midden.
+ *
+ * **Twee kolommen staan altijd in het midden van de balk** (sinds 0.118.1). Op een telefoon zijn ze bijna zo breed als
+ * de balk; boven de knop Meer, rechts, geklemd, stond het menu zichtbaar scheef. De eigenaar, 9 november 2026, met een
+ * schermafdruk van zijn iPhone: "Meer staat niet in het midden".
+ */
+export function menuMidden(balkBreedte, knopMidden, menuBreedte, twee = false) {
+  const halve = menuBreedte / 2;
+  const min = halve + 6;
+  const max = balkBreedte - halve - 6;
+  if (twee || max < min) return balkBreedte / 2;
+  return Math.min(Math.max(knopMidden, min), max);
+}
+
 /** Houd het aantal binnen de grenzen; alles onleesbaars wordt de standaard. */
 export function klemBalk(waarde) {
   // Niets ingevuld is niet hetzelfde als nul ingevuld. `Number(null)` en

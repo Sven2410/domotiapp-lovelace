@@ -224,6 +224,14 @@ const css = /* css */ `
     border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm); padding: 8px 10px;
     min-height: 40px; width: 100%; min-width: 0; color-scheme: var(--dac-scheme);
   }
+  /* Een datum- of tijdveld zelf zonder padding en rand (valkuil 79): Safari op iOS telt ze bij de 100% op, en dan loopt
+     Van over Tot heen. De rand is een schaduw naar binnen. Geen display hier: een verborgen .vak2 moet verborgen blijven. */
+  input[type="date"], input[type="datetime-local"], input[type="time"] {
+    -webkit-appearance: none; appearance: none; text-align: center;
+    padding: 0; border: 0; box-shadow: inset 0 0 0 1px var(--dac-border-hi);
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator { margin-right: 8px; }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
   /* De keuzelijst van de browser tekent zijn eigen menu, en dat menu nam de
@@ -327,7 +335,7 @@ const css = /* css */ `
 
   .ot-tabel { display: grid; grid-template-columns: 90px auto 100px 100px 100px 100px; gap: 6px 10px; align-items: center; font-size: 13px; }
   .ot-tabel .k { font-size: 11px; color: var(--dac-ink-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-  .ot-tabel input[type="time"] { min-height: 34px; padding: 4px 6px; font-size: 13px; }
+  .ot-tabel input[type="time"] { min-height: 34px; font-size: 13px; }
   .ot-tabel .dag { color: var(--dac-ink-2); }
   .ot-tabel input:disabled { opacity: 0.35; }
 
