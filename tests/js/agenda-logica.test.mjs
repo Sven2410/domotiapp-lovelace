@@ -23,6 +23,7 @@ import {
   maandRaster,
   nietTeWijzigen,
   opDag,
+  watKan,
   verschuif,
   weekBegin,
   weekdagNamen,
@@ -277,19 +278,36 @@ describe("de kalender", () => {
   });
 });
 
-describe("nietTeWijzigen", () => {
-  it("zegt bij iCloud waar het wel kan, en niets als het hier kan", () => {
-    const st = (f) => ({ attributes: { supported_features: f } });
-    const states = { "calendar.thuis": st(1), "calendar.werk": st(1), "calendar.gezin": st(7), "calendar.feestdagen": st(0) };
-    const ids = Object.keys(states);
-    const info = agendaInfo(states, ids, [{ soort: "apple", entiteiten: ["calendar.thuis"] }], (id) => id, (id) => (id === "calendar.werk" ? "caldav" : null));
-    assert.deepEqual(
-      info.map((x) => x.herkomst),
-      ["apple", "caldav", null, null]
-    );
-    assert.match(nietTeWijzigen(info[0]), /Agenda-app op je iPhone/);
-    assert.match(nietTeWijzigen(info[1]), /app van de agenda zelf; bij iCloud/);
-    assert.equal(nietTeWijzigen(info[2]), null);
-    assert.match(nietTeWijzigen(info[3]), /alleen te lezen/);
+describe("nietTeWijzigen en watKan", () => {
+  const st = (f) => ({ attributes: { supported_features: f } });
+  const states = { "calendar.thuis": st(1), "calendar.werk": st(1), "calendar.gezin": st(7), "calendar.feestdagen": st(0), "calendar.google": st(3) };
+  const info = agendaInfo(states, Object.keys(states), [{ soort: "apple", entiteiten: ["calendar.thuis"] }], (id) => id, (id) => (id === "calendar.werk" ? "caldav" : null));
+  const [thuis, werk, gezin, feestdagen, google] = info;
+  const los = { uid: "abc", herhaalt: false };
+  const reeks = { uid: "abc", herhaalt: true, recurrence_id: "20261107T140000Z" };
+
+  it("de herkomst: de soort waarmee de klant hem toevoegde, anders het platform", () => {
+    assert.deepEqual(info.map((x) => x.herkomst), ["apple", "caldav", null, null, null]);
+  });
+
+  // NIEUW GEDRAG (0.119.0); faalt op 0.118.1 bij het importeren (watKan bestond niet). De eigenaar, 9 november 2026, op de
+  // vraag of een afspraak uit iCloud dan niet te verwijderen is: "ja doe maar".
+  it("iCloud: wijzigen en verwijderen via onze server, behalve een herhalende afspraak", () => {
+    assert.deepEqual(watKan(thuis, los), { wijzigen: true, weghalen: true, serverWijzigen: true, serverWeghalen: true });
+    assert.deepEqual(watKan(werk, los), { wijzigen: true, weghalen: true, serverWijzigen: true, serverWeghalen: true });
+    assert.deepEqual(watKan(thuis, reeks), { wijzigen: false, weghalen: false, serverWijzigen: false, serverWeghalen: false });
+    assert.equal(watKan(thuis, { uid: null }).weghalen, false);
+    assert.equal(nietTeWijzigen(thuis, los), null);
+    assert.match(nietTeWijzigen(thuis, reeks), /herhalende afspraak uit iCloud .* Agenda-app op je iPhone/);
+    assert.match(nietTeWijzigen(werk, reeks), /app van de agenda zelf/);
+  });
+
+  it("de rest langs Home Assistant zelf, met wat die kan", () => {
+    assert.deepEqual(watKan(gezin, los), { wijzigen: true, weghalen: true, serverWijzigen: false, serverWeghalen: false });
+    assert.deepEqual(watKan(google, los), { wijzigen: false, weghalen: true, serverWijzigen: false, serverWeghalen: false });
+    assert.deepEqual(watKan(feestdagen, los), { wijzigen: false, weghalen: false, serverWijzigen: false, serverWeghalen: false });
+    assert.equal(nietTeWijzigen(gezin, los), null);
+    assert.match(nietTeWijzigen(google, los), /afspraken maken, maar niet wijzigen/);
+    assert.match(nietTeWijzigen(feestdagen, los), /alleen te lezen/);
   });
 });

@@ -9,7 +9,8 @@
  *
  * Wat een agenda kan, zegt Home Assistant in `supported_features`: maken (1), weghalen (2) en wijzigen (4). Een Lokale
  * agenda kan alles; een Google-agenda met de volledige koppeling maken en weghalen; iCloud (CalDAV) alleen maken; een
- * externe agenda (het iCal-adres van Google) niets: die is alleen te lezen.
+ * externe agenda (het iCal-adres van Google) niets: die is alleen te lezen. Wijzigen en weghalen in CalDAV doet sinds
+ * 0.119.0 onze eigen server (`agenda_caldav.py`), behalve bij een herhalende afspraak: zie `watKan`.
  *
  * Zonder DOM, zodat het in een gewone unittest past (`tests/js/agenda-logica.test.mjs`).
  */
@@ -64,17 +65,41 @@ export function agendaInfo(states, ids, toegevoegd, naamVan = (id) => id, platfo
   });
 }
 
+/** Een CalDAV-agenda (iCloud): wijzigen en weghalen doet onze server, want Home Assistant kan het daar niet. */
+export const viaServer = (info) => info?.herkomst === "apple" || info?.herkomst === "caldav";
+
+/**
+ * Wat er met deze afspraak kan, en langs welke weg. Home Assistant zelf als de agenda het kan; anders bij CalDAV onze
+ * server (`serverWijzigen`, `serverWeghalen`). De eigenaar, 9 november 2026, op de vraag of een afspraak uit iCloud dan
+ * niet te verwijderen is: "ja doe maar". Zonder uid (de eerstvolgende van ver weg, uit de toestand) kan het niet, en een
+ * herhalende afspraak in CalDAV ook niet: op de server is dat één afspraak met een regel, en weghalen zou de hele reeks
+ * weghalen.
+ */
+export function watKan(info, a) {
+  const uid = Boolean(a?.uid);
+  const server = uid && viaServer(info) && !a?.herhaalt;
+  const ha = info?.kan ?? {};
+  return {
+    wijzigen: uid && (Boolean(ha.wijzigen) || server),
+    weghalen: uid && (Boolean(ha.weghalen) || server),
+    serverWijzigen: server && !ha.wijzigen,
+    serverWeghalen: server && !ha.weghalen,
+  };
+}
+
 /**
  * Waarom een afspraak hier niet te wijzigen is, en waar het wel kan; `null` als hij hier te wijzigen is.
  *
- * De eigenaar, 9 november 2026, met een agenda uit iCloud: "aanmaken werkt wel trouwens maar wijzigen niet van een
- * bestaande uit apple agenda". Home Assistant kan in een CalDAV-agenda alleen maken (`supported_features` 1). Dat zeggen
- * we dan ook, met waar het wel kan, in plaats van "alleen te lezen".
+ * Sinds 0.119.0 kan het in iCloud wel, behalve bij een herhalende afspraak; zie `watKan`.
  */
-export function nietTeWijzigen(info) {
+export function nietTeWijzigen(info, a = null) {
   if (info?.kan?.wijzigen) return null;
-  if (info?.herkomst === "apple") return t("Een afspraak in iCloud kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de Agenda-app op je iPhone, iPad of Mac.");
-  if (info?.herkomst === "caldav") return t("Een afspraak in deze agenda kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de app van de agenda zelf; bij iCloud is dat de Agenda-app op je iPhone, iPad of Mac.");
+  if (viaServer(info)) {
+    if (!a?.herhaalt) return null;
+    return info.herkomst === "apple"
+      ? t("Een herhalende afspraak uit iCloud wijzig of verwijder je in de Agenda-app op je iPhone, iPad of Mac.")
+      : t("Een herhalende afspraak in deze agenda wijzig of verwijder je in de app van de agenda zelf.");
+  }
   if (info?.kan?.maken) return t("In deze agenda kun je hier wel afspraken maken, maar niet wijzigen. Dat doe je in de app van de agenda zelf.");
   return t("Deze agenda is hier alleen te lezen. Wijzig de afspraak waar hij vandaan komt, zoals in Google Agenda.");
 }

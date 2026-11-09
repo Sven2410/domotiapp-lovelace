@@ -21,3 +21,10 @@ PyTurboJPEG==1.8.3
 # met de echte Lokale agenda. Versie gelijk aan die van HA 2026.8 (de manifest
 # van local_calendar).
 ical==14.0.1
+
+# Sinds 0.119.0 wijzigt en verwijdert de integratie een afspraak in een CalDAV-agenda (iCloud) zelf
+# (`agenda_caldav.py`), met het `caldav.Calendar`-object van de integratie van Home Assistant. De tests gebruiken
+# de echte bibliotheek om te toetsen wat er naar de server gaat. Versies gelijk aan de manifest van `caldav` in HA 2026.8.
+caldav==2.1.0
+icalendar==6.3.1
+vobject==0.9.9

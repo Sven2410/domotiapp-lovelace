@@ -18,8 +18,9 @@
  *
  * ## Wat een agenda kan
  *
- * Alleen wat Home Assistant zegt (`kan`): een Wijzigen-knop staat er alleen als de agenda het kan. Kan het niet, dan zegt
- * het scherm waar het wel kan (`nietTeWijzigen`): bij iCloud de Agenda-app op de iPhone.
+ * Wat Home Assistant zegt (`kan`): een Wijzigen-knop staat er alleen als de agenda het kan. In een CalDAV-agenda (iCloud)
+ * kan Home Assistant alleen maken; wijzigen en weghalen gaan daar sinds 0.119.0 via onze server (`watKan`,
+ * `agenda_caldav.py`). Kan het niet, dan zegt het scherm waar het wel kan (`nietTeWijzigen`).
  *
  * ## De kalender
  *
@@ -52,13 +53,25 @@ import {
   maandRaster,
   nietTeWijzigen,
   nieuwFormulier,
+  viaServer,
+  watKan,
   opDag,
   tijdOp,
   verschuif,
   wanneerVoluit,
   weekdagNamen,
 } from "./agenda-logica.js";
-import { bijWijziging, haalAfspraakWeg, haalAgendaWeg, maakAfspraak, meldGewijzigd, voegAgendaToe, wijzigAfspraak } from "./agenda-client.js";
+import {
+  bijWijziging,
+  haalAfspraakWeg,
+  haalAgendaWeg,
+  haalWegViaServer,
+  maakAfspraak,
+  meldGewijzigd,
+  voegAgendaToe,
+  wijzigAfspraak,
+  wijzigViaServer,
+} from "./agenda-client.js";
 import { isoDatum, klok } from "./infoscherm-logica.js";
 import { dagBegin } from "./ruimtes-logica.js";
 
@@ -249,12 +262,13 @@ const css = /* css */ `
   .ev .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ev .tm { flex: 0 0 auto; color: var(--dac-ink-2); }
   .meer { font-size: 11px; color: var(--dac-ink-2); padding: 0 4px; }
-  /* Smal (een telefoon): stippen in plaats van titels. */
+  /* Smal (een telefoon): stippen in plaats van titels. Een stip is geen knop: een tik op de dag opent de dag, ook als de
+     vinger op een stip valt. Gemeten op 390 breed: een tik midden op een dag opende anders die ene afspraak. */
   @container (max-width: 560px) {
     .cel { min-height: 54px; padding: 3px 2px; align-items: center; }
     .cel .nr { align-self: center; }
     .evs { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
-    .ev { padding: 0; background: none; }
+    .ev { padding: 0; background: none; pointer-events: none; }
     .ev .nm, .ev .tm, .meer { display: none; }
   }
 
@@ -307,9 +321,10 @@ const veilig = (tekst) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-/** Wat een agenda kan, in woorden. */
-function kanWoord(kan) {
-  if (kan.maken && kan.wijzigen) return t("lezen en schrijven");
+/** Wat een agenda kan, in woorden. Een CalDAV-agenda kan alles: wijzigen en weghalen gaan via onze server. */
+function kanWoord(info) {
+  const kan = info.kan;
+  if (kan.maken && (kan.wijzigen || viaServer(info))) return t("lezen en schrijven");
   if (kan.maken) return t("lezen en afspraken maken");
   return t("alleen lezen");
 }
@@ -574,12 +589,13 @@ class AgendaScherm extends HTMLElement {
     const info = this.info_(a.agenda);
     const knoppen = [];
     if (this.vanKalender_) knoppen.push(`<button class="btn links" type="button" data-doe="naarKalender">${resolve("chevronLeft")}${veilig(t("Terug"))}</button>`);
-    if (info.kan.weghalen && a.uid) knoppen.push(`<button class="btn weg${this.vanKalender_ ? "" : " links"}" type="button" data-doe="weghalen">${veilig(t("Verwijderen"))}</button>`);
-    if (info.kan.wijzigen && a.uid) knoppen.push(`<button class="btn eerste" type="button" data-doe="wijzigen">${resolve("pencil")}${veilig(t("Wijzigen"))}</button>`);
+    const kan = watKan(info, a);
+    if (kan.weghalen) knoppen.push(`<button class="btn weg${this.vanKalender_ ? "" : " links"}" type="button" data-doe="weghalen">${veilig(t("Verwijderen"))}</button>`);
+    if (kan.wijzigen) knoppen.push(`<button class="btn eerste" type="button" data-doe="wijzigen">${resolve("pencil")}${veilig(t("Wijzigen"))}</button>`);
     // De eerstvolgende van ver weg komt uit de toestand van de agenda, zonder uid. In de kalender staat hij er met alles.
-    const zonderUid = !a.uid && (info.kan.wijzigen || info.kan.weghalen);
+    const zonderUid = !a.uid && (info.kan.wijzigen || info.kan.weghalen || viaServer(info));
     if (zonderUid && !this.vanKalender_) knoppen.push(`<button class="btn eerste" type="button" data-doe="inKalender">${resolve("calendar")}${veilig(t("Wijzigen in de kalender"))}</button>`);
-    const uitleg = zonderUid ? null : nietTeWijzigen(info);
+    const uitleg = zonderUid ? null : nietTeWijzigen(info, a);
     return `
       <header style="--tone:${info.kleur}">
         <span class="stip"></span>
@@ -590,7 +606,7 @@ class AgendaScherm extends HTMLElement {
         <div class="regel">${resolve("clock")}<span>${veilig(wanneerVoluit(a))}</span></div>
         ${a.plaats ? `<div class="regel">${resolve("house")}<span>${veilig(a.plaats)}</span></div>` : ""}
         ${a.omschrijving ? `<div class="regel">${resolve("dots")}<span class="omschrijving">${veilig(a.omschrijving)}</span></div>` : ""}
-        ${a.herhaalt ? `<div class="regel">${resolve("repeat")}<span>${veilig(t("Herhaalt. Wijzigen en verwijderen gaat alleen over deze keer."))}</span></div>` : ""}
+        ${a.herhaalt ? `<div class="regel">${resolve("repeat")}<span>${veilig(kan.wijzigen || kan.weghalen ? t("Herhaalt. Wijzigen en verwijderen gaat alleen over deze keer.") : t("Herhaalt."))}</span></div>` : ""}
       </div>
       ${uitleg ? `<div class="uitleg">${veilig(uitleg)}</div>` : ""}
       <div class="fout" role="alert"></div>
@@ -663,7 +679,7 @@ class AgendaScherm extends HTMLElement {
       <div class="soorten" role="radiogroup">
         ${soort("nieuw", "calendar", t("Nieuwe agenda"), t("In Home Assistant. Hier maak en wijzig je de afspraken."))}
         ${soort("google", "calendar", t("Google Agenda"), t("Je afspraken uit Google, alleen om te lezen. Afspraken maak je in Google zelf."))}
-        ${soort("apple", "calendar", t("Apple iCloud"), t("Je afspraken uit iCloud. Hier kun je er een bij maken; wijzigen doe je op je iPhone."))}
+        ${soort("apple", "calendar", t("Apple iCloud"), t("Je afspraken uit iCloud. Hier maak, wijzig en verwijder je ze ook."))}
       </div>
       ${velden}
       <div class="fout" role="alert"></div>
@@ -679,7 +695,7 @@ class AgendaScherm extends HTMLElement {
       .map(
         (x) => `<div class="agenda" style="--tone:${x.kleur}">
           <span class="stip"></span>
-          <span class="txt"><span class="nm">${veilig(x.naam)}</span><span class="rg">${veilig(kanWoord(x.kan))}</span></span>
+          <span class="txt"><span class="nm">${veilig(x.naam)}</span><span class="rg">${veilig(kanWoord(x))}</span></span>
           ${x.toegevoegd && this.bron?.toevoegen ? `<button class="btn klein weg" type="button" data-doe="agendaWeg" data-entry="${veilig(x.toegevoegd.entry_id)}" data-naam="${veilig(x.toegevoegd.naam || x.naam)}" data-gemaakt="${x.toegevoegd.gemaakt ? "1" : ""}">${veilig(t("Weghalen"))}</button>` : ""}
         </div>`
       )
@@ -819,7 +835,10 @@ class AgendaScherm extends HTMLElement {
     this.fout_("");
     const a = this.a;
     const agenda = a ? a.agenda : this.f_.agenda;
-    const gelukt = await this.metKnop_(knop, t("Opslaan…"), () => (a ? wijzigAfspraak(hass, a, uit.event) : maakAfspraak(hass, agenda, uit.event)));
+    const viaOns = a && watKan(this.info_(a.agenda), a).serverWijzigen;
+    const gelukt = await this.metKnop_(knop, t("Opslaan…"), () =>
+      a ? (viaOns ? wijzigViaServer(hass, a, uit.event) : wijzigAfspraak(hass, a, uit.event)) : maakAfspraak(hass, agenda, uit.event)
+    );
     if (gelukt) this.klaar_(agenda);
   }
 
@@ -831,7 +850,8 @@ class AgendaScherm extends HTMLElement {
       confirmText: t("Verwijderen"),
     });
     if (!ja || !this.hasAttribute("open")) return;
-    const gelukt = await this.metKnop_(knop, t("Verwijderen…"), () => haalAfspraakWeg(this.hass_, a));
+    const viaOns = watKan(this.info_(a.agenda), a).serverWeghalen;
+    const gelukt = await this.metKnop_(knop, t("Verwijderen…"), () => (viaOns ? haalWegViaServer(this.hass_, a) : haalAfspraakWeg(this.hass_, a)));
     if (gelukt) this.klaar_(a.agenda);
   }
 

@@ -11,5 +11,9 @@
   "iCloud gaf geen toegang. Kijk je Apple ID en het app-specifieke wachtwoord na.": "iCloud did not allow access. Check your Apple ID and the app-specific password.",
   "Onbekende soort agenda.": "Unknown kind of calendar.",
   "Deze agenda is niet via de kaart toegevoegd.": "This calendar was not added through the card.",
-  "Agenda's toevoegen staat uit op deze kaart.": "Adding calendars is turned off on this card."
+  "Agenda's toevoegen staat uit op deze kaart.": "Adding calendars is turned off on this card.",
+  "Deze afspraak staat niet meer in de agenda.": "This appointment is no longer in the calendar.",
+  "De agenda gaf een fout: {fout}": "The calendar returned an error: {fout}",
+  "Een herhalende afspraak uit iCloud wijzig of verwijder je in de Agenda-app op je iPhone, iPad of Mac.": "Change or delete a recurring iCloud appointment in the Calendar app on your iPhone, iPad or Mac.",
+  "Dit kan alleen in een CalDAV-agenda, zoals iCloud.": "This only works in a CalDAV calendar, such as iCloud."
 }

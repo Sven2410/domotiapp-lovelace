@@ -21,7 +21,7 @@ en ALLEEN deze drie, met vaste adressen:
   afspraken maakt de klant in Google zelf. De volledige Google-koppeling (lezen en schrijven) vraagt een eigen project bij
   Google met OAuth, en dat is werk voor de installateur: zo'n agenda kies je gewoon in de editor van de kaart.
 - **apple**: iCloud over CalDAV (`caldav`), met de Apple ID en een app-specifiek wachtwoord. Lezen en een afspraak maken;
-  wijzigen en weghalen kan de CalDAV-integratie van Home Assistant niet.
+  wijzigen en weghalen kan de CalDAV-integratie van Home Assistant niet, en dat doet sinds 0.119.0 `agenda_caldav.py`.
 
 **Geen adres naar keuze.** Net als bij het nieuws (zie de kop van `nieuws.py`): een commando dat elke ingelogde gebruiker
 kan sturen, mag Home Assistant geen willekeurig adres laten ophalen. Google mag alleen een adres van
@@ -54,6 +54,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dis
 from homeassistant.helpers.storage import Store
 from homeassistant.util import slugify
 
+from .agenda_caldav import ws_caldav_weg, ws_caldav_wijzig
 from .const import DOMAIN
 from .meldingen.kaarten import async_lees_kaarten
 from .taal import t
@@ -266,7 +267,7 @@ async def async_zet_op(hass: HomeAssistant) -> None:
         data[DATA_AGENDA] = agendas
     if data.get(DATA_WS):
         return
-    for commando in (ws_subscribe, ws_toevoegen, ws_weg):
+    for commando in (ws_subscribe, ws_toevoegen, ws_weg, ws_caldav_wijzig, ws_caldav_weg):
         websocket_api.async_register_command(hass, commando)
     data[DATA_WS] = True
 
