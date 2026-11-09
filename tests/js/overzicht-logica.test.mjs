@@ -136,17 +136,19 @@ describe("afspraken", () => {
     a("Eten", new Date(2026, 10, 8, 18), new Date(2026, 10, 8, 20)),
   ];
 
-  it("standaard een week vooruit, op begintijd, een hele dag vooraan", () => {
+  // NIEUW GEDRAG in 0.119.1: binnen een dag eerst wat op een tijd staat, dan een hele dag. Op 0.119.0 stond "Verjaardag"
+  // (hele dag) vooraan. De eigenaar: "ik vind afspraken op tijd belangrijker als afspraken voor een hele dag".
+  it("standaard een week vooruit, per dag, eerst op tijd en dan een hele dag", () => {
     assert.equal(AGENDA_DAGEN, 7);
     assert.deepEqual(
       komendeAfspraken([...lijst, a("Over een week", new Date(2026, 10, 15, 9), new Date(2026, 10, 15, 10))], NU).map((x) => x.titel),
-      ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]
+      ["Voetbal", "Eten", "Verjaardag", "Tandarts", "Overmorgen"]
     );
   });
 
   it("zoveel dagen als ingesteld: 2 is vandaag en morgen, 60 haalt een afspraak van weken later", () => {
-    assert.deepEqual(komendeAfspraken(lijst, NU, 2).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts"]);
-    assert.deepEqual(komendeAfspraken(lijst, NU, 1).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten"]);
+    assert.deepEqual(komendeAfspraken(lijst, NU, 2).map((x) => x.titel), ["Voetbal", "Eten", "Verjaardag", "Tandarts"]);
+    assert.deepEqual(komendeAfspraken(lijst, NU, 1).map((x) => x.titel), ["Voetbal", "Eten", "Verjaardag"]);
     const later = a("Kerstdiner", new Date(2026, 11, 17, 18), new Date(2026, 11, 17, 21));
     assert.deepEqual(komendeAfspraken([later], NU).map((x) => x.titel), []);
     assert.deepEqual(komendeAfspraken([later], NU, 60).map((x) => x.titel), ["Kerstdiner"]);
@@ -158,7 +160,7 @@ describe("afspraken", () => {
     const nieuwjaar = a("Nieuwjaar", new Date(2027, 0, 1), new Date(2027, 0, 2), true);
     assert.equal(AGENDA_VOORUIT, 60);
     assert.deepEqual(afsprakenOpKaart([nieuwjaar, kerst], NU).map((x) => x.titel), ["Kerstborrel"]);
-    assert.deepEqual(afsprakenOpKaart([...lijst, kerst], NU).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]);
+    assert.deepEqual(afsprakenOpKaart([...lijst, kerst], NU).map((x) => x.titel), ["Voetbal", "Eten", "Verjaardag", "Tandarts", "Overmorgen"]);
     assert.deepEqual(afsprakenOpKaart([a("Al geweest", new Date(2026, 10, 8, 9), new Date(2026, 10, 8, 10))], NU), []);
     assert.equal(afspraakWanneer(afsprakenOpKaart([kerst], NU)[0], NU), "do 17 dec 19:00");
   });
@@ -168,7 +170,7 @@ describe("afspraken", () => {
   it("de eerstvolgende uit de toestand van de agenda, zonder grens; wat in het venster staat gaat voor", () => {
     const pasen = { ...a("Pasen", new Date(2027, 2, 28), new Date(2027, 2, 29), true), uid: null };
     assert.deepEqual(afsprakenOpKaart([], NU, 7, [null, pasen]).map((x) => x.titel), ["Pasen"]);
-    assert.deepEqual(afsprakenOpKaart(lijst, NU, 7, [pasen]).map((x) => x.titel), ["Verjaardag", "Voetbal", "Eten", "Tandarts", "Overmorgen"]);
+    assert.deepEqual(afsprakenOpKaart(lijst, NU, 7, [pasen]).map((x) => x.titel), ["Voetbal", "Eten", "Verjaardag", "Tandarts", "Overmorgen"]);
     // Dezelfde afspraak uit het abonnement (met uid) gaat voor die uit de toestand.
     const kerst = a("Kerstborrel", new Date(2026, 11, 17, 19), new Date(2026, 11, 17, 23));
     const opgehaald = { ...kerst, uid: "abc" };
@@ -178,7 +180,7 @@ describe("afspraken", () => {
   });
 
   it("zegt wanneer", () => {
-    const [verjaardag, voetbal, eten, tandarts, overmorgen] = komendeAfspraken(lijst, NU);
+    const [voetbal, eten, verjaardag, tandarts, overmorgen] = komendeAfspraken(lijst, NU);
     assert.equal(afspraakWanneer(overmorgen, NU), "overmorgen 09:00");
     assert.equal(afspraakWanneer(a("Kerstdiner", new Date(2026, 11, 17, 18), new Date(2026, 11, 17, 21)), NU), "do 17 dec 18:00");
     assert.equal(afspraakWanneer(verjaardag, NU), "vandaag");

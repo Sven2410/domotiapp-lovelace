@@ -143,13 +143,19 @@ export function agendaTot(nu, dagen = AGENDA_DAGEN) {
 
 /**
  * De afspraken die ertoe doen: wat nu loopt en wat er nog komt, tot en met `dagen` dagen vooruit (1 is alleen vandaag).
+ *
+ * Per dag, en binnen een dag **eerst wat op een tijd staat**, daarna een hele dag (sinds 0.119.1; daarvoor stond een
+ * hele dag voorop). De eigenaar, 9 november 2026: "ik vind afspraken op tijd belangrijker als afspraken voor een hele dag". Met drie regels per soort valt een hele dag dus eerder onder "en n meer" dan een afspraak op tijd.
+ * Wat al begon, telt bij vandaag.
  * @param {Array<{start: Date, eind: Date, heleDag: boolean, titel: string, agenda?: string}>} afspraken
  */
 export function komendeAfspraken(afspraken, nu, dagen = AGENDA_DAGEN) {
   const tot = agendaTot(nu, dagen);
+  const vandaag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
+  const dag = (a) => (a.start < vandaag ? vandaag : new Date(a.start.getFullYear(), a.start.getMonth(), a.start.getDate())).getTime();
   return (afspraken ?? [])
     .filter((a) => a.eind > nu && a.start < tot)
-    .sort((a, b) => a.start - b.start || Number(b.heleDag) - Number(a.heleDag));
+    .sort((a, b) => dag(a) - dag(b) || Number(a.heleDag) - Number(b.heleDag) || a.start - b.start);
 }
 
 /** Zo ver haalt de kaart de afspraken zelf op, met alles erbij om ze te wijzigen. */

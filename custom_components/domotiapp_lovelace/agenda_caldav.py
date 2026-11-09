@@ -13,6 +13,15 @@ hij zelf ook gebruikt om op te halen en te maken. Daarmee zoeken we de afspraak 
 hem. **We lezen dus geen wachtwoord en bouwen geen eigen verbinding**: het is dezelfde verbinding, naar dezelfde server,
 met dezelfde inlog die de installateur of de klant bij het koppelen gaf.
 
+## Zoeken op een tijdvak, niet op de uid
+
+De bibliotheek zoekt een afspraak standaard op zijn uid (`event_by_uid`, een REPORT met een text-match op UID). **iCloud
+weigert dat** met "412 Precondition Failed". De eigenaar zag het meteen bij de eerste proef op 0.119.0: "De agenda gaf een
+fout: ReportError at '412 Precondition Failed', reason no reason". Een zoekvraag op een tijdvak doet iCloud wel: zo haalt de
+integratie van Home Assistant de afspraken ook op (`calendar.search(start, end, event=True)`). De kaart stuurt daarom het
+begin en eind van de afspraak mee, en de server zoekt in dat tijdvak (met een dag marge aan beide kanten) naar de uid. Pas
+als dat niets vindt, of de kaart geen tijden meegaf, op de uid.
+
 ## De grenzen
 
 - **Wie het mag:** wie de agenda mag bedienen (`POLICY_CONTROL`), net als Home Assistant zelf bij `calendar/event/delete`.
@@ -29,7 +38,7 @@ kent (deelnemers, meldingen, een URL) blijft staan.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import logging
 from typing import Any
 
@@ -74,30 +83,54 @@ def _moment(waarde: str) -> date | datetime:
     return tijd
 
 
-def _zoek(hass: HomeAssistant, agenda: Any, uid: str) -> Any:
+MARGE = timedelta(days=1)
+
+
+def _in_tijdvak(agenda: Any, uid: str, van: datetime, tot: datetime) -> Any:
+    """De afspraak met deze uid in het tijdvak, of None. Zonder `expand`: een herhalende komt zo terug met zijn regel."""
+    for obj in agenda.search(start=van - MARGE, end=tot + MARGE, event=True, expand=False):
+        if str(obj.icalendar_component.get("UID", "")) == uid:
+            return obj
+    return None
+
+
+def _zoek(hass: HomeAssistant, agenda: Any, uid: str, van: datetime | None = None, tot: datetime | None = None) -> Any:
     """De afspraak op de server. Draait in een executor: de bibliotheek praat synchroon met de server."""
-    try:
-        obj = agenda.event_by_uid(uid)
-    except Exception as err:  # noqa: BLE001 - de bibliotheek heeft geen gedeelde basisklasse voor "niet gevonden"
-        if type(err).__name__ == "NotFoundError":
-            raise CaldavFout(t(hass, "Deze afspraak staat niet meer in de agenda.")) from err
-        raise CaldavFout(t(hass, "De agenda gaf een fout: {fout}", fout=err)) from err
+    obj = None
+    fout: Exception | None = None
+    if van is not None and tot is not None:
+        try:
+            obj = _in_tijdvak(agenda, uid, van, tot)
+        except Exception as err:  # noqa: BLE001
+            fout = err
+    if obj is None:
+        try:
+            obj = agenda.event_by_uid(uid)
+        except Exception as err:  # noqa: BLE001 - de bibliotheek heeft geen gedeelde basisklasse voor "niet gevonden"
+            if type(err).__name__ == "NotFoundError" and fout is None:
+                raise CaldavFout(t(hass, "Deze afspraak staat niet meer in de agenda.")) from err
+            # Zocht het tijdvak foutloos en niets gevonden, dan is een weigering op de uid (iCloud) geen fout maar weg.
+            if van is not None and fout is None:
+                raise CaldavFout(t(hass, "Deze afspraak staat niet meer in de agenda.")) from err
+            raise CaldavFout(t(hass, "De agenda gaf een fout: {fout}", fout=fout or err)) from err
     onderdeel = obj.icalendar_component
     if "RRULE" in onderdeel or "RECURRENCE-ID" in onderdeel:
         raise CaldavFout(t(hass, "Een herhalende afspraak uit iCloud wijzig of verwijder je in de Agenda-app op je iPhone, iPad of Mac."))
     return obj
 
 
-def weghalen(hass: HomeAssistant, agenda: Any, uid: str) -> None:
-    obj = _zoek(hass, agenda, uid)
+def weghalen(hass: HomeAssistant, agenda: Any, uid: str, van: datetime | None = None, tot: datetime | None = None) -> None:
+    obj = _zoek(hass, agenda, uid, van, tot)
     try:
         obj.delete()
     except Exception as err:  # noqa: BLE001
         raise CaldavFout(t(hass, "De agenda gaf een fout: {fout}", fout=err)) from err
 
 
-def wijzigen(hass: HomeAssistant, agenda: Any, uid: str, event: dict[str, Any]) -> None:
-    obj = _zoek(hass, agenda, uid)
+def wijzigen(
+    hass: HomeAssistant, agenda: Any, uid: str, event: dict[str, Any], van: datetime | None = None, tot: datetime | None = None
+) -> None:
+    obj = _zoek(hass, agenda, uid, van, tot)
     onderdeel = obj.icalendar_component
     begin = _moment(event["dtstart"])
     eind = _moment(event["dtend"])
@@ -151,6 +184,12 @@ EVENT = vol.All(
 )
 
 
+def _tijd(waarde: str | None) -> datetime | None:
+    """Het begin of eind dat de kaart meestuurt (ISO, met zone), of None."""
+    tijd = dt_util.parse_datetime(waarde) if waarde else None
+    return tijd if tijd is not None and tijd.tzinfo is not None else None
+
+
 async def _voer_uit(hass: HomeAssistant, connection, msg: dict[str, Any], werk) -> None:
     entity_id = msg["entity_id"]
     if not connection.user.permissions.check_entity(entity_id, POLICY_CONTROL):
@@ -178,11 +217,14 @@ async def _voer_uit(hass: HomeAssistant, connection, msg: dict[str, Any], werk) 
         vol.Required("type"): f"{DOMAIN}/agenda/caldav_weg",
         vol.Required("entity_id"): str,
         vol.Required("uid"): str,
+        vol.Optional("start"): str,
+        vol.Optional("end"): str,
     }
 )
 @websocket_api.async_response
 async def ws_caldav_weg(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
-    await _voer_uit(hass, connection, msg, lambda agenda: weghalen(hass, agenda, msg["uid"]))
+    van, tot = _tijd(msg.get("start")), _tijd(msg.get("end"))
+    await _voer_uit(hass, connection, msg, lambda agenda: weghalen(hass, agenda, msg["uid"], van, tot))
 
 
 @websocket_api.websocket_command(
@@ -191,8 +233,11 @@ async def ws_caldav_weg(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
         vol.Required("entity_id"): str,
         vol.Required("uid"): str,
         vol.Required("event"): EVENT,
+        vol.Optional("start"): str,
+        vol.Optional("end"): str,
     }
 )
 @websocket_api.async_response
 async def ws_caldav_wijzig(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
-    await _voer_uit(hass, connection, msg, lambda agenda: wijzigen(hass, agenda, msg["uid"], msg["event"]))
+    van, tot = _tijd(msg.get("start")), _tijd(msg.get("end"))
+    await _voer_uit(hass, connection, msg, lambda agenda: wijzigen(hass, agenda, msg["uid"], msg["event"], van, tot))

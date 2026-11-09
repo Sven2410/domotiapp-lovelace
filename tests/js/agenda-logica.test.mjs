@@ -107,12 +107,13 @@ describe("perDag", () => {
     a("Over drie weken", new Date(2026, 10, 29, 10), new Date(2026, 10, 29, 11)),
   ];
 
-  it("van nu tot zoveel dagen vooruit, wat al begon onder vandaag, een hele dag voorop", () => {
+  // NIEUW GEDRAG in 0.119.1: eerst op tijd, dan een hele dag. Op 0.119.0 stond "Vakantie" voorop.
+  it("van nu tot zoveel dagen vooruit, wat al begon onder vandaag, eerst op tijd en dan een hele dag", () => {
     const dagen = perDag(lijst, NU, 14);
     assert.deepEqual(
       dagen.map((d) => [d.sleutel, d.afspraken.map((x) => x.titel)]),
       [
-        ["2026-11-08", ["Vakantie", "Loopt nog"]],
+        ["2026-11-08", ["Loopt nog", "Vakantie"]],
         ["2026-11-09", ["Tandarts"]],
       ]
     );
@@ -252,12 +253,12 @@ describe("de kalender", () => {
     assert.equal(iso(verschuif("jaar", new Date(2028, 1, 29), 1)), "2029-2-28");
   });
 
-  it("per dag: wat die dag (deels) beslaat, de hele dag eerst; een hele dag eindigt om middernacht", () => {
+  it("per dag: wat die dag (deels) beslaat, eerst op tijd en dan de hele dag; een hele dag eindigt om middernacht", () => {
     const vakantie = a("Vakantie", new Date(2026, 11, 24), new Date(2026, 11, 27), { heleDag: true });
     const nacht = a("Nachtdienst", new Date(2026, 11, 26, 22), new Date(2026, 11, 27, 6));
     const borrel = a("Borrel", new Date(2026, 11, 26, 17), new Date(2026, 11, 26, 19));
     const lijst = [nacht, borrel, vakantie];
-    assert.deepEqual(opDag(lijst, new Date(2026, 11, 26)).map((x) => x.titel), ["Vakantie", "Borrel", "Nachtdienst"]);
+    assert.deepEqual(opDag(lijst, new Date(2026, 11, 26)).map((x) => x.titel), ["Borrel", "Nachtdienst", "Vakantie"]);
     assert.deepEqual(opDag(lijst, new Date(2026, 11, 27)).map((x) => x.titel), ["Nachtdienst"]);
     assert.deepEqual(opDag(lijst, new Date(2026, 11, 23)), []);
   });
