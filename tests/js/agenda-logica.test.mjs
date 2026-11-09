@@ -16,7 +16,16 @@ import {
   agendasVan,
   dagenUit,
   dagKop,
+  eersteWeekdag,
   formulierVan,
+  kalenderBereik,
+  kalenderTitel,
+  maandRaster,
+  nietTeWijzigen,
+  opDag,
+  verschuif,
+  weekBegin,
+  weekdagNamen,
   googleAdres,
   kan,
   nieuwFormulier,
@@ -203,5 +212,84 @@ describe("volgendeUitToestand", () => {
     assert.equal(volgendeUitToestand({ state: "off", attributes: { friendly_name: "Werk" } }, "calendar.x"), null);
     assert.equal(volgendeUitToestand(undefined, "calendar.x"), null);
     assert.equal(volgendeUitToestand({ attributes: { message: "x", start_time: "morgen", end_time: "overmorgen" } }, "calendar.x"), null);
+  });
+});
+
+// NIEUW GEDRAG in 0.118.0; faalt op 0.117.1 bij het importeren (kalenderBereik en de rest bestonden niet). De eigenaar,
+// 9 november 2026: "voor de calendar wil ik een optie hebben om de calender helemaal te laten zien per dag per maand en per
+// jaar", en over iCloud: "aanmaken werkt wel trouwens maar wijzigen niet van een bestaande uit apple agenda".
+describe("de kalender", () => {
+  const iso = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+  it("de eerste dag van de week: uit het profiel, anders uit de taal, anders maandag", () => {
+    assert.equal(eersteWeekdag({ first_weekday: "sunday" }, "nl"), 0);
+    assert.equal(eersteWeekdag({ first_weekday: "monday" }, "en"), 1);
+    assert.equal(eersteWeekdag({ first_weekday: "language", language: "nl" }, "nl"), 1);
+    assert.equal(eersteWeekdag(undefined, "nl"), 1);
+  });
+
+  it("het maandblad van november 2026: zes weken, van maandag 26 oktober tot en met zondag 6 december", () => {
+    const raster = maandRaster(new Date(2026, 10, 9), 1);
+    assert.equal(raster.length, 42);
+    assert.deepEqual([iso(raster[0]), iso(raster[41])], ["2026-10-26", "2026-12-6"]);
+    assert.equal(iso(maandRaster(new Date(2026, 10, 9), 0)[0]), "2026-11-1");
+    assert.equal(iso(weekBegin(new Date(2026, 10, 15, 12), 1)), "2026-11-9");
+  });
+
+  it("wat er per weergave opgehaald wordt", () => {
+    const d = new Date(2026, 10, 9, 14, 30);
+    const r = (w) => Object.values(kalenderBereik(w, d, 1)).map(iso);
+    assert.deepEqual(r("dag"), ["2026-11-9", "2026-11-10"]);
+    assert.deepEqual(r("maand"), ["2026-10-26", "2026-12-7"]);
+    assert.deepEqual(r("jaar"), ["2026-1-1", "2027-1-1"]);
+  });
+
+  it("verder en terug, zonder over een korte maand heen te schieten", () => {
+    assert.equal(iso(verschuif("dag", new Date(2026, 11, 31), 1)), "2027-1-1");
+    assert.equal(iso(verschuif("maand", new Date(2027, 0, 31), 1)), "2027-2-28");
+    assert.equal(iso(verschuif("maand", new Date(2026, 0, 15), -1)), "2025-12-15");
+    assert.equal(iso(verschuif("jaar", new Date(2028, 1, 29), 1)), "2029-2-28");
+  });
+
+  it("per dag: wat die dag (deels) beslaat, de hele dag eerst; een hele dag eindigt om middernacht", () => {
+    const vakantie = a("Vakantie", new Date(2026, 11, 24), new Date(2026, 11, 27), { heleDag: true });
+    const nacht = a("Nachtdienst", new Date(2026, 11, 26, 22), new Date(2026, 11, 27, 6));
+    const borrel = a("Borrel", new Date(2026, 11, 26, 17), new Date(2026, 11, 26, 19));
+    const lijst = [nacht, borrel, vakantie];
+    assert.deepEqual(opDag(lijst, new Date(2026, 11, 26)).map((x) => x.titel), ["Vakantie", "Borrel", "Nachtdienst"]);
+    assert.deepEqual(opDag(lijst, new Date(2026, 11, 27)).map((x) => x.titel), ["Nachtdienst"]);
+    assert.deepEqual(opDag(lijst, new Date(2026, 11, 23)), []);
+  });
+
+  it("de titel en de weekdagen", () => {
+    const d = new Date(2026, 10, 9);
+    assert.equal(kalenderTitel("jaar", d), "2026");
+    assert.equal(kalenderTitel("maand", d), "November 2026");
+    assert.equal(kalenderTitel("dag", d), "Maandag 9 november 2026");
+    assert.deepEqual(weekdagNamen(1), ["ma", "di", "wo", "do", "vr", "za", "zo"]);
+    assert.equal(weekdagNamen(0)[0], "zo");
+  });
+
+  it("een nieuwe afspraak op een dag uit de kalender begint om 9 uur; vandaag op het volgende hele uur", () => {
+    const f = nieuwFormulier(NU, "calendar.gezin", new Date(2026, 11, 3));
+    assert.deepEqual([f.datum, f.van, f.tot], ["2026-12-03", "09:00", "10:00"]);
+    assert.equal(nieuwFormulier(NU, "calendar.gezin", new Date(2026, 10, 8)).van, "15:00");
+  });
+});
+
+describe("nietTeWijzigen", () => {
+  it("zegt bij iCloud waar het wel kan, en niets als het hier kan", () => {
+    const st = (f) => ({ attributes: { supported_features: f } });
+    const states = { "calendar.thuis": st(1), "calendar.werk": st(1), "calendar.gezin": st(7), "calendar.feestdagen": st(0) };
+    const ids = Object.keys(states);
+    const info = agendaInfo(states, ids, [{ soort: "apple", entiteiten: ["calendar.thuis"] }], (id) => id, (id) => (id === "calendar.werk" ? "caldav" : null));
+    assert.deepEqual(
+      info.map((x) => x.herkomst),
+      ["apple", "caldav", null, null]
+    );
+    assert.match(nietTeWijzigen(info[0]), /Agenda-app op je iPhone/);
+    assert.match(nietTeWijzigen(info[1]), /app van de agenda zelf; bij iCloud/);
+    assert.equal(nietTeWijzigen(info[2]), null);
+    assert.match(nietTeWijzigen(info[3]), /alleen te lezen/);
   });
 });

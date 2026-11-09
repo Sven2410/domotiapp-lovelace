@@ -4,7 +4,7 @@
  * De eigenaar, 8 november 2026: "Ik wil dat de klant ook zelf een agenda kan aanmaken en evenementen etc kan maken. Of een
  * bestaande toevoegen zoals google of apple".
  *
- *   Agenda                         [agenda's] [+ Afspraak]
+ *   Agenda              [kalender] [agenda's] [+ Afspraak]
  *   Vandaag
  *   ▍ hele dag      Verjaardag Mien
  *   ▍ 14:00 – 15:00 Voetbal · Sportpark
@@ -12,12 +12,14 @@
  *   ▍ 09:00 – 09:30 Tandarts Anna
  *
  * De streep heeft de kleur van de agenda. Een tik op een afspraak opent hem (`agenda-scherm.js`), met Wijzigen en
- * Verwijderen als de agenda dat kan. De knop met de agenda's laat zien welke er op de kaart staan, en daar voegt de klant
+ * Verwijderen als de agenda dat kan. De kalender (sinds 0.118.0) toont alles per dag, per maand en per jaar. De knop met
+ * de agenda's laat zien welke er op de kaart staan, en daar voegt de klant
  * er een toe: een nieuwe in Home Assistant, Google (alleen lezen) of Apple iCloud. Zie de kop van `agenda.py` waarom die
  * drie, en waarom Google alleen lezen.
  *
  * Welke agenda's: die in de editor gekozen zijn, plus die de klant via de kaart toevoegde (dat weet de server). Lezen gaat
- * met `calendar/event/subscribe`, dus een afspraak die ergens anders gemaakt wordt, staat er meteen.
+ * met `calendar/event/subscribe`, dus een afspraak die ergens anders gemaakt wordt, staat er meteen. Wat de klant in het
+ * scherm maakt, wijzigt of weghaalt, haalt de kaart opnieuw op (`bijWijziging`): iCloud meldt het zelf niet.
  *
  * De tijd is die van Home Assistant, niet die van het toestel (src/wandklok.js).
  */
@@ -32,7 +34,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
 import { DAGEN_MAX, DAGEN_STANDAARD, afsprakenVan, agendaInfo, agendasVan, dagKop, dagenUit, perDag, tijdOp } from "./agenda-logica.js";
-import { ToegevoegdAbonnement } from "./agenda-client.js";
+import { ToegevoegdAbonnement, bijWijziging } from "./agenda-client.js";
 import { agendaScherm, toonAgendaScherm } from "./agenda-scherm.js";
 import { dagBegin, plusDagen } from "./ruimtes-logica.js";
 
@@ -104,7 +106,8 @@ class AgendaCard extends DacCard {
     return `<div class="card surface">
         <div class="kop">
           <span class="titel">${escapeHtml(c.titel || t("Agenda"))}</span>
-          <button class="knop" type="button" data-doe="agendas" aria-label="${escapeHtml(t("Agenda's"))}" title="${escapeHtml(t("Agenda's"))}">${resolve("calendar")}</button>
+          <button class="knop" type="button" data-doe="kalender" aria-label="${escapeHtml(t("Kalender"))}" title="${escapeHtml(t("Kalender"))}">${resolve("calendar")}</button>
+          <button class="knop" type="button" data-doe="agendas" aria-label="${escapeHtml(t("Agenda's"))}" title="${escapeHtml(t("Agenda's"))}">${resolve("cog")}</button>
           <button class="knop plus" type="button" data-doe="nieuw">${resolve("plus")}<span>${escapeHtml(t("Afspraak"))}</span></button>
         </div>
         <div class="lijst"></div>
@@ -147,6 +150,11 @@ class AgendaCard extends DacCard {
     };
     plan();
     this.abonneer_(true);
+    this.teardown_.push(
+      bijWijziging((agenda) => {
+        for (const [id, abo] of this.abos_) if (!agenda || id === agenda) abo.start(this.hass);
+      })
+    );
     this.teardown_.push(() => {
       clearTimeout(this.klok_);
       this.toegevoegdAbo_?.stop();
@@ -215,7 +223,13 @@ class AgendaCard extends DacCard {
   }
 
   info_() {
-    return agendaInfo(this.hass?.states, this.ids_(), this.toegevoegd_, (id) => nameOf(this.hass, id)).map((x) => ({ ...x, kleur: TONES[x.toon] }));
+    return agendaInfo(
+      this.hass?.states,
+      this.ids_(),
+      this.toegevoegd_,
+      (id) => nameOf(this.hass, id),
+      (id) => this.hass?.entities?.[id]?.platform ?? null
+    ).map((x) => ({ ...x, kleur: TONES[x.toon] }));
   }
 
   /** Wat het scherm van deze kaart wil weten. */
@@ -226,6 +240,7 @@ class AgendaCard extends DacCard {
   doe_(wat) {
     const info = this.info_();
     if (wat === "agendas") return toonAgendaScherm(this.bron_(), "agendas");
+    if (wat === "kalender") return toonAgendaScherm(this.bron_(), "kalender");
     // Nog geen agenda om in te schrijven: dan eerst er een toevoegen.
     if (!info.some((x) => x.kan.maken)) return toonAgendaScherm(this.bron_(), this.config.toevoegen ? "toevoegen" : "agendas");
     return toonAgendaScherm(this.bron_(), "formulier");

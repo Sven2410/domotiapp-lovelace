@@ -47,7 +47,7 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import SOURCE_USER, ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
@@ -284,9 +284,11 @@ def ws_subscribe(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     def stuur(*_: Any) -> None:
         connection.send_message(websocket_api.event_message(msg["id"], {"agendas": _agendas(hass).lijst()}))
 
+    # Een event_filter krijgt de GEGEVENS van de gebeurtenis, niet de gebeurtenis. Tot 0.117.1 stond hier `event.data`, en
+    # dan gaf elke wijziging in het register "Error in event filter" en kwam er niets.
     @callback
-    def is_agenda(event: Event) -> bool:
-        return str(event.data.get("entity_id", "")).startswith("calendar.")
+    def is_agenda(data: dict[str, Any]) -> bool:
+        return str(data.get("entity_id", "")).startswith("calendar.")
 
     weg_signaal = async_dispatcher_connect(hass, SIGNAAL, stuur)
     weg_register = hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, stuur, event_filter=is_agenda)

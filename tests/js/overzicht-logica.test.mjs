@@ -194,6 +194,15 @@ describe("beperk", () => {
     assert.deepEqual(beperk(vijf).map((r) => r.tekst), ["Raam 1", "Raam 2", "en 3 meer"]);
     assert.equal(beperk(vijf.slice(0, 3)).length, 3);
   });
+
+  // NIEUW GEDRAG in 0.118.0. De eigenaar over "en 3 meer" bij de agenda: "kan er niet op klikken etc."
+  it("bij de agenda opent 'en n meer' de kalender", () => {
+    const vijf = [1, 2, 3, 4, 5].map((n) => ({ titel: `Afspraak ${n}`, start: new Date(2026, 10, 8, 15 + n), eind: new Date(2026, 10, 8, 16 + n), heleDag: false, agenda: "calendar.gezin" }));
+    const rijen = regels({ nu: new Date(2026, 10, 8, 14, 30), afspraken: vijf });
+    assert.deepEqual(rijen.map((r) => [r.tekst, Boolean(r.kalender)]), [["Afspraak 1", false], ["Afspraak 2", false], ["en 3 meer", true]]);
+    const open = regels({ nu: new Date(2026, 10, 8), open: [1, 2, 3, 4].map((n) => ({ entity_id: `binary_sensor.raam_${n}`, state: "on" })) });
+    assert.equal(open.at(-1).kalender, undefined);
+  });
 });
 
 describe("regels", () => {

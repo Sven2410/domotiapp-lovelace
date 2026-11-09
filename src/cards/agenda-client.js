@@ -33,6 +33,42 @@ export const haalAfspraakWeg = (hass, a) =>
     ...(a.recurrence_id ? { recurrence_id: a.recurrence_id } : {}),
   });
 
+const GEWIJZIGD = "domotiapp-agenda-gewijzigd";
+
+/** Een tweede keer ophalen, voor de zekerheid; zie `bijWijziging`. */
+const NOG_EENS_MS = 4000;
+
+/** Het scherm meldt het na maken, wijzigen of weghalen; `agenda` is de entiteit. */
+export const meldGewijzigd = (agenda) => window.dispatchEvent(new CustomEvent(GEWIJZIGD, { detail: { agenda } }));
+
+/**
+ * Na maken, wijzigen of weghalen in het scherm: `fn(agenda)` meteen, en na vier tellen nog een keer. Geeft de functie om te
+ * stoppen.
+ *
+ * De eigenaar, 9 november 2026: "als ik test er in heb gezet moet ik de webpagina vernieuwen om hem er in te laten zien".
+ * `calendar/event/subscribe` stuurt pas iets als de agenda zijn toestand opnieuw schrijft. Een Lokale agenda doet dat na
+ * een wijziging, CalDAV (iCloud) niet: die haalt elke vijftien minuten op (`caldav/coordinator.py`, Home Assistant 2026.8).
+ * Opnieuw abonneren vraagt de afspraken wel meteen bij iCloud op. De tweede keer is voor een server die een nieuwe afspraak
+ * niet meteen teruggeeft; dat is niet gemeten, het kost alleen een extra vraag.
+ */
+export function bijWijziging(fn) {
+  const klokken = new Set();
+  const luister = (e) => {
+    const agenda = e.detail?.agenda ?? null;
+    fn(agenda);
+    const klok = setTimeout(() => {
+      klokken.delete(klok);
+      fn(agenda);
+    }, NOG_EENS_MS);
+    klokken.add(klok);
+  };
+  window.addEventListener(GEWIJZIGD, luister);
+  return () => {
+    window.removeEventListener(GEWIJZIGD, luister);
+    for (const klok of klokken) clearTimeout(klok);
+  };
+}
+
 /** Een agenda toevoegen: `nieuw` (naam), `google` (naam, adres) of `apple` (gebruiker, wachtwoord). */
 export const voegAgendaToe = (hass, soort, gegevens) => stuur(hass, { type: `${PREFIX}/toevoegen`, soort, ...gegevens });
 

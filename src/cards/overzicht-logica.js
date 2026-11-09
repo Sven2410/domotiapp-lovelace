@@ -185,11 +185,11 @@ export function afspraakWanneer(a, nu) {
   return `${relativeDay(a.start, nu)} ${klok(a.start)}`;
 }
 
-/** Knip een soort af op `max` regels, met "en n meer" als laatste. */
-export function beperk(rijen, max = MAX_PER_SOORT) {
+/** Knip een soort af op `max` regels, met "en n meer" als laatste; `extra` komt op die laatste regel. */
+export function beperk(rijen, max = MAX_PER_SOORT, extra = {}) {
   if (rijen.length <= max) return rijen;
   const rest = rijen.length - (max - 1);
-  return [...rijen.slice(0, max - 1), { soort: rijen[0].soort, toon: "neutral", icoon: "dots", tekst: t("en {n} meer", { n: rest }) }];
+  return [...rijen.slice(0, max - 1), { soort: rijen[0].soort, toon: "neutral", icoon: "dots", tekst: t("en {n} meer", { n: rest }), ...extra }];
 }
 
 /**
@@ -214,8 +214,13 @@ export function regels({ nu, alarmen: alarm = [], open = [], afspraken = [], bat
     ...beperk(open.map((st) => ({ soort: "open", toon: "warn", icoon: openIcoon(st), tekst: naamVan(st.entity_id), bij: openWoord(st), entity: st.entity_id })))
   );
 
+  // "en n meer" opent bij de agenda de kalender (sinds 0.118.0). De eigenaar: "kan er niet op klikken etc."
   uit.push(
-    ...beperk(afspraken.map((a) => ({ soort: "agenda", toon: "accent", icoon: "calendar", tekst: a.titel || t("Afspraak"), bij: afspraakWanneer(a, nu), entity: a.agenda, afspraak: a })))
+    ...beperk(
+      afspraken.map((a) => ({ soort: "agenda", toon: "accent", icoon: "calendar", tekst: a.titel || t("Afspraak"), bij: afspraakWanneer(a, nu), entity: a.agenda, afspraak: a })),
+      MAX_PER_SOORT,
+      { kalender: true }
+    )
   );
 
   uit.push(

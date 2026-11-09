@@ -46,17 +46,37 @@ export function agendasVan(config, toegevoegd) {
 }
 
 /**
- * Per agenda wat de kaart en het scherm moeten weten: naam, kleur (een sleutel uit TONES), wat hij kan, en of de klant hem
- * via de kaart toevoegde (dan kan hij hem ook weer weghalen).
+ * Per agenda wat de kaart en het scherm moeten weten: naam, kleur (een sleutel uit TONES), wat hij kan, of de klant hem
+ * via de kaart toevoegde (dan kan hij hem ook weer weghalen), en waar hij vandaan komt (`herkomst`): de soort waarmee de
+ * klant hem toevoegde (`nieuw`, `google`, `apple`), anders de integratie van Home Assistant (`caldav`, `google`, ...).
  */
-export function agendaInfo(states, ids, toegevoegd, naamVan = (id) => id) {
-  return ids.map((id, i) => ({
-    id,
-    naam: naamVan(id),
-    toon: KLEUREN[i % KLEUREN.length],
-    kan: kan(states?.[id]),
-    toegevoegd: (toegevoegd ?? []).find((a) => (a?.entiteiten ?? []).includes(id)) ?? null,
-  }));
+export function agendaInfo(states, ids, toegevoegd, naamVan = (id) => id, platformVan = () => null) {
+  return ids.map((id, i) => {
+    const via = (toegevoegd ?? []).find((a) => (a?.entiteiten ?? []).includes(id)) ?? null;
+    return {
+      id,
+      naam: naamVan(id),
+      toon: KLEUREN[i % KLEUREN.length],
+      kan: kan(states?.[id]),
+      toegevoegd: via,
+      herkomst: via?.soort ?? platformVan(id) ?? null,
+    };
+  });
+}
+
+/**
+ * Waarom een afspraak hier niet te wijzigen is, en waar het wel kan; `null` als hij hier te wijzigen is.
+ *
+ * De eigenaar, 9 november 2026, met een agenda uit iCloud: "aanmaken werkt wel trouwens maar wijzigen niet van een
+ * bestaande uit apple agenda". Home Assistant kan in een CalDAV-agenda alleen maken (`supported_features` 1). Dat zeggen
+ * we dan ook, met waar het wel kan, in plaats van "alleen te lezen".
+ */
+export function nietTeWijzigen(info) {
+  if (info?.kan?.wijzigen) return null;
+  if (info?.herkomst === "apple") return t("Een afspraak in iCloud kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de Agenda-app op je iPhone, iPad of Mac.");
+  if (info?.herkomst === "caldav") return t("Een afspraak in deze agenda kan Home Assistant niet wijzigen of verwijderen. Dat doe je in de app van de agenda zelf; bij iCloud is dat de Agenda-app op je iPhone, iPad of Mac.");
+  if (info?.kan?.maken) return t("In deze agenda kun je hier wel afspraken maken, maar niet wijzigen. Dat doe je in de app van de agenda zelf.");
+  return t("Deze agenda is hier alleen te lezen. Wijzig de afspraak waar hij vandaan komt, zoals in Google Agenda.");
 }
 
 /** Een getal van 1 tot en met 60, anders 14. */
@@ -172,6 +192,81 @@ export function wanneerVoluit(a) {
     : `${datum(a.start)} ${klok(a.start)} – ${datum(a.eind)} ${klok(a.eind)}`;
 }
 
+/* ----------------------------------------------------------------- de kalender */
+
+/*
+ * De agenda helemaal, per dag, per maand en per jaar. De eigenaar, 9 november 2026: "voor de calendar wil ik een optie
+ * hebben om de calender helemaal te laten zien per dag per maand en per jaar". Alle datums hier zijn wandtijd (de klok van
+ * Home Assistant, zie src/wandklok.js).
+ */
+
+export const WEERGAVEN = ["dag", "maand", "jaar"];
+
+/** De eerste dag van de week: 1 is maandag, 0 zondag. Uit het profiel van Home Assistant, anders uit de taal. */
+export function eersteWeekdag(hassLocale, taal) {
+  const namen = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const gekozen = namen.indexOf(hassLocale?.first_weekday);
+  if (gekozen >= 0) return gekozen;
+  try {
+    const l = new Intl.Locale(hassLocale?.language || taal || "nl");
+    const info = typeof l.getWeekInfo === "function" ? l.getWeekInfo() : l.weekInfo;
+    if (info?.firstDay) return info.firstDay % 7;
+  } catch {
+    /* een onbekende taal: maandag */
+  }
+  return 1;
+}
+
+/** Het begin van de week waarin `d` valt. */
+export function weekBegin(d, eerste = 1) {
+  const dag = dagBegin(d);
+  return plusDagen(dag, -((dag.getDay() - eerste + 7) % 7));
+}
+
+/** De 42 dagen (zes weken) van het maandblad waarin `d` valt, van de eerste dag van de eerste week. */
+export function maandRaster(d, eerste = 1) {
+  const begin = weekBegin(new Date(d.getFullYear(), d.getMonth(), 1), eerste);
+  return Array.from({ length: 42 }, (_, i) => plusDagen(begin, i));
+}
+
+/** Wat er voor een weergave opgehaald moet worden: van `van` tot `tot` (niet erbij). */
+export function kalenderBereik(weergave, d, eerste = 1) {
+  if (weergave === "dag") return { van: dagBegin(d), tot: plusDagen(dagBegin(d), 1) };
+  if (weergave === "jaar") return { van: new Date(d.getFullYear(), 0, 1), tot: new Date(d.getFullYear() + 1, 0, 1) };
+  const raster = maandRaster(d, eerste);
+  return { van: raster[0], tot: plusDagen(raster[41], 1) };
+}
+
+/** Een dag, een maand of een jaar verder (of terug). 31 januari plus een maand is 28 februari, niet 3 maart. */
+export function verschuif(weergave, d, stap) {
+  if (weergave === "dag") return plusDagen(dagBegin(d), stap);
+  const jaar = d.getFullYear() + (weergave === "jaar" ? stap : 0);
+  const maand = d.getMonth() + (weergave === "maand" ? stap : 0);
+  const laatste = new Date(jaar, maand + 1, 0).getDate();
+  return new Date(jaar, maand, Math.min(d.getDate(), laatste));
+}
+
+/** De afspraken die (een deel van) deze dag beslaan: een hele dag eerst, dan op begintijd. */
+export function opDag(afspraken, dag) {
+  const van = dagBegin(dag);
+  const tot = plusDagen(van, 1);
+  return (afspraken ?? [])
+    .filter((a) => a.start < tot && a.eind > van)
+    .sort((a, b) => Number(b.heleDag) - Number(a.heleDag) || a.start - b.start || String(a.titel).localeCompare(String(b.titel)));
+}
+
+/** "Maandag 9 november 2026", "November 2026" of "2026". */
+export function kalenderTitel(weergave, d) {
+  if (weergave === "jaar") return String(d.getFullYear());
+  if (weergave === "maand") return hoofdletter(d.toLocaleDateString(locale(), { month: "long", year: "numeric" }));
+  return hoofdletter(d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+}
+
+/** De korte namen van de weekdagen, vanaf de eerste: "ma", "di", ... 1 november 2026 is een zondag. */
+export function weekdagNamen(eerste = 1, vorm = "short") {
+  return Array.from({ length: 7 }, (_, i) => new Date(2026, 10, 1 + ((eerste + i) % 7)).toLocaleDateString(locale(), { weekday: vorm }));
+}
+
 /* ----------------------------------------------------------------- het formulier */
 
 const tijd = (s) => /^\d{2}:\d{2}$/.test(String(s ?? ""));
@@ -185,9 +280,13 @@ const metTijd = (d, hhmm) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), u, m);
 };
 
-/** Een nieuw formulier: vandaag, het volgende hele uur, een uur lang, in de eerste agenda die het kan. */
-export function nieuwFormulier(nu, agenda) {
-  const begin = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), nu.getHours() + 1);
+/**
+ * Een nieuw formulier: vandaag, het volgende hele uur, een uur lang, in de eerste agenda die het kan. Met een andere `dag`
+ * (gekozen in de kalender) om 9 uur op die dag.
+ */
+export function nieuwFormulier(nu, agenda, dag = null) {
+  const andereDag = dag && isoDatum(dag) !== isoDatum(nu);
+  const begin = andereDag ? new Date(dag.getFullYear(), dag.getMonth(), dag.getDate(), 9) : new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), nu.getHours() + 1);
   const eind = new Date(begin.getTime() + 3600000);
   return {
     titel: "",

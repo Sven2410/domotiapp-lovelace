@@ -1,5 +1,5 @@
 /**
- * De overzichtskaart voor een tablet: links de favorieten, rechts het weer en wat er belangrijk is.
+ * De overzichtskaart voor een tablet: het weer en wat er belangrijk is, en als dat aan staat links de favorieten.
  *
  * Afval, lampen en wie er thuis is staan er sinds 0.113.0 niet meer op: die heeft de eigenaar al op een eigen kaart of
  * badge (zie de kop van overzicht-logica.js).
@@ -7,8 +7,13 @@
  * De eigenaar, 8 november 2026: "ik ben toch niet tevreden met die header kaart. Ik wil een nieuwe kaart maken. Voor ipad
  * links komen dan de favorieten en rechts moet een soort info scherm komen met weer en belangrijke dingen".
  *
- * Links staat de favorietenkaart zelf (`domotiapp-favorieten-card`, als kind in deze kaart), en niet een tweede
- * uitvoering ervan: wat de klant op de automatiseringskaart maakt, staat hier precies zo. Behalve de regel "Nog geen
+ * **De favorieten staan er sinds 0.118.0 standaard NIET op** (`favorieten`, in de editor). De eigenaar, 9 november 2026:
+ * "ik wil dat die kaart niet de favorieten laat zien. Die favorieten moeten gewoon links blijven staan op hun eigen kaart."
+ * Dan vult het overzicht zijn sectie, en staat de favorietenkaart in de sectie ernaast. Een halve sectie (6 kolommen) is
+ * te smal: gemeten 234 pixels.
+ *
+ * Staan ze aan, dan staat links de favorietenkaart zelf (`domotiapp-favorieten-card`, als kind in deze kaart), en niet een
+ * tweede uitvoering ervan: wat de klant op de automatiseringskaart maakt, staat hier precies zo. Behalve de regel "Nog geen
  * favorieten. Maak ze in de woninginstellingen.": die staat hier niet, op zijn verzoek van 8 november 2026. Zonder
  * favorieten is er geen linkerhelft, en staat het overzicht over de hele breedte.
  *
@@ -35,7 +40,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { locale, nt, t } from "../taal.js";
 import { naarWand, vanWand } from "../wandklok.js";
 import { afsprakenVan, agendaInfo, agendasVan, kan, volgendeUitToestand } from "./agenda-logica.js";
-import { ToegevoegdAbonnement } from "./agenda-client.js";
+import { ToegevoegdAbonnement, bijWijziging } from "./agenda-client.js";
 import { agendaScherm, toonAgendaScherm } from "./agenda-scherm.js";
 import {
   AGENDA_DAGEN,
@@ -88,9 +93,9 @@ class OverzichtCard extends DacCard {
     .info { position: relative; min-width: 0; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
 
     /* Zonder favorieten geen lege linkerhelft: het overzicht over de hele breedte. */
-    .rij:has(domotiapp-favorieten-card[leeg]) { grid-template-columns: minmax(0, 1fr); }
-    .rij:has(domotiapp-favorieten-card[leeg]) .links { display: none; }
-    .rij:has(domotiapp-favorieten-card[leeg]) .achter { width: 100%; }
+    .rij.alleen, .rij:has(domotiapp-favorieten-card[leeg]) { grid-template-columns: minmax(0, 1fr); }
+    .rij.alleen .links, .rij:has(domotiapp-favorieten-card[leeg]) .links { display: none; }
+    .rij.alleen .achter, .rij:has(domotiapp-favorieten-card[leeg]) .achter { width: 100%; }
 
     /* Smal: het overzicht boven de favorieten, en het vlak om het overzicht zelf. */
     @container (max-width: 599px) {
@@ -147,8 +152,8 @@ class OverzichtCard extends DacCard {
       display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 6px 0 2px;
       border-radius: var(--dac-radius-sm); -webkit-tap-highlight-color: transparent;
     }
-    .regel[data-entity] { cursor: pointer; }
-    @media (hover: hover) { .regel[data-entity]:hover { background: var(--dac-hover); } }
+    .regel[data-entity], .regel[data-kalender] { cursor: pointer; }
+    @media (hover: hover) { .regel[data-entity]:hover, .regel[data-kalender]:hover { background: var(--dac-hover); } }
     .regel .chip { width: 28px; height: 28px; }
     .regel .chip .icon, .regel .chip ha-icon { width: 16px; height: 16px; --mdc-icon-size: 16px; }
     .regel .tekst { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -157,7 +162,7 @@ class OverzichtCard extends DacCard {
     .regel[data-toon="warn"] .bij { color: var(--dac-warn); }
 
     /* ---- agenda: bekijken, toevoegen, een afspraak maken ---- */
-    .acties { display: flex; justify-content: flex-end; gap: 8px; }
+    .acties { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .lijst:empty + .acties { border-top: 1px solid var(--dac-border); padding-top: 10px; }
     .knop {
       flex: 0 0 auto; height: 32px; min-width: 32px; padding: 0 11px 0 9px; border-radius: var(--dac-radius-pill); cursor: pointer;
@@ -195,6 +200,7 @@ class OverzichtCard extends DacCard {
       dagen: getal(config.dagen, 0, DAGEN_MAX, DAGEN_STANDAARD),
       agenda_dagen: getal(config.agenda_dagen, 1, AGENDA_DAGEN_MAX, AGENDA_DAGEN),
       agenda_toevoegen: config.agenda_toevoegen !== false,
+      favorieten: config.favorieten === true,
     };
   }
 
@@ -208,7 +214,7 @@ class OverzichtCard extends DacCard {
     this.toggleAttribute("bare", Boolean(c.bare));
     return `
       <div class="card">
-        <div class="rij">
+        <div class="rij${c.favorieten ? "" : " alleen"}">
           <div class="achter"></div>
           <div class="links"></div>
           <div class="info">
@@ -226,7 +232,8 @@ class OverzichtCard extends DacCard {
             </div>
             <div class="lijst"></div>
             <div class="acties" hidden>
-              <button class="knop" type="button" data-doe="agendas">${resolve("calendar")}<span>${escapeHtml(t("Agenda's"))}</span></button>
+              <button class="knop" type="button" data-doe="kalender">${resolve("calendar")}<span>${escapeHtml(t("Kalender"))}</span></button>
+              <button class="knop" type="button" data-doe="agendas">${resolve("cog")}<span>${escapeHtml(t("Agenda's"))}</span></button>
               <button class="knop plus" type="button" data-doe="nieuw">${resolve("plus")}<span>${escapeHtml(t("Afspraak"))}</span></button>
             </div>
           </div>
@@ -239,12 +246,12 @@ class OverzichtCard extends DacCard {
     // Met createElement en niet in het sjabloon. Uit het sjabloon werd hij niet opgewaardeerd (gemeten op 8 november 2026:
     // "setConfig is not a function", en de hele kaart weg); de registry van Home Assistant is een andere (registratie.js).
     let fav = this.$("domotiapp-favorieten-card");
-    if (!fav) {
+    if (!fav && c.favorieten) {
       fav = document.createElement("domotiapp-favorieten-card");
       fav.setConfig({ verberg_leeg: true });
       this.$(".links").append(fav);
     }
-    if (this.hass) fav.hass = this.hass;
+    if (fav && this.hass) fav.hass = this.hass;
     // In de editor kan de config er eerder zijn dan hass: dan beginnen de abonnementen bij de eerste hass.
     this.zonderHass_ = !this.hass;
 
@@ -262,8 +269,10 @@ class OverzichtCard extends DacCard {
 
     const lijstEl = this.$(".lijst");
     const open = (e) => {
-      const regel = e.target.closest(".regel[data-entity]");
+      const regel = e.target.closest(".regel[data-entity], .regel[data-kalender]");
       if (!regel) return;
+      // "en n meer" bij de agenda: de kalender. De eigenaar: "kan er niet op klikken etc."
+      if (regel.dataset.kalender) return toonAgendaScherm(this.agendaBron_(), "kalender");
       // Een afspraak opent het scherm van de agendakaart, met Wijzigen en Verwijderen als de agenda dat kan.
       const afspraak = this.rijen_[Number(regel.dataset.i)]?.afspraak;
       if (afspraak) toonAgendaScherm(this.agendaBron_(), "afspraak", afspraak);
@@ -283,6 +292,7 @@ class OverzichtCard extends DacCard {
       if (!doe) return;
       const bron = this.agendaBron_();
       if (doe === "agendas") return toonAgendaScherm(bron, "agendas");
+      if (doe === "kalender") return toonAgendaScherm(bron, "kalender");
       // Nog geen agenda om in te schrijven: dan eerst er een toevoegen.
       if (!bron.agendas().some((x) => x.kan.maken)) return toonAgendaScherm(bron, c.agenda_toevoegen ? "toevoegen" : "agendas");
       toonAgendaScherm(bron, "formulier");
@@ -323,6 +333,12 @@ class OverzichtCard extends DacCard {
     this.toegevoegdAbo_.start(this.hass);
 
     this.abonneerAgendas_();
+    // Wat de klant in het scherm maakte, wijzigde of weghaalde, meteen opnieuw ophalen: iCloud meldt het zelf niet.
+    this.teardown_.push(
+      bijWijziging((agenda) => {
+        for (const [id, abo] of this.agendaAbos_) if (!agenda || id === agenda) abo.start(this.hass);
+      })
+    );
     this.teardown_.push(() => {
       this.toegevoegdAbo_?.stop();
       for (const abo of this.agendaAbos_.values()) abo.stop();
@@ -379,7 +395,14 @@ class OverzichtCard extends DacCard {
   agendaBron_() {
     return {
       hass: () => this.hass,
-      agendas: () => agendaInfo(this.hass?.states, this.agendaIds_(), this.toegevoegd_, (id) => nameOf(this.hass, id)).map((x) => ({ ...x, kleur: TONES[x.toon] })),
+      agendas: () =>
+        agendaInfo(
+          this.hass?.states,
+          this.agendaIds_(),
+          this.toegevoegd_,
+          (id) => nameOf(this.hass, id),
+          (id) => this.hass?.entities?.[id]?.platform ?? null
+        ).map((x) => ({ ...x, kleur: TONES[x.toon] })),
       toevoegen: this.config.agenda_toevoegen,
     };
   }
@@ -511,14 +534,15 @@ class OverzichtCard extends DacCard {
     const ids = this.agendaIds_();
     const knoppen = this.$(".acties");
     knoppen.hidden = !ids.length && !c.agenda_toevoegen;
+    this.$('[data-doe="kalender"]').hidden = !ids.length;
     // Afspraak maken kan alleen in een agenda die het kan, of na het toevoegen van een.
     this.$(".plus").hidden = !c.agenda_toevoegen && !ids.some((id) => kan(states[id]).maken);
-    const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity]));
+    const sig = JSON.stringify(rijen.map((r) => [r.soort, r.toon, r.icoon, r.tekst, r.bij, r.entity, r.kalender]));
     if (el.dataset.sig === sig) return;
     el.dataset.sig = sig;
     el.innerHTML = rijen
       .map(
-        (r, i) => `<div class="regel" data-i="${i}" data-soort="${r.soort}" data-toon="${r.toon}"${r.entity ? ` data-entity="${escapeHtml(r.entity)}" role="button" tabindex="0"` : ""}>
+        (r, i) => `<div class="regel" data-i="${i}" data-soort="${r.soort}" data-toon="${r.toon}"${r.entity ? ` data-entity="${escapeHtml(r.entity)}" role="button" tabindex="0"` : ""}${r.kalender ? ' data-kalender="1" role="button" tabindex="0"' : ""}>
           <span class="chip" style="--tone:${toneValue(r.toon)}">${resolve(r.icoon, "dots")}</span>
           <span class="tekst">${escapeHtml(r.tekst)}</span>
           ${r.bij ? `<span class="bij">${escapeHtml(r.bij)}</span>` : ""}
@@ -547,11 +571,12 @@ class OverzichtCard extends DacCard {
 
 class OverzichtEditor extends DacEditor {
   defaults() {
-    return { dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, agenda_toevoegen: true, batterij_grens: BATTERIJ_GRENS };
+    return { favorieten: false, dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, agenda_toevoegen: true, batterij_grens: BATTERIJ_GRENS };
   }
 
   schema() {
     return [
+      { name: "favorieten", selector: sel.bool() },
       { name: "weer", selector: sel.entity("weather") },
       { name: "dagen", selector: sel.number(0, DAGEN_MAX) },
       { name: "naam", selector: sel.text() },
@@ -576,6 +601,7 @@ class OverzichtEditor extends DacEditor {
   label(s) {
     return (
       {
+        favorieten: t("Favorieten links op de kaart"),
         weer: t("Weerentiteit"),
         dagen: t("Dagen vooruit"),
         naam: t("Naam in de begroeting"),
@@ -592,6 +618,7 @@ class OverzichtEditor extends DacEditor {
 
   helper(s) {
     return {
+      favorieten: t("Uit: alleen het overzicht, en de favorieten op hun eigen kaart ernaast."),
       dagen: t("0 laat de rij met dagen weg."),
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
       agenda: t("De afspraken in deze agenda's, vanaf nu."),
@@ -608,7 +635,7 @@ class OverzichtEditor extends DacEditor {
 registerEditor("domotiapp-overzicht-card-editor", OverzichtEditor);
 registerCard("domotiapp-overzicht-card", OverzichtCard, {
   name: nt("DomotiApp Overzicht"),
-  description: nt("Voor een tablet: links de favorieten, rechts de klok, het weer en wat er belangrijk is."),
+  description: nt("Voor een tablet: de klok, het weer en wat er belangrijk is, met de agenda erbij."),
 });
 
 export { OverzichtCard };

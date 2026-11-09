@@ -19,6 +19,7 @@ import pytest
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
 from custom_components.domotiapp_lovelace.agenda import DATA_AGENDA, ICLOUD, KAART_TYPE, OVERZICHT_TYPE, Agendas, google_adres
@@ -125,6 +126,26 @@ async def test_het_abonnement_geeft_de_lijst_en_opnieuw_na_toevoegen(hass: HomeA
     while not gezien or not gezien[-1]:
         gezien.append((await beheer.receive_json())["event"]["agendas"])
     assert [a["entiteiten"] for a in gezien[-1]] == [["calendar.werk"]]
+
+
+async def test_een_agenda_in_het_register_stuurt_de_lijst_opnieuw_zonder_fout(
+    hass: HomeAssistant, agenda_op, hass_ws_client, caplog: pytest.LogCaptureFixture
+) -> None:
+    """NIEUW GEDRAG (0.118.0). Een `event_filter` krijgt van Home Assistant de gegevens van de gebeurtenis, niet de gebeurtenis
+    zelf. Tot 0.117.1 vroeg het filter `event.data`, en dan stond er bij elke wijziging in het register "Error in event
+    filter" in het log (bij de eigenaar 24 keer in twee minuten, nadat hij Apple koppelde), en kwam er niets."""
+    beheer = await hass_ws_client(hass)
+    await beheer.send_json_auto_id({"type": f"{DOMAIN}/agenda/subscribe"})
+    assert (await beheer.receive_json())["success"] is True
+    assert (await beheer.receive_json())["event"] == {"agendas": []}
+
+    register = er.async_get(hass)
+    register.async_get_or_create("sensor", "proef", "iets_anders")
+    register.async_get_or_create("calendar", "proef", "verjaardagen")
+    await hass.async_block_till_done()
+
+    assert "Error in event filter" not in caplog.text
+    assert (await beheer.receive_json())["event"] == {"agendas": []}
 
 
 async def test_een_bestaande_lokale_agenda_wordt_gekoppeld_en_bij_weghalen_alleen_losgemaakt(
