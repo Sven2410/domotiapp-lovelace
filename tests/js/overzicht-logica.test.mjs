@@ -7,6 +7,9 @@
  *
  * NIEUW GEDRAG in 0.115.0: melders en batterijen alleen als ze gekozen zijn ("ik wil dat je alles moet kiezen in de GUI
  * editor"), en de agenda een instelbaar aantal dagen vooruit, standaard een week. Die tests falen op 0.114.1.
+ *
+ * NIEUW GEDRAG in 0.120.0: elk deel van de kaart te verbergen ("Eigenlijk alle opties kunnen weergeven en verbergen").
+ * Op 0.119.1 faalt "zichtbaar" bij het importeren.
  */
 
 import assert from "node:assert/strict";
@@ -25,6 +28,8 @@ import {
   openWoord,
   regels,
   staatOpen,
+  ONDERDELEN,
+  zichtbaar,
 } from "../../src/cards/overzicht-logica.js";
 
 const st = (entity_id, state, attributes = {}) => ({ entity_id, state, attributes });
@@ -39,6 +44,27 @@ describe("groet", () => {
     assert.equal(groet(new Date(2026, 10, 8, 6)), "Goedemorgen");
     assert.equal(groet(new Date(2026, 10, 8, 12)), "Goedemiddag");
     assert.equal(groet(new Date(2026, 10, 8, 18)), "Goedenavond");
+  });
+});
+
+describe("zichtbaar", () => {
+  it("zonder instelling staat alles erop, zoals voor 0.120.0", () => {
+    assert.deepEqual(zichtbaar({}), Object.fromEntries(ONDERDELEN.map((d) => [d, true])));
+    assert.deepEqual(zichtbaar(undefined), Object.fromEntries(ONDERDELEN.map((d) => [d, true])));
+  });
+
+  it("een deel met toon_ op false staat er niet", () => {
+    const z = zichtbaar({ toon_agenda: false, toon_klok: false, toon_batterijen: true });
+    assert.equal(z.agenda, false);
+    assert.equal(z.klok, false);
+    assert.equal(z.batterijen, true);
+    assert.equal(z.weer, true);
+  });
+
+  it("de knoppen van de agenda gaan mee weg met de agenda", () => {
+    assert.equal(zichtbaar({ toon_agenda: false }).agenda_knoppen, false);
+    assert.equal(zichtbaar({ toon_agenda_knoppen: false }).agenda_knoppen, false);
+    assert.equal(zichtbaar({ toon_agenda_knoppen: false }).agenda, true);
   });
 });
 

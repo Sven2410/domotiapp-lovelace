@@ -25,13 +25,16 @@
  * Breder dan ONGEVEER een telefoon staan de twee naast elkaar; smaller staat het weer boven de favorieten. Dat gaat met
  * een containerquery (valkuil 46): de kaart kijkt naar haar eigen breedte, niet naar die van het venster.
  *
+ * **Elk deel is te verbergen** (sinds 0.120.0, `toon_<deel>`, zie `zichtbaar` in overzicht-logica.js): begroeting, datum,
+ * klok, weer, agenda en de knoppen eronder, "Let op", melders en batterijen. Een verborgen agenda haalt ook niets op.
+ *
  * De hoogte komt op de rasterrijen uit via `meetRaster`. De twee helften staan naast elkaar, dus het vak heeft er één
  * kind (de rij) en niet twee (valkuil 74). Het vlak achter de rechterhelft is een eigen laag die de hele hoogte vult, ook
  * als de favorieten hoger zijn dan het overzicht: anders loopt dat vlak een halve rij voor het eind van de kaart dood.
  */
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor, toneValue } from "../base.js";
-import { DacEditor, sel } from "../editor/base.js";
+import { DacEditor, section, sel } from "../editor/base.js";
 import { attrsOf, fmtNumber, isDead, localizeState, moreInfo, nameOf, stateOf } from "../ha.js";
 import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { icons, resolve, weatherIcon } from "../icons.js";
@@ -48,6 +51,7 @@ import {
   AGENDA_VOORUIT,
   ALARMEN,
   BATTERIJ_GRENS,
+  ONDERDELEN,
   afsprakenOpKaart,
   agendaTot,
   alarmen,
@@ -55,6 +59,7 @@ import {
   groet,
   regels,
   staatOpen,
+  zichtbaar,
 } from "./overzicht-logica.js";
 
 const DAGEN_STANDAARD = 5;
@@ -148,6 +153,9 @@ class OverzichtCard extends DacCard {
     /* ---- de regels ---- */
     .lijst { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--dac-border); padding-top: 8px; }
     .lijst:empty { display: none; }
+    /* Staan kop en weer er niet, dan is de lijst het eerste: dan geen streep erboven. */
+    .kop[hidden] + .weer[hidden] + .lijst { border-top: 0; padding-top: 0; }
+    .wie[hidden] + .klok { margin-left: auto; }
     .regel {
       display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 6px 0 2px;
       border-radius: var(--dac-radius-sm); -webkit-tap-highlight-color: transparent;
@@ -164,6 +172,7 @@ class OverzichtCard extends DacCard {
     /* ---- agenda: bekijken, toevoegen, een afspraak maken ---- */
     .acties { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .lijst:empty + .acties { border-top: 1px solid var(--dac-border); padding-top: 10px; }
+    .kop[hidden] + .weer[hidden] + .lijst:empty + .acties { border-top: 0; padding-top: 0; }
     .knop {
       flex: 0 0 auto; height: 32px; min-width: 32px; padding: 0 11px 0 9px; border-radius: var(--dac-radius-pill); cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -206,11 +215,20 @@ class OverzichtCard extends DacCard {
 
   watched() {
     const c = this.config;
-    return [c.weer, ...this.agendaIds_(), ...lijst(c.letop), ...lijst(c.melders), ...lijst(c.batterijen)].filter(Boolean);
+    const z = zichtbaar(c);
+    return [
+      z.weer && c.weer,
+      ...this.agendaIds_(),
+      ...(z.letop ? lijst(c.letop) : []),
+      ...(z.melders ? lijst(c.melders) : []),
+      ...(z.batterijen ? lijst(c.batterijen) : []),
+    ].filter(Boolean);
   }
 
   template() {
     const c = this.config;
+    const z = zichtbaar(c);
+    const verborgen = (aan) => (aan ? "" : " hidden");
     this.toggleAttribute("bare", Boolean(c.bare));
     return `
       <div class="card">
@@ -218,11 +236,11 @@ class OverzichtCard extends DacCard {
           <div class="achter"></div>
           <div class="links"></div>
           <div class="info">
-            <div class="kop">
-              <div class="wie"><div class="hallo"></div><div class="datum"></div></div>
-              <div class="klok tnum"></div>
+            <div class="kop"${verborgen(z.begroeting || z.datum || z.klok)}>
+              <div class="wie"${verborgen(z.begroeting || z.datum)}><div class="hallo"${verborgen(z.begroeting)}></div><div class="datum"${verborgen(z.datum)}></div></div>
+              <div class="klok tnum"${verborgen(z.klok)}></div>
             </div>
-            <div class="weer"${c.weer ? "" : " hidden"}>
+            <div class="weer"${verborgen(z.weer && c.weer)}>
               <div class="nu" role="button" tabindex="0">
                 <span class="chip" style="--tone:${TONES.accent}"></span>
                 <span class="graden tnum"></span>
@@ -310,7 +328,7 @@ class OverzichtCard extends DacCard {
     plan();
     this.teardown_.push(() => clearTimeout(this.klokTimer_));
 
-    if (c.weer && c.dagen > 0) {
+    if (zichtbaar(c).weer && c.weer && c.dagen > 0) {
       this.weerAbo_ = new BlijvendAbonnement({ type: "weather/subscribe_forecast", forecast_type: "daily", entity_id: c.weer }, (bericht) => {
         this.voorspelling_ = Array.isArray(bericht?.forecast) ? bericht.forecast : [];
         this.paintWeer_();
@@ -323,14 +341,17 @@ class OverzichtCard extends DacCard {
       });
     }
 
-    // Agenda's die de klant via de agendakaart toevoegde, staan hier ook: hij kan dit dashboard niet wijzigen.
-    this.toegevoegdAbo_ = new ToegevoegdAbonnement((agendas) => {
-      const voor = this.agendaIds_().join();
-      this.toegevoegd_ = agendas;
-      if (this.agendaIds_().join() !== voor) this.abonneerAgendas_();
-      agendaScherm()?.ververs();
-    });
-    this.toegevoegdAbo_.start(this.hass);
+    // Agenda's die de klant via de agendakaart toevoegde, staan hier ook: hij kan dit dashboard niet wijzigen. Staat de
+    // agenda niet op de kaart, dan hoeft dat niet opgehaald te worden.
+    if (zichtbaar(c).agenda) {
+      this.toegevoegdAbo_ = new ToegevoegdAbonnement((agendas) => {
+        const voor = this.agendaIds_().join();
+        this.toegevoegd_ = agendas;
+        if (this.agendaIds_().join() !== voor) this.abonneerAgendas_();
+        agendaScherm()?.ververs();
+      });
+      this.toegevoegdAbo_.start(this.hass);
+    }
 
     this.abonneerAgendas_();
     // Wat de klant in het scherm maakte, wijzigde of weghaalde, meteen opnieuw ophalen: iCloud meldt het zelf niet.
@@ -341,6 +362,7 @@ class OverzichtCard extends DacCard {
     );
     this.teardown_.push(() => {
       this.toegevoegdAbo_?.stop();
+      this.toegevoegdAbo_ = null;
       for (const abo of this.agendaAbos_.values()) abo.stop();
       this.agendaAbos_.clear();
       this.afspraken_.clear();
@@ -386,8 +408,9 @@ class OverzichtCard extends DacCard {
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
 
-  /** De agenda's: die uit de editor, plus wat de klant via de agendakaart toevoegde. */
+  /** De agenda's: die uit de editor, plus wat de klant via de agendakaart toevoegde. Geen, als de agenda verborgen is. */
   agendaIds_() {
+    if (!zichtbaar(this.config).agenda) return [];
     return agendasVan({ agendas: lijst(this.config?.agenda) }, this.toegevoegd_);
   }
 
@@ -448,7 +471,7 @@ class OverzichtCard extends DacCard {
 
   paintWeer_() {
     const c = this.config;
-    if (!c.weer) return;
+    if (!c.weer || !zichtbaar(c).weer) return;
     const st = stateOf(this.hass, c.weer);
     const wa = attrsOf(this.hass, c.weer);
     const dood = isDead(st);
@@ -512,6 +535,7 @@ class OverzichtCard extends DacCard {
     const el = this.$(".lijst");
     if (!el || !this.hass) return;
     const c = this.config;
+    const z = zichtbaar(c);
     const states = this.hass.states ?? {};
     const naamVan = (id) => nameOf(this.hass, id);
     const nu = this.nu_();
@@ -519,21 +543,21 @@ class OverzichtCard extends DacCard {
     const rijen = regels({
       nu,
       naamVan,
-      alarmen: alarmen(states, lijst(c.melders)),
-      open: lijst(c.letop).map((id) => states[id]).filter(staatOpen),
+      alarmen: z.melders ? alarmen(states, lijst(c.melders)) : [],
+      open: z.letop ? lijst(c.letop).map((id) => states[id]).filter(staatOpen) : [],
       afspraken: afsprakenOpKaart(
         [...this.afspraken_.values()].flat(),
         nu,
         c.agenda_dagen,
         this.agendaIds_().map((id) => volgendeUitToestand(states[id], id))
       ),
-      batterijen: batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS),
+      batterijen: z.batterijen ? batterijenLeeg(states, lijst(c.batterijen), c.batterij_grens ?? BATTERIJ_GRENS) : [],
     });
 
     this.rijen_ = rijen;
     const ids = this.agendaIds_();
     const knoppen = this.$(".acties");
-    knoppen.hidden = !ids.length && !c.agenda_toevoegen;
+    knoppen.hidden = !z.agenda_knoppen || (!ids.length && !c.agenda_toevoegen);
     this.$('[data-doe="kalender"]').hidden = !ids.length;
     // Afspraak maken kan alleen in een agenda die het kan, of na het toevoegen van een.
     this.$(".plus").hidden = !c.agenda_toevoegen && !ids.some((id) => kan(states[id]).maken);
@@ -571,30 +595,62 @@ class OverzichtCard extends DacCard {
 
 class OverzichtEditor extends DacEditor {
   defaults() {
-    return { favorieten: false, dagen: DAGEN_STANDAARD, agenda_dagen: AGENDA_DAGEN, agenda_toevoegen: true, batterij_grens: BATTERIJ_GRENS };
+    return {
+      favorieten: false,
+      ...Object.fromEntries(ONDERDELEN.map((deel) => [`toon_${deel}`, true])),
+      dagen: DAGEN_STANDAARD,
+      agenda_dagen: AGENDA_DAGEN,
+      agenda_toevoegen: true,
+      batterij_grens: BATTERIJ_GRENS,
+    };
   }
 
+  /**
+   * Per deel een schakelaar, en daaronder zijn instellingen in een uitklapblok, alleen als hij aan staat (Vormregels: een
+   * functie die je in zijn geheel aan of uit zet). Verbergen gooit de instellingen niet weg: weer aan, en ze staan er nog.
+   */
   schema() {
+    const z = zichtbaar(this.config_);
+    const blok = (aan, titel, icoon, velden) => (aan ? [section(titel, icoon, velden)] : []);
     return [
       { name: "favorieten", selector: sel.bool() },
-      { name: "weer", selector: sel.entity("weather") },
-      { name: "dagen", selector: sel.number(0, DAGEN_MAX) },
-      { name: "naam", selector: sel.text() },
-      { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
-      { name: "agenda_dagen", selector: sel.number(1, AGENDA_DAGEN_MAX) },
-      { name: "agenda_toevoegen", selector: sel.bool() },
-      { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
-      {
-        name: "melders",
-        selector: {
-          entity: {
-            multiple: true,
-            filter: [{ domain: "binary_sensor", device_class: Object.keys(ALARMEN) }, { domain: "alarm_control_panel" }],
+      { name: "toon_begroeting", selector: sel.bool() },
+      ...blok(z.begroeting, nt("Begroeting"), "mdi:hand-wave-outline", [{ name: "naam", selector: sel.text() }]),
+      { name: "toon_datum", selector: sel.bool() },
+      { name: "toon_klok", selector: sel.bool() },
+      { name: "toon_weer", selector: sel.bool() },
+      ...blok(z.weer, nt("Weer"), "mdi:weather-partly-cloudy", [
+        { name: "weer", selector: sel.entity("weather") },
+        { name: "dagen", selector: sel.number(0, DAGEN_MAX) },
+      ]),
+      { name: "toon_agenda", selector: sel.bool() },
+      ...blok(z.agenda, nt("Agenda"), "mdi:calendar", [
+        { name: "agenda", selector: { entity: { domain: "calendar", multiple: true } } },
+        { name: "agenda_dagen", selector: sel.number(1, AGENDA_DAGEN_MAX) },
+        { name: "toon_agenda_knoppen", selector: sel.bool() },
+        { name: "agenda_toevoegen", selector: sel.bool() },
+      ]),
+      { name: "toon_letop", selector: sel.bool() },
+      ...blok(z.letop, nt("Let op"), "mdi:door-open", [
+        { name: "letop", selector: { entity: { domain: ["binary_sensor", "cover", "lock", "valve"], multiple: true } } },
+      ]),
+      { name: "toon_melders", selector: sel.bool() },
+      ...blok(z.melders, nt("Melders"), "mdi:smoke-detector-variant", [
+        {
+          name: "melders",
+          selector: {
+            entity: {
+              multiple: true,
+              filter: [{ domain: "binary_sensor", device_class: Object.keys(ALARMEN) }, { domain: "alarm_control_panel" }],
+            },
           },
         },
-      },
-      { name: "batterijen", selector: { entity: { multiple: true, filter: [{ domain: ["sensor", "binary_sensor"], device_class: "battery" }] } } },
-      { name: "batterij_grens", selector: sel.number(0, 50) },
+      ]),
+      { name: "toon_batterijen", selector: sel.bool() },
+      ...blok(z.batterijen, nt("Batterijen"), "mdi:battery-low", [
+        { name: "batterijen", selector: { entity: { multiple: true, filter: [{ domain: ["sensor", "binary_sensor"], device_class: "battery" }] } } },
+        { name: "batterij_grens", selector: sel.number(0, 50) },
+      ]),
     ];
   }
 
@@ -602,6 +658,15 @@ class OverzichtEditor extends DacEditor {
     return (
       {
         favorieten: t("Favorieten links op de kaart"),
+        toon_begroeting: t("Begroeting tonen"),
+        toon_datum: t("Datum tonen"),
+        toon_klok: t("Klok tonen"),
+        toon_weer: t("Weer tonen"),
+        toon_agenda: t("Agenda tonen"),
+        toon_agenda_knoppen: t("Knoppen onder de agenda"),
+        toon_letop: t("Let op tonen"),
+        toon_melders: t("Melders tonen"),
+        toon_batterijen: t("Batterijen tonen"),
         weer: t("Weerentiteit"),
         dagen: t("Dagen vooruit"),
         naam: t("Naam in de begroeting"),
@@ -619,6 +684,8 @@ class OverzichtEditor extends DacEditor {
   helper(s) {
     return {
       favorieten: t("Uit: alleen het overzicht, en de favorieten op hun eigen kaart ernaast."),
+      toon_agenda: t("Uit: geen afspraken en geen agendaknoppen op de kaart."),
+      toon_agenda_knoppen: t("Kalender, Agenda's en + Afspraak."),
       dagen: t("0 laat de rij met dagen weg."),
       naam: t("Leeg laten voor de naam van de ingelogde gebruiker."),
       agenda: t("De afspraken in deze agenda's, vanaf nu."),
