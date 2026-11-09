@@ -82,7 +82,7 @@ const css = /* css */ `
   }
   @keyframes op { from { opacity: 0 } to { opacity: 1 } }
   .vak {
-    width: min(440px, 100%); max-height: 100%; overflow-y: auto;
+    width: min(440px, 100%); max-height: 100%; overflow-y: auto; overflow-x: hidden;
     padding: 14px 14px 16px; border-radius: var(--dac-radius);
     background: var(--dac-bg-raise); border: 1px solid var(--dac-border);
     box-shadow: 0 24px 60px -20px rgba(0,0,0,calc(.7 * var(--dac-diepte)));
@@ -121,9 +121,25 @@ const css = /* css */ `
     border: 1px solid var(--dac-border-hi); border-radius: var(--dac-radius-sm); padding: 8px 10px;
     min-height: 40px; width: 100%; min-width: 0; color-scheme: var(--dac-scheme);
   }
-  /* Valkuil 78: een tijdveld nooit display block; op iOS zakt de tijd dan naar boven. */
-  input[type="time"], input[type="date"] { display: flex; align-items: center; }
+  /* Een datum- of tijdveld heeft zelf GEEN padding en GEEN rand: Safari op iOS past box-sizing border-box daar niet op
+     toe, en telt ze bij de 100% op (valkuil 79, gemeten in de wekkereditor). Op de iPhone van de eigenaar liepen Begin en
+     Eind zo over elkaar en over de rand van het formulier (9 november 2026: "loopt niet helemaal lekker over en
+     uitgelijnd"). De rand is een schaduw naar binnen, die telt niet mee. Appearance none: anders houdt Safari zijn eigen
+     minimale breedte aan. En valkuil 78: geen display block, anders zakt de tijd op iOS naar boven. */
+  input[type="time"], input[type="date"] {
+    -webkit-appearance: none; appearance: none;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 0; border: 0; max-width: 100%;
+    box-shadow: inset 0 0 0 1px var(--dac-border-hi);
+  }
+  input[type="time"]::-webkit-date-and-time-value, input[type="date"]::-webkit-date-and-time-value { margin: 0; min-width: 0; text-align: center; }
+  input[type="time"]::-webkit-calendar-picker-indicator, input[type="date"]::-webkit-calendar-picker-indicator { margin-right: 10px; }
+  input[type="time"][aria-invalid="true"], input[type="date"][aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--dac-bad); }
   textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
+  /* Onder 16px zoomt Safari op een telefoon in zodra een veld focus krijgt, en dan staat het formulier half buiten beeld. */
+  @media (pointer: coarse) {
+    input[type="text"], input[type="email"], input[type="password"], input[type="url"], input[type="date"], input[type="time"], textarea { font-size: 16px; }
+  }
   input:focus-visible, textarea:focus-visible { outline: 2px solid var(--dac-accent-hi); outline-offset: 1px; }
   input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--dac-bad); }
   .twee { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }

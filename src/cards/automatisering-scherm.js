@@ -166,10 +166,11 @@ const css = /* css */ `
     font: inherit; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;
     color: var(--dac-ink); color-scheme: var(--dac-scheme);
     background-color: rgba(var(--dac-tint), .05);
-    border: 1px solid var(--dac-border); border-radius: var(--dac-radius-pill);
-    padding: 0 12px; cursor: pointer; text-align: center;
+    /* De rand als schaduw naar binnen, en geen padding: iOS telt ze anders bij de 100% op (valkuil 79). */
+    border: 0; box-shadow: inset 0 0 0 1px var(--dac-border); border-radius: var(--dac-radius-pill);
+    padding: 0; cursor: pointer; text-align: center;
   }
-  @media (hover: hover) { .tijd:hover { border-color: var(--dac-border-hi); } }
+  @media (hover: hover) { .tijd:hover { box-shadow: inset 0 0 0 1px var(--dac-border-hi); } }
   .tijd::-webkit-calendar-picker-indicator { display: none; }
   .tijd::-webkit-datetime-edit { padding: 0; }
   .tijd::-webkit-date-and-time-value { margin: 0; min-width: 0; text-align: center; }

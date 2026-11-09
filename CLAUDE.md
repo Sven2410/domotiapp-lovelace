@@ -50,6 +50,16 @@ daarom in git — technische kennis hier, de stand daar.
 - **Elk rapport gaat óók naar `docs/fase-<N>/RAPPORT.md`** en wordt meegecommit.
   De terminaluitvoer is bij de eigenaar niet betrouwbaar over te nemen; hij
   leest het rapport uit de repo.
+- **Alles wat we maken is mobielvriendelijk, en dat wordt gemeten.** De eigenaar, 9 november 2026, met twee
+  schermafdrukken van zijn iPhone (een agendaformulier waarvan de tijdvelden over elkaar en over de rand liepen, en een
+  menu dat scheef stond): *"Zorg altijd dat als je iets maakt dat het mobile friendly is."* Hij gebruikt de kaarten vooral
+  op zijn telefoon, in de app. Dus bij elk scherm, elke kaart en elk menu dat je maakt of aanraakt:
+  - meet op 390 CSS-pixels breed, met `isMobile` en `hasTouch` (Playwright), met tikken in plaats van kliks;
+  - toon dat niets opzij uitsteekt: `scrollWidth` gelijk aan `clientWidth` van het vak en van de pagina;
+  - toon de randen van velden die naast elkaar staan;
+  - toon dat een veld met focus minstens 16px tekst heeft, anders zoomt Safari in;
+  - voor datum- en tijdvelden ook met `box-sizing: content-box` geforceerd, want zo rekent iOS (valkuil 79). Chrome laat
+    het iOS-gedrag niet vanzelf zien.
 - **Kleuren lopen via HA-themavariabelen, nooit hardcoded.** Uitzondering:
   iconen mogen vaste kleuren en gradients dragen.
 - **Tags en releases zonder `v`-prefix.** Sinds 19 augustus 2026 mag Claude Code
@@ -2151,6 +2161,14 @@ die daar niet staan:
    `align-items: center`. `tests/js/tijdveld-css.test.mjs` bewaakt het voor
    elke kaart. Zie ook de wekkereditor: iOS past daar `box-sizing` niet toe
    op een tijdveld.
+
+79. **Safari op iOS rekent padding en rand van een datum- of tijdveld BIJ de 100% op**, ook met `box-sizing:
+   border-box`. Eerst gemeten in de wekkereditor (zie de kop daar), en op 9 november 2026 opnieuw: in het agendascherm
+   liepen Begin en Eind op de iPhone van de eigenaar over elkaar en over de rand van het formulier, terwijl ze in Chrome
+   keurig naast elkaar stonden. Een veld met `width: 100%` heeft daarom zelf GEEN padding opzij en GEEN rand: de rand is
+   een `box-shadow: inset 0 0 0 1px ...`, die telt niet mee. Ook `appearance: none`, anders houdt Safari zijn eigen
+   minimale breedte aan. `tests/js/tijdveld-css.test.mjs` bewaakt het voor elke kaart. In Chrome is het na te bootsen
+   door `box-sizing: content-box !important` op het veld te zetten en dan te meten.
 
 ---
 

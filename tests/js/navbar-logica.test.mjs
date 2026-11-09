@@ -29,6 +29,7 @@ import {
   ITEMS_MAX,
   SUB_MAX,
   kolommenVoor,
+  menuMidden,
   VOORAF,
   actieVoor,
   asItem,
@@ -361,4 +362,21 @@ it("isBewerkTag: editor, voorbeeld en kaartkiezer, en verder niets", async () =>
   for (const tag of ["hui-card", "hui-grid-section", "hui-sections-view", "home-assistant", "div", "bubble-card"]) {
     assert.equal(isBewerkTag(tag), false, tag);
   }
+});
+
+// NIEUW GEDRAG (0.118.1); faalt op 0.118.0 bij het importeren (menuMidden bestond niet). De eigenaar, 9 november 2026,
+// met een schermafdruk van zijn iPhone, het menu Meer met negen knoppen in twee kolommen: "Meer staat niet in het midden".
+describe("menuMidden", () => {
+  it("twee kolommen staan in het midden van de balk, ook onder de laatste knop", () => {
+    // Een balk van 361 breed (een iPhone van 393 met 16 px marge), Meer rechts, het menu 329 breed.
+    assert.equal(menuMidden(361, 330, 329, true), 180.5);
+  });
+
+  it("één kolom staat boven zijn knop, binnen de balk geklemd", () => {
+    assert.equal(menuMidden(361, 180, 190, false), 180);
+    assert.equal(menuMidden(361, 330, 190, false), 361 - 95 - 6);
+    assert.equal(menuMidden(361, 20, 190, false), 95 + 6);
+    // Een balk smaller dan het menu: het midden.
+    assert.equal(menuMidden(150, 20, 190, false), 75);
+  });
 });
