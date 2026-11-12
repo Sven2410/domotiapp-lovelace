@@ -6,6 +6,8 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
+from custom_components.domotiapp_lovelace.bewaking.const import STORAGE_KEY_REGELS
+
 from .conftest import CAMERA, MELDER_PERSOON, MELDER_VOERTUIG, detecteer
 
 CAMERA2 = "camera.achterdeur"
@@ -310,3 +312,67 @@ async def test_de_timeline_geeft_op_limiet_nul_alles(
     antwoord = await client.receive_json()
     assert antwoord["success"] is True
     assert len(antwoord["result"]["beelden"]) == 2
+
+
+# ------------------------------------------------------------------ vergeten (0.123.0)
+#
+# NIEUW GEDRAG: op 0.122.0 bestaat `bewaking/vergeet` niet ("Unknown command"). Een beheersessie kon een regel van een
+# camera die niet meer bestaat niet weghalen.
+
+
+async def _vergeet(client, camera: str = CAMERA) -> dict[str, Any]:
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/vergeet", "camera": camera})
+    return await client.receive_json()
+
+
+async def test_vergeten_haalt_de_regel_weg_en_de_motor_luistert_niet_meer(
+    hass: HomeAssistant, bewaking_op, hass_ws_client, index
+) -> None:
+    client = await hass_ws_client(hass)
+    await _save(client)
+    uit = await _vergeet(client)
+    assert uit["success"] is True, uit
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/get"})
+    assert CAMERA not in (await client.receive_json())["result"]["regels"]
+    await detecteer(hass, MELDER_PERSOON)
+    assert index().alle() == []
+
+
+async def test_vergeten_blijft_na_een_herstart_weg(
+    hass: HomeAssistant, bewaking_op, hass_ws_client, hass_storage
+) -> None:
+    client = await hass_ws_client(hass)
+    await _save(client)
+    await _vergeet(client)
+    assert CAMERA not in hass_storage[STORAGE_KEY_REGELS]["data"]["cameras"]
+
+
+async def test_vergeten_van_een_camera_zonder_regel_zegt_dat(
+    hass: HomeAssistant, bewaking_op, hass_ws_client
+) -> None:
+    client = await hass_ws_client(hass)
+    uit = await _vergeet(client, "camera.bestaat_niet")
+    assert uit["error"]["code"] == "not_found"
+
+
+async def test_vergeten_mag_alleen_een_beheerder(
+    hass: HomeAssistant, bewaking_op, hass_ws_client, hass_read_only_access_token
+) -> None:
+    beheerder = await hass_ws_client(hass)
+    await _save(beheerder)
+    gewoon = await hass_ws_client(hass, hass_read_only_access_token)
+    uit = await _vergeet(gewoon)
+    assert uit["error"]["code"] == "unauthorized"
+    await beheerder.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/get"})
+    assert CAMERA in (await beheerder.receive_json())["result"]["regels"]
+
+
+async def test_een_open_kaart_hoort_het(hass: HomeAssistant, bewaking_op, hass_ws_client) -> None:
+    client = await hass_ws_client(hass)
+    await _save(client)
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/subscribe"})
+    assert (await client.receive_json())["success"] is True
+    await client.send_json_auto_id({"type": "domotiapp_lovelace/bewaking/vergeet", "camera": CAMERA})
+    gezien = [await client.receive_json(), await client.receive_json()]
+    gebeurtenis = next(x for x in gezien if x["type"] == "event")
+    assert gebeurtenis["event"] == {"soort": "regels", "camera": CAMERA}
