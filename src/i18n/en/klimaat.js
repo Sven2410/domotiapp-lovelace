@@ -39,6 +39,11 @@ export const KLIMAAT = {
   "Naam voor {naam}": "Name for {naam}",
   "{naam} is een poort": "{naam} is a gate",
   "{naam} omgekeerd aangesloten": "{naam} wired in reverse",
+  "{naam} werkt met één puls": "{naam} works with a single pulse",
+  "Openen / sluiten": "Open / close",
+  "Open / dicht": "Open / close",
+  "Voor een poort met één knop: elke puls opent of sluit. Dan staat er één knop die altijd openen stuurt, zonder stop, schuif en status.":
+    "For a gate with a single button: each pulse opens or closes it. There is then one button that always sends open, without stop, slider or state.",
   "Rolluiken": "Shutters",
   "Stopknop tonen": "Show stop button",
   "Status tonen": "Show state",

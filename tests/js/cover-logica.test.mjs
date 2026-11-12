@@ -26,13 +26,18 @@ import {
   getoondeStand,
   isOmgekeerd,
   isPoort,
+  isPuls,
   keerPositie,
+  knoppen,
   knopTekst,
   optie,
   standaardIconen,
   statusTekst,
   toestandUit,
 } from "../../src/cards/cover-logica.js";
+
+// Sinds 0.121.0 heeft knopTekst ook een tekst voor de puls; de oude toetsen gaan over open en dicht.
+const openDicht = ({ open, close }) => ({ open, close });
 
 describe("per rolluik of voor de hele kaart", () => {
   it("laat de regel winnen van de kaart", () => {
@@ -53,11 +58,11 @@ describe("per rolluik of voor de hele kaart", () => {
 
 describe("de knoppen van een poort — NIEUW GEDRAG", () => {
   it("zet er woorden op in plaats van pijlen", () => {
-    assert.deepEqual(knopTekst(true), { open: "Openen", close: "Sluiten" });
+    assert.deepEqual(openDicht(knopTekst(true)), { open: "Openen", close: "Sluiten" });
   });
 
   it("laat een rolluik met rust — REGRESSIEWACHT", () => {
-    assert.deepEqual(knopTekst(false), { open: "Open", close: "Dicht" });
+    assert.deepEqual(openDicht(knopTekst(false)), { open: "Open", close: "Dicht" });
   });
 });
 
@@ -235,11 +240,48 @@ describe("de drie samen, op één rolluik", () => {
   });
 
   it("zet Openen en Sluiten op de knoppen", () => {
-    assert.deepEqual(knopTekst(isPoort(cover, config)), { open: "Openen", close: "Sluiten" });
+    assert.deepEqual(openDicht(knopTekst(isPoort(cover, config))), { open: "Openen", close: "Sluiten" });
   });
 
   it("laat de statusregel leeg", () => {
     const state = toestandUit("closed", isOmgekeerd(cover, config));
     assert.equal(statusTekst({ state, positie: null, toon: config.show_state !== false }), "");
+  });
+});
+
+/**
+ * Een poort op een pulsrelais, sinds 0.121.0. NIEUW GEDRAG: op 0.120.0 bestaan
+ * `isPuls` en `knoppen` niet, en stuurde de knop Sluiten `close_cover`, wat bij
+ * zo'n integratie een NotImplementedError geeft (gemeten bij een klant op
+ * 12 november 2026, met een poort die OPEN, CLOSE en STOP belooft).
+ */
+describe("een poort met één puls — NIEUW GEDRAG", () => {
+  it("is een vinkje per regel, en anders van de kaart", () => {
+    assert.equal(isPuls({ puls: true }, {}), true);
+    assert.equal(isPuls({}, { puls: true }), true);
+    assert.equal(isPuls({}, {}), false);
+  });
+
+  it("heeft één knop, ook als de stopknop aan staat", () => {
+    assert.deepEqual(knoppen({ puls: true, stop: true }), ["puls"]);
+    assert.deepEqual(knoppen({ puls: true, stop: false }), ["puls"]);
+  });
+
+  it("laat de gewone knoppen staan zonder puls — REGRESSIEWACHT", () => {
+    assert.deepEqual(knoppen({ stop: true }), ["open", "stop", "close"]);
+    assert.deepEqual(knoppen({ stop: false }), ["open", "close"]);
+    assert.deepEqual(knoppen(), ["open", "stop", "close"]);
+  });
+
+  it("stuurt altijd openen, ook bij een omgekeerde motor", () => {
+    assert.equal(dienstVoor("puls", false), "open_cover");
+    assert.equal(dienstVoor("puls", true), "open_cover");
+    // En dus grijst hij alleen uit als de entiteit niet eens openen kan.
+    assert.equal(BIT_VOOR_DIENST[dienstVoor("puls", true)], F.OPEN);
+  });
+
+  it("zegt in woorden dat de knop allebei doet", () => {
+    assert.equal(knopTekst(true).puls, "Openen / sluiten");
+    assert.equal(knopTekst(false).puls, "Open / dicht");
   });
 });
