@@ -1,112 +1,140 @@
 # De botkaart: "Vraag het de DomotiTech Bot"
 
-Tak `fase-178/bot-kaart`. **Nog niet uitgebracht**: de tickets bestaan in de coach nog niet. Gebouwd en beproefd tegen
-een nagemaakte coach in de testinstance, volgens contract 1 zoals het op 13 november 2026 is afgesproken. Het gaat pas
-uit als het bij de eigenaar thuis in het echt werkt, met een echte dump van de coach als vaste testinvoer.
+Tak `fase-178/bot-kaart`, concept-PR #199. **Nog niet uitgebracht.** De coach heeft het gesprek en de tickets nog
+niet; de werkplaats bouwt ze als v0.220.0. Gebouwd en beproefd tegen een nagemaakte coach in de testinstance, volgens
+contract 1 in `notities/werkmap/domotitech-bot.md`, met de wijziging van 13 november 2026. Het gaat pas uit als het
+bij de eigenaar thuis in het echt werkt, met een echte dump van de coach als vaste testinvoer.
 
 ## De vraag
 
 De eigenaar, 12 november 2026, in de werkmap-sessie: *"het moet in een popup komen zoals Vraag het de DomotiTech Bot
 snap je? Alles in HA [...] Niet iedereen heeft en wil telegram."* En: *"Lovelace moet een eigen kaart hebben en dat
-moet hetzelfde zijn in de coach snap je? Hetzelfde als de laadpaal kaart bijvoorbeeld."*
+moet hetzelfde zijn in de coach snap je?"*
 
-De klant stelt een vraag, doet een aanvraag of meldt een storing. Dat is een ticket. De coach bewaart het, en
-DomotiTech antwoordt erop van buiten Home Assistant.
+Op 13 november 2026, na de eerste vorm: *"die ticket kaart moet uitgebreider. Gewoon een vraag stellen over de
+installatie en echt een ticket aan maken zijn aparte dingen."* Op de vraag hoe koos hij:
+- het vragen-deel wordt **één doorlopende chat**;
+- bij een ticket horen de **soort** en **een foto bijvoegen**.
+
+Dat staat als wijziging in de afspraak, en de werkplaats bouwt het zo in v0.220.0.
 
 ## Wat er is
 
 - **`custom:domotiapp-bot-card`**: één tegel van één rasterrij (56 hoog), met het nieuwe icoon `chat`. Onder de naam
-  staat "2 nieuwe antwoorden", of "1 vraag loopt", of niets. Een stip op het icoon betekent dat er een antwoord is dat
-  deze gebruiker nog niet las. In de editor staan alleen een naam en een icoon.
-- **Het scherm** (`bot-scherm.js`) hangt aan `document.body` (valkuil 34) en heeft drie standen:
-  - **Lijst**: Nieuw, en daaronder de tickets. Het laatst bijgewerkte ticket staat bovenaan, met onderwerp, `#nummer ·
-    soort · stand`, de tijd en een stip bij een ongelezen antwoord.
-  - **Gesprek**: de berichten. Die van de klant staan rechts, die van DomotiTech links. Onderaan staat een veld om te
-    reageren. Een gesprek openen stuurt `read`, maar alleen als er iets na het gelezene kwam.
-  - **Nieuw**: kies Vraag, Aanvraag of Storing, typ, en Versturen. Daarna staat het gesprek er met "Ontvangen, we kijken
-    ernaar", tot er een antwoord is. Het ticket staat dan ook in de lijst.
+  staat "2 nieuwe antwoorden", of "1 ticket loopt", of niets. Een stip op het icoon betekent dat er ergens een antwoord
+  is dat deze gebruiker nog niet las, in het gesprek of in een ticket. In de editor staan alleen een naam en een icoon.
+- **Het scherm** (`bot-scherm.js`) hangt aan `document.body` (valkuil 34). Bovenaan staan twee tabbladen; een stip op
+  een tabblad betekent dat daar iets nieuws is.
+  - **Vragen**: het gesprek van het huis (`id` 0 in het contract), zoals een chat. Typen, Versturen, en het antwoord
+    komt eronder. Zonder berichten staat er een voorbeeldvraag, en de tip om een ticket te maken als er iets niet
+    werkt.
+  - **Tickets**: Nieuw ticket, met daaronder de lijst. Het laatst bijgewerkte ticket staat bovenaan, met `#nummer ·
+    soort · stand`, de tijd en een stip.
+  - **Een ticket openen** toont zijn gesprek, met een veld en een knop Foto.
+  - **Nieuw ticket**: kies Storing of Aanvraag, beschrijf het, voeg tot vier foto's toe (camera of fotorol), en tik
+    Versturen. Daarna staat het ticket open met "Ontvangen, we kijken ernaar", tot er een antwoord is.
+- **Waar het scherm opent**: het opent op Vragen. Staat er alleen in de tickets iets nieuws, dan opent het op
+  Tickets.
+- **Foto's**:
+  - De kaart verkleint elke foto tot een JPEG met een lange kant van hoogstens 2000 px (`fotoMaat`). Een staande foto
+    blijft staand.
+  - Daarna gaat hij met `hass.fetchWithAuth` naar `POST /api/domotiapp_coach/tickets/bijlage`, en het id gaat mee in
+    `bijlagen`.
+  - Bekijken gaat via een ondertekend pad (`auth/sign_path`, een uur geldig). Zo staat er geen token in een `<img>`.
+  - `bijlagePad` maakt alleen een adres van een id van 32 hex-tekens.
+  - Een tik op een foto toont hem groot.
 - **De standen voor de klant**:
 
   | stand | wat de klant leest |
   |---|---|
   | `nieuw` | Ontvangen |
   | `in_behandeling` | In behandeling |
-  | `bij_beheerder` | Ligt bij DomotiTech (zoals de werkmap voorstelde) |
+  | `bij_beheerder` | Ligt bij DomotiTech |
   | `klaar` | Afgerond |
   | een stand die er later bijkomt | In behandeling |
-
-  Een onbekende soort is een vraag.
-- **Live**: de kaart is geabonneerd met `BlijvendAbonnement` (valkuil 70) en neemt de beginlijst en daarna elk ticket
-  over. Een antwoord komt binnen terwijl het gesprek open staat. Een herstart van Home Assistant overleeft hij zonder
-  herladen.
-- **Zonder coach**: de tegel zegt "Heeft DomotiApp Coach nodig". Het scherm zegt dat de bot via de coach werkt, zonder
-  knop Nieuw.
-- **Met een coach die de tickets niet kent**: Home Assistant zegt dan `unknown_command`, net als tijdens het opstarten.
-  De herkansing vraagt het gewoon opnieuw. Staat de coach er en lukt het na twintig tellen nog niet, dan zegt de kaart
-  "Werk DomotiApp Coach bij".
-- **Tekst is tekst**: alles van de klant en van DomotiTech gaat er met `textContent` in. Een `<b>` in een antwoord
-  staat er letterlijk.
-- **Het veld** heeft 16px tekst (anders zoomt Safari in), geen eigen rand die meetelt (valkuil 79) en geen sleepgreepje.
-  Ctrl of Cmd met Enter verstuurt.
+- **Live**: de kaart is geabonneerd met `BlijvendAbonnement` (valkuil 70). Een wijziging met `id` 0 gaat naar het
+  gesprek, de rest naar de tickets.
+- **Zonder coach**, of **met een coach die de tickets niet kent**: dan staat er een zin. De coach is te oud als hij
+  er wel staat en het na twintig tellen nog `unknown_command` geeft.
+- **Tekst is tekst**: alles van de klant en van DomotiTech gaat er met `textContent` in.
+- **De velden** hebben 16px tekst, geen eigen rand die meetelt (valkuil 79) en geen sleepgreepje. Ctrl of Cmd met
+  Enter verstuurt.
 
 ## Hoe het gemeten is
 
-Een nagemaakte coach in `.ha-dev-config/custom_components/domotiapp_coach/tickets.py` (niet in git). Hij volgt contract
-1 uit de afspraak: `list`, `subscribe`, `new`, `reply`, `read`, `answer` en `set_state`, met een Store en de
-gebeurtenis. Op `kaart-test` staat een view `bot`, met de kaart over de volle breedte, een tweede op halve breedte naast
-een tegel van Home Assistant, en de favorietenkaart.
+De nagemaakte coach staat in `.ha-dev-config/custom_components/domotiapp_coach/tickets.py` (niet in git). Hij volgt
+het contract met de wijziging:
+- het gesprek met `id` 0;
+- `new` alleen voor storing en aanvraag;
+- de foto's: upload, `bijlagen`, en bekijken met GET.
 
-Playwright, 390 breed, `isMobile` en `hasTouch`, met tikken. Antwoorden komen zoals de mini-pc ze stuurt: als beheerder
-`answer`.
+Op `kaart-test` staat een view `bot`.
+
+Playwright, 390 breed, `isMobile` en `hasTouch`, met tikken. Antwoorden komen zoals de mini-pc ze stuurt: als
+beheerder `answer`, over een eigen websocket. De foto is gekozen met een echte tik op Foto, en daarna via de
+bestandskiezer van de browser (`filechooser`).
 
 ```
-BUNDEL schijf b9ea5c4fe720 geladen ["b9ea5c4fe720"]
-MATEN [top, hoogte, links, breedte] {"bot":[80,56,8,374],"bot2":[208,56,8,183],"tile":[208,56,199,183]}
-VELD {"waarde":"De lamp in de gang doet het niet meer","px":"16px","actief":true} spaties keydown:true:spatie (8x)
-NA VERSTUREN {"stand":"gesprek","kop":"#5 · Storing","onder":"Ontvangen","berichten":["De lamp in de gang doet het niet meer"],"ontvangen":"Ontvangen, we kijken ernaar."}
-ANTWOORD LIVE {"ontvangenNogDaar":false,"onder":"In behandeling","laatste":"Dank je. Zit er een <b>nieuwe</b> lamp in?\nZo niet: ...","html":false}
-REACTIEVELD px 16px spaties 5
-KAART na sluiten {"regel":"1 nieuw antwoord","stip":true}
-BREEDTE nieuw    {"pagina":[390,390],"vak":[356,356,16,374,390]}
-BREEDTE gesprek  {"pagina":[390,390],"vak":[356,356,16,374,390]}
-BREEDTE lijst    {"pagina":[390,390],"vak":[356,356,16,374,390]}
-ZONDER COACH / TE OUD {"geen":"Heeft DomotiApp Coach nodig","oud":"Werk DomotiApp Coach bij"}
-LOG kliks touchstart:true click:true (5x)
+BUNDEL schijf 32ad6693a325 geladen ["32ad6693a325"]
+OPEN {"stand":"vragen","tabs":["Vragen:true","Tickets:false"]}
+VRAAGVELD px 16px spaties isTrusted 5
+MELDING VRAAG "" VELD LEEG true
+GESPREK ["klant: Hoe vol is mijn accu nu?","domotitech: Je thuisbatterij staat op 64 procent. Va"]
+FOTO origineel 260985 bytes                      (4032 x 3024)
+GEKOZEN 1 spaties 5
+NA TICKET {"stand":"ticket","kop":"#10 · Storing","ontvangen":"Ontvangen, we kijken ernaar.","fotos":[{"geladen":true,"maat":[2000,1500],"ondertekend":true}]}
+BIJ DE COACH {"id":10,"soort":"storing","tekst":"De lamp in de gang knippert","bijlagen":[{"id":"1b9e...","type":"image/jpeg","grootte":40633}]}
+GROOT true
+KAART na antwoord, dicht {"regel":"2 nieuwe antwoorden","stip":true}
+OPENT OP tickets
+BREEDTE vragen        {"pagina":[390,390],"vak":[356,356,16,374,82,762,390,844]}
+BREEDTE tickets       {"pagina":[390,390],"vak":[356,356,16,374,159,685,390,844]}
+BREEDTE nieuw ticket  {"pagina":[390,390],"vak":[356,356,16,374,195,649,390,844]}
 FOUTEN []
 ```
 
-- **De tegel** is 56 hoog, net als de tegel van Home Assistant ernaast (bovenkant 208, hoogte 56, allebei).
-- **De breedte**: `vak` is `[scrollWidth, clientWidth, links, rechts, venster]`. In de eerste meting liep de lijst over
-  de rand: het vak was 386 breed, van 16 tot 404, op een scherm van 390. Een raster met een automatische kolom groeit mee
-  met een onderwerp dat niet afbreekt. Na de reparatie (een vaste kolom `minmax(0, 1fr)`) is het vak in alle drie de
-  standen 356 breed, van 16 tot 374. Op 1366 breed is het 438, en de pagina scrolt nergens opzij.
+- **Klikken en tikken**: in het logboek is elke tik `touchstart:true click:true`. Er is één `click:false`: dat is de
+  kaart zelf, die de verborgen bestandskiezer opent.
+- **De breedte**: `vak` is `[scrollWidth, clientWidth, links, rechts, boven, onder, venster]`. In alle standen past het
+  vak binnen het scherm, en de pagina scrolt nergens opzij.
+  - In de eerste vorm liep de lijst 14 px over de rechterrand (386 breed, van 16 tot 404). Een raster met een
+    automatische kolom groeit mee met een onderwerp dat niet afbreekt. Gerepareerd met `minmax(0, 1fr)`.
+  - Op 1366 breed is het vak 438.
+- **Gevonden en gerepareerd: na een vraag stond er "Versturen lukte niet: this.fotos_[e] is not iterable".** De vraag
+  ging wel weg, maar het leegmaken van de foto's daarna kende het vak Vragen niet. Na de reparatie staat er geen
+  melding en is het veld leeg (zie `MELDING VRAAG` hierboven).
+- **De tegel** is 56 hoog, net als een tegel van Home Assistant ernaast.
 - **Zonder coach en te oud** zijn gemeten met de echte kaart met de hand in de pagina (valkuil 21):
-  - een `hass` zonder `domotiapp_coach` in de componenten;
-  - een verbinding die `unknown_command` geeft, en dan twintig tellen wachten.
-- **De herstart**: de pagina bleef open, en Home Assistant herstartte met `pm2 restart`. Daarna kwam er een antwoord via
-  een eigen websocket, niet vanuit de pagina:
+  - een `hass` zonder `domotiapp_coach` geeft "Heeft DomotiApp Coach nodig";
+  - een verbinding die `unknown_command` zegt geeft na twintig tellen "Werk DomotiApp Coach bij".
+
+  In beide gevallen toont het scherm een zin en geen knoppen.
+- **De herstart**: de pagina bleef open, en Home Assistant herstartte met `pm2 restart`. Daarna kwam er een antwoord
+  in het gesprek via een eigen websocket:
 
   ```
-  23:13:33 VOOR {"regel":"2 vragen lopen","stip":false} navigaties 2
-  23:13:35 HERSTART
-  23:13:56 TERUG {"regel":"2 vragen lopen","stip":false}
-  antwoord True 3
-  23:13:59 NA ANTWOORD {"regel":"1 nieuw antwoord","stip":true} navigaties 2
+  23:42:08 VOOR {"regel":"6 tickets lopen","stip":false} navigaties 2
+  23:42:10 HERSTART
+  23:42:32 TERUG {"regel":"6 tickets lopen","stip":false}
+  antwoord True 6
+  23:42:36 NA ANTWOORD {"regel":"1 nieuw antwoord","stip":true} navigaties 2
   ```
 
-  Het aantal navigaties bleef 2. Dat zijn de eerste lading en de herlading die Home Assistant zelf doet. De kaart herlaadde
-  dus niet; hij abonneerde zich opnieuw.
-- **Licht thema**: schermafdrukken van tegel, lijst en gesprek. Kaart en scherm staan op `dac-thema="licht"`.
+  Er zijn geen nieuwe navigaties bijgekomen. De kaart abonneerde zich opnieuw, zonder dat de pagina herlaadde.
+- **Licht thema**: kaart en scherm staan op `dac-thema="licht"`. Er zijn schermafdrukken van de tegel, de lijst en het
+  gesprek.
 
 ## Proeven
 
-`tests/js/bot-logica.test.mjs`, 17 proeven, allemaal **NIEUW GEDRAG**. Ze gaan over:
-- het abonnement: de beginlijst, een ticket dat verandert of erbij komt, en het contract;
-- gelezen per gebruiker;
+`tests/js/bot-logica.test.mjs`, 22 proeven, allemaal **NIEUW GEDRAG**. Ze gaan over:
+- het abonnement: gesprek en tickets apart, en `id` 0;
+- gelezen per gebruiker, en samen geteld;
 - de regel op de tegel, ook in het Engels;
-- de standen en soorten, ook onbekende;
-- nakijken voor versturen;
-- foutzinnen en tijden.
+- de standen, en de soorten (alleen storing en aanvraag);
+- nakijken voor versturen: een ticket met alleen een foto mag, met hoogstens vier;
+- foutzinnen;
+- de maat van een foto, en geen adres zonder een echt id;
+- tijden.
 
 Op de code van main bestaat `bot-logica.js` niet:
 
@@ -114,34 +142,44 @@ Op de code van main bestaat `bot-logica.js` niet:
 # Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../src/cards/bot-logica.js'
 ```
 
-Alles samen: 2422 JS-proeven groen. `check:taal`, `check:css`, `check:registratie`, `check:controls` en `verify` zijn
+Alles samen: 2427 JS-proeven groen. `check:taal`, `check:css`, `check:registratie`, `check:controls` en `verify` zijn
 ook groen. Python is niet veranderd.
 
-Het icoon `chat` staat op de vier plekken: de tekening, de groep, de zoekwoorden en `iconen.json`
-(`scripts/iconen-naar-paden.py`).
+`check:css` ving dat `accept="image/*"` in het sjabloon begint als een CSS-commentaar. Die waarde zet de kaart nu
+vanuit JavaScript.
+
+Het icoon `chat` staat op de vier plekken: de tekening, de groep, de zoekwoorden en `iconen.json`.
 
 ## Samenvatting
 
-Een nieuwe kaart `custom:domotiapp-bot-card`: één tegel en een scherm met de tickets van het huis, een gesprek, en een
-nieuwe vraag, aanvraag of storing. De tickets komen live van de coach (contract 1). Gemeten als telefoon met echte
-tikken en getypte spaties, over een herstart van Home Assistant heen, in licht en donker, en zonder coach.
+Een nieuwe kaart `custom:domotiapp-bot-card`: één tegel, en een scherm met twee tabbladen.
+- **Vragen** is één doorlopend gesprek over de installatie.
+- **Tickets** zijn storingen en aanvragen, met foto's.
+
+Alles komt live van de coach. Gemeten als telefoon met echte tikken en getypte spaties, met een echte foto van
+telefoonformaat, over een herstart van Home Assistant heen, in licht en donker, en zonder coach. Een fout gevonden en
+gerepareerd: "this.fotos_[e] is not iterable" na een vraag.
 
 ## Wat niet lukte
 
-- **Niet tegen de echte coach**: die heeft de tickets nog niet. De werkplaats bouwt ze als v0.220.0. Tot er een echte
-  dump is, gaat dit niet uit (CLAUDE.md, *Het contract met DomotiApp Coach*).
-- De editor (naam en icoon) is niet in een browser geopend. Er staan alleen standaardvelden in: een tekstveld van
-  `ha-form` en de icoonkiezer van de familie.
-- iOS zelf is niet gemeten. Het veld volgt de regels van valkuil 79, maar wat het toetsenbord met een venster van vaste
-  hoogte doet, laat Chrome niet zien.
+- **Niet tegen de echte coach**: die heeft het nog niet (v0.220.0). Tot er een echte dump is, gaat dit niet uit
+  (CLAUDE.md, *Het contract met DomotiApp Coach*).
+- **De editor** (naam en icoon) is niet in een browser geopend. Er staan alleen een standaard tekstveld en de
+  icoonkiezer van de familie in.
+- **iOS** zelf is niet gemeten:
+  - wat het toetsenbord met een venster van vaste hoogte doet;
+  - de camera als bron;
+  - een HEIC-foto. Safari levert normaal een JPEG aan; lukt verkleinen niet, dan gaat het origineel en beslist de coach.
+- **Het icoon van de knop Foto** is `camera`. Die tekening lijkt meer op een filmcamera dan op een fototoestel. Er is
+  geen eigen fototoestel-icoon.
 
 ## Aannames
 
-- Een tijd wordt getoond in de tijdzone van het toestel, niet die van Home Assistant. Voor een gesprek is dat wat de
-  klant verwacht.
-- De lijst sorteert op `bijgewerkt` en niet op nummer. Zo staat een ticket met een nieuw antwoord bovenaan.
-- `bij_beheerder` heet voor de klant "Ligt bij DomotiTech", zoals de werkmap voorstelde.
-- Het versienummer 0.124.0 in de commentaren is het volgende vrije. Komt er eerst een andere uitgave, dan schuift dat op.
+- Het gesprek hoort bij het huis, net als de tickets: iedereen in die Home Assistant ziet hetzelfde gesprek.
+- Een tijd staat in de tijdzone van het toestel, niet in die van Home Assistant.
+- In het gesprek kunnen geen foto's. Zo staat het in de afspraak: foto's zijn voor een ticket.
+- Het versienummer 0.124.0 in de commentaren is het volgende vrije. Komt er eerst een andere uitgave, dan schuift dat
+  op.
 
 ## git status --porcelain
 
@@ -149,16 +187,11 @@ Bij het schrijven van dit rapport, vóór de commit:
 
 ```
  M CLAUDE.md
- M custom_components/domotiapp_lovelace/afbeeldingen/iconen.json
  M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
- M src/editor/icoon-zoek.js
- M src/i18n/en.js
- M src/icons.js
- M src/index.js
-?? docs/bot-kaart/
-?? src/cards/bot-card.js
-?? src/cards/bot-logica.js
-?? src/cards/bot-scherm.js
-?? src/i18n/en/bot.js
-?? tests/js/bot-logica.test.mjs
+ M docs/bot-kaart/RAPPORT.md
+ M src/cards/bot-card.js
+ M src/cards/bot-logica.js
+ M src/cards/bot-scherm.js
+ M src/i18n/en/bot.js
+ M tests/js/bot-logica.test.mjs
 ```

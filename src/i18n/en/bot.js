@@ -8,12 +8,10 @@ export const BOT = {
     "This version of DomotiApp Coach does not know the bot yet. Update the coach.",
   "Leeg laten: Vraag het de DomotiTech Bot.": "Leave empty: Ask the DomotiTech Bot.",
   "DomotiApp Bot": "DomotiApp Bot",
-  "Vraag het de DomotiTech Bot: de klant stelt een vraag, doet een aanvraag of meldt een storing, en leest het antwoord. Werkt via DomotiApp Coach.":
-    "Ask the DomotiTech Bot: the customer asks a question, makes a request or reports a fault, and reads the answer. Works through DomotiApp Coach.",
+  "Vraag het de DomotiTech Bot: de klant stelt een vraag over de installatie, of maakt een ticket voor een storing of een aanvraag, met foto. Werkt via DomotiApp Coach.":
+    "Ask the DomotiTech Bot: the customer asks a question about the installation, or opens a ticket for a fault or a request, with a photo. Works through DomotiApp Coach.",
 
   // bot-logica.js
-  "Vraag": "Question",
-  "Hoe vol is mijn accu? Waarom ging de lamp aan?": "How full is my battery? Why did the light turn on?",
   "Aanvraag": "Request",
   "Iets erbij of iets anders: een lamp, een knop, een regel.": "Something new or something different: a light, a button, a rule.",
   "Storing": "Fault",
@@ -32,22 +30,36 @@ export const BOT = {
   "Versturen lukte niet.": "Sending failed.",
   "{n} nieuw antwoord": "{n} new answer",
   "{n} nieuwe antwoorden": "{n} new answers",
-  "{n} vraag loopt": "{n} open question",
-  "{n} vragen lopen": "{n} open questions",
+  "Ticket": "Ticket",
+  "Hoogstens {n} foto's per bericht.": "{n} photos per message at most.",
+  "De foto kon niet mee: {fout}": "The photo could not be sent: {fout}",
+  "{n} ticket loopt": "{n} open ticket",
+  "{n} tickets lopen": "{n} open tickets",
 
   // bot-scherm.js
-  "Nieuw": "New",
   "Versturen": "Send",
   "Typ je reactie": "Type your reply",
   "Wat wil je vragen of melden?": "What do you want to ask or report?",
   "{n} lopend · {m} in totaal": "{n} open · {m} in total",
-  "Een vraag, een aanvraag of een storing": "A question, a request or a fault",
   "Tickets ophalen…": "Fetching tickets…",
-  "Nog niets gevraagd. Met Nieuw stel je een vraag, doe je een aanvraag of meld je een storing.":
-    "Nothing asked yet. With New you ask a question, make a request or report a fault.",
   "nieuw antwoord": "new answer",
   "Ontvangen, we kijken ernaar.": "Received, we are looking into it.",
-  "Wat is het?": "What is it?",
+
+  "Vragen": "Questions",
+  "Tickets": "Tickets",
+  "Nieuw ticket": "New ticket",
+  "Foto": "Photo",
+  "Stel je vraag over de installatie": "Ask your question about the installation",
+  "Wat is er aan de hand, of wat wil je?": "What is going on, or what would you like?",
+  "Vraag het over je installatie": "Ask about your installation",
+  "Stel hier je vraag over de installatie, bijvoorbeeld: hoe vol is mijn accu? Werkt er iets niet, of wil je iets erbij? Maak dan een ticket.":
+    "Ask your question about the installation here, for example: how full is my battery? Is something not working, or do you want something added? Then open a ticket.",
+  "Storingen en aanvragen": "Faults and requests",
+  "Nog geen tickets. Werkt er iets niet, of wil je iets erbij? Maak dan een nieuw ticket.":
+    "No tickets yet. Is something not working, or do you want something added? Then open a new ticket.",
+  "Een storing of een aanvraag": "A fault or a request",
+  "Foto groot bekijken": "View photo large",
+  "Foto's versturen…": "Sending photos…",
 
   // editor/icoon-zoek.js
   "tekstballon": "speech bubble",
