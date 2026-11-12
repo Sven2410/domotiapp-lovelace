@@ -7,10 +7,15 @@
 | `bewaking/timeline` | iedere ingelogde gebruiker |
 | `bewaking/subscribe` | iedere ingelogde gebruiker |
 | `bewaking/verwijder` | iedere ingelogde gebruiker |
+| `bewaking/vergeet` | alleen een beheerder (sinds 0.123.0) |
 
 Niet admin-only, om dezelfde reden als bij de scenes: de klant draait Fully
 Kiosk met een niet-adminaccount en moet zijn eigen camerakaart kunnen
 instellen.
+
+`vergeet` is de uitzondering. Het haalt de regel van een camera helemaal weg,
+ook van een camera die niet meer bestaat. Het is er voor het beheer, niet voor de
+kaart: een kaart die een camera kwijt is, zet zijn regel gewoon uit.
 
 ## De URL van een beeld wordt hier ondertekend en niet in de kaart samengesteld
 
@@ -72,6 +77,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_timeline)
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_verwijder)
+    websocket_api.async_register_command(hass, ws_vergeet)
 
     data[DATA_WS_REGISTERED] = True
     _LOGGER.debug("Bewakingscommando's geregistreerd")
@@ -211,6 +217,36 @@ async def ws_save(
 
     meld_meldingen(hass, SOORT_CAMERA)
     connection.send_result(msg["id"], {"regel": regel.als_dict()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/bewaking/vergeet",
+        vol.Required("camera"): cv.entity_id,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_vergeet(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Haal de regel van één camera weg. De beelden die er al zijn blijven staan, en ruimen vanzelf op."""
+    data = hass.data.get(DOMAIN, {})
+    regels = data.get(DATA_REGELS)
+    if regels is None:
+        connection.send_error(msg["id"], "not_loaded", t(hass, "De integratie is niet geladen"))
+        return
+    if not await regels.async_verwijder(msg["camera"]):
+        connection.send_error(msg["id"], "not_found", t(hass, "Voor deze camera is geen regel"))
+        return
+    if (motor := data.get(DATA_MOTOR)) is not None:
+        motor.async_herzie()
+    async_meld_aan_abonnees(hass, EVENT_REGELS, {"camera": msg["camera"]})
+    from ..meldingen.const import SOORT_CAMERA  # noqa: PLC0415
+    from ..meldingen.websocket import async_meld_aan_abonnees as meld_meldingen  # noqa: PLC0415
+
+    meld_meldingen(hass, SOORT_CAMERA)
+    connection.send_result(msg["id"], {"camera": msg["camera"]})
 
 
 @websocket_api.websocket_command(
