@@ -32,6 +32,7 @@ import { vraagBevestiging } from "../vraag.js";
 import {
   alleenRolluiken,
   alleenSpeakers,
+  favorietOnder,
   favorietenVoor,
   lampenKort,
   lampenUit,
@@ -348,7 +349,7 @@ class AutomatiseringCard extends DacCard {
           <span class="ico">${resolve(f.icoon, "star")}</span>
           <span class="txt">
             <span class="nm">${escapeHtml(f.naam)}</span>
-            <span class="lp">${escapeHtml(lampenKort(f, this.lampen_(), naamVan))}</span>
+            <span class="lp">${escapeHtml(favorietOnder(f, this.lampen_(), naamVan))}</span>
           </span>
           <button class="weg" type="button" aria-label="${escapeHtml(t("Verwijderen"))}">${resolve("bin")}</button>
         </div>`

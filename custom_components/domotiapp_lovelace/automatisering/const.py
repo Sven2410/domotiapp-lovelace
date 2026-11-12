@@ -59,6 +59,11 @@ MAX_URI = 500
 # begint, is erger dan stilte. Een paar minuten mag, want een tik kan net na de herstart vallen.
 MEDIA_INHAAL_MIN = 5
 
+# Een favoriet kan na een tijd nog iets doen (sinds 0.122.0): `daarna`, stappen met elk `na` minuten na de tik. De
+# eigenaar, 12 november 2026: "ik wil dat als optie hebben na zoveel tijd ook iets aan of uit". Zie `Motor.plan_favoriet`.
+MAX_STAPPEN = 10
+MAX_NA_MIN = 24 * 60
+
 # Een grens zodat een open commando de opslag niet vol kan schrijven.
 MAX_REGELS = 200
 MAX_FAVORIETEN = 50

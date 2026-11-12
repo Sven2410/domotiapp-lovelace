@@ -999,6 +999,10 @@ je niet hoort terug te draaien zonder het te vragen:
   `wind_sensor` en `wind_max` (km/h, standaard 30) op de kaart. Niet uitrollen boven de grens of zonder bruikbare meting; intrekken
   één keer bij het overschrijden, en bij harde wind na een herstart. Het voorbeeld laat ze met rust. Zonder windsensor geen grens: dat
   is de keuze van de beheerder.
+- **Een favoriet kan stappen hebben** (sinds 0.122.0, `daarna` met `na` minuten na de tik). De eigenaar: "na zoveel tijd ook
+  iets aan of uit". Bij de tik komt elke stap met zijn TIJDSTIP in de opslag (`gepland`), en pas dan een wekker; na een
+  herstart zet de motor ze terug en doet wat gemist is met de grenzen van een regel (`doelen_van_stap`). Alleen een wekker
+  zonder opslag overleeft een herstart niet. In het scherm zijn het onderdelen, met de tik als stap 1.
 - **Het voorbeeld draait in de browser, niet in de motor** (sinds 0.95.0). Het zet de lampen zoals de
   regel straks doet, en zet ze terug bij stoppen, sluiten en opslaan. Gaat de pagina dicht, dan
   blijven ze staan; dat is bewust geen timer of servertaak.

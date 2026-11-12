@@ -497,7 +497,7 @@ export function helderheidTekst(regel) {
  */
 
 /** Wat bij een onderdeel hoort; de rest is van de regel. */
-export const DEEL_VELDEN = ["lampen", "helderheden", "helderheid", "aan", "uit", "media"];
+export const DEEL_VELDEN = ["lampen", "helderheden", "helderheid", "aan", "uit", "media", "na"];
 
 /** De onderdelen van een regel. Een regel zonder `delen` is er één. */
 export function onderdelenVan(regel) {
@@ -743,12 +743,73 @@ export function metVinkje(favoriet, lampen, buiten, sleutel, aan) {
   return { ...favoriet, lampen: lijst, helderheden: per };
 }
 
-/** Wat er naar de server gaat. 0 is uit of dicht; iets zonder schuif op een andere stand is gewoon aan. */
-export function favorietNaarServer(favoriet, dimt = () => true) {
-  const per = favoriet.helderheden ?? {};
+/**
+ * Stappen (sinds 0.122.0). De eigenaar, 12 november 2026: "ik wil dat als optie hebben na zoveel tijd ook iets aan of
+ * uit". Een favoriet zet bij de tik zijn lampen; elke stap in `daarna` doet dat nog een keer, `na` minuten later. In het
+ * scherm zijn het onderdelen, net als bij een regel, met de tik als eerste. De server plant ze; zie de kop van
+ * `automatisering/motor.py`.
+ */
+
+/** Wat de stapper voor "na" aanbiedt, in minuten. */
+export const NA_STAPPEN = [1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720, 1440];
+export const NA_STANDAARD = 10;
+
+/** De stappen van een favoriet: de tik zelf, en wat er daarna komt. */
+export function stappenVan(favoriet) {
+  const eerste = Object.fromEntries(
+    DEEL_VELDEN.filter((k) => k !== "na" && favoriet?.[k] !== undefined).map((k) => [k, favoriet[k]])
+  );
+  return [eerste, ...(favoriet?.daarna ?? []).map((s) => ({ ...s }))];
+}
+
+/** Eén stap verder op de stapper; een waarde ertussen gaat naar de dichtstbijzijnde stap in die richting. */
+export function stapNa(na, richting) {
+  const nu = na ?? NA_STANDAARD;
+  if (richting > 0) return NA_STAPPEN.find((m) => m > nu) ?? NA_STAPPEN.at(-1);
+  return [...NA_STAPPEN].reverse().find((m) => m < nu) ?? NA_STAPPEN[0];
+}
+
+/**
+ * Een nieuwe stap: wat de vorige aan zette, gaat uit. Dat is het gewone geval (de overloop aan, en straks weer uit), en
+ * wat er anders moet, past de klant aan.
+ */
+export function nieuweStap(vorige) {
+  const per = vorige?.helderheden ?? {};
+  const lampen = (vorige?.lampen ?? []).filter((l) => per[l] !== 0);
+  return { na: NA_STANDAARD, lampen, helderheden: Object.fromEntries(lampen.map((l) => [l, 0])) };
+}
+
+/** Wat een stap doet, in een woord: "uit", "aan" of "aan en uit" (bij rolluiken open en dicht). */
+export function stapStand(stap) {
+  const lampen = stap.lampen ?? [];
+  if (!lampen.length) return "";
+  const waarden = lampen.map((l) => stap.helderheden?.[l] ?? 100);
+  const rolluiken = alleenRolluiken(lampen);
+  if (waarden.every((w) => w === 0)) return rolluiken ? t("dicht") : t("uit");
+  if (waarden.every((w) => w !== 0)) return rolluiken ? t("open") : t("aan");
+  return rolluiken ? t("open en dicht") : t("aan en uit");
+}
+
+/** De regel onder een stap: "Meteen" of "Na 10 min", en wat hij doet. */
+export function stapTekst(stap, eerste = false) {
+  const wanneer = eerste ? t("Meteen") : t("Na {duur}", { duur: duurTekst(stap.na ?? NA_STANDAARD) });
+  return [wanneer, stapStand(stap)].filter(Boolean).join(" · ");
+}
+
+/** Onder de naam in de lijst: de lampen, en wat er later nog komt ("na 10 min uit"). */
+export function favorietOnder(favoriet, lampen, naamVan = (id) => id) {
+  const later = (favoriet.daarna ?? []).map((s) =>
+    [t("na {duur}", { duur: duurTekst(s.na) }), stapStand(s)].filter(Boolean).join(" ")
+  );
+  return [lampenKort(favoriet, lampen, naamVan), ...later].join(" · ");
+}
+
+/** Eén stap zoals de server hem kent. 0 is uit of dicht; iets zonder schuif op een andere stand is gewoon aan. */
+function stapNaarServer(stap, dimt) {
+  const per = stap.helderheden ?? {};
   const helderheden = {};
-  const muziek = muziekVan(favoriet, true);
-  for (const lamp of favoriet.lampen) {
+  const muziek = muziekVan(stap, true);
+  for (const lamp of stap.lampen) {
     if (isSpeaker(lamp)) {
       helderheden[lamp] = muziek.stoppen ? 0 : muziek.volume;
       continue;
@@ -756,14 +817,19 @@ export function favorietNaarServer(favoriet, dimt = () => true) {
     const pct = per[lamp] ?? 100;
     if (pct === 0 || dimt(lamp)) helderheden[lamp] = pct;
   }
-  const media = speeltAf({ ...favoriet, favoriet: true }) ? mediaUit(favoriet.media) : null;
+  const media = speeltAf({ ...stap, favoriet: true }) ? mediaUit(stap.media) : null;
+  return { lampen: stap.lampen, helderheden, ...(media ? { media } : {}) };
+}
+
+/** Wat er naar de server gaat: de tik, en de stappen daarna met hun `na`. */
+export function favorietNaarServer(favoriet, dimt = () => true) {
+  const daarna = (favoriet.daarna ?? []).map((s) => ({ na: s.na ?? NA_STANDAARD, ...stapNaarServer(s, dimt) }));
   return {
     ...(favoriet.id ? { id: favoriet.id } : {}),
     naam: String(favoriet.naam ?? "").trim(),
     icoon: favoriet.icoon || FAVORIET_ICONEN[0],
-    lampen: favoriet.lampen,
-    helderheden,
-    ...(media ? { media } : {}),
+    ...stapNaarServer(favoriet, dimt),
+    ...(daarna.length ? { daarna } : {}),
   };
 }
 
@@ -798,8 +864,13 @@ function deelWaaromNiet(deel) {
 export function waaromNiet(regel) {
   if (regel.favoriet) {
     if (!String(regel.naam ?? "").trim()) return t("Geef de favoriet een naam.");
-    if (!regel.lampen?.length) return t("Kies minstens één lamp.");
-    if (speeltAf(regel) && !regel.media?.uri) return t("Kies wat er moet spelen.");
+    const stappen = stappenVan(regel);
+    for (const [i, stap] of stappen.entries()) {
+      let reden = null;
+      if (!stap.lampen?.length) reden = t("Kies minstens één lamp.");
+      else if (speeltAf({ ...stap, favoriet: true }) && !stap.media?.uri) reden = t("Kies wat er moet spelen.");
+      if (reden) return stappen.length > 1 ? t("Stap {n}: {reden}", { n: i + 1, reden }) : reden;
+    }
     return null;
   }
   const delen = onderdelenVan(regel);

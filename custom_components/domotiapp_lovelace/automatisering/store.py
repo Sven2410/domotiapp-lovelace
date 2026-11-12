@@ -8,6 +8,7 @@
 | `laatst` | tot waar de klok is gekomen; zie hieronder |
 | `brandt` | de regels die hun lamp aan zetten en nog niet uit |
 | `licht` | per moment op de lichtsterkte: wat de sensor de vorige keer zei (`was`) en de dag dat het gebeurde (`gedaan`); zie licht.py |
+| `gepland` | de stappen van een favoriet die nog moeten komen: `{sleutel, favoriet, op, lampen, helderheden, media}`; zie motor.py |
 
 **`laatst` wordt niet elke minuut weggeschreven**, want dat is elke minuut naar de
 schijf van een Raspberry Pi. Hij gaat mee zodra er iets uitgevoerd of gewijzigd
@@ -48,7 +49,7 @@ class AutomatiseringOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}}
+        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": []}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -67,6 +68,10 @@ class AutomatiseringOpslag:
             self._data["brandt"] = [str(x) for x in rauw["brandt"]]
         if isinstance(rauw.get("licht"), dict):
             self._data["licht"] = {str(k): v for k, v in rauw["licht"].items() if isinstance(v, dict)}
+        if isinstance(rauw.get("gepland"), list):
+            self._data["gepland"] = [
+                g for g in rauw["gepland"] if isinstance(g, dict) and g.get("sleutel") and isinstance(g.get("op"), str)
+            ]
 
     @callback
     def _bewaar(self) -> None:
@@ -136,8 +141,27 @@ class AutomatiseringOpslag:
         if len(over) == len(lijst):
             return False
         self._data["favorieten"] = over
+        # Wat hij nog zou doen, vervalt met hem.
+        self._data["gepland"] = [g for g in self._data["gepland"] if g.get("favoriet") != favoriet_id]
         self._bewaar()
         return True
+
+    # ---------------------------------------------------- geplande stappen
+
+    @property
+    def gepland(self) -> list[dict[str, Any]]:
+        return list(self._data["gepland"])
+
+    @callback
+    def zet_gepland(self, favoriet_id: str, stappen: list[dict[str, Any]]) -> None:
+        """De stappen van deze favoriet; wat hij eerder plande, vervalt. Meteen weg, zodat een herstart ze kent."""
+        self._data["gepland"] = [g for g in self._data["gepland"] if g.get("favoriet") != favoriet_id] + stappen
+        self._bewaar()
+
+    @callback
+    def gepland_gedaan(self, sleutel: str) -> None:
+        self._data["gepland"] = [g for g in self._data["gepland"] if g.get("sleutel") != sleutel]
+        self._bewaar()
 
     # ------------------------------------------------------------------ stand
 

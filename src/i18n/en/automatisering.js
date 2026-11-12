@@ -156,6 +156,20 @@ export const AUTOMATISERING = {
   "Onderdeel toevoegen, met eigen tijden": "Add a part with its own times",
   "Onderdeel weghalen": "Remove part",
   "Onderdeel {n}": "Part {n}",
+
+  // Stappen van een favoriet (0.122.0)
+  "dicht": "closed",
+  "open en dicht": "open and closed",
+  "aan en uit": "on and off",
+  "Meteen": "Right away",
+  "Na {duur}": "After {duur}",
+  "na {duur}": "after {duur}",
+  "Stap {n}: {reden}": "Step {n}: {reden}",
+  "Stappen": "Steps",
+  "Stap toevoegen": "Add a step",
+  "Stap weghalen": "Remove step",
+  "Daarna nog iets doen, na een tijd": "Do something else afterwards, after a while",
+  "Stap {n}": "Step {n}",
   "Onderdeel {n}: {reden}": "Part {n}: {reden}",
   "Nog niets gekozen": "Nothing chosen yet",
   // Lichtsterkte (0.103.0)
