@@ -68,7 +68,9 @@ export function standaardIconen(attrs = {}, poort = false) {
 
 /** Wat er op de twee knoppen staat. Een poort schuift opzij; een pijl omhoog liegt daarover. */
 export const knopTekst = (poort) =>
-  poort ? { open: t("Openen"), close: t("Sluiten") } : { open: t("Open"), close: tc("knop", "Dicht") };
+  poort
+    ? { open: t("Openen"), close: t("Sluiten"), puls: t("Openen / sluiten") }
+    : { open: t("Open"), close: tc("knop", "Dicht"), puls: t("Open / dicht") };
 
 /** De toestand zoals Home Assistant hem meldt, omgedraaid als het moet. */
 const OMGEKEERD = { open: "closed", closed: "open", opening: "closing", closing: "opening" };
@@ -85,8 +87,26 @@ export const toestandUit = (state, omgekeerd) =>
 export const keerPositie = (pos, omgekeerd) =>
   omgekeerd && pos != null ? 100 - pos : pos;
 
-/** Welke dienst een knop aanroept. */
+/**
+ * Werkt deze regel met één puls? Sinds 0.121.0.
+ *
+ * Een poort op een pulsrelais (een PalGate bijvoorbeeld): één puls opent, de
+ * volgende sluit. De integratie belooft dan vaak OPEN, CLOSE en STOP, maar kan
+ * alleen `open_cover`; `close_cover` geeft in Home Assistant een
+ * NotImplementedError. Aan `supported_features` is dat dus niet te zien, en
+ * daarom is het een vinkje. Er is één knop, die altijd `open_cover` stuurt,
+ * zonder stop, schuif en statusregel: zo'n integratie meldt na de puls
+ * "opening" en daarna nooit meer iets.
+ */
+export const isPuls = (cover, config) => Boolean(optie(cover, config, "puls"));
+
+/** Welke knoppen er op een regel staan. */
+export const knoppen = ({ puls = false, stop = true } = {}) =>
+  puls ? ["puls"] : stop ? ["open", "stop", "close"] : ["open", "close"];
+
+/** Welke dienst een knop aanroept. Een puls is altijd openen, ook bij een omgekeerde motor. */
 export function dienstVoor(actie, omgekeerd) {
+  if (actie === "puls") return "open_cover";
   if (actie === "stop") return "stop_cover";
   const open = actie === "open";
   return (omgekeerd ? !open : open) ? "open_cover" : "close_cover";

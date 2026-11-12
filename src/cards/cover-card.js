@@ -22,6 +22,10 @@
  * van pijlen, want een poort schuift opzij), `invert` (de motor is omgekeerd
  * aangesloten) en een eigen naam. Het rekenwerk daarachter staat los in
  * `cover-logica.js`, met een gewone Node-test eromheen.
+ *
+ * Sinds 0.121.0 ook `puls`: een poort op een pulsrelais, met één knop die
+ * altijd openen stuurt. Zie `isPuls` in `cover-logica.js` waarom dat een vinkje
+ * is en niet uit `supported_features` volgt.
  */
 
 import { DacCard, registerCard, registerEditor, rowsFor, toneValue, INCOMPLETE } from "../base.js";
@@ -37,8 +41,10 @@ import {
   getoondeStand,
   isOmgekeerd,
   isPoort,
+  isPuls,
   kaartHoogte,
   keerPositie,
+  knoppen,
   knopTekst,
   standaardIconen,
   statusTekst,
@@ -138,16 +144,21 @@ class CoverCard extends DacCard {
     return this.config.covers.map((c) => c.entity);
   }
 
-  keysHtml(withStop, poort) {
+  keysHtml(withStop, poort, puls) {
     const tekst = knopTekst(poort);
-    const knop = (act, naam, teken) =>
-      `<button type="button" class="${poort ? "tekst" : ""}" data-act="${act}" ` +
-      `aria-label="${naam}">${teken}</button>`;
+    const woorden = poort || puls;
+    const teken = { open: icons.arrowUp, stop: icons.stop, close: icons.arrowDown };
+    const knop = (act) => {
+      const naam = act === "stop" ? t("Stop") : tekst[act];
+      const metTekst = woorden && act !== "stop";
+      return (
+        `<button type="button" class="${metTekst ? "tekst" : ""}" data-act="${act}" ` +
+        `aria-label="${naam}">${metTekst ? naam : teken[act]}</button>`
+      );
+    };
     return `
-      <div class="keys${poort ? " woorden" : ""}">
-        ${knop("open", tekst.open, poort ? tekst.open : icons.arrowUp)}
-        ${withStop ? `<button type="button" data-act="stop" aria-label="${t("Stop")}">${icons.stop}</button>` : ""}
-        ${knop("close", tekst.close, poort ? tekst.close : icons.arrowDown)}
+      <div class="keys${woorden ? " woorden" : ""}">
+        ${knoppen({ puls, stop: withStop }).map(knop).join("")}
       </div>`;
   }
 
@@ -161,7 +172,7 @@ class CoverCard extends DacCard {
       <div class="cv" data-i="${i}" data-shown="closed" style="--tone:${toneValue(cv.tone ?? c.tone, "solar")}">
         <button class="chip" type="button" aria-label="${t("Meer info")}"></button>
         <div class="txt"><div class="nm"></div><div class="st"></div></div>
-        ${this.keysHtml(c.show_stop !== false, isPoort(cv, c))}
+        ${this.keysHtml(c.show_stop !== false, isPoort(cv, c), isPuls(cv, c))}
         <div class="pos" hidden></div>
       </div>`
       )
@@ -192,7 +203,8 @@ class CoverCard extends DacCard {
             entity_id: cfg.entity,
           });
 
-          if (act === "stop") return;
+          // Een puls zegt niets over de richting, dus ook geen aanname.
+          if (act === "stop" || act === "puls") return;
           this.assumed_.set(i, act === "open" ? "open" : "closed");
           this.paint();
         });
@@ -216,12 +228,15 @@ class CoverCard extends DacCard {
       const dead = !st || st.state === "unavailable";
       const omgekeerd = isOmgekeerd(cfg, this.config);
       const poort = isPoort(cfg, this.config);
-      const state = toestandUit(st?.state ?? "unknown", omgekeerd);
+      const puls = isPuls(cfg, this.config);
+      // Na een puls blijft zo'n integratie eeuwig op "opening" staan. Die
+      // toestand is dus geen meting, en het icoon blijft in rust.
+      const state = puls ? "unknown" : toestandUit(st?.state ?? "unknown", omgekeerd);
 
       cvEl.classList.toggle("unavailable", dead);
       cvEl.querySelector(".nm").textContent = nameOf(this.hass, cfg.entity, cfg.name);
 
-      const hasPos = can(st, F.SET_POSITION) && attrs.current_position != null;
+      const hasPos = !puls && can(st, F.SET_POSITION) && attrs.current_position != null;
       const positie = hasPos ? keerPositie(attrs.current_position, omgekeerd) : null;
 
       const shown = getoondeStand({ state, positie, aanname: this.assumed_.get(i) });
@@ -241,7 +256,7 @@ class CoverCard extends DacCard {
 
       const stEl = cvEl.querySelector(".st");
       if (!this.dragging_.has(i)) {
-        stEl.textContent = statusTekst({ dood: dead, state, positie, toon: this.toonStatus_() });
+        stEl.textContent = statusTekst({ dood: dead, state, positie, toon: this.toonStatus_() && !puls });
       }
 
       cvEl.querySelectorAll(".keys button").forEach((b) => {
@@ -303,7 +318,9 @@ class CoverCard extends DacCard {
     return rowsFor(
       kaartHoogte({
         aantal: list.length,
-        kanPositie: list.some((c) => can(stateOf(this.hass, c.entity), F.SET_POSITION)),
+        kanPositie: list.some(
+          (c) => !isPuls(c, this.config) && can(stateOf(this.hass, c.entity), F.SET_POSITION)
+        ),
         toonPositie: this.config?.show_position,
       })
     );
@@ -363,6 +380,7 @@ class CoverEditor extends DacEditor {
       if (c.name) flat[`naam:${c.entity}`] = c.name;
       if (c.poort) flat[`poort:${c.entity}`] = true;
       if (c.invert) flat[`invert:${c.entity}`] = true;
+      if (c.puls) flat[`puls:${c.entity}`] = true;
     }
     super.setConfig(flat);
   }
@@ -375,9 +393,10 @@ class CoverEditor extends DacEditor {
       if (uit[`naam:${id}`]) extra.name = uit[`naam:${id}`];
       if (uit[`poort:${id}`]) extra.poort = true;
       if (uit[`invert:${id}`]) extra.invert = true;
+      if (uit[`puls:${id}`]) extra.puls = true;
       return Object.keys(extra).length ? { entity: id, ...extra } : id;
     });
-    for (const k of Object.keys(uit)) if (/^(naam|poort|invert):/.test(k)) delete uit[k];
+    for (const k of Object.keys(uit)) if (/^(naam|poort|invert|puls):/.test(k)) delete uit[k];
     return uit;
   }
 
@@ -398,7 +417,9 @@ class CoverEditor extends DacEditor {
       ...ids.flatMap((id) => [
         { name: `naam:${id}`, selector: sel.text() },
         { name: `poort:${id}`, selector: sel.bool() },
-        { name: `invert:${id}`, selector: sel.bool() },
+        { name: `puls:${id}`, selector: sel.bool() },
+        // Bij een puls is er geen richting om te draaien.
+        ...(this.config_?.[`puls:${id}`] ? [] : [{ name: `invert:${id}`, selector: sel.bool() }]),
       ]),
       { name: "show_stop", selector: sel.bool() },
       { name: "show_state", selector: sel.bool() },
@@ -421,6 +442,7 @@ class CoverEditor extends DacEditor {
     if (s.name.startsWith("poort:")) return t("{naam} is een poort", { naam: this.naamVan_(s.name.slice(6)) });
     if (s.name.startsWith("invert:"))
       return t("{naam} omgekeerd aangesloten", { naam: this.naamVan_(s.name.slice(7)) });
+    if (s.name.startsWith("puls:")) return t("{naam} werkt met één puls", { naam: this.naamVan_(s.name.slice(5)) });
     return (
       {
         covers: t("Rolluiken"),
@@ -438,6 +460,10 @@ class CoverEditor extends DacEditor {
     if (s.name.startsWith("poort:"))
       return t(
         "Zet pijltjes om in Openen en Sluiten, en geeft een poorticoon. Een poort schuift opzij, dus omhoog en omlaag zeggen er niets over."
+      );
+    if (s.name.startsWith("puls:"))
+      return t(
+        "Voor een poort met één knop: elke puls opent of sluit. Dan staat er één knop die altijd openen stuurt, zonder stop, schuif en status."
       );
     if (s.name.startsWith("invert:"))
       return t(
