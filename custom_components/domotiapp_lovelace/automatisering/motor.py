@@ -22,6 +22,14 @@ regel om 23:00 uit had gemoeten. Een lamp die iemand anders aan zette, blijft er
 af: de uit van een gepauzeerde regel hoort de lamp van een vakantieregel niet uit
 te doen.
 
+## Een favoriet met stappen
+
+Sinds 0.122.0 kan een favoriet na een tijd nog iets doen (`daarna`): Slapen zet de lampen beneden uit en de overloop aan,
+en tien minuten later de overloop weer uit. Bij de tik komen die stappen met hun TIJDSTIP in de opslag (`gepland`), en
+pas daarna een wekker. Na een herstart zet de motor de wekkers terug, en doet hij wat er tijdens de herstart had moeten
+gebeuren alsnog, met dezelfde grenzen als bij een regel (`doelen_van_stap`). Nog een tik op dezelfde favoriet: wat hij
+eerder plande vervalt, en de nieuwe tijden gelden.
+
 ## Een gekoppelde vakantiestand
 
 Heeft de klant al een eigen stand (`vakantie_entiteit` in de kaartconfig), dan
@@ -42,6 +50,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_ON
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers.event import (
     async_call_later,
+    async_track_point_in_utc_time,
     async_track_state_change_event,
     async_track_time_change,
     async_track_time_interval,
@@ -66,6 +75,22 @@ from .store import AutomatiseringOpslag
 _LOGGER = logging.getLogger(__name__)
 
 EVENT_LOVELACE_UPDATED = "lovelace_updated"
+
+
+def doelen_van_stap(stap: dict[str, Any], toegestaan: set[str], laat: timedelta) -> dict[str, int | None]:
+    """Wat een geplande stap nu nog zet. `laat` is hoe ver hij over zijn tijd is, na een herstart.
+
+    Dezelfde grenzen als bij een regel: uit en dicht tot een etmaal, aan tot een paar uur, muziek alleen vlak na de tijd.
+    """
+    per = stap.get("helderheden") or {}
+    doelen = {lamp: per.get(lamp) for lamp in stap.get("lampen") or [] if lamp in toegestaan}
+    if laat > timedelta(hours=INHAAL_UIT_UUR):
+        return {}
+    if laat > timedelta(hours=INHAAL_AAN_UUR):
+        doelen = {lamp: pct for lamp, pct in doelen.items() if pct == 0}
+    if laat > timedelta(minutes=MEDIA_INHAAL_MIN):
+        doelen = {lamp: pct for lamp, pct in doelen.items() if pct == 0 or not lamp.startswith("media_player.")}
+    return doelen
 
 
 def lampen_uit(kaart: dict[str, Any]) -> list[str]:
@@ -108,6 +133,8 @@ class Motor:
         self._koppeling_uit: CALLBACK_TYPE | None = None
         self._klaar = False
         self._volgers: list[Callable[[], None]] = []
+        # De wekker van elke geplande stap, op zijn sleutel. De stap zelf staat in de opslag.
+        self._wekkers: dict[str, CALLBACK_TYPE] = {}
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -125,6 +152,9 @@ class Motor:
             self._uit.pop()()
         self._koppel_los()
         self._volg_wind(None)
+        for uit in self._wekkers.values():
+            uit()
+        self._wekkers.clear()
 
     @callback
     def _gestart(self, _hass: HomeAssistant) -> None:
@@ -138,6 +168,8 @@ class Motor:
             if self.wind_sensor and (kmh := wind.kmh_van(self.hass, self.wind_sensor)) is not None and kmh > self.wind_max:
                 self._trek_in(kmh)
             self._tik(dt_util.utcnow())
+            for stap in self.opslag.gepland:
+                self._zet_wekker(stap)
 
         self._uit.append(async_call_later(self.hass, INHAAL_NA_SEC, nu))
 
@@ -288,7 +320,62 @@ class Motor:
         doelen = {lamp: per_lamp.get(lamp) for lamp in favoriet["lampen"] if lamp in self.toegestaan}
         _LOGGER.debug("Favoriet %s: %s", favoriet["id"], doelen)
         self._schakel(doelen, favoriet.get("media"))
+        self.plan_favoriet(favoriet)
         return len(doelen)
+
+    @callback
+    def plan_favoriet(self, favoriet: dict[str, Any]) -> None:
+        """De stappen na de tik: eerst in de opslag, dan een wekker. Wat deze favoriet eerder plande, vervalt."""
+        self.vergeet_favoriet(favoriet["id"], opslag=False)
+        nu = dt_util.utcnow()
+        stappen = [
+            {
+                "sleutel": f"{favoriet['id']}:{i}",
+                "favoriet": favoriet["id"],
+                "op": (nu + timedelta(minutes=stap["na"])).isoformat(),
+                "lampen": stap["lampen"],
+                "helderheden": stap.get("helderheden") or {},
+                "media": stap.get("media"),
+            }
+            for i, stap in enumerate(favoriet.get("daarna") or [])
+        ]
+        self.opslag.zet_gepland(favoriet["id"], stappen)
+        for stap in stappen:
+            self._zet_wekker(stap)
+
+    @callback
+    def vergeet_favoriet(self, favoriet_id: str, opslag: bool = True) -> None:
+        """Geen stappen meer van deze favoriet: hij is weg, of hij begint opnieuw."""
+        for sleutel in [s for s in self._wekkers if s.split(":")[0] == favoriet_id]:
+            self._wekkers.pop(sleutel)()
+        if opslag:
+            self.opslag.zet_gepland(favoriet_id, [])
+
+    @callback
+    def _zet_wekker(self, stap: dict[str, Any]) -> None:
+        if stap["sleutel"] in self._wekkers or (op := dt_util.parse_datetime(stap["op"])) is None:
+            return
+
+        @callback
+        def gaat(_: datetime) -> None:
+            self._wekkers.pop(stap["sleutel"], None)
+            self._voer_stap_uit(stap, dt_util.utcnow() - op)
+
+        if op <= dt_util.utcnow():
+            # Had al moeten gebeuren, tijdens een herstart.
+            gaat(dt_util.utcnow())
+            return
+        self._wekkers[stap["sleutel"]] = async_track_point_in_utc_time(self.hass, gaat, op)
+
+    @callback
+    def _voer_stap_uit(self, stap: dict[str, Any], laat: timedelta) -> None:
+        self.opslag.gepland_gedaan(stap["sleutel"])
+        doelen = doelen_van_stap(stap, self.toegestaan, laat)
+        if laat > timedelta(minutes=1):
+            _LOGGER.info("Favoriet %s: stap van %s alsnog, %s te laat", stap["favoriet"], stap["op"], laat)
+        _LOGGER.debug("Favoriet %s, stap %s: %s", stap["favoriet"], stap["sleutel"], doelen)
+        if doelen:
+            self._schakel(doelen, stap.get("media"))
 
     @callback
     def _schakel(self, doelen: dict[str, int | None], media: dict[str, Any] | None = None) -> None:

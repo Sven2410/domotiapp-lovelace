@@ -29,8 +29,10 @@ from .const import (
     MAX_DELEN,
     MAX_FAVORIETEN,
     MAX_LAMPEN_PER_REGEL,
+    MAX_NA_MIN,
     MAX_NAAM,
     MAX_LUX,
+    MAX_STAPPEN,
     MAX_REGELS,
     MAX_URI,
     MAX_VERSCHIL_MIN,
@@ -79,6 +81,16 @@ _MEDIA = vol.Schema(
 )
 _APPARATEN = vol.All([_APPARAAT], vol.Length(min=1, max=MAX_LAMPEN_PER_REGEL))
 
+# Een stap van een favoriet die later komt (sinds 0.122.0): `na` minuten na de tik. Zie de kop van motor.py.
+_STAP = vol.Schema(
+    {
+        vol.Required("na"): vol.All(int, vol.Range(min=1, max=MAX_NA_MIN)),
+        vol.Required("lampen"): _APPARATEN,
+        vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},
+        vol.Optional("media"): vol.Any(None, _MEDIA),
+    }
+)
+
 _FAVORIET = vol.Schema(
     {
         vol.Optional("id"): cv.string,
@@ -88,6 +100,7 @@ _FAVORIET = vol.Schema(
         # 0 is uit of dicht. Een lamp die er niet in staat, gaat alleen aan. Bij een speaker is het het volume, en 0 stoppen.
         vol.Optional("helderheden", default=dict): {_APPARAAT: vol.All(int, vol.Range(min=0, max=100))},
         vol.Optional("media"): vol.Any(None, _MEDIA),
+        vol.Optional("daarna", default=list): vol.All([_STAP], vol.Length(max=MAX_STAPPEN)),
     }
 )
 
@@ -129,6 +142,21 @@ def _met_media(nieuw: dict[str, Any]) -> dict[str, Any]:
     if nieuw.get("media") and any(lamp.startswith("media_player.") for lamp in nieuw["lampen"]):
         return {"media": nieuw["media"]}
     return {"media": None} if "media" in nieuw else {}
+
+
+def _alle_lampen(favoriet: dict[str, Any]) -> set[str]:
+    """De lampen van een favoriet, met die van zijn latere stappen."""
+    return set(favoriet["lampen"]) | {lamp for stap in favoriet.get("daarna") or [] for lamp in stap["lampen"]}
+
+
+def _stap(nieuw: dict[str, Any]) -> dict[str, Any]:
+    """Wat er van een latere stap in de opslag komt."""
+    return {
+        "na": nieuw["na"],
+        "lampen": nieuw["lampen"],
+        "helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]},
+        **_met_media(nieuw),
+    }
 
 
 def _deel(nieuw: dict[str, Any]) -> dict[str, Any]:
@@ -363,9 +391,9 @@ def ws_favoriet_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
         return
     nieuw = msg["favoriet"]
     bestaand = next((f for f in motor.opslag.favorieten if f["id"] == nieuw.get("id")), None)
-    # Dezelfde grens als bij een regel: wat al in deze favoriet stond, mag blijven.
-    mag = motor.toegestaan | set(bestaand["lampen"] if bestaand else [])
-    if not set(nieuw["lampen"]) <= mag:
+    # Dezelfde grens als bij een regel: wat al in deze favoriet stond, mag blijven. Dat geldt voor elke stap.
+    mag = motor.toegestaan | (_alle_lampen(bestaand) if bestaand else set())
+    if not _alle_lampen(nieuw) <= mag:
         connection.send_error(msg["id"], "not_allowed", t(hass, "Deze lamp staat niet op de kaart"))
         return
     if bestaand is None and len(motor.opslag.favorieten) >= MAX_FAVORIETEN:
@@ -375,6 +403,7 @@ def ws_favoriet_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
         **nieuw,
         "helderheden": {lamp: pct for lamp, pct in nieuw["helderheden"].items() if lamp in nieuw["lampen"]},
         **_met_media(nieuw),
+        "daarna": [_stap(s) for s in nieuw["daarna"]],
         "id": bestaand["id"] if bestaand else uuid4().hex[:12],
     }
     motor.opslag.zet_favoriet(favoriet)
@@ -393,6 +422,7 @@ def ws_favoriet_verwijder(hass: HomeAssistant, connection, msg: dict[str, Any]) 
     if not motor.opslag.verwijder_favoriet(msg["favoriet"]):
         connection.send_error(msg["id"], "not_found", t(hass, "Deze favoriet bestaat niet meer"))
         return
+    motor.vergeet_favoriet(msg["favoriet"])
     async_meld_aan_abonnees(hass)
     connection.send_result(msg["id"])
 

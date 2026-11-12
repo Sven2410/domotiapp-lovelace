@@ -30,8 +30,10 @@ import {
   mediaUit,
   metMuziek,
   muziekVan,
+  NA_STANDAARD,
   dagNamen,
   deelTekst,
+  duurTekst,
   favorietNaarServer,
   favorietVinkjes,
   groepenUit,
@@ -46,6 +48,7 @@ import {
   metVinkje,
   naarServer,
   nieuweGroep,
+  nieuweStap,
   nieuwOnderdeel,
   niveauTekst,
   onderdelenVan,
@@ -54,6 +57,9 @@ import {
   schuifNaar,
   startHelderheden,
   stapLux,
+  stapNa,
+  stapTekst,
+  stappenVan,
   stapVerschil,
   standaardRichting,
   terugOproepen,
@@ -198,6 +204,8 @@ const css = /* css */ `
   }
   .naam::placeholder, .zoek::placeholder { color: var(--dac-ink-3); }
   @media (hover: hover) { .naam:hover, .zoek:hover { border-color: var(--dac-border-hi); } }
+  /* Onder 16px zoomt Safari op een telefoon in zodra een veld focus krijgt (gemeten in 0.122.0: naam en zoeken 14px). */
+  @media (pointer: coarse) { .naam, .zoek, .tijd { font-size: 16px; } }
   /* Eén rij die opzij veegt: met een vinger, een touchpad, het muiswiel of slepen. De padding houdt
      de focusring binnen de rij, en de marge haalt die ruimte er weer af. */
   .ruimtes {
@@ -473,17 +481,18 @@ class AutomatiseringScherm extends HTMLElement {
     this.stopVoorbeeld_();
     this.bron = bron;
     this.concept = structuredClone(regel);
-    // Een regel bestaat uit onderdelen; het scherm wijzigt er één tegelijk, en dat staat in `concept`.
-    this.delen_ = regel.favoriet ? null : structuredClone(onderdelenVan(regel));
+    // Een regel bestaat uit onderdelen; het scherm wijzigt er één tegelijk, en dat staat in `concept`. Een favoriet
+    // net zo, met zijn stappen (sinds 0.122.0): de tik, en wat er daarna komt.
+    this.delen_ = structuredClone(regel.favoriet ? stappenVan(regel) : onderdelenVan(regel));
     delete this.concept.delen;
+    delete this.concept.daarna;
     this.filter_ = { zoek: "", ruimte: null };
     this.standen_ = {};
     this.foutTekst_ = "";
     this.bezig_ = false;
     this.icoonOpen_ = false;
     this.icoonZoek_ = "";
-    if (this.delen_) this.laadDeel_(0);
-    else this.beginDeel_();
+    this.laadDeel_(0);
     // Staat er al een vinkje aan, dan zijn de vinkjes het overzicht en de lampen een stap verder.
     this.aanpassen_ = !regel.favoriet || !this.vinkjes_().some((v) => v.aan);
     let titel = regel.id ? t("Automatisering wijzigen") : t("Nieuwe automatisering");
@@ -546,9 +555,13 @@ class AutomatiseringScherm extends HTMLElement {
   volledig_() {
     if (!this.delen_) return this.concept;
     this.bewaarDeel_();
-    const regel = { ...this.concept, delen: this.delen_ };
-    for (const k of DEEL_VELDEN) delete regel[k];
-    return regel;
+    const kop = { ...this.concept };
+    for (const k of DEEL_VELDEN) delete kop[k];
+    if (kop.favoriet) {
+      const [tik, ...daarna] = this.delen_;
+      return { ...kop, ...tik, daarna };
+    }
+    return { ...kop, delen: this.delen_ };
   }
 
   /** Meer dan één onderdeel? Dan staat er een lijst bovenaan, en hoort wat eronder staat bij het gekozen. */
@@ -559,9 +572,11 @@ class AutomatiseringScherm extends HTMLElement {
   /** De lijst onderdelen, met het gekozen gemarkeerd en een knop om er een bij te maken. */
   onderdelenHtml_() {
     if (!this.meerDelen_()) return "";
-    return `<div class="groep">${this.kop_("keuzelijst", t("Onderdelen"))}
-      <div class="delen" role="radiogroup" aria-label="${veilig(t("Onderdelen"))}">${this.delenRijen_()}</div>
-      <button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(t("Onderdeel toevoegen"))}</button>
+    const fav = Boolean(this.concept.favoriet);
+    const kop = fav ? t("Stappen") : t("Onderdelen");
+    return `<div class="groep">${this.kop_("keuzelijst", kop)}
+      <div class="delen" role="radiogroup" aria-label="${veilig(kop)}">${this.delenRijen_()}</div>
+      <button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(fav ? t("Stap toevoegen") : t("Onderdeel toevoegen"))}</button>
     </div>`;
   }
 
@@ -574,10 +589,13 @@ class AutomatiseringScherm extends HTMLElement {
         const lampen = deel.lampen ?? [];
         const naam = lampen.length ? lampenKort(deel, kaart, naamVan) : t("Nog niets gekozen");
         const icoon = lampen.length && lampen.every(isSpeaker) ? "music" : lampen.length && alleenRolluiken(lampen) ? "shutter" : "bulb";
-        const onder = deelTekst(deel);
+        const fav = Boolean(this.concept.favoriet);
+        const onder = fav ? stapTekst(deel, i === 0) : deelTekst(deel);
+        // De tik zelf is geen stap om weg te halen: zonder hem is de favoriet niets.
+        const weg = fav ? t("Stap weghalen") : t("Onderdeel weghalen");
         return `<div class="deel" data-actief="${i === this.deel_}">
           <button type="button" class="treffer" role="radio" aria-checked="${i === this.deel_}" data-k="deel:${i}"><span class="hoes">${resolve(icoon)}</span><span class="vt"><b>${veilig(naam)}</b>${onder ? `<small>${veilig(onder)}</small>` : ""}</span></button>
-          <button type="button" class="keus deelweg" data-k="deelweg:${i}" aria-label="${veilig(t("Onderdeel weghalen"))}" title="${veilig(t("Onderdeel weghalen"))}">${resolve("bin")}</button>
+          ${fav && i === 0 ? "" : `<button type="button" class="keus deelweg" data-k="deelweg:${i}" aria-label="${veilig(weg)}" title="${veilig(weg)}">${resolve("bin")}</button>`}
         </div>`;
       })
       .join("");
@@ -592,7 +610,22 @@ class AutomatiseringScherm extends HTMLElement {
   /** Bij één onderdeel: de knop om er nog een te maken, met eigen tijden. */
   deelErbijHtml_() {
     if (!this.delen_ || this.meerDelen_()) return "";
-    return `<div class="groep"><button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(t("Onderdeel toevoegen, met eigen tijden"))}</button></div>`;
+    const tekst = this.concept.favoriet ? t("Daarna nog iets doen, na een tijd") : t("Onderdeel toevoegen, met eigen tijden");
+    return `<div class="groep"><button type="button" class="nieuw" data-k="deelnieuw:">${resolve("plus")}${veilig(tekst)}</button></div>`;
+  }
+
+  /** Bij een latere stap van een favoriet: hoe lang na de tik. */
+  naHtml_() {
+    const c = this.concept;
+    if (!c.favoriet || !this.deel_) return "";
+    const na = c.na ?? NA_STANDAARD;
+    return `<div class="groep">${this.kop_("clock", t("Wanneer"))}
+      <div class="stapper">
+        <button type="button" data-k="na:min" aria-label="${veilig(t("Eerder"))}" ${stapNa(na, -1) === na ? "disabled" : ""}>${resolve("minus")}</button>
+        <span class="wat">${veilig(t("Na {duur}", { duur: duurTekst(na) }))}</span>
+        <button type="button" data-k="na:plus" aria-label="${veilig(t("Later"))}" ${stapNa(na, 1) === na ? "disabled" : ""}>${resolve("plus")}</button>
+      </div>
+    </div>`;
   }
 
   /** Staat hij in een groep? Bij een favoriet alles: ook wat geen schuif kent, kan uit of dicht. Een speaker nooit: die heeft het blok Muziek. */
@@ -726,9 +759,10 @@ class AutomatiseringScherm extends HTMLElement {
         <input class="naam" type="text" data-naam="1" maxlength="60" value="${veilig(c.naam ?? "")}" placeholder="${veilig(c.favoriet ? t("Bijvoorbeeld Woning verlaten") : t("Bijvoorbeeld Avond beneden"))}" aria-label="${veilig(t("Naam"))}" autocomplete="off" />
       </div>
       ${c.favoriet ? this.iconenHtml_() : ""}
-      ${c.favoriet ? this.vinkjesHtml_() : ""}
       ${this.onderdelenHtml_()}
-      ${this.meerDelen_() ? `<div class="deelvak"><span class="deelkop">${veilig(t("Onderdeel {n}", { n: this.deel_ + 1 }))}</span>` : ""}
+      ${this.meerDelen_() ? `<div class="deelvak"><span class="deelkop">${veilig(c.favoriet ? t("Stap {n}", { n: this.deel_ + 1 }) : t("Onderdeel {n}", { n: this.deel_ + 1 }))}</span>` : ""}
+      ${this.naHtml_()}
+      ${c.favoriet && !this.deel_ ? this.vinkjesHtml_() : ""}
       ${
         this.aanpassen_
           ? `<div class="groep">
@@ -743,7 +777,7 @@ class AutomatiseringScherm extends HTMLElement {
       ${this.voorbeeldHtml_()}
       ${
         c.favoriet
-          ? ""
+          ? `${this.meerDelen_() ? "</div>" : ""}${this.deelErbijHtml_()}`
           : `${this.momentHtml_("aan", c.aan)}
       ${this.momentHtml_("uit", c.uit)}
       ${this.meerDelen_() ? "</div>" : ""}
@@ -1106,6 +1140,7 @@ class AutomatiseringScherm extends HTMLElement {
     }
     else if (soort === "aanpassen") this.aanpassen_ = true;
     else if (soort === "deel" || soort === "deelweg" || soort === "deelnieuw") this.wisselDeel_(soort, Number(waarde));
+    else if (soort === "na") c.na = stapNa(c.na, waarde === "min" ? -1 : 1);
     else if (soort === "iconenmeer") this.icoonOpen_ = !this.icoonOpen_;
     else if (soort === "lamp" || soort === "weg") this.wisselLamp_(waarde);
     else if (soort === "ruimte") this.filter_.ruimte = waarde === "*" ? null : waarde;
@@ -1161,11 +1196,14 @@ class AutomatiseringScherm extends HTMLElement {
     if (!this.delen_ || this.bezig_) return;
     this.bewaarDeel_();
     this.stopVoorbeeld_();
+    const fav = Boolean(this.concept.favoriet);
+    // Bij een favoriet staan de lampen van een stap altijd open: de vinkjes horen bij de tik.
+    if (fav) this.aanpassen_ = true;
     if (soort === "deelnieuw") {
-      this.delen_.push(nieuwOnderdeel());
+      this.delen_.push(fav ? nieuweStap(this.delen_.at(-1)) : nieuwOnderdeel());
       this.laadDeel_(this.delen_.length - 1);
     } else if (soort === "deelweg") {
-      if (this.delen_.length < 2 || !this.delen_[i]) return;
+      if (this.delen_.length < 2 || !this.delen_[i] || (fav && i === 0)) return;
       this.delen_.splice(i, 1);
       const nu = i < this.deel_ ? this.deel_ - 1 : Math.min(this.deel_, this.delen_.length - 1);
       this.laadDeel_(nu);
@@ -1249,7 +1287,7 @@ class AutomatiseringScherm extends HTMLElement {
     this.kijkNa_();
     try {
       const dimt = (id) => this.dimbaar_(id);
-      if (this.concept.favoriet) await this.bron.opslaanFavoriet(favorietNaarServer(this.concept, dimt));
+      if (this.concept.favoriet) await this.bron.opslaanFavoriet(favorietNaarServer(this.volledig_(), dimt));
       else await this.bron.opslaan(naarServer(this.volledig_(), dimt));
       this.sluit();
     } catch (fout) {
