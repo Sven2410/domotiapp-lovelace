@@ -1,15 +1,15 @@
-/** Het Engels van de botkaart (sinds 0.124.0). DomotiTech en DomotiApp Coach zijn namen en blijven staan. */
+/** Het Engels van de botkaart (sinds 0.124.0). COACH, Coach Assist en DomotiTech zijn namen en blijven staan. */
 export const BOT = {
   // bot-card.js
-  "Vraag het de DomotiTech Bot": "Ask the DomotiTech Bot",
-  "De bot werkt via DomotiApp Coach, en die staat niet in deze Home Assistant.":
-    "The bot works through DomotiApp Coach, and that is not installed in this Home Assistant.",
-  "Deze versie van DomotiApp Coach kent de bot nog niet. Werk de coach bij.":
-    "This version of DomotiApp Coach does not know the bot yet. Update the coach.",
-  "Leeg laten: Vraag het de DomotiTech Bot.": "Leave empty: Ask the DomotiTech Bot.",
-  "DomotiApp Bot": "DomotiApp Bot",
-  "Vraag het de DomotiTech Bot: de klant stelt een vraag over de installatie, of maakt een ticket voor een storing of een aanvraag, met foto. Werkt via DomotiApp Coach.":
-    "Ask the DomotiTech Bot: the customer asks a question about the installation, or opens a ticket for a fault or a request, with a photo. Works through DomotiApp Coach.",
+  "Vraag het Coach Assist": "Ask Coach Assist",
+  "Coach Assist werkt via COACH, en die staat niet in deze Home Assistant.":
+    "Coach Assist works through COACH, and that is not installed in this Home Assistant.",
+  "Deze versie van COACH kent Coach Assist nog niet. Werk COACH bij.":
+    "This version of COACH does not know Coach Assist yet. Update COACH.",
+  "Leeg laten: Vraag het Coach Assist.": "Leave empty: Ask Coach Assist.",
+  "DomotiApp Coach Assist": "DomotiApp Coach Assist",
+  "Vraag het Coach Assist: de klant stelt een vraag over de installatie, of maakt een ticket voor een storing of een aanvraag, met foto. Werkt via COACH.":
+    "Ask Coach Assist: the customer asks a question about the installation, or opens a ticket for a fault or a request, with a photo. Works through COACH.",
 
   // bot-logica.js
   "Aanvraag": "Request",
@@ -20,12 +20,12 @@ export const BOT = {
   "Afgerond": "Done",
   "Ligt bij DomotiTech": "With DomotiTech",
   "In behandeling": "In progress",
-  "Heeft DomotiApp Coach nodig": "Needs DomotiApp Coach",
-  "Werk DomotiApp Coach bij": "Update DomotiApp Coach",
+  "Heeft COACH nodig": "Needs COACH",
+  "Werk COACH bij": "Update COACH",
   "Typ eerst wat je wilt vragen.": "Type what you want to ask first.",
   "Dat is te lang: hoogstens {n} tekens.": "That is too long: {n} characters at most.",
   "gisteren {tijd}": "yesterday {tijd}",
-  "De coach kent de bot nog niet. Werk DomotiApp Coach bij.": "The coach does not know the bot yet. Update DomotiApp Coach.",
+  "COACH kent Coach Assist nog niet. Werk COACH bij.": "COACH does not know Coach Assist yet. Update COACH.",
   "Versturen lukte niet: {fout}": "Sending failed: {fout}",
   "Versturen lukte niet.": "Sending failed.",
   "{n} nieuw antwoord": "{n} new answer",

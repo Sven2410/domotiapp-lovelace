@@ -5,11 +5,11 @@
  */
 export const COACH = {
   // coach-logica.js
-  "Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach {versie} of nieuwer nodig.":
-    "No DomotiApp Coach device found. This needs coach {versie} or newer.",
+  "Geen apparaat van COACH gevonden. Daarvoor is COACH {versie} of nieuwer nodig.":
+    "No COACH device found. This needs COACH {versie} or newer.",
   "Kies in de editor welk apparaat van de coach deze kaart volgt.": "Choose in the editor which coach device this card follows.",
   "Het gekozen apparaat van de coach bestaat niet meer.": "The chosen coach device no longer exists.",
-  "Werk DomotiApp Coach bij naar {versie} of nieuwer.": "Update DomotiApp Coach to {versie} or newer.",
+  "Werk COACH bij naar {versie} of nieuwer.": "Update COACH to {versie} or newer.",
 
   // laadpaal-logica.js
   "Laadt op zon": "Charging on solar",
@@ -58,7 +58,7 @@ export const COACH = {
   "nog <b>{kwh} kWh</b>": "<b>{kwh} kWh</b> to go",
   "{modus} uit de app van de paal": "{modus} from the charger's app",
   "{wat}: geldt tot de kabel eruit gaat.": "{wat}: applies until the cable is unplugged.",
-  "Weekschema, te wijzigen in DomotiApp Coach": "Weekly schedule, change it in DomotiApp Coach",
+  "Weekschema, te wijzigen in COACH": "Weekly schedule, change it in COACH",
   "Automatisch (merk en model van de paal)": "Automatic (make and model of the charger)",
   "Laadpaal bij de coach": "Charger in the coach",
   "Knoppen op deze kaart": "Buttons on this card",
@@ -67,12 +67,12 @@ export const COACH = {
     "An unticked setting is not on this card, for example where the coach charges in the cheap hours and ready by and charge to do not count. Ready by includes the week. The coach panel keeps them all.",
   "Uitgevinkt staat de knop niet op deze kaart. Het paneel van de coach houdt ze allemaal, en staat een uitgevinkte stand daar aan, dan zegt de kaart dat.": "An unticked button is not on this card. The coach panel keeps them all, and if an unticked mode is on there, the card says so.",
   "Leeg laten: de naam die de laadpaal bij de coach heeft.": "Leave empty: the name the charger has in the coach.",
-  "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.":
-    "Leave empty: the DomotiApp Coach charger, if there is exactly one. This needs coach 0.112.1 or newer.",
+  "Leeg laten: de laadpaal van COACH, als er precies één is. Daarvoor is COACH 0.112.1 of nieuwer nodig.":
+    "Leave empty: the COACH charger, if there is exactly one. This needs COACH 0.112.1 or newer.",
   "Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen).":
     "Automatic picks the photo for the make and model of the charger, as the coach reports them (Easee or Alfen).",
   "Leeg laten: de vermogenssensor die bij de coach is ingevuld.": "Leave empty: the power sensor set in the coach.",
   "DomotiApp Laadpaal": "DomotiApp Charger",
-  "De laadpaal zoals DomotiApp Coach hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan.":
-    "The charger as DomotiApp Coach controls it: the car's charge level, mode, pause, schedule and the charging plan.",
+  "De laadpaal zoals COACH hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan.":
+    "The charger as COACH controls it: the car's charge level, mode, pause, schedule and the charging plan.",
 };

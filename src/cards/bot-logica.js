@@ -1,5 +1,9 @@
 /**
- * Het rekenwerk achter de botkaart, "Vraag het de DomotiTech Bot", zonder DOM.
+ * Het rekenwerk achter de botkaart, "Vraag het Coach Assist", zonder DOM.
+ *
+ * De namen sinds 13 november 2026 (de eigenaar): DomotiTech is het bedrijf, COACH het systeem, Coach Assist de digitale
+ * hulp. Wat de klant leest zegt geen "bot" meer ("Niet meer bot"); de technische namen (`domotiapp-bot-card`, de
+ * bestanden, de commando's) blijven, want die staan in dashboards. Tot dan heette de kaart "Vraag het de DomotiTech Bot".
  *
  * De eigenaar, 12 november 2026: "het moet in een popup komen zoals Vraag het de DomotiTech Bot snap je? Alles in HA
  * [...] Niet iedereen heeft en wil telegram." En: "Lovelace moet een eigen kaart hebben en dat moet hetzelfde zijn in
@@ -52,6 +56,20 @@ export const SOORTEN = [
 ];
 
 export const soortVan = (id) => SOORTEN.find((s) => s.id === id) ?? { id, naam: nt("Ticket"), icoon: "chat" };
+
+/** Zo heet de digitale hulp sinds 13 november 2026 (was "de DomotiTech Bot"). Een naam: niet vertalen. */
+export const ASSIST = "Coach Assist";
+
+/**
+ * Wie een bericht schreef, zoals de klant het leest. De coach zet bij een antwoord `naam`; tot 13 november 2026 was
+ * dat "DomotiTech", en die oude berichten blijven zo in zijn opslag staan. Die en een antwoord zonder naam heten
+ * "Coach Assist", net als in het paneel van de coach, zodat oude en nieuwe antwoorden er gelijk uitzien.
+ */
+export function afzender(bericht) {
+  const naam = bericht?.naam || "";
+  if (bericht?.van === "klant") return naam;
+  return !naam || naam === "DomotiTech" ? ASSIST : naam;
+}
 
 /** De stand zoals de klant hem leest. */
 export function standNaam(stand) {
@@ -117,8 +135,8 @@ export const allesOngelezen = (stand, userId) =>
 
 /** De regel onder de naam op de kaart. Leeg als er niets te melden is. */
 export function tegelRegel({ coach, stand, userId, teOud }) {
-  if (!coach) return t("Heeft DomotiApp Coach nodig");
-  if (teOud) return t("Werk DomotiApp Coach bij");
+  if (!coach) return t("Heeft COACH nodig");
+  if (teOud) return t("Werk COACH bij");
   if (!stand) return "";
   const nieuw = allesOngelezen(stand, userId);
   if (nieuw) return tn(nieuw, "{n} nieuw antwoord", "{n} nieuwe antwoorden");
@@ -164,7 +182,7 @@ export function wanneer(iso, nu = new Date()) {
 
 /** Een fout van de coach in een zin. Wat de coach zelf zegt, wordt niet vertaald. */
 export function foutTekst(fout) {
-  if (fout?.code === "unknown_command") return t("De coach kent de bot nog niet. Werk DomotiApp Coach bij.");
+  if (fout?.code === "unknown_command") return t("COACH kent Coach Assist nog niet. Werk COACH bij.");
   if (fout?.code === "foto") return t("De foto kon niet mee: {fout}", { fout: String(fout.message ?? "") });
   const uitleg = String(fout?.message ?? "").trim();
   return uitleg ? t("Versturen lukte niet: {fout}", { fout: uitleg }) : t("Versturen lukte niet.");

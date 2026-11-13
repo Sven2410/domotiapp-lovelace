@@ -56,7 +56,7 @@ import {
   uitgelezenStand,
   vermogenTekst,
 } from "./batterij-logica.js";
-import { COACH_FABRIKANT, coachMelding, coachRollen, contractVan, kiesApparaat, klantEntiteiten } from "./coach-logica.js";
+import { coachFilter, coachMelding, coachRollen, contractVan, kiesApparaat, klantEntiteiten } from "./coach-logica.js";
 import { drukOproep } from "./vaatwasser-logica.js";
 import { getalTekst, stapWaarde } from "./laadpaal-logica.js";
 import { nt, t } from "../taal.js";
@@ -603,7 +603,7 @@ class BatterijEditor extends DacEditor {
       { name: "name", selector: sel.text() },
       {
         name: "coach_device",
-        selector: { device: { filter: BATTERIJ_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })) } },
+        selector: { device: { filter: coachFilter(BATTERIJ_MODELLEN) } },
       },
       { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
     ];
@@ -619,7 +619,7 @@ class BatterijEditor extends DacEditor {
     return {
       name: t("Leeg laten: de naam die de batterij bij de coach heeft."),
       coach_device: t(
-        "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig."
+        "Leeg laten: de thuisbatterij van COACH, als er precies één is. Daarvoor is COACH 0.112.1 of nieuwer nodig."
       ),
       afbeelding: t(
         "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC). Een Growatt ARK herkent hij aan de capaciteit bij de coach; staat daar iets anders, kies het type dan hier."
@@ -632,7 +632,7 @@ registerEditor("domotiapp-batterij-card-editor", BatterijEditor);
 registerCard("domotiapp-batterij-card", BatterijCard, {
   name: nt("DomotiApp Thuisbatterij"),
   description: nt(
-    "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen."
+    "De thuisbatterij zoals COACH hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen."
   ),
 });
 

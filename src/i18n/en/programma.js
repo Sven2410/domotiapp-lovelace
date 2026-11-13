@@ -79,7 +79,7 @@ export const PROGRAMMA = {
   "Icoon (zonder foto)": "Icon (without photo)",
   "Merk": "Brand",
   "Type": "Type",
-  "In combinatie met DomotiApp Coach": "Together with DomotiApp Coach",
+  "In combinatie met COACH": "Together with COACH",
   "Apparaat bij de coach": "Appliance in the coach",
   "Afwijken van de coach": "Differ from the coach",
   "Statussensor": "Status sensor",

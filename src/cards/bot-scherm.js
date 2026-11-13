@@ -34,6 +34,7 @@ import {
   MAX_FOTOS,
   MAX_TEKST,
   SOORTEN,
+  afzender,
   foutTekst,
   loopt,
   moetLezen,
@@ -675,7 +676,7 @@ class BotScherm extends HTMLElement {
         el.className = "bericht";
         el.dataset.van = b.van === "klant" ? "klant" : "domotitech";
         el.innerHTML = `<span class="wie2"></span><div class="tk"></div>`;
-        el.querySelector(".wie2").textContent = [b.naam || (b.van === "klant" ? "" : "DomotiTech"), wanneer(b.at)]
+        el.querySelector(".wie2").textContent = [afzender(b), wanneer(b.at)]
           .filter(Boolean)
           .join(" · ");
         el.querySelector(".tk").textContent = b.tekst ?? "";

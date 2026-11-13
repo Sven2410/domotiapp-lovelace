@@ -250,7 +250,7 @@ describe("NIEUW GEDRAG: waarom de knoppen er niet staan", () => {
   });
 
   it("vraagt om een nieuwere coach als zijn sensor geen contract heeft", () => {
-    assert.match(V.coachMelding({ reden: "enige" }, 0), /Werk DomotiApp Coach bij/);
+    assert.match(V.coachMelding({ reden: "enige" }, 0), /Werk COACH bij/);
   });
 
   it("zegt niets als alles er is", () => {

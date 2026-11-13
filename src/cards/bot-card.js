@@ -166,7 +166,7 @@ class BotCard extends DacCard {
   // Voor het scherm.
 
   titel_() {
-    return this.config?.name || t("Vraag het de DomotiTech Bot");
+    return this.config?.name || t("Vraag het Coach Assist");
   }
 
   userId_() {
@@ -175,8 +175,8 @@ class BotCard extends DacCard {
 
   /** Een zin in plaats van het gesprek en de tickets, of `null` als er tickets te tonen zijn. */
   zin_() {
-    if (!heeftCoach(this.hass)) return t("De bot werkt via DomotiApp Coach, en die staat niet in deze Home Assistant.");
-    if (this.teOud_) return t("Deze versie van DomotiApp Coach kent de bot nog niet. Werk de coach bij.");
+    if (!heeftCoach(this.hass)) return t("Coach Assist werkt via COACH, en die staat niet in deze Home Assistant.");
+    if (this.teOud_) return t("Deze versie van COACH kent Coach Assist nog niet. Werk COACH bij.");
     return null;
   }
 
@@ -232,7 +232,7 @@ class BotCard extends DacCard {
     this.leest_.add(id);
     this.hass.connection
       .sendMessagePromise({ type: `${COMMANDO}/read`, ticket_id: id })
-      .catch((fout) => console.warn("DomotiApp Bot:", fout))
+      .catch((fout) => console.warn("DomotiApp Coach Assist:", fout))
       .finally(() => this.leest_.delete(id));
   }
 
@@ -276,7 +276,7 @@ class BotEditor extends DacEditor {
   }
 
   helper(s) {
-    return s.name === "name" ? t("Leeg laten: Vraag het de DomotiTech Bot.") : undefined;
+    return s.name === "name" ? t("Leeg laten: Vraag het Coach Assist.") : undefined;
   }
 }
 
@@ -301,8 +301,8 @@ async function verklein(bestand) {
 
 registerEditor("domotiapp-bot-card-editor", BotEditor);
 registerCard("domotiapp-bot-card", BotCard, {
-  name: nt("DomotiApp Bot"),
-  description: nt("Vraag het de DomotiTech Bot: de klant stelt een vraag over de installatie, of maakt een ticket voor een storing of een aanvraag, met foto. Werkt via DomotiApp Coach."),
+  name: nt("DomotiApp Coach Assist"),
+  description: nt("Vraag het Coach Assist: de klant stelt een vraag over de installatie, of maakt een ticket voor een storing of een aanvraag, met foto. Werkt via COACH."),
 });
 
 export { BotCard };

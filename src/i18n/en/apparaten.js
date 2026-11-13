@@ -81,8 +81,8 @@ export const APPARATEN = {
   "Aan op {wat}": "Run on {wat}",
   "Kamertemperatuur": "Room temperature",
   "Energieverbruik": "Energy consumption",
-  "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij.":
-    "The climate entity of the air conditioner. The card finds room temperature, humidity, power, energy and a fault on the same device itself. If DomotiApp Coach controls this air conditioner, the card finds that too: the target then goes to the coach, with Run on and Pause added.",
+  "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt COACH deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij.":
+    "The climate entity of the air conditioner. The card finds room temperature, humidity, power, energy and a fault on the same device itself. If COACH controls this air conditioner, the card finds that too: the target then goes to the coach, with Run on and Pause added.",
   "Leeg laten: de naam van de airco in Home Assistant.": "Leave empty: the name of the air conditioner in Home Assistant.",
   "Automatisch toont een foto bij merk en model van de airco als die er is, en anders het icoon. Een tik op de foto of het icoon zet de airco aan of uit.":
     "Automatic shows a photo for the make and model of the air conditioner if there is one, and otherwise the icon. A tap on the photo or the icon turns the air conditioner on or off.",
@@ -90,8 +90,8 @@ export const APPARATEN = {
     "An external temperature sensor, for any brand of air conditioner. It takes priority over what the unit measures itself, and is the only source for a unit that reports no room temperature. Leave empty: what the unit measures itself.",
   "Leeg laten: de energiesensor van hetzelfde apparaat, als die er is.": "Leave empty: the energy sensor of the same device, if there is one.",
   "DomotiApp Airco": "DomotiApp Air Conditioner",
-  "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren.":
-    "An air conditioner of any make: on and off, the mode, the target temperature, fan and vanes, with room temperature and consumption from the same device. With DomotiApp Coach also on solar and cheap hours.",
+  "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met COACH ook op zon en goedkope uren.":
+    "An air conditioner of any make: on and off, the mode, the target temperature, fan and vanes, with room temperature and consumption from the same device. With COACH also on solar and cheap hours.",
 
   // stofzuiger-logica.js: wat de robot doet (Dreame)
   "Zuigt": "Sweeping",
