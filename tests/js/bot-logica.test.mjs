@@ -3,7 +3,7 @@
  *
  * Het gesprek en de tickets hebben de vorm van contract 1 van de coach (`domotiapp_coach/tickets/*`), met de wijziging
  * van 13 november 2026: één gesprek per huis met `id` 0 voor de vragen, tickets alleen voor storing en aanvraag, en
- * foto's. Zodra de coach het uitbrengt, komt er een echte dump bij als vaste invoer.
+ * foto's. Wat coach v0.220.0 echt stuurt, staat in `bot-dump-0220.test.mjs`.
  */
 
 import assert from "node:assert/strict";

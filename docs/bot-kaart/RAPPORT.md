@@ -1,9 +1,9 @@
 # De botkaart: "Vraag het de DomotiTech Bot"
 
-Tak `fase-178/bot-kaart`, concept-PR #199. **Nog niet uitgebracht.** De coach heeft het gesprek en de tickets nog
-niet; de werkplaats bouwt ze als v0.220.0. Gebouwd en beproefd tegen een nagemaakte coach in de testinstance, volgens
-contract 1 in `notities/werkmap/domotitech-bot.md`, met de wijziging van 13 november 2026. Het gaat pas uit als het
-bij de eigenaar thuis in het echt werkt, met een echte dump van de coach als vaste testinvoer.
+Tak `fase-178/bot-kaart`, PR #199, versie 0.124.0. **Nog niet uitgebracht.** Gebouwd volgens contract 1 in
+`notities/werkmap/domotitech-bot.md`, met de wijziging van 13 november 2026. Coach v0.220.0 heeft het sinds 13 november
+2026; de kaart is daarna nagemeten tegen de ECHTE gegevenslaag van die coach (zie *Tegen coach v0.220.0*), en een
+echte dump staat als vaste testinvoer. Bij de eigenaar thuis is hij nog niet geprobeerd: dat kan pas na een uitgave.
 
 ## De vraag
 
@@ -124,7 +124,48 @@ FOUTEN []
 - **Licht thema**: kaart en scherm staan op `dac-thema="licht"`. Er zijn schermafdrukken van de tegel, de lijst en het
   gesprek.
 
+## Tegen coach v0.220.0
+
+De werkplaats bracht v0.220.0 uit op 13 november 2026 en stuurde een dump van `list`. Daarna:
+
+- **De vaste invoer** `tests/js/vaste-invoer/coach-0.220.0-tickets.json` is gemaakt met `tickets.py` van de
+  uitgebrachte coach zelf (`overzicht` en `voor_buiten`), niet nagebouwd. Het pakket zelf laadt niet zonder Home
+  Assistant, dus alleen dat bestand is geladen. Er staan twee bewoners in, een gesprek, een storing met een foto bij de
+  beheerder, een aanvraag die klaar is, een storing van alleen een foto, en een event na een antwoord.
+- **De nep-coach in de testinstance** draait nu op die echte gegevenslaag: `echt_tickets.py` is `tickets.py` van
+  v0.220.0, letterlijk, alleen zonder Engels. De websocket, de opslag en de twee HTTP-wegen zijn overgenomen uit
+  `websocket.py`, `storage.py` en `bijlagen.py`, zonder de pushmelding.
+- **De hele telefoonmeting opnieuw**, 390 breed met echte tikken:
+  - een vraag in het gesprek, het antwoord eronder, het veld leeg;
+  - een storing met een foto van 4032×3024: aangekomen als 2000×1500, 40.633 bytes, met een ondertekend pad;
+  - de foto groot;
+  - een antwoord terwijl het scherm dicht is: "1 nieuw antwoord" en de stip;
+  - nergens iets breder dan het scherm, geen paginafouten.
+- **De herstartproef opnieuw**: het ticket staat er na een herstart van Home Assistant nog, en een antwoord daarna
+  komt binnen zonder de pagina te herladen (2 navigaties, net als ervoor).
+- **De weigeringen van de echte coach**:
+
+  | wat | code |
+  |---|---|
+  | een vraag als ticket | `soort` |
+  | een lege vraag | `leeg` |
+  | een foto in het gesprek | `bijlage_gesprek` |
+  | een ticket dat niet bestaat | `niet_gevonden` |
+
+  De kaart zegt ze met de zin van de coach erachter ("Versturen lukte niet: ..."). De kaart kan zelf geen foto in het
+  gesprek zetten: daar staat geen knop Foto.
+
+Er is in de kaart niets veranderd. Een bericht van alleen een foto heeft bij de coach een lege tekst; de lege regel
+was al weg met `.tk:empty`.
+
 ## Proeven
+
+`tests/js/bot-dump-0220.test.mjs`, 6 proeven op de echte dump, **NIEUW GEDRAG**. Ze gaan over:
+- contract 1, het gesprek apart, de tickets nieuwste eerst;
+- elke soort en stand een woord;
+- wat elke bewoner nog niet las;
+- de foto's als `{id, type, grootte}`;
+- een event dat één ticket vervangt.
 
 `tests/js/bot-logica.test.mjs`, 22 proeven, allemaal **NIEUW GEDRAG**. Ze gaan over:
 - het abonnement: gesprek en tickets apart, en `id` 0;
@@ -136,14 +177,14 @@ FOUTEN []
 - de maat van een foto, en geen adres zonder een echt id;
 - tijden.
 
-Op de code van main bestaat `bot-logica.js` niet:
+Op de code van main bestaat `bot-logica.js` niet, dus beide bestanden vallen daar om (hier de dumpproef):
 
 ```
 # Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../src/cards/bot-logica.js'
 ```
 
-Alles samen: 2427 JS-proeven groen. `check:taal`, `check:css`, `check:registratie`, `check:controls` en `verify` zijn
-ook groen. Python is niet veranderd.
+Alles samen: 2433 JS-proeven en 1153 Python-proeven groen. `check:taal`, `check:css`, `check:registratie`,
+`check:controls` en `verify` zijn ook groen. Python is niet veranderd.
 
 `check:css` ving dat `accept="image/*"` in het sjabloon begint als een CSS-commentaar. Die waarde zet de kaart nu
 vanuit JavaScript.
@@ -158,12 +199,15 @@ Een nieuwe kaart `custom:domotiapp-bot-card`: één tegel, en een scherm met twe
 
 Alles komt live van de coach. Gemeten als telefoon met echte tikken en getypte spaties, met een echte foto van
 telefoonformaat, over een herstart van Home Assistant heen, in licht en donker, en zonder coach. Een fout gevonden en
-gerepareerd: "this.fotos_[e] is not iterable" na een vraag.
+gerepareerd: "this.fotos_[e] is not iterable" na een vraag. Na de uitgave van coach v0.220.0 alles opnieuw gemeten
+tegen zijn echte gegevenslaag, met een echte dump als vaste invoer; daarvoor hoefde er niets aan de kaart te veranderen.
 
 ## Wat niet lukte
 
-- **Niet tegen de echte coach**: die heeft het nog niet (v0.220.0). Tot er een echte dump is, gaat dit niet uit
-  (CLAUDE.md, *Het contract met DomotiApp Coach*).
+- **Niet bij de eigenaar thuis**: daar mogen wij niets aan zetten of versturen, en de kaart komt er pas met een uitgave.
+  De pushmelding van de coach na een antwoord is dus ook niet gezien.
+- **De echte coach als geheel** draaide niet in de testinstance (daar staat een nep met andere apparaten); wel zijn
+  gegevenslaag letterlijk, en zijn websocket en HTTP-wegen overgenomen.
 - **De editor** (naam en icoon) is niet in een browser geopend. Er staan alleen een standaard tekstveld en de
   icoonkiezer van de familie in.
 - **iOS** zelf is niet gemeten:
@@ -178,20 +222,17 @@ gerepareerd: "this.fotos_[e] is not iterable" na een vraag.
 - Het gesprek hoort bij het huis, net als de tickets: iedereen in die Home Assistant ziet hetzelfde gesprek.
 - Een tijd staat in de tijdzone van het toestel, niet in die van Home Assistant.
 - In het gesprek kunnen geen foto's. Zo staat het in de afspraak: foto's zijn voor een ticket.
-- Het versienummer 0.124.0 in de commentaren is het volgende vrije. Komt er eerst een andere uitgave, dan schuift dat
-  op.
+- 0.124.0 is het volgende vrije versienummer (main staat op 0.123.0); de manifest staat er al op.
 
 ## git status --porcelain
 
 Bij het schrijven van dit rapport, vóór de commit:
 
 ```
- M CLAUDE.md
  M custom_components/domotiapp_lovelace/frontend/domotiapp-lovelace.js
+ M custom_components/domotiapp_lovelace/manifest.json
  M docs/bot-kaart/RAPPORT.md
- M src/cards/bot-card.js
- M src/cards/bot-logica.js
- M src/cards/bot-scherm.js
- M src/i18n/en/bot.js
  M tests/js/bot-logica.test.mjs
+?? tests/js/bot-dump-0220.test.mjs
+?? tests/js/vaste-invoer/coach-0.220.0-tickets.json
 ```

@@ -1,0 +1,186 @@
+{
+ "_toelichting": "Coach v0.220.0 (contract 1), 13-11-2026: wat domotiapp_coach/tickets/list teruggeeft (ook het eerste event van subscribe), en een event na een antwoord. Gemaakt met tickets.py van de uitgebrachte coach zelf (overzicht en voor_buiten), niet nagebouwd; dezelfde vorm als de dump die de werkplaats stuurde. Verzonnen namen en ids.",
+ "list": {
+  "contract": 1,
+  "gesprek": {
+   "id": 0,
+   "soort": "vraag",
+   "berichten": [
+    {
+     "id": 1,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Waarom laadt de auto vannacht pas om 02:00?",
+     "at": "2026-11-13T09:00:00+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 2,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "Dan is de stroom het goedkoopst. Om 07:00 is hij vol.",
+     "at": "2026-11-13T09:04:00+01:00"
+    },
+    {
+     "id": 3,
+     "van": "klant",
+     "naam": "Anna",
+     "tekst": "Hoe vol is de thuisbatterij?",
+     "at": "2026-11-13T09:30:00+01:00",
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+    }
+   ],
+   "gelezen": {
+    "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 1,
+    "1a2b3c4d5e6f708192a3b4c5d6e7f809": 3
+   },
+   "bijgewerkt": "2026-11-13T09:30:00+01:00"
+  },
+  "tickets": [
+   {
+    "id": 3,
+    "soort": "storing",
+    "stand": "nieuw",
+    "onderwerp": "Foto",
+    "gemaakt": "2026-11-13T10:01:00+01:00",
+    "bijgewerkt": "2026-11-13T10:01:00+01:00",
+    "door": {
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809",
+     "naam": "Anna"
+    },
+    "berichten": [
+     {
+      "id": 1,
+      "van": "klant",
+      "naam": "Anna",
+      "tekst": "",
+      "at": "2026-11-13T10:01:00+01:00",
+      "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809",
+      "bijlagen": [
+       {
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "type": "image/png",
+        "grootte": 90210
+       }
+      ]
+     }
+    ],
+    "gelezen": {
+     "1a2b3c4d5e6f708192a3b4c5d6e7f809": 1
+    }
+   },
+   {
+    "id": 1,
+    "soort": "storing",
+    "stand": "bij_beheerder",
+    "onderwerp": "De laadpaal geeft een rood lampje.",
+    "gemaakt": "2026-11-13T09:11:00+01:00",
+    "bijgewerkt": "2026-11-13T09:20:00+01:00",
+    "door": {
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+     "naam": "Bram"
+    },
+    "berichten": [
+     {
+      "id": 1,
+      "van": "klant",
+      "naam": "Bram",
+      "tekst": "De laadpaal geeft een rood lampje.",
+      "at": "2026-11-13T09:11:00+01:00",
+      "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+      "bijlagen": [
+       {
+        "id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        "type": "image/jpeg",
+        "grootte": 412331
+       }
+      ]
+     },
+     {
+      "id": 2,
+      "van": "domotitech",
+      "naam": "DomotiTech",
+      "tekst": "Dat is een aardlekfout. We kijken mee.",
+      "at": "2026-11-13T09:20:00+01:00"
+     }
+    ],
+    "gelezen": {
+     "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 1
+    }
+   },
+   {
+    "id": 2,
+    "soort": "aanvraag",
+    "stand": "klaar",
+    "onderwerp": "Kan de tuinverlichting op de favorieten?",
+    "gemaakt": "2026-11-11T00:00:00+01:00",
+    "bijgewerkt": "2026-11-12T00:00:00+01:00",
+    "door": {
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809",
+     "naam": "Anna"
+    },
+    "berichten": [
+     {
+      "id": 1,
+      "van": "klant",
+      "naam": "Anna",
+      "tekst": "Kan de tuinverlichting op de favorieten?",
+      "at": "2026-11-11T00:00:00+01:00",
+      "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+     },
+     {
+      "id": 2,
+      "van": "domotitech",
+      "naam": "DomotiTech",
+      "tekst": "Staat erop.",
+      "at": "2026-11-12T00:00:00+01:00"
+     }
+    ],
+    "gelezen": {
+     "1a2b3c4d5e6f708192a3b4c5d6e7f809": 2
+    }
+   }
+  ]
+ },
+ "event": {
+  "ticket": {
+   "id": 1,
+   "soort": "storing",
+   "stand": "bij_beheerder",
+   "onderwerp": "De laadpaal geeft een rood lampje.",
+   "gemaakt": "2026-11-13T09:11:00+01:00",
+   "bijgewerkt": "2026-11-13T09:20:00+01:00",
+   "door": {
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+    "naam": "Bram"
+   },
+   "berichten": [
+    {
+     "id": 1,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "De laadpaal geeft een rood lampje.",
+     "at": "2026-11-13T09:11:00+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+     "bijlagen": [
+      {
+       "id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+       "type": "image/jpeg",
+       "grootte": 412331
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "Dat is een aardlekfout. We kijken mee.",
+     "at": "2026-11-13T09:20:00+01:00"
+    }
+   ],
+   "gelezen": {
+    "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 1
+   }
+  }
+ }
+}
