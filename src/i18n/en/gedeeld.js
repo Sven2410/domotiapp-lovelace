@@ -209,6 +209,7 @@ export const GEDEELD = {
   "opslag": "storage",
   "celsius": "celsius",
   "domotitech": "domotitech",
+  "coach": "coach",
   "strand": "beach",
   "slapen": "sleep",
   "ketel": "boiler",

@@ -37,7 +37,7 @@
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
-import { resolve } from "../icons.js";
+import { coachMerk, coachMerkCss, resolve } from "../icons.js";
 import { stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
@@ -102,6 +102,7 @@ class BatterijCard extends DacCard {
        een schermafdruk van "... wat het huis vraagt komt…": "ook op pc snijd de
        tekst af van de batterij kaart". */
     .reden { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); }
+    ${coachMerkCss}
 
     /* De lading: groot, zoals de accustand op de laadpaalkaart. Het getal
        draagt geen kleur (theme.js). */
@@ -275,7 +276,7 @@ class BatterijCard extends DacCard {
           <div class="midden">
             <span class="nm"></span>
             <span class="st"><span class="stip"></span><span class="woord"></span></span>
-            <span class="reden"></span>
+            <span class="reden">${coachMerk()}<span class="rt"></span></span>
           </div>
           <div class="lading" hidden><span class="soc"></span><span class="temp"></span></div>
         </div>
@@ -411,7 +412,7 @@ class BatterijCard extends DacCard {
       stip.innerHTML = resolve(vorm.icoon);
     }
     this.text(".woord", s ? s.tekst || t(vorm.label) : t("Niet bereikbaar"));
-    this.text(".reden", s?.reden ?? "");
+    this.text(".reden .rt", s?.reden ?? "");
     this.$(".reden").hidden = !s?.reden;
     this.$(".kop").setAttribute("aria-label", `${this.$(".nm").textContent}, ${this.$(".woord").textContent}`);
     this.paintFoto_(s);

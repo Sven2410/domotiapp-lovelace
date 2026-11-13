@@ -71,7 +71,7 @@
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, section, sel } from "../editor/base.js";
-import { resolve } from "../icons.js";
+import { coachMerk, coachMerkCss, resolve } from "../icons.js";
 import { isOn, nameOf, stateOf } from "../ha.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
@@ -182,6 +182,9 @@ class DishwasherCard extends DacCard {
     .st .stip { flex: 0 0 auto; width: 13px; height: 13px; color: var(--tone); display: grid; }
     .st .stip .icon { width: 13px; height: 13px; --mdc-icon-size: 13px; }
     .st .stip[hidden] { display: none; }
+    ${coachMerkCss}
+    /* In de statusregel staat het merkje van de coach in de rij, met de ruimte van de rij. */
+    .st .coachmerk { flex: 0 0 auto; margin-right: 0; }
 
 
     /* De productfoto in de kop, op een eigen vlak in de tint van het thema:
@@ -572,7 +575,7 @@ class DishwasherCard extends DacCard {
           <span class="chip"></span>
           <span class="txt">
             <span class="nm"></span>
-            <span class="st"><span class="stip" hidden></span><span class="sw"></span></span>
+            <span class="st"><span class="stip" hidden></span>${coachMerk(true)}<span class="sw"></span></span>
           </span>
         </div>
 
@@ -905,6 +908,8 @@ class DishwasherCard extends DacCard {
       stEl.innerHTML = tekst + let_;
     }
     top.setAttribute("aria-label", `${this.$(".nm").textContent}, ${nu.tekst}`);
+    // Volgt de coach dit apparaat, dan staat zijn logo voor wat hij van plan is.
+    this.$(".st .coachmerk").hidden = !coach;
 
     // De tegels: deur, programma, fase, klaar om, verbruik en TwinDos, in de
     // woorden van Home Assistant, altijd (programma-logica.js).

@@ -46,7 +46,7 @@ export const GROEPEN = [
   [nt("Status"), ["shield", "alarmOff", "alarmPartial", "alarmOn", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "handmatig", "close", "clock", "gaugeArrow", "bell", "bellOff", "pressure", "refill", "sleep", "siren", "sirenOff", "homeStatus"]],
   [nt("Cijfers"), ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
   [nt("Sport en vrije tijd"), ["football", "sports", "dumbbell", "raceCar", "beach"]],
-  [nt("Overig"), ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "chat", "pencil", "domotitech"]],
+  [nt("Overig"), ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "chat", "pencil", "domotitech", "coach"]],
 ];
 
 /**
@@ -86,6 +86,7 @@ export const TERMEN = {
   storage: [nt("opslag"), "dozen", "berging", "zolder", "kelder", "opbergen", "voorraad", "storage", "kast", "boxes", "attic", "basement", "cupboard"],
   celsius: [nt("celsius"), "graden", "temperatuur", "graad", "c", "thermometer", "warmte", "degrees", "temperature"],
   domotitech: [nt("domotitech"), "logo", "merk", "website", "domoti", "domotica", "brand"],
+  coach: [nt("coach"), "logo", "merk", "coach", "energie", "bliksem", "energiemanagement", "brand", "energy"],
   beach: [nt("strand"), "zee", "golven", "kust", "vakantie", "zon en zee", "beach", "zomer", "water", "sea", "holiday", "summer", "coast"],
   sleep: [nt("slapen"), "zzz", "slaapstand", "nachtmodus", "slaap", "sleep", "rust", "nacht", "welterusten", "dutje", "night", "rest", "bedtime"],
   boiler: [nt("ketel"), "cv", "cv-ketel", "boiler", "verwarming", "ketelstatus", "boiler status", "vlam", "warmte", "heating", "central heating", "flame"],

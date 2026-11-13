@@ -94,6 +94,7 @@ const css = /* css */ `
     background: var(--dac-surface); border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 45%, transparent);
   }
   .ico .icon { width: 22px; height: 22px; }
+  .ico img.icon { width: 28px; height: 28px; }
   .wie { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
   .wie b { font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wie span { font-size: 12px; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -319,7 +320,7 @@ class BotScherm extends HTMLElement {
         <div class="vak" role="dialog" aria-modal="true" aria-labelledby="kop" tabindex="-1" data-stand="vragen">
           <header>
             <button class="rond terug" type="button" hidden>${resolve("arrowLeft")}</button>
-            <span class="ico">${resolve("chat")}</span>
+            <span class="ico">${resolve("coach")}</span>
             <span class="wie"><b id="kop"></b><span class="onder"></span></span>
             <button class="rond sluit" type="button">${resolve("close")}</button>
           </header>
