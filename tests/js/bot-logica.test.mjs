@@ -110,8 +110,8 @@ describe("gelezen", () => {
 describe("de regel op de kaart", () => {
   it("zegt het zonder coach, en met een coach die te oud is", () => {
     _reset();
-    assert.equal(B.tegelRegel({ coach: false, stand: null }), "Heeft DomotiApp Coach nodig");
-    assert.equal(B.tegelRegel({ coach: true, teOud: true, stand: null }), "Werk DomotiApp Coach bij");
+    assert.equal(B.tegelRegel({ coach: false, stand: null }), "Heeft COACH nodig");
+    assert.equal(B.tegelRegel({ coach: true, teOud: true, stand: null }), "Werk COACH bij");
   });
 
   it("noemt eerst de nieuwe antwoorden, dan de lopende tickets, en anders niets", () => {
@@ -167,7 +167,7 @@ describe("versturen", () => {
       B.foutTekst({ code: "te_veel", message: "Je kunt hoogstens 20 nieuwe vragen per uur stellen. Probeer het straks opnieuw." }),
       "Versturen lukte niet: Je kunt hoogstens 20 nieuwe vragen per uur stellen. Probeer het straks opnieuw."
     );
-    assert.equal(B.foutTekst({ code: "unknown_command" }), "De coach kent de bot nog niet. Werk DomotiApp Coach bij.");
+    assert.equal(B.foutTekst({ code: "unknown_command" }), "COACH kent Coach Assist nog niet. Werk COACH bij.");
     assert.equal(B.foutTekst({ code: "foto", message: "HTTP 415" }), "De foto kon niet mee: HTTP 415");
     assert.equal(B.foutTekst({}), "Versturen lukte niet.");
   });

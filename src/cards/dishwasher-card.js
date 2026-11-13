@@ -75,7 +75,7 @@ import { resolve } from "../icons.js";
 import { isOn, nameOf, stateOf } from "../ha.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
-  COACH_FABRIKANT,
+  coachFilter,
   PROGRAMMA_MODELLEN,
   coachRollen,
   contractVan,
@@ -1178,14 +1178,14 @@ class DishwasherEditor extends DacEditor {
       ...(c.coach
         ? [
             section(
-              "DomotiApp Coach",
+              "COACH",
               "mdi:leaf",
               [
                 {
                   name: "coach_device",
                   selector: {
                     device: {
-                      filter: PROGRAMMA_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })),
+                      filter: coachFilter(PROGRAMMA_MODELLEN),
                     },
                   },
                 },
@@ -1214,7 +1214,7 @@ class DishwasherEditor extends DacEditor {
         merk: t("Merk"),
         model: t("Type"),
         pause: t("Pauze"),
-        coach: t("In combinatie met DomotiApp Coach"),
+        coach: t("In combinatie met COACH"),
         coach_device: t("Apparaat bij de coach"),
         afwijken: t("Afwijken van de coach"),
         status: t("Statussensor"),

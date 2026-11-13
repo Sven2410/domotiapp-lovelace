@@ -49,6 +49,17 @@ import { t, taal } from "../taal.js";
 /** Zo heet de coach als fabrikant van zijn apparaten. */
 export const COACH_FABRIKANT = "DomotiApp Coach";
 
+/**
+ * Elke naam die de coach als fabrikant heeft gedragen of gaat dragen. De eigenaar, 13 november 2026: het systeem heet
+ * voortaan COACH, ook als fabrikant. De werkplaats zet die pas om als elke klant een lovelace heeft die beide kent, want
+ * de uitrol installeert coach en lovelace los van elkaar. Haal de oude naam er dus nooit uit.
+ */
+export const COACH_FABRIKANTEN = [COACH_FABRIKANT, "COACH"];
+
+/** De filter voor de apparaatkiezer van Home Assistant: elk model onder elke naam van de coach. */
+export const coachFilter = (modellen) =>
+  COACH_FABRIKANTEN.flatMap((manufacturer) => modellen.map((model) => ({ manufacturer, model })));
+
 /** Het domein van de integratie, zoals het in `hass.entities[id].platform` staat. */
 export const COACH_PLATFORM = "domotiapp_coach";
 
@@ -68,7 +79,7 @@ export const PROGRAMMA_MODELLEN = ["Vaatwasser", "Wasmachine", "Droger"];
 export function coachApparaten(hass, modellen) {
   const lijst = [];
   for (const [id, d] of Object.entries(hass?.devices ?? {})) {
-    if (d?.manufacturer !== COACH_FABRIKANT || !modellen.includes(d?.model)) continue;
+    if (!COACH_FABRIKANTEN.includes(d?.manufacturer) || !modellen.includes(d?.model)) continue;
     lijst.push({ id, naam: d.name_by_user || d.name || id, model: d.model });
   }
   return lijst.sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
@@ -191,9 +202,9 @@ export function klantEntiteiten(st) {
  * @param {string} [versie] de coach die deze kaart nodig heeft (laadpaal en batterij: 0.112.1)
  */
 export function coachMelding(keuze, contract, versie = "0.110.0") {
-  if (keuze.reden === "geen") return t("Geen apparaat van DomotiApp Coach gevonden. Daarvoor is coach {versie} of nieuwer nodig.", { versie });
+  if (keuze.reden === "geen") return t("Geen apparaat van COACH gevonden. Daarvoor is COACH {versie} of nieuwer nodig.", { versie });
   if (keuze.reden === "meerdere") return t("Kies in de editor welk apparaat van de coach deze kaart volgt.");
   if (keuze.reden === "weg") return t("Het gekozen apparaat van de coach bestaat niet meer.");
-  if (!contract) return t("Werk DomotiApp Coach bij naar {versie} of nieuwer.", { versie });
+  if (!contract) return t("Werk COACH bij naar {versie} of nieuwer.", { versie });
   return "";
 }

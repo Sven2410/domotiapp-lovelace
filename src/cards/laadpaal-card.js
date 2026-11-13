@@ -44,7 +44,7 @@ import { resolve } from "../icons.js";
 import { stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
-  COACH_FABRIKANT,
+  coachFilter,
   coachMelding,
   coachRollen,
   contractVan,
@@ -875,7 +875,7 @@ class LaadpaalCard extends DacCard {
             `<span class="dag" data-aan="${d.aan}" data-vandaag="${d.vandaag}">${t(d.dag)}<b>${d.aan && d.klaarOm ? d.klaarOm : "—"}</b></span>`
         )
         .join("");
-      wEl.setAttribute("aria-label", t("Weekschema, te wijzigen in DomotiApp Coach"));
+      wEl.setAttribute("aria-label", t("Weekschema, te wijzigen in COACH"));
     }
   }
 
@@ -964,7 +964,7 @@ class LaadpaalEditor extends DacEditor {
       { name: "name", selector: sel.text() },
       {
         name: "coach_device",
-        selector: { device: { filter: LAADPAAL_MODELLEN.map((model) => ({ manufacturer: COACH_FABRIKANT, model })) } },
+        selector: { device: { filter: coachFilter(LAADPAAL_MODELLEN) } },
       },
       { name: "afbeelding", selector: sel.select(AFBEELDING_KEUZES.map((k) => ({ ...k, label: t(k.label) }))) },
       { name: "power", selector: sel.entity(["sensor"]) },
@@ -1008,7 +1008,7 @@ class LaadpaalEditor extends DacEditor {
     return {
       name: t("Leeg laten: de naam die de laadpaal bij de coach heeft."),
       coach_device: t(
-        "Leeg laten: de laadpaal van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig."
+        "Leeg laten: de laadpaal van COACH, als er precies één is. Daarvoor is COACH 0.112.1 of nieuwer nodig."
       ),
       afbeelding: t("Automatisch kiest de foto bij merk en model van de paal, zoals de coach ze meldt (Easee of Alfen)."),
       power: t("Leeg laten: de vermogenssensor die bij de coach is ingevuld."),
@@ -1030,7 +1030,7 @@ registerEditor("domotiapp-laadpaal-card-editor", LaadpaalEditor);
 registerCard("domotiapp-laadpaal-card", LaadpaalCard, {
   name: nt("DomotiApp Laadpaal"),
   description: nt(
-    "De laadpaal zoals DomotiApp Coach hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan."
+    "De laadpaal zoals COACH hem stuurt: accustand van de auto, modus, pauze, schema en het laadplan."
   ),
 });
 

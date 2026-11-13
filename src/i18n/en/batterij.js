@@ -43,11 +43,11 @@ export const BATTERIJ = {
   "Automatisch (merk en model van de batterij)": "Automatic (make and model of the battery)",
   "Thuisbatterij bij de coach": "Home battery in the coach",
   "Leeg laten: de naam die de batterij bij de coach heeft.": "Leave empty: the name the battery has in the coach.",
-  "Leeg laten: de thuisbatterij van DomotiApp Coach, als er precies één is. Daarvoor is coach 0.112.1 of nieuwer nodig.":
-    "Leave empty: the DomotiApp Coach home battery, if there is exactly one. This needs coach 0.112.1 or newer.",
+  "Leeg laten: de thuisbatterij van COACH, als er precies één is. Daarvoor is COACH 0.112.1 of nieuwer nodig.":
+    "Leave empty: the COACH home battery, if there is exactly one. This needs COACH 0.112.1 or newer.",
   "Automatisch kiest de foto bij merk en model van de batterij, zoals de coach ze meldt (Anker Solarbank Max AC). Een Growatt ARK herkent hij aan de capaciteit bij de coach; staat daar iets anders, kies het type dan hier.":
     "Automatic picks the photo for the make and model of the battery, as the coach reports them (Anker Solarbank Max AC). A Growatt ARK is recognised by the capacity set in the coach; if that says something else, choose the type here.",
   "DomotiApp Thuisbatterij": "DomotiApp Home Battery",
-  "De thuisbatterij zoals DomotiApp Coach hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen.":
-    "The home battery as DomotiApp Coach controls it: charge, charge to full, discharge, holiday mode and the plan. A battery the coach only reads (Growatt) shows its charge and power.",
+  "De thuisbatterij zoals COACH hem stuurt: lading, vol laden, leegladen, vakantiestand en het plan. Een batterij die de coach alleen uitleest (Growatt) toont zijn lading en vermogen.":
+    "The home battery as COACH controls it: charge, charge to full, discharge, holiday mode and the plan. A battery the coach only reads (Growatt) shows its charge and power.",
 };

@@ -994,7 +994,7 @@ class AircoEditor extends DacEditor {
   helper(s) {
     return {
       entity: t(
-        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt DomotiApp Coach deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij."
+        "De climate-entiteit van de airco. Kamertemperatuur, vochtigheid, vermogen, energie en een storing van hetzelfde apparaat zoekt de kaart zelf. Stuurt COACH deze airco, dan vindt de kaart dat ook zelf: het doel gaat dan naar de coach, met Aan op en Pauze erbij."
       ),
       name: t("Leeg laten: de naam van de airco in Home Assistant."),
       afbeelding: t(
@@ -1010,7 +1010,7 @@ registerEditor("domotiapp-airco-card-editor", AircoEditor);
 registerCard("domotiapp-airco-card", AircoCard, {
   name: nt("DomotiApp Airco"),
   description: nt(
-    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met DomotiApp Coach ook op zon en goedkope uren."
+    "Een airco van elk merk: aan en uit, de stand, de doeltemperatuur, ventilator en lamellen, met kamertemperatuur en verbruik van hetzelfde apparaat. Met COACH ook op zon en goedkope uren."
   ),
 });
 
