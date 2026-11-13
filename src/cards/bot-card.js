@@ -58,6 +58,8 @@ class BotCard extends DacCard {
 
     .chip { position: relative; width: 36px; height: 36px; flex: 0 0 auto; }
     .chip .icon, .chip ha-icon { width: 18px; height: 18px; --mdc-icon-size: 18px; }
+    /* Het logo van COACH (of een ander plaatje) vult de chip meer dan een lijnicoon. */
+    .chip img.icon { width: 24px; height: 24px; }
     .stip {
       position: absolute; top: -1px; right: -1px; width: 11px; height: 11px; border-radius: 50%;
       background: var(--dac-accent-hi); border: 2px solid var(--dac-bg-raise);
@@ -93,7 +95,7 @@ class BotCard extends DacCard {
   template() {
     this.toggleAttribute("bare", Boolean(this.config.bare));
     return `<div class="knop surface" role="button" tabindex="0" style="--tone:${TONES.accent}">
-      <span class="chip">${resolve(this.config.icon || "chat", "chat")}<span class="stip" hidden></span></span>
+      <span class="chip">${resolve(this.config.icon || "coach", "coach")}<span class="stip" hidden></span></span>
       <span class="txt"><span class="nm">${escapeHtml(this.titel_())}</span><span class="rg"></span></span>
       <span class="pijl">${resolve("chevronRight")}</span>
     </div>`;
@@ -268,7 +270,7 @@ class BotCard extends DacCard {
 
 class BotEditor extends DacEditor {
   pickers() {
-    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "chat", auto: false }];
+    return [{ key: "icon", kind: "icon", label: t("Icoon"), fallback: "coach", auto: false }];
   }
 
   schema() {

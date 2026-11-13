@@ -45,6 +45,8 @@ VASTE_NAMEN = [
     "bundesliga.png",
     "laliga.png",
     "formule1.png",
+    # Sinds 0.126.0: het logo van COACH, voor een dashboard van een beheersessie.
+    "coach.png",
 ]
 
 PNG_HANDTEKENING = b"\x89PNG\r\n\x1a\n"

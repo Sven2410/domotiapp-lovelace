@@ -55,7 +55,7 @@
 
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
-import { icons, resolve } from "../icons.js";
+import { coachMerk, coachMerkCss, icons, resolve } from "../icons.js";
 import { moreInfo, nameOf, stateOf } from "../ha.js";
 import { locale, nt, t } from "../taal.js";
 import { bewusteWijziging, meetRaster, volgRaster } from "../rasterhoogte.js";
@@ -171,6 +171,7 @@ class AircoCard extends DacCard {
     .st .storing::before { content: "·"; margin-right: 6px; color: var(--dac-ink-3); font-weight: 400; }
     /* De zin van de coach: heel, niet afgekapt, net als op de laadpaal. */
     .reden { font-size: 11.5px; line-height: 1.35; color: var(--dac-ink-2); }
+    ${coachMerkCss}
 
     /* De kamertemperatuur: groot, en in neutrale inkt. */
     .binnen { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
@@ -467,7 +468,7 @@ class AircoCard extends DacCard {
           <span class="txt">
             <span class="nm"></span>
             <span class="st"><span class="stip" hidden></span><span class="woord"></span><span class="storing" hidden>${t("Storing")}</span></span>
-            <span class="reden" hidden></span>
+            <span class="reden" hidden>${coachMerk()}<span class="rt"></span></span>
           </span>
           <span class="binnen" hidden><span class="graden"></span><span class="onder">${t("binnen")}</span></span>
         </div>
@@ -665,7 +666,7 @@ class AircoCard extends DacCard {
     const cs = coach ? aircoCoachStand(stateOf(hass, coach.rollen.coach)) : null;
     const knoppen = coach ? coachKnoppen(hass, coach.rollen, cs) : [];
     const regel = coachRegel(cs);
-    this.text(".reden", regel);
+    this.text(".reden .rt", regel);
     this.$(".reden").hidden = !regel;
     this.paintAanOp_(coach ? aanOpKeuzes(stateOf(hass, coach.rollen.aan_op), cs) : null);
     this.paintSchakels_(knoppen);
