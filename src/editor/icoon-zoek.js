@@ -46,7 +46,7 @@ export const GROEPEN = [
   [nt("Status"), ["shield", "alarmOff", "alarmPartial", "alarmOn", "lock", "lockOpen", "key", "wifi", "smoke", "smokeDetector", "co", "warning", "check", "handmatig", "close", "clock", "gaugeArrow", "bell", "bellOff", "pressure", "refill", "sleep", "siren", "sirenOff", "homeStatus"]],
   [nt("Cijfers"), ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien"]],
   [nt("Sport en vrije tijd"), ["football", "sports", "dumbbell", "raceCar", "beach"]],
-  [nt("Overig"), ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "pencil", "domotitech"]],
+  [nt("Overig"), ["star", "moon", "leaf", "cog", "qr", "keuzelijst", "dots", "plus", "minus", "chevronRight", "chevronDown", "question", "chat", "pencil", "domotitech"]],
 ];
 
 /**
@@ -263,6 +263,7 @@ export const TERMEN = {
   chevronRight: [nt("pijl rechts"), "verder", "volgende", "chevron", "open", "meer", "arrow right", "next", "more"],
   chevronDown: [nt("pijl omlaag"), "uitklappen", "openklappen", "chevron", "meer", "dropdown", "arrow down", "expand"],
   question: [nt("vraagteken"), "onbekend", "hulp", "help", "vraag", "geen idee", "question mark", "unknown", "question"],
+  chat: [nt("tekstballon"), "chat", "bericht", "gesprek", "praten", "vraag", "bot", "hulp", "speech bubble", "message", "talk"],
   pencil: [nt("potlood"), "bewerken", "wijzigen", "aanpassen", "edit", "pen", "instellen", "pencil", "change"],
 };
 

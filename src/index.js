@@ -57,6 +57,7 @@ import "./cards/batterij-card.js";
 import "./cards/meldingen-card.js";
 import "./cards/automatisering-card.js";
 import "./cards/favorieten-card.js";
+import "./cards/bot-card.js";
 import "./cards/overzicht-card.js";
 import "./cards/nieuws-card.js";
 import "./cards/agenda-card.js";

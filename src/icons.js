@@ -665,6 +665,10 @@ export const icons = {
   question: draw(`<circle cx="12" cy="12" r="8.6"/>
     <path d="M9.6 9.6a2.4 2.4 0 1 1 3.2 2.3c-.5.2-.8.7-.8 1.2v.6M12 16.6v.1"/>`),
 
+  // Een tekstballon met drie puntjes: de botkaart (0.124.0).
+  chat: draw(`<path d="M5.6 4.8h12.8a1.8 1.8 0 0 1 1.8 1.8v8.4a1.8 1.8 0 0 1-1.8 1.8H11.2l-4.4 3.4v-3.4H5.6A1.8 1.8 0 0 1 3.8 15V6.6a1.8 1.8 0 0 1 1.8-1.8z"/>
+    <path d="M8.4 10.8v.1M12 10.8v.1M15.6 10.8v.1"/>`),
+
   pencil: draw(`<path d="M4.5 19.5h3.2L18.4 8.8a1.9 1.9 0 0 0 0-2.7l-.5-.5a1.9 1.9 0 0 0-2.7 0L4.5 16.3z"/>
     <path d="m14.6 6.8 2.6 2.6"/>`),
 
