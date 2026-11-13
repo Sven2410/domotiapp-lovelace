@@ -15,6 +15,10 @@
  * (`bron.stuur_()`, `bron.upload_()`, `bron.fotoAdres_()`); het scherm tekent en vraagt. Zo is er één plek die het
  * abonnement heeft, en tekent het scherm opnieuw zodra er een antwoord binnenkomt, ook terwijl het gesprek open staat.
  *
+ * Zolang het open staat, staat de pagina eronder vast (`zetScrollSlot`, net als het zoekscherm van de media). De
+ * eigenaar, 13 november 2026, op zijn iPhone: "ik kan de achtergrond scrollen als de bot geopend is, dat moet ook niet".
+ * De lijsten en gesprekken houden hun eigen scrollen bij zich (`overscroll-behavior: contain`).
+ *
  * Alle tekst van de klant en van DomotiTech gaat er met `textContent` in, nooit als html. Een foto heeft een id van de
  * coach, en `bijlagePad` maakt daar alleen een adres van als het er echt een is.
  */
@@ -23,6 +27,7 @@ import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
 import { resolve } from "../icons.js";
+import { zetScrollSlot } from "../scrollslot.js";
 import { t } from "../taal.js";
 import {
   GESPREK,
@@ -154,7 +159,7 @@ const css = /* css */ `
   .foto-knop .icon { width: 17px; height: 17px; }
   .knoppen { display: flex; gap: 8px; }
 
-  .lijst { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; }
+  .lijst { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
   .ticket {
     display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
     padding: 10px 12px; min-height: 58px; cursor: pointer;
@@ -181,7 +186,7 @@ const css = /* css */ `
   .ticket .wn { flex: 0 0 auto; align-self: flex-start; font-size: 11.5px; color: var(--dac-ink-3); padding-top: 2px; }
 
   /* Een gesprek: dat van het huis, of dat van een ticket. */
-  .berichten { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+  .berichten { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
   .bericht { max-width: 85%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
   .bericht[data-van="klant"] { align-self: flex-end; align-items: flex-end; }
   .bericht .wie2 { font-size: 11.5px; color: var(--dac-ink-3); padding: 0 4px; }
@@ -251,7 +256,7 @@ const css = /* css */ `
   .soort[aria-checked="true"] .v { background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi); }
 
   .stand { display: flex; flex-direction: column; gap: 12px; min-height: 0; flex: 1 1 auto; }
-  .nieuw-stand { overflow-y: auto; }
+  .nieuw-stand { overflow-y: auto; overscroll-behavior: contain; }
 
   /* Een foto groot: over het hele vak, tik om te sluiten. */
   .groot {
@@ -300,6 +305,11 @@ class BotScherm extends HTMLElement {
 
   connectedCallback() {
     if (!this.gebouwd_) this.bouw_();
+  }
+
+  disconnectedCallback() {
+    this.scrollLos_?.();
+    this.scrollLos_ = null;
   }
 
   bouw_() {
@@ -464,6 +474,8 @@ class BotScherm extends HTMLElement {
       el.querySelector(".rg").textContent = t(s.uitleg);
     }
     this.$(".groot").hidden = true;
+    // Eén slot: open() op een scherm dat al openstaat (een tweede kaart) mag het eerste niet kwijtmaken.
+    this.scrollLos_ ??= zetScrollSlot();
     this.setAttribute("open", "");
     const stand = bron.stand_;
     const uid = bron.userId_();
@@ -473,6 +485,8 @@ class BotScherm extends HTMLElement {
   }
 
   sluit() {
+    this.scrollLos_?.();
+    this.scrollLos_ = null;
     this.removeAttribute("open");
     this.bron = null;
     for (const voor of Object.keys(this.fotos_)) this.leegFotos_(voor);
