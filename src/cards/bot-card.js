@@ -28,10 +28,11 @@ import {
   fotoMaat,
   heeftCoach,
   kentContract,
+  pakketOver,
   tegelRegel,
   verwerk,
 } from "./bot-logica.js";
-import { botScherm, toonBotScherm } from "./bot-scherm.js";
+import { botScherm, etiketCss, toonBotScherm } from "./bot-scherm.js";
 
 /** Zo lang mag het abonnement mislukken terwijl de coach er wel is, voordat de kaart zegt dat de coach te oud is. */
 const TE_OUD_NA_MS = 20000;
@@ -67,6 +68,14 @@ class BotCard extends DacCard {
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px; }
     .nm { font-size: 13px; font-weight: 500; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Het pakket naast de naam, alleen als er plek is: past het niet, dan loopt het naar een tweede regel die er niet
+       is (vaste hoogte, overflow hidden), en blijft de tegel 56 hoog. De eigenaar, 15 november 2026: "ik wil bij de
+       coach assist ook zien welk abbo je hebt". */
+    .kopregel { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; height: calc(13px * 1.25); overflow: hidden; min-width: 0; }
+    .kopregel .nm { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+    ${etiketCss}
+    /* Op de tegel niet hoger dan de naamregel (16,25 px), anders valt de rand eraf. */
+    .kopregel .etiket { padding: 0 6px; line-height: 14px; }
     .rg { font-size: 12px; line-height: 1.25; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rg:empty { display: none; }
     .pijl { flex: 0 0 auto; color: var(--dac-ink-3); display: grid; place-items: center; }
@@ -96,7 +105,7 @@ class BotCard extends DacCard {
     this.toggleAttribute("bare", Boolean(this.config.bare));
     return `<div class="knop surface" role="button" tabindex="0" style="--tone:${TONES.accent}">
       <span class="chip">${resolve(this.config.icon || "coach", "coach")}<span class="stip" hidden></span></span>
-      <span class="txt"><span class="nm">${escapeHtml(this.titel_())}</span><span class="rg"></span></span>
+      <span class="txt"><span class="kopregel"><span class="nm">${escapeHtml(this.titel_())}</span><span class="etiket" hidden></span></span><span class="rg"></span></span>
       <span class="pijl">${resolve("chevronRight")}</span>
     </div>`;
   }
@@ -245,6 +254,10 @@ class BotCard extends DacCard {
     const regel = tegelRegel({ coach, stand: this.stand_, userId: uid, teOud: this.teOud_ });
     const rg = this.$(".rg");
     if (rg.textContent !== regel) rg.textContent = regel;
+    const etiket = this.$(".etiket");
+    const pakket = coach ? pakketOver(this.stand_)?.naam ?? "" : "";
+    if (etiket.textContent !== pakket) etiket.textContent = pakket;
+    etiket.hidden = !pakket;
     const nieuw = coach && allesOngelezen(this.stand_, uid) > 0;
     this.$(".stip").hidden = !nieuw;
     knop.setAttribute("aria-label", regel ? `${this.titel_()}. ${regel}` : this.titel_());

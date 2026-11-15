@@ -44,9 +44,26 @@ import {
   ongelezen,
   soortVan,
   standNaam,
+  tellerTekst,
+  ticketTellerTekst,
+  ticketsOpTekst,
+  vragenOpTekst,
+  pakketOver,
+  WEINIG_VRAGEN,
   waaromNiet,
   wanneer,
 } from "./bot-logica.js";
+
+/** Het etiket met het pakket (DomotiCare): naast de titel van het scherm, en op de tegel als daar plek is. */
+export const etiketCss = /* css */ `
+  .etiket {
+    flex: 0 0 auto; padding: 1px 7px; border-radius: var(--dac-radius-pill);
+    font-size: 11px; font-weight: 600; line-height: 1.3; letter-spacing: 0; white-space: nowrap;
+    color: var(--dac-accent-hi); background: color-mix(in srgb, var(--dac-accent-hi) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dac-accent-hi) 35%, transparent);
+  }
+  .etiket[hidden] { display: none; }
+`;
 
 const css = /* css */ `
   ${themaCss}
@@ -99,8 +116,11 @@ const css = /* css */ `
   .ico .icon { width: 22px; height: 22px; }
   .ico img.icon { width: 28px; height: 28px; }
   .wie { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
-  .wie b { font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .wie span { font-size: 12px; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* De titel met het pakket ernaast; past het niet, dan zakt het etiket onder de titel. */
+  .kopregel { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
+  .wie b { min-width: 0; max-width: 100%; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wie .onder { font-size: 12px; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  ${etiketCss}
 
   .rond {
     flex: 0 0 auto; width: 36px; height: 36px; padding: 0; cursor: pointer;
@@ -254,6 +274,13 @@ const css = /* css */ `
   .vak[data-stand="vragen"] textarea, .vak[data-stand="ticket"] textarea { min-height: 52px; }
   textarea:focus { outline: none; box-shadow: inset 0 0 0 2px var(--dac-accent-hi); }
   .melding { font-size: 12px; line-height: 1.4; color: var(--dac-ink-2); }
+
+  /* Het abonnement: hoeveel vragen er vandaag over zijn, en het blok als ze op zijn. */
+  .teller { font-size: 12px; line-height: 1.4; color: var(--dac-ink-3); padding: 0 2px; }
+  .teller[data-weinig] { color: var(--dac-warn); font-weight: 500; }
+  .op { display: flex; flex-direction: column; gap: 10px; }
+  .op p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); }
+  textarea:disabled { opacity: .55; cursor: not-allowed; }
   .melding[data-soort="fout"] { color: var(--dac-warn); }
   .melding:empty { display: none; }
 
@@ -309,15 +336,18 @@ let sheets = null;
 /** Elke foto, ook van de camera. Niet in het sjabloon: daar leest check:css de schuine streep met ster als commentaar. */
 const BEELDEN = "image/" + "*";
 
-const SCHRIJF = (soort, rijen, foto) => `
+/** Een schrijfvak. Met `pakket` (alleen Vragen) ook de teller en het blok voor als de vragen van vandaag op zijn. */
+const SCHRIJF = (soort, rijen, foto, pakket = false) => `
   <div class="schrijf" data-voor="${soort}">
     <textarea rows="${rijen}" maxlength="${MAX_TEKST}"></textarea>
+    ${pakket ? `<div class="teller" role="status" hidden></div>` : ""}
     ${foto ? `<div class="gekozen"></div><input type="file" multiple hidden />` : ""}
     <div class="melding" role="status"></div>
     <div class="knoppen">
       ${foto ? `<button class="foto-knop" type="button">${resolve("camera")}<span></span></button>` : ""}
       <button class="hoofd verstuur" type="button">${resolve("arrowRight")}<span></span></button>
     </div>
+    ${pakket ? `<div class="op" hidden><p></p><div class="knoppen"><button class="hoofd meld" type="button">${resolve("warning")}<span></span></button></div></div>` : ""}
   </div>`;
 
 class BotScherm extends HTMLElement {
@@ -337,6 +367,10 @@ class BotScherm extends HTMLElement {
     // De dagen die in beeld blijven omdat er een ongelezen antwoord stond, en de keuze in de lijst (zie `inDagen`).
     this.vast_ = new Set();
     this.keuze_ = null;
+    // De coach zei pakket_op: tot de volgende middernacht dicht, ook als hij nog geen nieuw pakket stuurde.
+    this.vragenOp_ = false;
+    this.ticketsOp_ = false;
+    this.pakket_ = null;
   }
 
   connectedCallback() {
@@ -355,7 +389,7 @@ class BotScherm extends HTMLElement {
           <header>
             <button class="rond terug" type="button" hidden>${resolve("arrowLeft")}</button>
             <span class="ico">${resolve("coach")}</span>
-            <span class="wie"><b id="kop"></b><span class="onder"></span></span>
+            <span class="wie"><span class="kopregel"><b id="kop"></b><span class="etiket" hidden></span></span><span class="onder"></span></span>
             <button class="rond sluit" type="button">${resolve("close")}</button>
           </header>
           <div class="storing" hidden></div>
@@ -366,10 +400,12 @@ class BotScherm extends HTMLElement {
           <div class="stand vragen-stand">
             <select class="keuze dagen" hidden></select>
             <div class="berichten" aria-live="polite"></div>
-            ${SCHRIJF("vragen", 2, false)}
+            ${SCHRIJF("vragen", 2, false, true)}
           </div>
           <div class="stand tickets-stand" hidden>
             <div class="knoppen"><button class="hoofd nieuw" type="button">${resolve("plus")}<span></span></button></div>
+            <div class="teller" role="status" hidden></div>
+            <div class="op" hidden><p></p></div>
             <div class="lijst"></div>
           </div>
           <div class="stand ticket-stand" hidden>
@@ -406,6 +442,14 @@ class BotScherm extends HTMLElement {
       tab.addEventListener("click", () => this.naar_(tab.dataset.tab));
     }
     this.$(".nieuw").addEventListener("click", () => this.naar_("nieuw"));
+    // Meld een storing: Nieuw ticket, Storing gekozen, en wat er al getypt was gaat mee (en staat dan niet meer bij Vragen).
+    this.$(".meld").addEventListener("click", () => {
+      const vraag = this.$('.schrijf[data-voor="vragen"] textarea');
+      const tekst = vraag.value;
+      vraag.value = "";
+      this.naar_("nieuw");
+      this.$('.schrijf[data-voor="nieuw"] textarea').value = tekst;
+    });
     this.$(".groot").addEventListener("click", () => {
       this.$(".groot").hidden = true;
     });
@@ -507,6 +551,8 @@ class BotScherm extends HTMLElement {
     this.$('.tab[data-tab="vragen"] .nm').textContent = t("Vragen");
     this.$('.tab[data-tab="tickets"] .nm').textContent = t("Tickets");
     this.$(".nieuw span").textContent = t("Nieuw ticket");
+    this.$(".meld span").textContent = t("Meld een storing");
+    this.vragenOp_ = this.ticketsOp_ = false;
     for (const knop of this.shadowRoot.querySelectorAll(".verstuur span")) knop.textContent = t("Versturen");
     for (const knop of this.shadowRoot.querySelectorAll(".foto-knop span")) knop.textContent = t("Foto");
     this.$('.schrijf[data-voor="vragen"] textarea').placeholder = t("Stel je vraag over de installatie");
@@ -529,6 +575,7 @@ class BotScherm extends HTMLElement {
   }
 
   sluit() {
+    clearTimeout(this.middernacht_);
     this.scrollLos_?.();
     this.scrollLos_ = null;
     this.removeAttribute("open");
@@ -606,6 +653,7 @@ class BotScherm extends HTMLElement {
       this.$('.tab[data-tab="vragen"] .stip').hidden = !(stand !== "vragen" && ongelezen(s?.gesprek, uid));
       this.$('.tab[data-tab="tickets"] .stip').hidden = !(stand !== "tickets" && (s?.tickets ?? []).some((x) => ongelezen(x, uid)));
     }
+    this.tekenPakket_();
     if (stand === "zin") this.$(".wie .onder").textContent = "";
     else if (stand === "vragen") this.tekenVragen_();
     else if (stand === "tickets") this.tekenLijst_();
@@ -634,6 +682,62 @@ class BotScherm extends HTMLElement {
     }
     this.tekenBerichten_(vak, gesprek, false, true);
     if (moetLezen(gesprek, bron.userId_())) bron.lees_(GESPREK);
+  }
+
+  /**
+   * Het abonnement, bij elke tekening (zie `pakketOver` in bot-logica.js):
+   * - in Vragen "Nog 7 vragen vandaag" onder het veld, en op 0 het veld uit met de zin van de coach en de knop Meld een
+   *   storing (niet als ook de tickets op zijn). Wat er getypt was blijft staan.
+   * - in Tickets "Nog 1 ticket vandaag" bij de knop Nieuw ticket, en op 0 die knop weg met de zin van de coach eronder;
+   *   op het scherm Nieuw ticket gaat Versturen dan ook weg.
+   * Om middernacht van Home Assistant gaat het vanzelf weer open: een wekker op `opnieuw`, zolang het scherm open staat.
+   * Zei de coach `pakket_op` terwijl de kaart nog dacht dat er ruimte was, dan is het tot dan ook dicht.
+   */
+  tekenPakket_() {
+    const p = pakketOver(this.bron.stand_);
+    const nu = Date.now();
+    const tot = p?.opnieuw && nu < p.opnieuw;
+    if (!tot) this.vragenOp_ = this.ticketsOp_ = false;
+    if (p && this.vragenOp_ && p.vragen != null) p.vragen = 0;
+    if (p && this.ticketsOp_ && p.tickets != null) p.tickets = 0;
+
+    const schrijf = this.$('.schrijf[data-voor="vragen"]');
+    const op = p?.vragen === 0;
+    const teller = schrijf.querySelector(".teller");
+    teller.hidden = p?.vragen == null || op;
+    teller.textContent = tellerTekst(p?.vragen);
+    if (p?.vragen != null && p.vragen <= WEINIG_VRAGEN) teller.dataset.weinig = "";
+    else delete teller.dataset.weinig;
+    schrijf.querySelector("textarea").disabled = op;
+    schrijf.querySelector(".knoppen").hidden = op;
+    schrijf.querySelector(".op").hidden = !op;
+    schrijf.querySelector(".op p").textContent = op ? vragenOpTekst() : "";
+    this.$(".meld").hidden = p?.tickets === 0;
+    if (op) this.melding_(schrijf, "");
+
+    const ticketsOp = p?.tickets === 0;
+    const tTeller = this.$(".tickets-stand .teller");
+    tTeller.textContent = ticketTellerTekst(p?.tickets);
+    tTeller.hidden = ticketsOp || !tTeller.textContent;
+    tTeller.dataset.weinig = "";
+    this.$(".nieuw").parentElement.hidden = ticketsOp;
+    const tZin = this.$(".tickets-stand .op p");
+    tZin.textContent = ticketsOp ? ticketsOpTekst() : "";
+    tZin.parentElement.hidden = !ticketsOp;
+    this.$('.schrijf[data-voor="nieuw"] .verstuur').hidden = ticketsOp;
+    if (ticketsOp && this.stand_ === "nieuw") this.melding_(this.$('.schrijf[data-voor="nieuw"]'), ticketsOpTekst(), true);
+
+    clearTimeout(this.middernacht_);
+    if (tot && (p.vragen != null || p.tickets != null)) {
+      this.middernacht_ = setTimeout(() => this.teken(), Math.min(p.opnieuw - nu + 1000, 2 ** 31 - 1));
+    }
+    // Het abonnement zelf, altijd als er een is (ook Onbeperkt). De eigenaar: "ik wil bij de coach assist ook zien welk
+    // abbo je hebt zoals domoticare of domoticare plus".
+    const etiket = this.$(".etiket");
+    etiket.textContent = p?.naam ?? "";
+    etiket.hidden = !p?.naam;
+    this.pakket_ = p;
+    return p;
   }
 
   tekenLijst_() {
@@ -889,10 +993,17 @@ class BotScherm extends HTMLElement {
         this.teken();
       }
     } catch (fout) {
-      if (this.bron === bron) this.melding_(schrijf, foutTekst(fout), true);
+      if (this.bron !== bron) return;
+      this.melding_(schrijf, foutTekst(fout, { nieuw: voor === "nieuw" }), true);
+      if (fout?.code === "pakket_op" && voor !== "ticket") {
+        if (voor === "vragen") this.vragenOp_ = true;
+        else this.ticketsOp_ = true;
+      }
     } finally {
       this.bezig_ = false;
       knop.disabled = false;
+      // Na de knop: het pakket kan hem juist weer uitzetten.
+      if (this.bron === bron) this.teken();
     }
   }
 }
