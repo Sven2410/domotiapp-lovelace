@@ -258,6 +258,8 @@ const css = /* css */ `
   .bericht .tk:empty { display: none; }
   .bericht .tijd { align-self: flex-end; font-size: 11px; line-height: 1.2; color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
   .bericht .fotos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .foto-weg { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-style: italic; color: var(--dac-ink-3); }
+  .foto-weg .icon { width: 15px; height: 15px; flex: 0 0 auto; }
   ${coachMerkCss}
 
   /* De dag boven zijn berichten, als WhatsApp: een pil in het midden. */
@@ -470,10 +472,15 @@ class BotScherm extends HTMLElement {
       tab.addEventListener("click", () => this.naar_(tab.dataset.tab));
     }
     this.$(".nieuw").addEventListener("click", () => this.naar_("nieuw"));
-    // Een gesloten ticket: Nieuw ticket, met de soort van dat ticket al gekozen.
+    // Een gesloten ticket: Nieuw ticket, met de soort van dat ticket al gekozen, en wat er al getypt was (het ticket
+    // kan dicht zijn gegaan terwijl iemand typte). Zo doet het paneel van de coach het ook.
     this.$(".opnieuw").addEventListener("click", () => {
       const soort = this.bron?.stand_?.tickets?.find((x) => x.id === this.ticketId_)?.soort;
+      const veld = this.$('.schrijf[data-voor="ticket"] textarea');
+      const tekst = veld.value;
+      veld.value = "";
       this.naar_("nieuw");
+      this.$('.schrijf[data-voor="nieuw"] textarea').value = tekst;
       if (SOORTEN.some((s) => s.id === soort) && !zonderAssist(this.bron?.stand_)) {
         this.soort_ = soort;
         this.tekenSoorten_();
@@ -1010,6 +1017,14 @@ class BotScherm extends HTMLElement {
         });
       }
       blok.append(rij);
+    }
+    // Na 30 dagen dicht haalt de coach de foto's weg (v0.230.0): dan staat er dat er een foto was, geen leeg vak.
+    if (b.bijlagen_weg) {
+      const weg = document.createElement("span");
+      weg.className = "foto-weg";
+      weg.innerHTML = `${resolve("camera")}<span></span>`;
+      weg.lastChild.textContent = t("Foto verwijderd");
+      blok.append(weg);
     }
     const klok = document.createElement("span");
     klok.className = "tijd";

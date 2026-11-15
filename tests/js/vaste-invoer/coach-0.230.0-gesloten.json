@@ -1,0 +1,93 @@
+{
+ "_toelichting": "Coach v0.230.0 (contract 1), 15-11-2026: gesloten is gesloten en opruimen. Gemaakt met tickets.py van de uitgebrachte coach zelf (tag v0.230.0, alleen de vertaalfunctie vervangen), op vaste tijden: een storing met een foto op 10-11 10:00, antwoord om 11:00, gesloten om 12:00; reply en answer daarna; de lijst na 3 uur en na 2 dagen; opruimen na 31 dagen; en weer geopend. Verzonnen namen en ids.",
+ "gesloten_ticket": {
+  "id": 1,
+  "soort": "storing",
+  "stand": "klaar",
+  "onderwerp": "De laadpaal geeft een rood lampje.",
+  "gemaakt": "2026-11-10T10:00:00+01:00",
+  "bijgewerkt": "2026-11-10T12:00:00+01:00",
+  "door": {
+   "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+   "naam": "Bram"
+  },
+  "berichten": [
+   {
+    "id": 1,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "De laadpaal geeft een rood lampje.",
+    "at": "2026-11-10T10:00:00+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+    "bijlagen": [
+     {
+      "id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "type": "image/jpeg",
+      "grootte": 412331
+     }
+    ]
+   },
+   {
+    "id": 2,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "Dat is een aardlekfout. We kijken mee.",
+    "at": "2026-11-10T11:00:00+01:00"
+   }
+  ],
+  "gelezen": {
+   "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 1
+  },
+  "gesloten": "2026-11-10T12:00:00+01:00"
+ },
+ "fout_reply_gesloten": {
+  "code": "ticket_gesloten",
+  "message": "Dit ticket is gesloten. Is het er weer? Maak dan een nieuw ticket."
+ },
+ "fout_answer_gesloten": {
+  "code": "ticket_gesloten",
+  "message": "Dit ticket is gesloten. Is het er weer? Maak dan een nieuw ticket."
+ },
+ "list_na_3_uur_ids": [
+  1
+ ],
+ "list_na_2_dagen_ids": [],
+ "ticket_na_31_dagen": {
+  "id": 1,
+  "soort": "storing",
+  "stand": "klaar",
+  "onderwerp": "De laadpaal geeft een rood lampje.",
+  "gemaakt": "2026-11-10T10:00:00+01:00",
+  "bijgewerkt": "2026-11-10T12:00:00+01:00",
+  "door": {
+   "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+   "naam": "Bram"
+  },
+  "berichten": [
+   {
+    "id": 1,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "De laadpaal geeft een rood lampje.",
+    "at": "2026-11-10T10:00:00+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0",
+    "bijlagen_weg": true
+   },
+   {
+    "id": 2,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "Dat is een aardlekfout. We kijken mee.",
+    "at": "2026-11-10T11:00:00+01:00"
+   }
+  ],
+  "gelezen": {
+   "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 1
+  },
+  "gesloten": "2026-11-10T12:00:00+01:00"
+ },
+ "heropend": {
+  "id": 1,
+  "stand": "in_behandeling"
+ }
+}

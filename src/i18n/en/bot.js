@@ -79,6 +79,7 @@ export const BOT = {
 
   // gesloten is gesloten (0.129.0); "Open" staat bij programma
   "Gesloten": "Closed",
+  "Foto verwijderd": "Photo removed",
   "Dit ticket is gesloten. Is het er weer? Maak een nieuw ticket.": "This ticket is closed. Is it back? Open a new ticket.",
   "Dit ticket is gesloten. Is het er weer? Maak dan een nieuw ticket.": "This ticket is closed. Is it back? Then open a new ticket.",
 
