@@ -136,7 +136,7 @@ describe("de stand en de soort voor de klant", () => {
     assert.equal(B.standNaam("nieuw"), "Ontvangen");
     assert.equal(B.standNaam("in_behandeling"), "In behandeling");
     assert.equal(B.standNaam("bij_beheerder"), "Ligt bij DomotiTech");
-    assert.equal(B.standNaam("klaar"), "Afgerond");
+    assert.equal(B.standNaam("klaar"), "Gesloten"); // was "Afgerond" tot 0.129.0 (gesloten is gesloten)
     assert.equal(B.standNaam("iets_nieuws"), "In behandeling");
   });
 

@@ -74,9 +74,20 @@ export function afzender(bericht) {
 /** De stand zoals de klant hem leest. */
 export function standNaam(stand) {
   if (stand === "nieuw") return t("Ontvangen");
-  if (stand === "klaar") return t("Afgerond");
+  if (stand === "klaar") return t("Gesloten");
   if (stand === "bij_beheerder") return t("Ligt bij DomotiTech");
   return t("In behandeling");
+}
+
+/**
+ * Het etiket van een ticket in de lijst: Open, In behandeling of Gesloten. De eigenaar, 15 november 2026: "de klant
+ * moet ook goed kunnen zien wat open staat en gesloten is". `soort` kiest de kleur. Ligt het bij DomotiTech, dan is het
+ * in behandeling; dat staat er in woorden naast (`standNaam`).
+ */
+export function standEtiket(stand) {
+  if (stand === "klaar") return { tekst: t("Gesloten"), soort: "dicht" };
+  if (stand === "nieuw") return { tekst: t("Open"), soort: "open" };
+  return { tekst: t("In behandeling"), soort: "bezig" };
 }
 
 /** Hoort de stand bij een lopend ticket? Alleen `klaar` is het niet meer. */
@@ -351,6 +362,7 @@ export function inDagen(ticket, { userId = "", nu = new Date(), invouwen = true,
 export function foutTekst(fout, { nieuw = false } = {}) {
   if (fout?.code === "unknown_command") return t("COACH kent Coach Assist nog niet. Werk COACH bij.");
   if (fout?.code === "pakket_op") return nieuw ? ticketsOpTekst() : vragenOpTekst();
+  if (fout?.code === "ticket_gesloten") return t("Dit ticket is gesloten. Is het er weer? Maak dan een nieuw ticket.");
   if (fout?.code === "geen_coach_assist") return t("Coach Assist zit niet in je abonnement. Een storing melden kan altijd.");
   if (fout?.code === "foto") return t("De foto kon niet mee: {fout}", { fout: String(fout.message ?? "") });
   const uitleg = String(fout?.message ?? "").trim();
