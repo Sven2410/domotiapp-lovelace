@@ -33,7 +33,7 @@ describe("coach v0.220.0: list en subscribe", () => {
       assert.ok(B.SOORTEN.some((s) => s.id === x.soort), x.soort);
       assert.notEqual(B.soortVan(x.soort).naam, "Ticket");
     }
-    assert.deepEqual(DUMP.list.tickets.map((x) => B.standNaam(x.stand)), ["Ontvangen", "Ligt bij DomotiTech", "Afgerond"]);
+    assert.deepEqual(DUMP.list.tickets.map((x) => B.standNaam(x.stand)), ["Ontvangen", "Ligt bij DomotiTech", "Gesloten"]);
     // Het gesprek heeft geen stand.
     assert.equal("stand" in DUMP.list.gesprek, false);
   });

@@ -17,7 +17,6 @@ export const BOT = {
   "Storing": "Fault",
   "Iets doet het niet zoals het hoort.": "Something is not working as it should.",
   "Ontvangen": "Received",
-  "Afgerond": "Done",
   "Ligt bij DomotiTech": "With DomotiTech",
   "In behandeling": "In progress",
   "Heeft COACH nodig": "Needs COACH",
@@ -77,6 +76,11 @@ export const BOT = {
     "You have already opened the maximum number of tickets today. You can open one again tomorrow. Is it urgent? Then contact your installer.",
   "Je hebt je vragen voor vandaag gesteld. Morgen kun je weer vragen stellen. Is er iets kapot? Meld dan een storing.":
     "You have asked your questions for today. You can ask again tomorrow. Is something broken? Then report a fault.",
+
+  // gesloten is gesloten (0.129.0); "Open" staat bij programma
+  "Gesloten": "Closed",
+  "Dit ticket is gesloten. Is het er weer? Maak een nieuw ticket.": "This ticket is closed. Is it back? Open a new ticket.",
+  "Dit ticket is gesloten. Is het er weer? Maak dan een nieuw ticket.": "This ticket is closed. Is it back? Then open a new ticket.",
 
   // editor/icoon-zoek.js
   "tekstballon": "speech bubble",

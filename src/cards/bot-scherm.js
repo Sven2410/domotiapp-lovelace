@@ -43,6 +43,7 @@ import {
   moetLezen,
   ongelezen,
   soortVan,
+  standEtiket,
   standNaam,
   tellerTekst,
   ticketTellerTekst,
@@ -210,6 +211,31 @@ const css = /* css */ `
   .ticket[data-nieuw] .ond { font-weight: 650; }
   .ticket .rg { font-size: 12px; line-height: 1.3; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ticket .wn { flex: 0 0 auto; align-self: flex-start; font-size: 11.5px; color: var(--dac-ink-3); padding-top: 2px; }
+
+  /* Open en Gesloten apart, met een etiket per stand. De eigenaar: "de klant moet ook goed kunnen zien wat open staat
+     en gesloten is". Gesloten staat ingeklapt onderaan, en minder opvallend. */
+  .groep { flex: 0 0 auto; padding: 4px 2px 0; font-size: 12px; font-weight: 600; color: var(--dac-ink-2); }
+  .groep:first-child { padding-top: 0; }
+  button.groep {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px;
+    padding: 4px 8px; cursor: pointer; border: none; border-radius: 10px; background: none; text-align: left;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--dac-ink-2); -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { button.groep:hover { background: var(--dac-hover); color: var(--dac-ink); } }
+  button.groep .icon { width: 15px; height: 15px; transition: transform 160ms ease; }
+  button.groep[aria-expanded="true"] .icon { transform: rotate(180deg); }
+  .ticket[data-dicht] { opacity: .72; }
+  .st-etiket {
+    display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: var(--dac-radius-pill);
+    font-size: 11px; font-weight: 600; line-height: 15px; vertical-align: 1px; border: 1px solid transparent;
+  }
+  .st-etiket[data-st="open"] { color: var(--dac-accent-hi); background: color-mix(in srgb, var(--dac-accent-hi) 12%, transparent); border-color: color-mix(in srgb, var(--dac-accent-hi) 35%, transparent); }
+  .st-etiket[data-st="bezig"] { color: var(--dac-warn); background: color-mix(in srgb, var(--dac-warn) 12%, transparent); border-color: color-mix(in srgb, var(--dac-warn) 35%, transparent); }
+  .st-etiket[data-st="dicht"] { color: var(--dac-ink-3); background: rgba(var(--dac-tint), .06); border-color: var(--dac-border); }
+
+  /* Een gesloten ticket: terug te lezen, niet meer te beantwoorden. */
+  .dicht { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+  .dicht p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); }
 
   /* Een gesprek: dat van het huis, of dat van een ticket. Zoals WhatsApp: wat je zelf schreef rechts in de accenttint,
      de antwoorden en de andere bewoners links, elk blok met de naam erboven en de tijd onderin. */
@@ -412,6 +438,7 @@ class BotScherm extends HTMLElement {
           <div class="stand ticket-stand" hidden>
             <div class="berichten" aria-live="polite"></div>
             ${SCHRIJF("ticket", 2, true)}
+            <div class="dicht" hidden><p></p><div class="knoppen"><button class="hoofd opnieuw" type="button">${resolve("plus")}<span></span></button></div></div>
           </div>
           <div class="stand nieuw-stand" hidden>
             <div class="soorten" role="radiogroup">${SOORTEN.map(
@@ -443,6 +470,15 @@ class BotScherm extends HTMLElement {
       tab.addEventListener("click", () => this.naar_(tab.dataset.tab));
     }
     this.$(".nieuw").addEventListener("click", () => this.naar_("nieuw"));
+    // Een gesloten ticket: Nieuw ticket, met de soort van dat ticket al gekozen.
+    this.$(".opnieuw").addEventListener("click", () => {
+      const soort = this.bron?.stand_?.tickets?.find((x) => x.id === this.ticketId_)?.soort;
+      this.naar_("nieuw");
+      if (SOORTEN.some((s) => s.id === soort) && !zonderAssist(this.bron?.stand_)) {
+        this.soort_ = soort;
+        this.tekenSoorten_();
+      }
+    });
     // Meld een storing: Nieuw ticket, Storing gekozen, en wat er al getypt was gaat mee (en staat dan niet meer bij Vragen).
     this.$(".meld").addEventListener("click", () => {
       const vraag = this.$('.schrijf[data-voor="vragen"] textarea');
@@ -552,6 +588,8 @@ class BotScherm extends HTMLElement {
     this.$('.tab[data-tab="vragen"] .nm').textContent = t("Vragen");
     this.$('.tab[data-tab="tickets"] .nm').textContent = t("Tickets");
     this.$(".nieuw span").textContent = t("Nieuw ticket");
+    this.$(".opnieuw span").textContent = t("Nieuw ticket");
+    this.geslotenOpen_ = false;
     this.$(".meld span").textContent = t("Meld een storing");
     this.vragenOp_ = this.ticketsOp_ = false;
     for (const knop of this.shadowRoot.querySelectorAll(".verstuur span")) knop.textContent = t("Versturen");
@@ -768,32 +806,61 @@ class BotScherm extends HTMLElement {
       return;
     }
     const uid = bron.userId_();
-    const sig = tickets.map((x) => `${x.id}:${x.bijgewerkt}:${x.stand}:${ongelezen(x, uid)}`).join(",");
+    const lopend = tickets.filter(loopt);
+    const dicht = tickets.filter((x) => !loopt(x));
+    // Een gesloten ticket met een antwoord dat je nog niet las: dan staat Gesloten open.
+    if (dicht.some((x) => ongelezen(x, uid))) this.geslotenOpen_ = true;
+    const sig = [this.geslotenOpen_, ...tickets.map((x) => `${x.id}:${x.bijgewerkt}:${x.stand}:${ongelezen(x, uid)}`)].join(",");
     if (lijst.dataset.sig === sig) return;
     lijst.dataset.sig = sig;
-    lijst.replaceChildren(
-      ...tickets.map((x) => {
-        const soort = soortVan(x.soort);
-        const nieuw = ongelezen(x, uid);
-        const el = document.createElement("div");
-        el.className = "ticket";
-        el.setAttribute("role", "button");
-        el.tabIndex = 0;
-        el.dataset.id = String(x.id);
-        if (loopt(x)) el.dataset.loopt = "";
-        if (nieuw) el.dataset.nieuw = "";
-        el.innerHTML = `<span class="si">${resolve(soort.icoon)}${nieuw ? `<span class="stip"></span>` : ""}</span>
-          <span class="txt"><span class="ond"></span><span class="rg"></span></span><span class="wn"></span>`;
-        el.querySelector(".ond").textContent = x.onderwerp || x.berichten?.[0]?.tekst || "";
-        el.querySelector(".rg").textContent = `#${x.id} · ${t(soort.naam)} · ${standNaam(x.stand)}`;
-        el.querySelector(".wn").textContent = wanneer(x.bijgewerkt ?? x.gemaakt);
-        el.setAttribute(
-          "aria-label",
-          `#${x.id}, ${t(soort.naam)}, ${standNaam(x.stand)}${nieuw ? `, ${t("nieuw antwoord")}` : ""}: ${x.onderwerp ?? ""}`
-        );
-        return el;
-      })
+    const delen = [];
+    if (lopend.length) {
+      const kop = document.createElement("div");
+      kop.className = "groep";
+      kop.textContent = `${t("Open")} · ${lopend.length}`;
+      delen.push(kop, ...lopend.map((x) => this.ticketEl_(x, uid)));
+    }
+    if (dicht.length) {
+      const knop = document.createElement("button");
+      knop.type = "button";
+      knop.className = "groep";
+      knop.setAttribute("aria-expanded", String(this.geslotenOpen_));
+      knop.innerHTML = `<span></span>${resolve("chevronDown")}`;
+      knop.firstChild.textContent = `${t("Gesloten")} · ${dicht.length}`;
+      knop.addEventListener("click", () => {
+        this.geslotenOpen_ = !this.geslotenOpen_;
+        this.tekenLijst_();
+      });
+      delen.push(knop);
+      if (this.geslotenOpen_) delen.push(...dicht.map((x) => this.ticketEl_(x, uid)));
+    }
+    lijst.replaceChildren(...delen);
+  }
+
+  /** Eén ticket in de lijst: icoon, onderwerp, het etiket van de stand met nummer en soort, en wanneer. */
+  ticketEl_(x, uid) {
+    const soort = soortVan(x.soort);
+    const nieuw = ongelezen(x, uid);
+    const etiket = standEtiket(x.stand);
+    const el = document.createElement("div");
+    el.className = "ticket";
+    el.setAttribute("role", "button");
+    el.tabIndex = 0;
+    el.dataset.id = String(x.id);
+    if (loopt(x)) el.dataset.loopt = "";
+    else el.dataset.dicht = "";
+    if (nieuw) el.dataset.nieuw = "";
+    el.innerHTML = `<span class="si">${resolve(soort.icoon)}${nieuw ? `<span class="stip"></span>` : ""}</span>
+      <span class="txt"><span class="ond"></span><span class="rg"><span class="st-etiket" data-st="${etiket.soort}"></span><span class="nr"></span></span></span><span class="wn"></span>`;
+    el.querySelector(".ond").textContent = x.onderwerp || x.berichten?.[0]?.tekst || "";
+    el.querySelector(".st-etiket").textContent = etiket.tekst;
+    el.querySelector(".nr").textContent = `#${x.id} · ${t(soort.naam)}`;
+    el.querySelector(".wn").textContent = wanneer(x.bijgewerkt ?? x.gemaakt);
+    el.setAttribute(
+      "aria-label",
+      `#${x.id}, ${t(soort.naam)}, ${standNaam(x.stand)}${nieuw ? `, ${t("nieuw antwoord")}` : ""}: ${x.onderwerp ?? ""}`
     );
+    return el;
   }
 
   tekenTicket_() {
@@ -810,6 +877,13 @@ class BotScherm extends HTMLElement {
     // "Ontvangen" alleen tot er een antwoord is: daarna zegt het gesprek het zelf.
     const ontvangen = this.ontvangen_ === ticket.id && !(ticket.berichten ?? []).some((b) => b.van !== "klant");
     this.tekenBerichten_(this.$(".ticket-stand .berichten"), ticket, ontvangen, false);
+    // Gesloten is gesloten: terug te lezen, maar geen veld meer; wel de weg naar een nieuw ticket. Wat er getypt was
+    // blijft in het (verborgen) veld staan.
+    const dicht = !loopt(ticket);
+    this.$('.schrijf[data-voor="ticket"]').hidden = dicht;
+    this.$(".ticket-stand .dicht").hidden = !dicht;
+    this.$(".ticket-stand .dicht p").textContent = dicht ? t("Dit ticket is gesloten. Is het er weer? Maak een nieuw ticket.") : "";
+    this.$(".opnieuw").parentElement.hidden = this.pakket_?.tickets === 0;
     if (moetLezen(ticket, bron.userId_())) bron.lees_(ticket.id);
   }
 
