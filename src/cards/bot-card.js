@@ -30,6 +30,7 @@ import {
   kentContract,
   pakketOver,
   tegelRegel,
+  zonderAssist,
   verwerk,
 } from "./bot-logica.js";
 import { botScherm, etiketCss, toonBotScherm } from "./bot-scherm.js";
@@ -43,6 +44,8 @@ const ADRES_S = 3600;
 class BotCard extends DacCard {
   static css = /* css */ `
     :host { display: block; }
+    /* Geen DomotiCare: de kaart verbergt zich, en hui-card dan ook (geen ruimte in de sectie). */
+    :host([hidden]) { display: none; }
     *, *::before, *::after { box-sizing: border-box; }
     [hidden] { display: none !important; }
 
@@ -91,6 +94,10 @@ class BotCard extends DacCard {
     this.adressen_ = new Map();
     this.teOud_ = false;
     this.leest_ = new Set();
+    // Verborgen (Geen DomotiCare) blijft de kaart in de pagina: anders haalt hui-card hem eruit, krijgt hij geen
+    // berichten van de coach meer, en komt hij niet terug als het abonnement weer Coach Assist heeft. Zo doen de kaarten
+    // van Home Assistant zelf het ook.
+    this.connectedWhileHidden = true;
   }
 
   validate(config) {
@@ -112,11 +119,15 @@ class BotCard extends DacCard {
 
   wire() {
     const knop = this.$(".knop");
-    this.on(knop, "click", () => toonBotScherm(this));
+    // Zonder Coach Assist in het abonnement opent er niets (alleen te zien in de bewerkmodus, met een zin).
+    const open = () => {
+      if (!zonderAssist(this.stand_)) toonBotScherm(this);
+    };
+    this.on(knop, "click", open);
     this.on(knop, "keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault();
-      toonBotScherm(this);
+      open();
     });
     this.abonnement_ = new BlijvendAbonnement({ type: `${COMMANDO}/subscribe` }, (bericht) => this.bericht_(bericht));
     this.abonnement_.start(this.hass);
@@ -171,7 +182,11 @@ class BotCard extends DacCard {
   bijwerken_() {
     if (this.hass && this.wired_) this.paint();
     const scherm = botScherm();
-    if (scherm?.isVan(this)) scherm.teken();
+    // Ging het abonnement net naar Geen DomotiCare, dan gaat een open scherm dicht.
+    if (scherm?.isVan(this)) {
+      if (zonderAssist(this.stand_)) scherm.sluit();
+      else scherm.teken();
+    }
   }
 
   // Voor het scherm.
@@ -247,18 +262,42 @@ class BotCard extends DacCard {
       .finally(() => this.leest_.delete(id));
   }
 
+  /**
+   * Home Assistant zet `preview` in de kaarteditor en op elke kaart in de bewerkmodus. Daar blijft een kaart zonder
+   * Coach Assist staan, met een zin, zodat de beheerder ziet waarom hij er op het dashboard niet is.
+   */
+  set preview(waarde) {
+    this.preview_ = Boolean(waarde);
+    if (this.hass && this.wired_) this.paint();
+  }
+
+  get preview() {
+    return Boolean(this.preview_);
+  }
+
+  /** Geen DomotiCare: verbergen zoals Home Assistant het zelf doet (`hidden` en `card-visibility-changed`). */
+  zetZichtbaar_(zichtbaar) {
+    if (this.hidden === !zichtbaar) return;
+    this.hidden = !zichtbaar;
+    this.dispatchEvent(new CustomEvent("card-visibility-changed", { detail: { value: zichtbaar } }));
+  }
+
   paint() {
     const knop = this.$(".knop");
     const uid = this.userId_();
     const coach = heeftCoach(this.hass);
-    const regel = tegelRegel({ coach, stand: this.stand_, userId: uid, teOud: this.teOud_ });
+    const zonder = coach && zonderAssist(this.stand_);
+    this.zetZichtbaar_(!zonder || this.preview);
+    const regel = zonder
+      ? t("Coach Assist zit niet in het abonnement van dit huis.")
+      : tegelRegel({ coach, stand: this.stand_, userId: uid, teOud: this.teOud_ });
     const rg = this.$(".rg");
     if (rg.textContent !== regel) rg.textContent = regel;
     const etiket = this.$(".etiket");
     const pakket = coach ? pakketOver(this.stand_)?.naam ?? "" : "";
     if (etiket.textContent !== pakket) etiket.textContent = pakket;
     etiket.hidden = !pakket;
-    const nieuw = coach && allesOngelezen(this.stand_, uid) > 0;
+    const nieuw = coach && !zonder && allesOngelezen(this.stand_, uid) > 0;
     this.$(".stip").hidden = !nieuw;
     knop.setAttribute("aria-label", regel ? `${this.titel_()}. ${regel}` : this.titel_());
     meetRaster(knop);

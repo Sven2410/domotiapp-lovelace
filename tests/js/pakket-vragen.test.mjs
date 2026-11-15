@@ -79,6 +79,31 @@ describe("wat er vandaag over is", () => {
   });
 });
 
+describe("Geen DomotiCare", () => {
+  it("alleen coach_assist: false is zonder; ontbreekt het, dan zit het erin", () => {
+    assert.equal(B.zonderAssist({ pakket: pakket({ naam: "Geen DomotiCare", coach_assist: false }) }), true);
+    assert.equal(B.zonderAssist({ pakket: pakket({ coach_assist: true }) }), false);
+    assert.equal(B.zonderAssist({ pakket: pakket() }), false);
+    assert.equal(B.zonderAssist({ pakket: null }), false);
+    assert.equal(B.zonderAssist(null), false);
+  });
+
+  it("de fout van de coach in een zin", () => {
+    _reset();
+    assert.equal(B.foutTekst({ code: "geen_coach_assist", message: "x" }), "Coach Assist zit niet in je abonnement.");
+  });
+
+  it("de kaart verbergt zich zoals Home Assistant, behalve in de bewerkmodus, en opent dan niets", () => {
+    const kaart = readFileSync(new URL("../../src/cards/bot-card.js", import.meta.url), "utf8");
+    assert.match(kaart, /this\.zetZichtbaar_\(!zonder \|\| this\.preview\);/);
+    assert.match(kaart, /new CustomEvent\("card-visibility-changed", \{ detail: \{ value: zichtbaar \} \}\)/);
+    assert.match(kaart, /:host\(\[hidden\]\) \{ display: none; \}/);
+    assert.match(kaart, /this\.connectedWhileHidden = true;/);
+    assert.match(kaart, /if \(!zonderAssist\(this\.stand_\)\) toonBotScherm\(this\);/);
+    assert.match(kaart, /if \(zonderAssist\(this\.stand_\)\) scherm\.sluit\(\);/);
+  });
+});
+
 describe("de woorden", () => {
   it("de teller, in het Nederlands en het Engels", () => {
     _reset();
