@@ -69,8 +69,8 @@ export const BOT = {
   "Nog {n} vraag vandaag": "{n} question left today",
   "Nog {n} vragen vandaag": "{n} questions left today",
   "Meld een storing": "Report a fault",
-  "Coach Assist zit niet in je abonnement.": "Coach Assist is not part of your subscription.",
-  "Coach Assist zit niet in het abonnement van dit huis.": "Coach Assist is not part of this home's subscription.",
+  "Coach Assist zit niet in je abonnement. Een storing melden kan altijd.":
+    "Coach Assist is not part of your subscription. You can always report a fault.",
   "Nog {n} ticket vandaag": "{n} ticket left today",
   "Nog {n} tickets vandaag": "{n} tickets left today",
   "Je hebt vandaag al het maximum aantal tickets gemaakt. Morgen kan het weer. Is het dringend? Neem dan contact op met je installateur.":

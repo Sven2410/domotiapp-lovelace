@@ -79,7 +79,7 @@ describe("wat er vandaag over is", () => {
   });
 });
 
-describe("Geen DomotiCare", () => {
+describe("Geen DomotiCare: alleen een storing melden", () => {
   it("alleen coach_assist: false is zonder; ontbreekt het, dan zit het erin", () => {
     assert.equal(B.zonderAssist({ pakket: pakket({ naam: "Geen DomotiCare", coach_assist: false }) }), true);
     assert.equal(B.zonderAssist({ pakket: pakket({ coach_assist: true }) }), false);
@@ -90,17 +90,22 @@ describe("Geen DomotiCare", () => {
 
   it("de fout van de coach in een zin", () => {
     _reset();
-    assert.equal(B.foutTekst({ code: "geen_coach_assist", message: "x" }), "Coach Assist zit niet in je abonnement.");
+    assert.equal(B.foutTekst({ code: "geen_coach_assist", message: "x" }), "Coach Assist zit niet in je abonnement. Een storing melden kan altijd.");
   });
 
-  it("de kaart verbergt zich zoals Home Assistant, behalve in de bewerkmodus, en opent dan niets", () => {
+  it("de tegel heet Meld een storing, zonder etiket, en telt alleen de tickets", () => {
     const kaart = readFileSync(new URL("../../src/cards/bot-card.js", import.meta.url), "utf8");
-    assert.match(kaart, /this\.zetZichtbaar_\(!zonder \|\| this\.preview\);/);
-    assert.match(kaart, /new CustomEvent\("card-visibility-changed", \{ detail: \{ value: zichtbaar \} \}\)/);
-    assert.match(kaart, /:host\(\[hidden\]\) \{ display: none; \}/);
-    assert.match(kaart, /this\.connectedWhileHidden = true;/);
-    assert.match(kaart, /if \(!zonderAssist\(this\.stand_\)\) toonBotScherm\(this\);/);
-    assert.match(kaart, /if \(zonderAssist\(this\.stand_\)\) scherm\.sluit\(\);/);
+    assert.match(kaart, /if \(zonderAssist\(this\.stand_\)\) return t\("Meld een storing"\);/);
+    assert.match(kaart, /const stand = zonder \? \{ \.\.\.this\.stand_, gesprek: null \} : this\.stand_;/);
+    assert.match(kaart, /const pakket = coach && !zonder \?/);
+    assert.doesNotMatch(kaart, /card-visibility-changed/);
+  });
+
+  it("het scherm: alleen Tickets, en een nieuw ticket is een storing", () => {
+    const BRON = readFileSync(new URL("../../src/cards/bot-scherm.js", import.meta.url), "utf8");
+    assert.match(BRON, /if \(zonder && this\.stand_ === "vragen"\) this\.stand_ = "tickets";/);
+    assert.match(BRON, /this\.\$\('\.soort\[data-soort="aanvraag"\]'\)\.hidden = zonder;/);
+    assert.match(BRON, /this\.\$\("\.tabs"\)\.hidden = !bovenaan \|\| Boolean\(zin\) \|\| zonder;/);
   });
 });
 

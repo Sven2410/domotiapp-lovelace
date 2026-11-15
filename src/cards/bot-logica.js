@@ -165,8 +165,9 @@ export function pakketOver(stand, nu = new Date()) {
 
 /**
  * Geen DomotiCare: het huis heeft een pakket zonder Coach Assist (`coach_assist: false`). De eigenaar, 15 november
- * 2026: "ik wil ook een optie geen domoticare of iets. Dan moet er geen AI assistant in zitten etc". De kaart toont dan
- * niets, en de coach weigert een vraag of ticket (`geen_coach_assist`). Ontbreekt het veld, dan zit het er wel in.
+ * 2026: "ik wil ook een optie geen domoticare of iets. Dan moet er geen AI assistant in zitten etc", en daarna "Ja
+ * zonder care wel een storing melden". De kaart heet dan Meld een storing: alleen Tickets, en een nieuw ticket is altijd
+ * een storing. Een vraag of aanvraag weigert de coach (`geen_coach_assist`). Ontbreekt het veld, dan zit het er wel in.
  */
 export const zonderAssist = (stand) => stand?.pakket?.coach_assist === false;
 
@@ -350,7 +351,7 @@ export function inDagen(ticket, { userId = "", nu = new Date(), invouwen = true,
 export function foutTekst(fout, { nieuw = false } = {}) {
   if (fout?.code === "unknown_command") return t("COACH kent Coach Assist nog niet. Werk COACH bij.");
   if (fout?.code === "pakket_op") return nieuw ? ticketsOpTekst() : vragenOpTekst();
-  if (fout?.code === "geen_coach_assist") return t("Coach Assist zit niet in je abonnement.");
+  if (fout?.code === "geen_coach_assist") return t("Coach Assist zit niet in je abonnement. Een storing melden kan altijd.");
   if (fout?.code === "foto") return t("De foto kon niet mee: {fout}", { fout: String(fout.message ?? "") });
   const uitleg = String(fout?.message ?? "").trim();
   return uitleg ? t("Versturen lukte niet: {fout}", { fout: uitleg }) : t("Versturen lukte niet.");

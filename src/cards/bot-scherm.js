@@ -49,6 +49,7 @@ import {
   ticketsOpTekst,
   vragenOpTekst,
   pakketOver,
+  zonderAssist,
   WEINIG_VRAGEN,
   waaromNiet,
   wanneer,
@@ -570,7 +571,8 @@ class BotScherm extends HTMLElement {
     const stand = bron.stand_;
     const uid = bron.userId_();
     const ticketsNieuw = (stand?.tickets ?? []).some((x) => ongelezen(x, uid));
-    this.naar_(ticketsNieuw && !ongelezen(stand?.gesprek, uid) ? "tickets" : "vragen");
+    const opTickets = zonderAssist(stand) || (ticketsNieuw && !ongelezen(stand?.gesprek, uid));
+    this.naar_(opTickets ? "tickets" : "vragen");
     setTimeout(() => this.$(".vak")?.focus(), 40);
   }
 
@@ -627,12 +629,18 @@ class BotScherm extends HTMLElement {
   teken() {
     if (!this.bron) return;
     const bron = this.bron;
+    // Geen DomotiCare: alleen Tickets, en een nieuw ticket is een storing. Ging het abonnement net om terwijl Vragen
+    // open stond, dan naar Tickets.
+    const zonder = zonderAssist(bron.stand_);
+    if (zonder && this.stand_ === "vragen") this.stand_ = "tickets";
+    if (zonder) this.soort_ = "storing";
+    this.$('.soort[data-soort="aanvraag"]').hidden = zonder;
     const zin = bron.zin_();
     const vak = this.$(".vak");
     const stand = zin ? "zin" : this.stand_;
     vak.dataset.stand = stand;
     const bovenaan = stand === "vragen" || stand === "tickets" || stand === "zin";
-    this.$(".tabs").hidden = !bovenaan || Boolean(zin);
+    this.$(".tabs").hidden = !bovenaan || Boolean(zin) || zonder;
     this.$(".vragen-stand").hidden = stand !== "vragen";
     this.$(".tickets-stand").hidden = stand !== "tickets";
     this.$(".ticket-stand").hidden = stand !== "ticket";
@@ -734,8 +742,9 @@ class BotScherm extends HTMLElement {
     // Het abonnement zelf, altijd als er een is (ook Onbeperkt). De eigenaar: "ik wil bij de coach assist ook zien welk
     // abbo je hebt zoals domoticare of domoticare plus".
     const etiket = this.$(".etiket");
-    etiket.textContent = p?.naam ?? "";
-    etiket.hidden = !p?.naam;
+    const naam = zonderAssist(this.bron.stand_) ? "" : (p?.naam ?? "");
+    etiket.textContent = naam;
+    etiket.hidden = !naam;
     this.pakket_ = p;
     return p;
   }
@@ -806,7 +815,10 @@ class BotScherm extends HTMLElement {
 
   tekenNieuw_() {
     this.$("#kop").textContent = t("Nieuw ticket");
-    this.$(".wie .onder").textContent = t("Een storing of een aanvraag");
+    // Geen DomotiCare: alleen een storing.
+    this.$(".wie .onder").textContent = zonderAssist(this.bron.stand_)
+      ? t("Iets doet het niet zoals het hoort.")
+      : t("Een storing of een aanvraag");
     this.tekenSoorten_();
   }
 
