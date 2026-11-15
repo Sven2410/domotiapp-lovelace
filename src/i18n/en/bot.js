@@ -65,6 +65,18 @@ export const BOT = {
   "{n} berichten": "{n} messages",
   "Eerdere dagen": "Earlier days",
   "Oudere berichten": "Older messages",
+  // het abonnement (DomotiCare, 0.128.0). Gelijk aan het paneel van de coach.
+  "Nog {n} vraag vandaag": "{n} question left today",
+  "Nog {n} vragen vandaag": "{n} questions left today",
+  "Meld een storing": "Report a fault",
+  "Coach Assist zit niet in je abonnement. Een storing melden kan altijd.":
+    "Coach Assist is not part of your subscription. You can always report a fault.",
+  "Nog {n} ticket vandaag": "{n} ticket left today",
+  "Nog {n} tickets vandaag": "{n} tickets left today",
+  "Je hebt vandaag al het maximum aantal tickets gemaakt. Morgen kan het weer. Is het dringend? Neem dan contact op met je installateur.":
+    "You have already opened the maximum number of tickets today. You can open one again tomorrow. Is it urgent? Then contact your installer.",
+  "Je hebt je vragen voor vandaag gesteld. Morgen kun je weer vragen stellen. Is er iets kapot? Meld dan een storing.":
+    "You have asked your questions for today. You can ask again tomorrow. Is something broken? Then report a fault.",
 
   // editor/icoon-zoek.js
   "tekstballon": "speech bubble",

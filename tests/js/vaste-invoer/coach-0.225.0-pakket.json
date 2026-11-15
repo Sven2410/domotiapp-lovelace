@@ -1,0 +1,132 @@
+{
+ "_toelichting": "Coach v0.225.0 (contract 1), 15-11-2026: het pakket (DomotiCare) zoals de coach het geeft. Gemaakt met tickets.py van de uitgebrachte coach zelf (tag v0.225.0, letterlijk in de nagebootste coach van de testinstance) en de websocket volgens websocket.py van die tag, over de echte websocket van de testinstance. Alleen het pakket, de sleutels en de fouten; de grenzen zijn in de testinstance ruim of gelijk aan wat er al gesteld was, zodat elke stand erin staat.",
+ "set_plan": {
+  "naam": "DomotiCare",
+  "coach_assist": true,
+  "vragen_per_dag": 1000,
+  "vragen_vandaag": 13,
+  "vragen_over": 987,
+  "tickets_per_dag": 1000,
+  "tickets_vandaag": 8,
+  "tickets_over": 992,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "list_pakket": {
+  "naam": "DomotiCare",
+  "coach_assist": true,
+  "vragen_per_dag": 1000,
+  "vragen_vandaag": 13,
+  "vragen_over": 987,
+  "tickets_per_dag": 1000,
+  "tickets_vandaag": 8,
+  "tickets_over": 992,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "list_sleutels": [
+  "contract",
+  "gesprek",
+  "pakket",
+  "tickets"
+ ],
+ "subscribe_eerste_sleutels": [
+  "contract",
+  "gesprek",
+  "pakket",
+  "tickets"
+ ],
+ "subscribe_eerste_pakket": {
+  "naam": "DomotiCare",
+  "coach_assist": true,
+  "vragen_per_dag": 1000,
+  "vragen_vandaag": 13,
+  "vragen_over": 987,
+  "tickets_per_dag": 1000,
+  "tickets_vandaag": 8,
+  "tickets_over": 992,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "event_na_vraag": {
+  "sleutels": [
+   "pakket",
+   "ticket"
+  ],
+  "ticket_id": 0,
+  "pakket": {
+   "naam": "DomotiCare",
+   "coach_assist": true,
+   "vragen_per_dag": 1000,
+   "vragen_vandaag": 14,
+   "vragen_over": 986,
+   "tickets_per_dag": 1000,
+   "tickets_vandaag": 8,
+   "tickets_over": 992,
+   "opnieuw": "2026-11-16T00:00:00+01:00"
+  }
+ },
+ "event_na_set_plan": {
+  "pakket": {
+   "naam": "DomotiCare Plus",
+   "coach_assist": true,
+   "vragen_per_dag": 900,
+   "vragen_vandaag": 14,
+   "vragen_over": 886,
+   "tickets_per_dag": 900,
+   "tickets_vandaag": 8,
+   "tickets_over": 892,
+   "opnieuw": "2026-11-16T00:00:00+01:00"
+  }
+ },
+ "pakket_op_stand": {
+  "naam": "DomotiCare",
+  "coach_assist": true,
+  "vragen_per_dag": 14,
+  "vragen_vandaag": 14,
+  "vragen_over": 0,
+  "tickets_per_dag": 8,
+  "tickets_vandaag": 8,
+  "tickets_over": 0,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "fout_vraag_op": {
+  "code": "pakket_op",
+  "message": "Je hebt je vragen voor vandaag gesteld. Morgen kun je weer vragen stellen. Is er iets kapot? Meld dan een storing."
+ },
+ "fout_ticket_op": {
+  "code": "pakket_op",
+  "message": "Je hebt vandaag al het maximum aantal tickets gemaakt. Morgen kan het weer. Is het dringend? Neem dan contact op met je installateur."
+ },
+ "geen_pakket": {
+  "naam": "Geen DomotiCare",
+  "coach_assist": false,
+  "vragen_per_dag": null,
+  "vragen_vandaag": 14,
+  "vragen_over": null,
+  "tickets_per_dag": null,
+  "tickets_vandaag": 8,
+  "tickets_over": null,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "fout_geen_vraag": {
+  "code": "geen_coach_assist",
+  "message": "Coach Assist zit niet in je abonnement."
+ },
+ "fout_geen_ticket": {
+  "code": "geen_coach_assist",
+  "message": "Coach Assist zit niet in je abonnement."
+ },
+ "onbeperkt": {
+  "naam": "DomotiCare Onbeperkt",
+  "coach_assist": true,
+  "vragen_per_dag": null,
+  "vragen_vandaag": 14,
+  "vragen_over": null,
+  "tickets_per_dag": null,
+  "tickets_vandaag": 8,
+  "tickets_over": null,
+  "opnieuw": "2026-11-16T00:00:00+01:00"
+ },
+ "event_geen_pakket": {
+  "pakket": null
+ },
+ "list_zonder_pakket": null
+}

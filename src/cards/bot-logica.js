@@ -101,20 +101,96 @@ export const sorteer = (tickets) =>
 export const leegGesprek = () => ({ id: GESPREK, soort: "vraag", berichten: [], gelezen: {} });
 
 /**
- * Een bericht van het abonnement erbij. Het eerste is alles (`gesprek` en `tickets`, met `contract`), daarna één
- * ticket per wijziging (`ticket`; met `id` 0 is dat het gesprek). Geeft de nieuwe stand `{gesprek, tickets}`, of
- * `null` als het bericht er niets mee te maken had.
+ * Een bericht van het abonnement erbij. Het eerste is alles (`gesprek`, `tickets` en sinds 15 november 2026
+ * `pakket`, met `contract`), daarna één ticket per wijziging (`ticket`; met `id` 0 is dat het gesprek, en na een vraag
+ * staat het bijgewerkte `pakket` ernaast), of een nieuw pakket alleen (`{pakket}`, na `set_plan`). Geeft de nieuwe stand `{gesprek, tickets, pakket}`, of `null` als het bericht er niets mee te
+ * maken had. Een coach die het pakket niet kent stuurt het niet mee: dan is het `null`, en is er geen grens.
  */
 export function verwerk(stand, bericht) {
   if (Array.isArray(bericht?.tickets)) {
-    return { gesprek: bericht.gesprek ?? leegGesprek(), tickets: sorteer(bericht.tickets.filter((x) => x.id !== GESPREK)) };
+    return {
+      gesprek: bericht.gesprek ?? leegGesprek(),
+      tickets: sorteer(bericht.tickets.filter((x) => x.id !== GESPREK)),
+      pakket: bericht.pakket ?? null,
+    };
+  }
+  // Na een vraag staat het pakket naast het gesprek; na `set_plan` komt het alleen.
+  const pakket = bericht && "pakket" in bericht ? (bericht.pakket ?? null) : (stand?.pakket ?? null);
+  if (bericht && "pakket" in bericht && !("ticket" in bericht)) {
+    return { gesprek: stand?.gesprek ?? leegGesprek(), tickets: stand?.tickets ?? [], pakket: bericht.pakket ?? null };
   }
   const ticket = bericht?.ticket;
   if (!ticket || ticket.id == null) return null;
   const tickets = stand?.tickets ?? [];
-  if (Number(ticket.id) === GESPREK) return { gesprek: ticket, tickets };
-  return { gesprek: stand?.gesprek ?? leegGesprek(), tickets: sorteer([...tickets.filter((x) => x.id !== ticket.id), ticket]) };
+  if (Number(ticket.id) === GESPREK) return { gesprek: ticket, tickets, pakket };
+  return { gesprek: stand?.gesprek ?? leegGesprek(), tickets: sorteer([...tickets.filter((x) => x.id !== ticket.id), ticket]), pakket };
 }
+
+/*
+ * HET ABONNEMENT (DomotiCare)
+ *
+ * De eigenaar, 15 november 2026: klanten krijgen een pakket met een aantal vragen per dag (10, 25 of onbeperkt), en
+ * "elk abbo heeft geen maandlimiet". Daarna ook een grens op nieuwe tickets, tegen spam (5, 10 of geen). Een reactie op
+ * een ticket telt niet. De coach houdt de grens en weigert wat te veel is (`pakket_op`); de kaart laat zien hoeveel er
+ * over is, en zet het veld of de knop op 0 uit. Zie de afspraak "Wijziging 15-11-2026".
+ */
+
+/**
+ * Wat er vandaag nog over is: `{naam, vragen, tickets, opnieuw}`, of `null` zonder pakket. `vragen` en `tickets` zijn
+ * het aantal dat over is, of `null` als daar geen grens op zit (onbeperkt, of een coach die alleen vragen telt).
+ *
+ * De coach telt (uit alles wat hij bewaard heeft, niet uit de laatste 100 die hij meestuurt) en stuurt het mee: in
+ * `list`, naast het gesprek na elke vraag, en na `set_plan`. Om middernacht komt er geen bericht; na `opnieuw` (de
+ * volgende middernacht van Home Assistant) is het daarom weer de hele grens. Zo doet het paneel het ook.
+ */
+export function pakketOver(stand, nu = new Date()) {
+  const pakket = stand?.pakket;
+  if (!pakket || typeof pakket !== "object") return null;
+  const opnieuw = tijd(pakket.opnieuw) || null;
+  const voorbij = Boolean(opnieuw) && nu.getTime() >= opnieuw;
+  const grens = (perDag, over) => {
+    const per = perDag == null ? null : Number(perDag);
+    if (per == null || !Number.isFinite(per)) return null;
+    if (voorbij) return per;
+    const nog = over == null ? per : Number(over);
+    return Math.max(0, Number.isFinite(nog) ? nog : per);
+  };
+  return {
+    naam: String(pakket.naam ?? ""),
+    vragen: grens(pakket.vragen_per_dag, pakket.vragen_over),
+    tickets: grens(pakket.tickets_per_dag, pakket.tickets_over),
+    opnieuw: voorbij ? null : opnieuw,
+  };
+}
+
+/**
+ * Geen DomotiCare: het huis heeft een pakket zonder Coach Assist (`coach_assist: false`). De eigenaar, 15 november
+ * 2026: "ik wil ook een optie geen domoticare of iets. Dan moet er geen AI assistant in zitten etc", en daarna "Ja
+ * zonder care wel een storing melden". De kaart heet dan Meld een storing: alleen Tickets, en een nieuw ticket is altijd
+ * een storing. Een vraag of aanvraag weigert de coach (`geen_coach_assist`). Ontbreekt het veld, dan zit het er wel in.
+ */
+export const zonderAssist = (stand) => stand?.pakket?.coach_assist === false;
+
+/** De regel onder het vraagveld. Leeg bij onbeperkt of zonder pakket. */
+export const tellerTekst = (over) =>
+  over == null ? "" : tn(over, "Nog {n} vraag vandaag", "Nog {n} vragen vandaag");
+
+/** Bij zoveel vragen of minder valt de teller op. */
+export const WEINIG_VRAGEN = 3;
+
+/** De regel bij Nieuw ticket. Alleen als er nog `WEINIG_TICKETS` of minder over zijn. */
+export const ticketTellerTekst = (over) =>
+  over == null || over > WEINIG_TICKETS ? "" : tn(over, "Nog {n} ticket vandaag", "Nog {n} tickets vandaag");
+
+export const WEINIG_TICKETS = 2;
+
+/** Wat de klant leest als zijn vragen voor vandaag op zijn. Dezelfde zin als de coach bij `pakket_op`. */
+export const vragenOpTekst = () =>
+  t("Je hebt je vragen voor vandaag gesteld. Morgen kun je weer vragen stellen. Is er iets kapot? Meld dan een storing.");
+
+/** En als de tickets voor vandaag op zijn (tegen spam). Dezelfde zin als de coach bij `pakket_op` op `new`. */
+export const ticketsOpTekst = () =>
+  t("Je hebt vandaag al het maximum aantal tickets gemaakt. Morgen kan het weer. Is het dringend? Neem dan contact op met je installateur.");
 
 /** Het laatste bericht dat deze gebruiker zag. */
 const gezien = (ticket, userId) => Number(ticket?.gelezen?.[userId] ?? 0);
@@ -268,9 +344,14 @@ export function inDagen(ticket, { userId = "", nu = new Date(), invouwen = true,
   return { dagen: dagen.filter(inBeeld), keuzes, keuze: gekozen };
 }
 
-/** Een fout van de coach in een zin. Wat de coach zelf zegt, wordt niet vertaald. */
-export function foutTekst(fout) {
+/**
+ * Een fout van de coach in een zin. Wat de coach zelf zegt, wordt niet vertaald; `pakket_op` wel, want die zin kennen
+ * we, en hij hangt af van wat er verstuurd werd (`nieuw`: een nieuw ticket, anders een vraag).
+ */
+export function foutTekst(fout, { nieuw = false } = {}) {
   if (fout?.code === "unknown_command") return t("COACH kent Coach Assist nog niet. Werk COACH bij.");
+  if (fout?.code === "pakket_op") return nieuw ? ticketsOpTekst() : vragenOpTekst();
+  if (fout?.code === "geen_coach_assist") return t("Coach Assist zit niet in je abonnement. Een storing melden kan altijd.");
   if (fout?.code === "foto") return t("De foto kon niet mee: {fout}", { fout: String(fout.message ?? "") });
   const uitleg = String(fout?.message ?? "").trim();
   return uitleg ? t("Versturen lukte niet: {fout}", { fout: uitleg }) : t("Versturen lukte niet.");

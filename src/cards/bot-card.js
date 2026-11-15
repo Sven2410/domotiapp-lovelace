@@ -28,10 +28,12 @@ import {
   fotoMaat,
   heeftCoach,
   kentContract,
+  pakketOver,
   tegelRegel,
+  zonderAssist,
   verwerk,
 } from "./bot-logica.js";
-import { botScherm, toonBotScherm } from "./bot-scherm.js";
+import { botScherm, etiketCss, toonBotScherm } from "./bot-scherm.js";
 
 /** Zo lang mag het abonnement mislukken terwijl de coach er wel is, voordat de kaart zegt dat de coach te oud is. */
 const TE_OUD_NA_MS = 20000;
@@ -67,6 +69,14 @@ class BotCard extends DacCard {
 
     .txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px; }
     .nm { font-size: 13px; font-weight: 500; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Het pakket naast de naam, alleen als er plek is: past het niet, dan loopt het naar een tweede regel die er niet
+       is (vaste hoogte, overflow hidden), en blijft de tegel 56 hoog. De eigenaar, 15 november 2026: "ik wil bij de
+       coach assist ook zien welk abbo je hebt". */
+    .kopregel { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; height: calc(13px * 1.25); overflow: hidden; min-width: 0; }
+    .kopregel .nm { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+    ${etiketCss}
+    /* Op de tegel niet hoger dan de naamregel (16,25 px), anders valt de rand eraf. */
+    .kopregel .etiket { padding: 0 6px; line-height: 14px; }
     .rg { font-size: 12px; line-height: 1.25; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rg:empty { display: none; }
     .pijl { flex: 0 0 auto; color: var(--dac-ink-3); display: grid; place-items: center; }
@@ -96,18 +106,19 @@ class BotCard extends DacCard {
     this.toggleAttribute("bare", Boolean(this.config.bare));
     return `<div class="knop surface" role="button" tabindex="0" style="--tone:${TONES.accent}">
       <span class="chip">${resolve(this.config.icon || "coach", "coach")}<span class="stip" hidden></span></span>
-      <span class="txt"><span class="nm">${escapeHtml(this.titel_())}</span><span class="rg"></span></span>
+      <span class="txt"><span class="kopregel"><span class="nm">${escapeHtml(this.titel_())}</span><span class="etiket" hidden></span></span><span class="rg"></span></span>
       <span class="pijl">${resolve("chevronRight")}</span>
     </div>`;
   }
 
   wire() {
     const knop = this.$(".knop");
-    this.on(knop, "click", () => toonBotScherm(this));
+    const open = () => toonBotScherm(this);
+    this.on(knop, "click", open);
     this.on(knop, "keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault();
-      toonBotScherm(this);
+      open();
     });
     this.abonnement_ = new BlijvendAbonnement({ type: `${COMMANDO}/subscribe` }, (bericht) => this.bericht_(bericht));
     this.abonnement_.start(this.hass);
@@ -167,7 +178,12 @@ class BotCard extends DacCard {
 
   // Voor het scherm.
 
+  /**
+   * De naam op de tegel en boven het scherm. Geen DomotiCare heeft geen Coach Assist, maar wel storingen melden (de
+   * eigenaar, 15 november 2026: "Ja zonder care wel een storing melden"): dan heet het zo.
+   */
   titel_() {
+    if (zonderAssist(this.stand_)) return t("Meld een storing");
     return this.config?.name || t("Vraag het Coach Assist");
   }
 
@@ -242,10 +258,19 @@ class BotCard extends DacCard {
     const knop = this.$(".knop");
     const uid = this.userId_();
     const coach = heeftCoach(this.hass);
-    const regel = tegelRegel({ coach, stand: this.stand_, userId: uid, teOud: this.teOud_ });
+    // Geen DomotiCare: alleen tickets; het gesprek telt niet mee, want daar kan hij niet bij.
+    const zonder = coach && zonderAssist(this.stand_);
+    const stand = zonder ? { ...this.stand_, gesprek: null } : this.stand_;
+    const nm = this.$(".nm");
+    if (nm.textContent !== this.titel_()) nm.textContent = this.titel_();
+    const regel = tegelRegel({ coach, stand, userId: uid, teOud: this.teOud_ });
     const rg = this.$(".rg");
     if (rg.textContent !== regel) rg.textContent = regel;
-    const nieuw = coach && allesOngelezen(this.stand_, uid) > 0;
+    const etiket = this.$(".etiket");
+    const pakket = coach && !zonder ? pakketOver(this.stand_)?.naam ?? "" : "";
+    if (etiket.textContent !== pakket) etiket.textContent = pakket;
+    etiket.hidden = !pakket;
+    const nieuw = coach && allesOngelezen(stand, uid) > 0;
     this.$(".stip").hidden = !nieuw;
     knop.setAttribute("aria-label", regel ? `${this.titel_()}. ${regel}` : this.titel_());
     meetRaster(knop);
