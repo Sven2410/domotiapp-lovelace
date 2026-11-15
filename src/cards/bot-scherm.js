@@ -26,7 +26,7 @@
 import { meldAan } from "../registratie.js";
 import { sheet, tokens, themaCss } from "../theme.js";
 import { volgThema } from "../thema.js";
-import { resolve } from "../icons.js";
+import { coachMerk, coachMerkCss, resolve } from "../icons.js";
 import { zetScrollSlot } from "../scrollslot.js";
 import { t } from "../taal.js";
 import {
@@ -36,6 +36,9 @@ import {
   SOORTEN,
   afzender,
   foutTekst,
+  inDagen,
+  isEigen,
+  klokVan,
   loopt,
   moetLezen,
   ongelezen,
@@ -187,23 +190,51 @@ const css = /* css */ `
   .ticket .rg { font-size: 12px; line-height: 1.3; color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ticket .wn { flex: 0 0 auto; align-self: flex-start; font-size: 11.5px; color: var(--dac-ink-3); padding-top: 2px; }
 
-  /* Een gesprek: dat van het huis, of dat van een ticket. */
+  /* Een gesprek: dat van het huis, of dat van een ticket. Zoals WhatsApp: wat je zelf schreef rechts in de accenttint,
+     de antwoorden en de andere bewoners links, elk blok met de naam erboven en de tijd onderin. */
   .berichten { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
-  .bericht { max-width: 85%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
-  .bericht[data-van="klant"] { align-self: flex-end; align-items: flex-end; }
-  .bericht .wie2 { font-size: 11.5px; color: var(--dac-ink-3); padding: 0 4px; }
-  .bericht .tk {
-    padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.45;
-    white-space: pre-wrap; overflow-wrap: anywhere;
+  .bericht { max-width: 80%; min-width: 0; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; align-items: flex-start; }
+  .bericht[data-zij="eigen"] { align-self: flex-end; align-items: flex-end; }
+  .bericht .wie2 { font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--dac-ink-2); padding: 0 4px; overflow-wrap: anywhere; }
+  .bericht[data-van="domotitech"] .wie2 { color: var(--dac-accent-hi); }
+  .blok {
+    max-width: 100%; display: flex; flex-direction: column; gap: 6px;
+    padding: 8px 11px 5px; border-radius: 14px; border-top-left-radius: 4px;
     background: var(--dac-surface); border: 1px solid var(--dac-border);
   }
-  .bericht .tk:empty { display: none; }
-  .bericht[data-van="klant"] .tk {
+  .bericht[data-zij="eigen"] .blok {
+    border-radius: 14px; border-top-right-radius: 4px;
     background: color-mix(in srgb, var(--dac-accent-hi) 16%, transparent);
     border-color: color-mix(in srgb, var(--dac-accent-hi) 35%, transparent);
   }
-  .bericht .fotos { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-  .bericht[data-van="domotitech"] .fotos { justify-content: flex-start; }
+  .bericht .tk { font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bericht .tk:empty { display: none; }
+  .bericht .tijd { align-self: flex-end; font-size: 11px; line-height: 1.2; color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
+  .bericht .fotos { display: flex; flex-wrap: wrap; gap: 6px; }
+  ${coachMerkCss}
+
+  /* De dag boven zijn berichten, als WhatsApp: een pil in het midden. */
+  .dag { align-self: center; flex: 0 0 auto; max-width: 100%; }
+  .dag > span {
+    display: inline-block; padding: 4px 11px; border-radius: var(--dac-radius-pill);
+    background: rgba(var(--dac-tint), .07); color: var(--dac-ink-2);
+    font-size: 12px; font-weight: 500; line-height: 1.3; text-align: center;
+  }
+
+  /* De eerdere dagen: één keuzelijst boven het gesprek. 16px tekst, anders zoomt Safari in zodra hij opengaat. Een
+     eigen achtergrondkleur, ook voor de opties: het uitklappaneel valt buiten de shadow root (check:controls). */
+  .keuze {
+    align-self: center; flex: 0 0 auto; max-width: 100%; min-height: 34px; cursor: pointer;
+    padding: 4px 32px 4px 14px; border-radius: var(--dac-radius-pill);
+    font: inherit; font-size: 16px; line-height: 1.2; color: var(--dac-ink-2); color-scheme: var(--dac-scheme);
+    appearance: none; -webkit-appearance: none; text-overflow: ellipsis;
+    background-color: var(--dac-bg-raise); border: 1px solid var(--dac-border);
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 16px center, right 11px center; background-size: 5px 5px; background-repeat: no-repeat;
+  }
+  .keuze option { background-color: var(--dac-bg-raise); color: var(--dac-ink); }
+  .keuze option:checked { background-color: var(--dac-accent); color: var(--dac-on-accent); }
+  .keuze[data-gekozen] { color: var(--dac-ink); border-color: color-mix(in srgb, var(--dac-accent-hi) 45%, transparent); }
   .bericht .fotos button {
     width: 96px; height: 96px; padding: 0; cursor: zoom-in; overflow: hidden;
     border-radius: 12px; border: 1px solid var(--dac-border); background: var(--dac-surface);
@@ -303,6 +334,9 @@ class BotScherm extends HTMLElement {
     this.bezig_ = false;
     // Per schrijfvak de gekozen foto's. Ook Vragen staat erin, leeg: na versturen wordt elk vak leeggemaakt.
     this.fotos_ = { vragen: [], ticket: [], nieuw: [] };
+    // De dagen die in beeld blijven omdat er een ongelezen antwoord stond, en de keuze in de lijst (zie `inDagen`).
+    this.vast_ = new Set();
+    this.keuze_ = null;
   }
 
   connectedCallback() {
@@ -330,6 +364,7 @@ class BotScherm extends HTMLElement {
             <button class="tab" type="button" role="tab" data-tab="tickets">${resolve("warning")}<span class="nm"></span><span class="stip" hidden></span></button>
           </div>
           <div class="stand vragen-stand">
+            <select class="keuze dagen" hidden></select>
             <div class="berichten" aria-live="polite"></div>
             ${SCHRIJF("vragen", 2, false)}
           </div>
@@ -396,6 +431,13 @@ class BotScherm extends HTMLElement {
         this.$(".groot").hidden = false;
       });
     }
+
+    // Een eerdere dag kiezen: die dag op zijn plek erbij, en het gesprek naar zijn begin.
+    this.$(".dagen").addEventListener("change", (e) => {
+      this.keuze_ = e.target.value || null;
+      this.naarKeuze_ = Boolean(this.keuze_);
+      this.teken();
+    });
 
     const soorten = this.$(".soorten");
     const kies = (doel) => {
@@ -508,6 +550,11 @@ class BotScherm extends HTMLElement {
   naar_(stand, ticketId = null) {
     const was = this.stand_;
     this.stand_ = stand;
+    // Een gesprek opent elke keer zoals nieuw: alleen de laatste dag open, en onderaan.
+    if (stand === "vragen" || stand === "ticket") {
+      this.vast_.clear();
+      this.keuze_ = null;
+    }
     if (stand === "ticket") {
       if (ticketId !== this.ticketId_) {
         this.$('.schrijf[data-voor="ticket"] textarea').value = "";
@@ -585,7 +632,7 @@ class BotScherm extends HTMLElement {
       }
       return;
     }
-    this.tekenBerichten_(vak, gesprek, false);
+    this.tekenBerichten_(vak, gesprek, false, true);
     if (moetLezen(gesprek, bron.userId_())) bron.lees_(GESPREK);
   }
 
@@ -649,7 +696,7 @@ class BotScherm extends HTMLElement {
     this.$(".wie .onder").textContent = standNaam(ticket.stand);
     // "Ontvangen" alleen tot er een antwoord is: daarna zegt het gesprek het zelf.
     const ontvangen = this.ontvangen_ === ticket.id && !(ticket.berichten ?? []).some((b) => b.van !== "klant");
-    this.tekenBerichten_(this.$(".ticket-stand .berichten"), ticket, ontvangen);
+    this.tekenBerichten_(this.$(".ticket-stand .berichten"), ticket, ontvangen, false);
     if (moetLezen(ticket, bron.userId_())) bron.lees_(ticket.id);
   }
 
@@ -666,50 +713,119 @@ class BotScherm extends HTMLElement {
     return el;
   }
 
-  tekenBerichten_(vak, ticket, ontvangen) {
+  /**
+   * Een gesprek tekenen, per dag, zoals WhatsApp (zie `inDagen` in bot-logica.js). Naar onderen gaat het bij openen
+   * (naar_ wist `sig`), na je eigen bericht, en bij een antwoord alleen als je al onderaan stond: wie terugleest, wordt
+   * niet weggetrokken. Een dag kiezen in de lijst schuift naar het begin van die dag. De foto's hebben een vaste maat,
+   * dus een plaatje dat later laadt duwt niets weg.
+   */
+  tekenBerichten_(vak, ticket, ontvangen, invouwen) {
     const berichten = ticket.berichten ?? [];
-    const sig = `${ticket.id}:${berichten.map((b) => b.id).join(",")}:${ontvangen}`;
-    if (vak.dataset.sig === sig) return;
+    const uid = this.bron.userId_();
+    const nu = new Date();
+    const { dagen, keuzes, keuze } = inDagen(ticket, { userId: uid, nu, invouwen, vast: this.vast_, keuze: this.keuze_ });
+    // Een dag met een ongelezen antwoord blijft in beeld, ook nadat `read` terugkomt.
+    for (const d of dagen) if (d.ongelezen) this.vast_.add(d.sleutel);
+    if (invouwen) this.tekenKeuzes_(keuzes, keuze);
+    const vorige = vak.dataset.sig;
+    const sig = [
+      ticket.id, berichten.map((b) => b.id).join(","), ontvangen, uid, nu.toDateString(), dagen.map((d) => d.sleutel).join(","),
+    ].join(":");
+    const naarKeuze = this.naarKeuze_ && invouwen;
+    this.naarKeuze_ = false;
+    if (vorige === sig && !naarKeuze) return;
+    const vers = !vorige || vorige === "laden" || vorige === "leeg";
+    const onderaan = vak.scrollHeight - vak.scrollTop - vak.clientHeight < 40;
+    const laatste = berichten.at(-1);
+    const nieuw = Number(laatste?.id) > Number(vak.dataset.laatste ?? 0);
+    const omlaag = vers || (nieuw && (isEigen(laatste, uid) || onderaan));
+    const plek = vak.scrollTop;
     vak.dataset.sig = sig;
-    vak.replaceChildren(
-      ...berichten.map((b) => {
-        const el = document.createElement("div");
-        el.className = "bericht";
-        el.dataset.van = b.van === "klant" ? "klant" : "domotitech";
-        el.innerHTML = `<span class="wie2"></span><div class="tk"></div>`;
-        el.querySelector(".wie2").textContent = [afzender(b), wanneer(b.at)]
-          .filter(Boolean)
-          .join(" · ");
-        el.querySelector(".tk").textContent = b.tekst ?? "";
-        const fotos = (b.bijlagen ?? []).filter((x) => x?.id);
-        if (fotos.length) {
-          const rij = document.createElement("div");
-          rij.className = "fotos";
-          for (const foto of fotos) {
-            const knop = document.createElement("button");
-            knop.type = "button";
-            knop.setAttribute("aria-label", t("Foto groot bekijken"));
-            const img = document.createElement("img");
-            img.alt = "";
-            img.loading = "lazy";
-            knop.append(img);
-            rij.append(knop);
-            this.bron.fotoAdres_(foto.id).then((adres) => {
-              if (adres) img.src = adres;
-            });
-          }
-          el.append(rij);
-        }
-        return el;
-      })
-    );
+    vak.dataset.laatste = String(laatste?.id ?? 0);
+
+    const delen = [];
+    for (const d of dagen) {
+      const kop = document.createElement("div");
+      kop.className = "dag";
+      kop.dataset.dag = String(d.sleutel);
+      kop.append(document.createElement("span"));
+      kop.firstChild.textContent = d.kop;
+      delen.push(kop);
+      for (const b of d.berichten) delen.push(this.berichtEl_(b, uid));
+    }
+    vak.replaceChildren(...delen);
     if (ontvangen) {
       const zin = document.createElement("div");
       zin.className = "ontvangen";
       zin.textContent = t("Ontvangen, we kijken ernaar.");
       vak.append(zin);
     }
-    vak.scrollTop = vak.scrollHeight;
+    const gekozen = naarKeuze && dagen.find((d) => !d.vast);
+    if (gekozen) {
+      const kop = vak.querySelector(`.dag[data-dag="${gekozen.sleutel}"]`);
+      vak.scrollTop = kop.getBoundingClientRect().top - vak.getBoundingClientRect().top + vak.scrollTop - 2;
+    } else vak.scrollTop = omlaag ? vak.scrollHeight : plek;
+  }
+
+  /** De keuzelijst met de eerdere dagen. Alleen opnieuw opbouwen als er iets veranderde: hij kan net open staan. */
+  tekenKeuzes_(keuzes, keuze) {
+    const lijst = this.$(".dagen");
+    lijst.hidden = !keuzes.length;
+    lijst.setAttribute("aria-label", t("Eerdere dagen"));
+    if (keuze) lijst.dataset.gekozen = "";
+    else delete lijst.dataset.gekozen;
+    const sig = JSON.stringify(keuzes);
+    if (lijst.dataset.sig !== sig) {
+      lijst.dataset.sig = sig;
+      lijst.replaceChildren(
+        ...[{ waarde: "", tekst: t("Eerdere dagen") }, ...keuzes].map((k) => {
+          const optie = document.createElement("option");
+          optie.value = k.waarde;
+          optie.textContent = k.tekst;
+          return optie;
+        })
+      );
+    }
+    lijst.value = keuze;
+  }
+
+  /** Eén bericht: de naam erboven, in het blok de tekst, de foto's en de tijd. */
+  berichtEl_(b, uid) {
+    const el = document.createElement("div");
+    el.className = "bericht";
+    el.dataset.van = b.van === "klant" ? "klant" : "domotitech";
+    el.dataset.zij = isEigen(b, uid) ? "eigen" : "ander";
+    el.innerHTML = `<span class="wie2">${el.dataset.van === "domotitech" ? coachMerk() : ""}<span class="nm"></span></span>
+      <div class="blok"><div class="tk"></div></div>`;
+    const naam = afzender(b);
+    el.querySelector(".wie2 .nm").textContent = naam;
+    el.querySelector(".wie2").hidden = !naam;
+    el.querySelector(".tk").textContent = b.tekst ?? "";
+    const blok = el.querySelector(".blok");
+    const fotos = (b.bijlagen ?? []).filter((x) => x?.id);
+    if (fotos.length) {
+      const rij = document.createElement("div");
+      rij.className = "fotos";
+      for (const foto of fotos) {
+        const knop = document.createElement("button");
+        knop.type = "button";
+        knop.setAttribute("aria-label", t("Foto groot bekijken"));
+        const img = document.createElement("img");
+        img.alt = "";
+        img.loading = "lazy";
+        knop.append(img);
+        rij.append(knop);
+        this.bron.fotoAdres_(foto.id).then((adres) => {
+          if (adres) img.src = adres;
+        });
+      }
+      blok.append(rij);
+    }
+    const klok = document.createElement("span");
+    klok.className = "tijd";
+    klok.textContent = klokVan(b.at);
+    blok.append(klok);
+    return el;
   }
 
   tekenSoorten_() {

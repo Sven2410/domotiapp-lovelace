@@ -60,6 +60,11 @@ export const BOT = {
   "Een storing of een aanvraag": "A fault or a request",
   "Foto groot bekijken": "View photo large",
   "Foto's versturen…": "Sending photos…",
+  // het gesprek per dag (0.127.0); Vandaag en Gisteren staan bij de camera. Gelijk aan het paneel van de coach.
+  "{n} bericht": "{n} message",
+  "{n} berichten": "{n} messages",
+  "Eerdere dagen": "Earlier days",
+  "Oudere berichten": "Older messages",
 
   // editor/icoon-zoek.js
   "tekstballon": "speech bubble",

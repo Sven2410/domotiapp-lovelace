@@ -180,6 +180,94 @@ export function wanneer(iso, nu = new Date()) {
   return d.toLocaleDateString(locale(), opties);
 }
 
+/*
+ * HET GESPREK ZOALS WHATSAPP
+ *
+ * De eigenaar, 15 november 2026, nadat een klant het gesprek een paar keer gebruikte: "kijk even goed hoe whatsapp het
+ * doet. Blokken rechts van je eigen tekst, blokken links van de antwoorden. En duidelijk aangeven of het de gebruiker
+ * is met de naam of de coach snap je", "standaard naar het laatste bericht scrollen, ipv bovenaan beginnen", en "Evt de
+ * historische dagen ingevouwen? Tot een week max". Afgestemd met de werkplaats van de coach, zodat het paneel daar
+ * hetzelfde leest; daar zei hij ook: "Bij datum een dropdown niet zo veel datums laten zien ivm ruimtegebrek".
+ */
+
+/** Hoeveel dagen vóór het laatste bericht een eigen keuze in de lijst krijgen; wat ouder is, is samen één keuze. */
+export const DAGEN_TERUG = 7;
+
+/**
+ * Staat dit bericht rechts? Alleen wat de gebruiker die kijkt zelf schreef, zoals WhatsApp in een groep: een andere
+ * bewoner staat links, met zijn naam. Een klantbericht zonder `user_id` (de coach zet hem sinds v0.220.0) telt als
+ * eigen, zoals het tot 0.127.0 stond.
+ */
+export const isEigen = (bericht, userId) =>
+  bericht?.van === "klant" && (!bericht.user_id || !userId || bericht.user_id === userId);
+
+/** De klok van een bericht, zonder dag: die staat in de scheiding erboven. */
+export function klokVan(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+}
+
+/** De scheiding boven een dag: Vandaag, Gisteren, binnen een week de weekdag met de datum, en anders de datum. */
+export function dagKop(sleutel, nu = new Date()) {
+  const d = new Date(sleutel);
+  const verschil = Math.round((dag(nu) - sleutel) / 86400000);
+  if (verschil === 0) return t("Vandaag");
+  if (verschil === 1) return t("Gisteren");
+  const opties = { day: "numeric", month: "long" };
+  if (verschil > 1 && verschil < 7) opties.weekday = "long";
+  if (d.getFullYear() !== nu.getFullYear()) opties.year = "numeric";
+  const tekst = d.toLocaleDateString(locale(), opties);
+  return tekst.charAt(0).toUpperCase() + tekst.slice(1);
+}
+
+/** Kies je in de keuzelijst `OUDER`, dan staan alle dagen van vóór `DAGEN_TERUG` erbij. */
+export const OUDER = "ouder";
+
+const berichtenTekst = (n) => tn(n, "{n} bericht", "{n} berichten");
+
+/**
+ * De berichten van een gesprek in dagen: welke in beeld staan, en welke in de keuzelijst.
+ *
+ * - De LAATSTE dag met berichten staat altijd in beeld, ook als dat niet vandaag is: anders opent een stil gesprek leeg.
+ * - Een dag met een antwoord dat deze gebruiker nog niet las ook (`ongelezen`). Het scherm onthoudt die in `vast`,
+ *   zodat hij niet wegvalt zodra `read` terugkomt.
+ * - Alle andere dagen staan in één keuzelijst, nieuwste eerst ("Gisteren · 2 berichten"). De eigenaar, 15 november 2026,
+ *   in de werkplaats van de coach: "Bij datum een dropdown niet zo veel datums laten zien ivm ruimtegebrek". Wat meer dan
+ *   `DAGEN_TERUG` dagen vóór het laatste bericht ligt, is daarin één keuze `OUDER`.
+ * - Eén keuze tegelijk (`keuze`: de sleutel van een dag, of `OUDER`): die dag staat dan op zijn plek in het gesprek, en
+ *   blijft in de lijst staan zodat hij gekozen blijft.
+ * - Met `invouwen: false` (een ticket) staat alles in beeld en is er geen lijst.
+ *
+ * Een bericht zonder bruikbare tijd hoort bij de dag van het bericht ervoor.
+ */
+export function inDagen(ticket, { userId = "", nu = new Date(), invouwen = true, vast = new Set(), keuze = null } = {}) {
+  const gelezen = gezien(ticket, userId);
+  const dagen = [];
+  for (const b of ticket?.berichten ?? []) {
+    const ms = tijd(b.at);
+    const sleutel = ms ? dag(new Date(ms)) : (dagen.at(-1)?.sleutel ?? dag(nu));
+    let groep = dagen.at(-1);
+    if (groep?.sleutel !== sleutel) dagen.push((groep = { sleutel, berichten: [], ongelezen: false }));
+    groep.berichten.push(b);
+    if (b.van !== "klant" && Number(b.id) > gelezen) groep.ongelezen = true;
+  }
+  const laatste = dagen.at(-1)?.sleutel;
+  for (const g of dagen) {
+    g.kop = dagKop(g.sleutel, nu);
+    g.laatste = g.sleutel === laatste;
+    g.oud = Math.round((laatste - g.sleutel) / 86400000) > DAGEN_TERUG;
+    g.vast = !invouwen || g.laatste || g.ongelezen || vast.has(g.sleutel);
+  }
+  const rest = dagen.filter((g) => !g.vast);
+  const keuzes = rest.filter((g) => !g.oud).reverse().map((g) => ({ waarde: String(g.sleutel), tekst: `${g.kop} · ${berichtenTekst(g.berichten.length)}` }));
+  const oud = rest.filter((g) => g.oud).reduce((n, g) => n + g.berichten.length, 0);
+  if (oud) keuzes.push({ waarde: OUDER, tekst: `${t("Oudere berichten")} · ${berichtenTekst(oud)}` });
+  // Een keuze die er niet (meer) is, telt niet: die dag is intussen vast in beeld, of weg.
+  const gekozen = keuzes.some((k) => k.waarde === String(keuze)) ? String(keuze) : "";
+  const inBeeld = (g) => g.vast || (gekozen === OUDER ? g.oud : gekozen === String(g.sleutel));
+  return { dagen: dagen.filter(inBeeld), keuzes, keuze: gekozen };
+}
+
 /** Een fout van de coach in een zin. Wat de coach zelf zegt, wordt niet vertaald. */
 export function foutTekst(fout) {
   if (fout?.code === "unknown_command") return t("COACH kent Coach Assist nog niet. Werk COACH bij.");
