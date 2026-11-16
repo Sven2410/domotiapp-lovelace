@@ -82,6 +82,7 @@ import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
 import { kanTijdZetten, tijdSoort, veldWaarde, zetOproep } from "./tijdveld.js";
 import { huidigeKeuze, kanKiezen, keuzes, kiesOproep } from "./keuzeveld.js";
 import { keuzeNaam } from "./programmanaam.js";
+import { helderheidProcent } from "./light-logica.js";
 import "../editor/entities-editor.js";
 import {
   GAP,
@@ -752,8 +753,8 @@ class EntitiesCard extends DacCard {
         stEl.textContent = t("Niet bereikbaar");
       } else if (!st || isStateless(st.entity_id)) {
         stEl.textContent = "";
-      } else if (domainOf(st.entity_id) === "light" && on && st.attributes.brightness != null) {
-        stEl.textContent = `${Math.round((st.attributes.brightness / 255) * 100)}%`;
+      } else if (domainOf(st.entity_id) === "light" && on && helderheidProcent(st.attributes.brightness) != null) {
+        stEl.textContent = `${helderheidProcent(st.attributes.brightness)}%`;
       } else {
         const unit = st.attributes.unit_of_measurement;
         stEl.textContent = unit ? `${st.state} ${unit}` : localizeState(this.hass, st);
