@@ -150,6 +150,7 @@ import {
 import { geenQrReden, netwerkNaam, qrAdres } from "./wifi-logica.js";
 import { nt, t } from "../taal.js";
 import { SCHERM } from "./infoscherm-logo.js";
+import { helderheidProcent } from "./light-logica.js";
 import {
   SOORT_ICOON,
   aanUitOproep,
@@ -3036,8 +3037,8 @@ export class InfoschermCard extends DacCard {
     const status = dood
       ? t("Niet bereikbaar")
       : aan
-        ? typeof a.brightness === "number"
-          ? t("Aan · {pct}%", { pct: Math.round((a.brightness / 255) * 100) })
+        ? helderheidProcent(a.brightness) != null
+          ? t("Aan · {pct}%", { pct: helderheidProcent(a.brightness) })
           : t("Aan")
         : t("Uit");
     // De naam uit het beheer gaat voor; de receptie mag hem daar wijzigen.

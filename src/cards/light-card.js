@@ -22,7 +22,7 @@ import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
 import { bindActions, isDead, lampkleurCss, moreInfo, nameOf, stateOf } from "../ha.js";
 import { bindSlider, sliderCss, sliderHtml } from "../slider.js";
-import { lampBesturing } from "./light-logica.js";
+import { helderheidProcent, lampBesturing } from "./light-logica.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { nt, t } from "../taal.js";
 
@@ -32,7 +32,8 @@ const modesOf = (st) => st?.attributes?.supported_color_modes ?? [];
 const hasColour = (st) => modesOf(st).some((m) => COLOURFUL.has(m));
 const hasTemp = (st) => modesOf(st).includes("color_temp");
 
-const pct = (brightness) => Math.max(1, Math.round(((brightness ?? 0) / 255) * 100));
+/** De stand van de schuif: het percentage, of vol als de lamp brandt maar geen bruikbare helderheid meldt. */
+const pct = (brightness) => helderheidProcent(brightness) ?? 100;
 
 class LightCard extends DacCard {
   static css = /* css */ `
@@ -220,7 +221,9 @@ class LightCard extends DacCard {
       if (!el.classList.contains("dragging")) {
         const v = on ? pct(st.attributes.brightness) : 0;
         this.setSlider_(el, v);
-        this.text(".v", on ? `${v}%` : t("Uit"));
+        // Geen bruikbare helderheid (een Shelly na een update): "Aan", geen verzonnen getal.
+        const bekend = helderheidProcent(st.attributes.brightness) != null;
+        this.text(".v", on ? (bekend ? `${v}%` : t("Aan")) : t("Uit"));
       }
     } else if (kind === "toggle") {
       ctl.querySelector(".toggle")?.setAttribute("aria-checked", String(on));
