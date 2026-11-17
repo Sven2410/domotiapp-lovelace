@@ -112,9 +112,18 @@ describe("de kaart en de editor", () => {
   const bron = readFileSync(new URL("../../src/cards/automatisering-card.js", import.meta.url), "utf8");
 
   it("de kaart tekent het blok uit de stand, en kijkt naar de windsensor", () => {
-    assert.match(bron, /class="wind" hidden/);
     assert.match(bron, /this\.tekenWind_\(stand\.wind\)/);
     assert.match(bron, /this\.stand_\?\.wind\?\.sensor/);
+  });
+
+  it("0.133.0: de windbeveiliging is de eerste rij onder Automatiseringen, en dan is de lijst niet leeg", () => {
+    const leeg = bron.indexOf('<div class="leeg" data-groep="gewoon"');
+    const wind = bron.indexOf('<div class="rij wind"');
+    const lijst = bron.indexOf('<div class="lijst" data-groep="gewoon">');
+    const favorieten = bron.indexOf('<div class="favorieten">');
+    assert.ok(leeg > 0 && leeg < wind && wind < lijst && lijst < favorieten, JSON.stringify({ leeg, wind, lijst, favorieten }));
+    assert.match(bron, /\.hidden = gewoon\.length > 0 \|\| metWind;/);
+    assert.doesNotMatch(bron, /titel\("wind"/);
   });
 
   it("REGRESSIEWACHT: de editor biedt Motor omgekeerd ook voor zonneschermen aan", () => {
