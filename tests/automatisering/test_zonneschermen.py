@@ -289,7 +289,12 @@ async def test_de_stand_kent_de_windbeveiliging(hass: HomeAssistant, motor, sche
     from custom_components.domotiapp_lovelace.automatisering.websocket import stand  # noqa: PLC0415
 
     wind = stand(hass)["wind"]
-    assert wind == {"sensor": WIND, "max": 30, "schermen": sorted([KEUKEN, WOONKAMER, ANDERSOM]), "laatst": None}
+    assert {k: wind[k] for k in ("sensor", "max", "schermen", "laatst")} == {
+        "sensor": WIND,
+        "max": 30,
+        "schermen": sorted([KEUKEN, WOONKAMER, ANDERSOM]),
+        "laatst": None,
+    }
     zet_wind(hass, 10)
     await hass.async_block_till_done()
     laatst = stand(hass)["wind"]["laatst"]
@@ -442,3 +447,100 @@ async def test_het_half_uur_overleeft_een_herstart(hass: HomeAssistant, motor, s
     assert schermen == []
     await _herstart(hass, freezer, om(3, 14, 40))
     assert sorted(schermen) == [("close_cover", [KEUKEN, WOONKAMER]), ("open_cover", [ANDERSOM])]
+
+
+# ------------------------------------------------- de windbeveiliging wijzigen op de kaart (0.134.0)
+
+
+@pytest.fixture
+async def beheerder(hass: HomeAssistant, motor, hass_ws_client, hass_access_token):
+    return await hass_ws_client(hass, hass_access_token)
+
+
+async def test_zonder_opslag_geldt_de_kaart(hass: HomeAssistant, motor) -> None:
+    """NIEUW GEDRAG: de stand zegt alles wat het dialoog nodig heeft, met de waarden van de kaart."""
+    from custom_components.domotiapp_lovelace.automatisering.websocket import stand  # noqa: PLC0415
+
+    wind = stand(hass)["wind"]
+    alle = sorted([KEUKEN, WOONKAMER, ANDERSOM])
+    assert wind["aan"] is True
+    assert wind["bron"] == "kaart"
+    assert wind["kiesbaar"] == alle and wind["schermen"] == alle
+    assert wind["omgekeerd"] == [ANDERSOM]
+
+
+async def test_een_beheerder_wijzigt_de_windbeveiliging(hass: HomeAssistant, motor, schermen, beheerder) -> None:
+    """NIEUW GEDRAG: grens, sensor, wie meedoet en omgekeerd; de opslag gaat voor de kaart."""
+    zet_wind(hass, 7)  # 25,2 km/h: onder 30, boven 20
+    hass.states.async_set("sensor.ander", "1", {"unit_of_measurement": "m/s"})
+    await hass.async_block_till_done()
+    uit = await _vraag(
+        beheerder, type=f"{T}/wind_opslaan", aan=True, sensor=WIND, max=20, zonder=[WOONKAMER], omgekeerd={KEUKEN: True, ANDERSOM: False}
+    )
+    assert uit["success"], uit
+    await hass.async_block_till_done()
+    assert motor.wind_max == 20
+    assert motor.zonneschermen == {KEUKEN, ANDERSOM}
+    assert KEUKEN in motor.omgekeerd and ANDERSOM not in motor.omgekeerd
+    # De nieuwe grens geldt meteen: 7 m/s is nu te hard, en KEUKEN gaat in met open_cover.
+    schermen.clear()
+    zet_wind(hass, 3)
+    await hass.async_block_till_done()
+    zet_wind(hass, 7)
+    await hass.async_block_till_done()
+    assert sorted(schermen) == [("close_cover", [ANDERSOM]), ("open_cover", [KEUKEN])]
+
+
+async def test_uit_is_geen_windgrens(hass: HomeAssistant, motor, schermen, beheerder, freezer) -> None:
+    """NIEUW GEDRAG"""
+    assert (await _vraag(beheerder, type=f"{T}/wind_opslaan", aan=False, sensor=WIND, max=30))["success"]
+    zet_wind(hass, 15)
+    await hass.async_block_till_done()
+    assert schermen == []
+    _maak(motor, [KEUKEN])
+    await tik(hass, freezer, om(3, 12))
+    assert schermen == [("open_cover", [KEUKEN])]
+    from custom_components.domotiapp_lovelace.automatisering.websocket import stand  # noqa: PLC0415
+
+    assert stand(hass)["wind"]["aan"] is False
+
+
+async def test_een_nieuw_scherm_op_de_kaart_doet_meteen_mee(hass: HomeAssistant, motor, beheerder) -> None:
+    """NIEUW GEDRAG: de opslag zegt wie NIET meedoet, niet wie wel."""
+    assert (await _vraag(beheerder, type=f"{T}/wind_opslaan", aan=True, sensor=WIND, max=30, zonder=[WOONKAMER]))["success"]
+    nieuw = "cover.zonnescherm_nieuw"
+    await _kaart(hass, motor, {**KAART_SCHERM, "zonneschermen": [*KAART_SCHERM["zonneschermen"], nieuw]})
+    assert nieuw in motor.zonneschermen and WOONKAMER not in motor.zonneschermen
+
+
+async def test_alleen_wat_op_een_kaart_staat_telt(hass: HomeAssistant, motor, beheerder) -> None:
+    """NIEUW GEDRAG: een ander rolluik omkeren of uitsluiten kan niet via de wind."""
+    assert (await _vraag(beheerder, type=f"{T}/wind_opslaan", aan=True, sensor=WIND, max=30, zonder=["cover.vreemd"], omgekeerd={ROLLUIK: True}))["success"]
+    assert ROLLUIK not in motor.omgekeerd
+    assert motor.opslag.wind_instelling["zonder"] == []
+    assert motor.opslag.wind_instelling["omgekeerd"] == {}
+
+
+async def test_aan_zonder_sensor_kan_niet(motor, beheerder) -> None:
+    """NIEUW GEDRAG"""
+    uit = await _vraag(beheerder, type=f"{T}/wind_opslaan", aan=True, max=30)
+    assert not uit["success"]
+    assert motor.opslag.wind_instelling is None
+
+
+async def test_een_gewone_gebruiker_mag_de_wind_niet_wijzigen(ws, motor) -> None:
+    """NIEUW GEDRAG: uitzetten is een scherm in de storm."""
+    uit = await _vraag(ws, type=f"{T}/wind_opslaan", aan=False, sensor=WIND, max=30)
+    assert not uit["success"]
+    assert uit["error"]["code"] == "unauthorized"
+    assert motor.opslag.wind_instelling is None
+
+
+async def test_de_instelling_overleeft_een_herstart(hass: HomeAssistant, motor, beheerder, freezer) -> None:
+    """NIEUW GEDRAG"""
+    assert (await _vraag(beheerder, type=f"{T}/wind_opslaan", aan=True, sensor=WIND, max=45, zonder=[KEUKEN]))["success"]
+    await _herstart(hass, freezer, om(3, 10))
+    nieuw = hass.data[DOMAIN][DATA_MOTOR]
+    assert nieuw.wind_max == 45
+    assert KEUKEN not in nieuw.zonneschermen
+    assert nieuw.wind_stand()["bron"] == "opslag"

@@ -141,6 +141,10 @@ class Motor:
         self._licht_sinds: dict[str, tuple[datetime, timedelta]] = {}
         # Zonneschermen en hun windgrens; zie wind.py.
         self.zonneschermen: set[str] = set()
+        # De zonneschermen op de kaarten, ook die niet meedoen met de wind; zie wind.py.
+        self.kaart_schermen: set[str] = set()
+        self.wind_aan = True
+        self.wind_bron = "kaart"
         self.wind_sensor: str | None = None
         self.wind_max: float = wind.WIND_MAX_STANDAARD
         self._wind_uit: CALLBACK_TYPE | None = None
@@ -220,6 +224,28 @@ class Motor:
         except (TypeError, ValueError):
             self.wind_max = wind.WIND_MAX_STANDAARD
         sensor = str(met_wind["wind_sensor"]) if met_wind else None
+        self.kaart_schermen = set(self.zonneschermen)
+        self.wind_aan = True
+        self.wind_bron = "kaart"
+        if (inst := self.opslag.wind_instelling) is not None:
+            # Wat een beheerder op de kaart wijzigde, gaat voor; zie wind.py.
+            self.wind_bron = "opslag"
+            self.wind_aan = inst.get("aan") is not False
+            self.zonneschermen = self.kaart_schermen - set(inst.get("zonder") or [])
+            for ident, andersom in (inst.get("omgekeerd") or {}).items():
+                if ident in self.kaart_schermen:
+                    if andersom:
+                        self.omgekeerd.add(ident)
+                    else:
+                        self.omgekeerd.discard(ident)
+            try:
+                self.wind_max = float(inst.get("max") or wind.WIND_MAX_STANDAARD)
+            except (TypeError, ValueError):
+                self.wind_max = wind.WIND_MAX_STANDAARD
+            gekozen = inst.get("sensor")
+            sensor = str(gekozen) if isinstance(gekozen, str) and gekozen.startswith("sensor.") else None
+        if not self.wind_aan:
+            sensor = None
         if sensor != self.wind_sensor:
             self._volg_wind(sensor)
         koppel = next(
@@ -562,15 +588,36 @@ class Motor:
 
     @callback
     def wind_stand(self) -> dict[str, Any] | None:
-        """De windbeveiliging zoals de motor hem nu toepast, voor de kaart. None zonder zonneschermen."""
-        if not self.zonneschermen:
+        """De windbeveiliging zoals de motor hem nu toepast, voor de kaart. None zonder zonneschermen op een kaart.
+
+        `kiesbaar` zijn alle zonneschermen van de kaarten, `schermen` die meedoen; `bron` zegt of het van de kaartconfig
+        komt of van de opslag (zie wind.py).
+        """
+        if not self.kaart_schermen:
             return None
         return {
+            "aan": self.wind_aan,
             "sensor": self.wind_sensor,
             "max": self.wind_max,
             "schermen": sorted(self.zonneschermen),
+            "kiesbaar": sorted(self.kaart_schermen),
+            "omgekeerd": sorted(self.omgekeerd & self.kaart_schermen),
+            "bron": self.wind_bron,
             "laatst": self.opslag.wind,
         }
+
+    async def async_zet_wind(self, instelling: dict[str, Any]) -> None:
+        """Van het dialoog op de kaart; alleen wat op een kaart staat, telt."""
+        self.opslag.zet_wind_instelling(
+            {
+                "aan": bool(instelling["aan"]),
+                "sensor": instelling.get("sensor"),
+                "max": float(instelling["max"]),
+                "zonder": sorted(set(instelling.get("zonder") or []) & self.kaart_schermen),
+                "omgekeerd": {k: bool(v) for k, v in (instelling.get("omgekeerd") or {}).items() if k in self.kaart_schermen},
+            }
+        )
+        await self.async_herlees()
 
     @callback
     def _rolluik_dienst(self, ident: str, pct: int | None) -> tuple[str, int | None]:

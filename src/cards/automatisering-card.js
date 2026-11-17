@@ -24,6 +24,9 @@
  * Sinds 0.133.0 is het de eerste rij onder Automatiseringen, en dan staat daar geen "Nog geen automatiseringen". De
  * eigenaar: het is een automatisering die draait, dus hoort hij in die lijst. Het blok onder Favorieten van 0.132.0 is weg.
  *
+ * Sinds 0.134.0 opent een tik het dialoog van de windbeveiliging (`automatisering-wind-scherm.js`), net als een regel; de
+ * windsensor staat daar als knop in. Wijzigen kan alleen een beheerder.
+ *
  * ## Wat de kaart doet en wat niet
  *
  * De kaart VOERT NIETS UIT. Dat doet de integratie (`automatisering/`), die ook
@@ -33,7 +36,7 @@
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
-import { moreInfo, nameOf } from "../ha.js";
+import { nameOf } from "../ha.js";
 import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
@@ -55,6 +58,7 @@ import {
   windBlok,
 } from "./automatisering-logica.js";
 import { automatiseringScherm, toonAutomatiseringScherm } from "./automatisering-scherm.js";
+import { toonWindScherm, windScherm } from "./automatisering-wind-scherm.js";
 import { nt, t } from "../taal.js";
 
 const COMMANDO = "domotiapp_lovelace/automatisering";
@@ -135,7 +139,7 @@ class AutomatiseringCard extends DacCard {
     .wind[data-soort="te_hard"] .ico, .wind[data-soort="geen_meting"] .ico {
       color: var(--dac-warn); border-color: color-mix(in srgb, var(--dac-warn) 45%, transparent);
     }
-    .wind[data-soort="geen_sensor"] .ico { color: var(--dac-ink-3); border-color: var(--dac-border); }
+    .wind[data-soort="geen_sensor"] .ico, .wind[data-soort="uit"] .ico { color: var(--dac-ink-3); border-color: var(--dac-border); }
     .wind .wk { font-size: 12px; line-height: 1.3; font-weight: 500; color: var(--dac-ink); }
     .wind[data-soort="te_hard"] .wk, .wind[data-soort="geen_meting"] .wk { color: var(--dac-warn); }
     .wind .wr { font-size: 11.5px; line-height: 1.3; color: var(--dac-ink-2); overflow-wrap: anywhere; }
@@ -252,15 +256,14 @@ class AutomatiseringCard extends DacCard {
     }
     for (const lijst of this.$$(".lijst")) this.on(lijst, "click", (e) => this.tikOpLijst_(e));
     const windRij = this.$(".wind");
-    const openSensor = () => {
-      const sensor = this.stand_?.wind?.sensor;
-      if (sensor) moreInfo(this, sensor);
+    const openWind = () => {
+      if (this.stand_?.wind) toonWindScherm(this, this.stand_.wind);
     };
-    this.on(windRij, "click", openSensor);
+    this.on(windRij, "click", openWind);
     this.on(windRij, "keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        openSensor();
+        openWind();
       }
     });
     const schakelaar = this.$(".vrij .toggle");
@@ -284,6 +287,8 @@ class AutomatiseringCard extends DacCard {
       // Een wijziging in de editor bouwt de kaart opnieuw; dan klopt het scherm niet meer.
       const scherm = automatiseringScherm();
       if (scherm?.isVan(this)) scherm.sluit();
+      const wind = windScherm();
+      if (wind?.isVan(this)) wind.sluit();
     });
   }
 
@@ -325,6 +330,11 @@ class AutomatiseringCard extends DacCard {
   /** Het scherm roept dit aan, en toont zelf de fout. */
   opslaan(regel) {
     return this.stuur_({ type: `${COMMANDO}/opslaan`, regel });
+  }
+
+  /** Het winddialoog roept dit aan, en toont zelf de fout. Alleen een beheerder; dat toetst de server. */
+  opslaanWind(instelling) {
+    return this.stuur_({ type: `${COMMANDO}/wind_opslaan`, ...instelling });
   }
 
   /** Het scherm roept dit aan, en toont zelf de fout. */
@@ -461,7 +471,8 @@ class AutomatiseringCard extends DacCard {
       txt.dataset.html = html;
     }
     vak.dataset.soort = blok.soort;
-    vak.toggleAttribute("aria-disabled", !wind.sensor);
+    const scherm = windScherm();
+    if (scherm?.isVan(this)) scherm.ververs(wind);
     return true;
   }
 
@@ -617,7 +628,7 @@ class AutomatiseringEditor extends DacEditor {
       lampen: t("Alleen deze lampen zijn te kiezen, ook als iemand anders dan de kaart het vraagt. Per lamp kun je hieronder een eigen naam zetten."),
       rolluiken: t("Aan is open op de gekozen stand, uit is dicht. Een rolluik dat zijn stand niet kent, gaat alleen open en dicht."),
       zonneschermen: t("Net als een rolluik: aan is uitrollen, uit is inrollen. Met een windsensor eronder rollen ze niet uit bij harde wind."),
-      wind_sensor: t("Bij voorkeur de windstoten. Zegt hij niets bruikbaars, dan rollen de zonneschermen niet uit. Leeg laten: geen windgrens."),
+      wind_sensor: t("Bij voorkeur de windstoten. Zegt hij niets bruikbaars, dan rollen de zonneschermen niet uit. Leeg laten: geen windgrens. Wijzigt een beheerder de windbeveiliging op de kaart zelf, dan geldt dat, voor het hele huis."),
       wind_max: t("Boven deze wind rollen de zonneschermen niet uit, en gaan ze in als ze uit stonden. Leeg laten: 30 km/h."),
       speakers: t("Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen."),
       lichtsensor: t("Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt."),

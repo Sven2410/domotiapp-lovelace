@@ -26,6 +26,18 @@ erbij: de beheerder kiest op de kaart een windsensor (`wind_sensor`) en een gren
   uitrollen met de afstandsbediening niet te zien is. Per scherm in de opslag (`wind_schermen`), dus ook na een herstart.
   Goedgekeurd door de eigenaar, voorstel van de beheersessie.
 
+- **Wijzigen op de kaart** (sinds 0.134.0). De eigenaar wilde de windbeveiliging wijzigen zoals een regel: een tik op de rij.
+  Dat staat dan in de opslag (`wind_instelling`), voor het hele huis, zodat twee dashboards met dezelfde kaart gelijk blijven:
+  - `aan`: uit is geen windgrens;
+  - `sensor` en `max`;
+  - `zonder`: zonneschermen van de kaart die NIET meedoen. Een uitsluitlijst en geen lijst van wie meedoet, zodat een scherm
+    dat later op een kaart komt meteen beschermd is;
+  - `omgekeerd`: per zonnescherm `true` of `false`; dat geldt ook voor de regels. Een scherm dat er niet in staat, volgt de kaart.
+
+  Zolang er niets is opgeslagen, geldt de kaartconfig, en opent het dialoog met die waarden: de overgang gaat vanzelf.
+  Alleen een beheerder mag het opslaan (`wind_opslaan` heeft `require_admin`): uitzetten is een scherm in de storm. Een
+  gewone gebruiker ziet hetzelfde dialoog om te lezen.
+
 **Een knikarmscherm dat zich als rolluik meldt.** Somfy (Overkiz) kent een knikarmscherm soms als ExteriorScreen, met
 `device_class: blind`. Dan is `close_cover` de motor omlaag, en dat is bij een knikarm UITROLLEN. Intrekken bij de wind rolde
 ze zo juist uit. Zet zo'n scherm in `omgekeerd` op de kaart; de editor waarschuwt bij een zonnescherm dat zich niet als
