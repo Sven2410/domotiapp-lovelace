@@ -18,6 +18,14 @@ erbij: de beheerder kiest op de kaart een windsensor (`wind_sensor`) en een gren
   de beveiliging stond alleen in de editor. De stand geeft daarom `wind` mee (sensor, grens, schermen, en de laatste ingreep
   uit de opslag), en de kaart toont dat als blok Windbeveiliging.
 
+- **Niet bij elke vlaag opnieuw** (sinds 0.133.0). Bij vlagerige wind komt de sensor telkens weer boven de grens: bij de
+  eigenaar op één middag acht keer. Een scherm met een bekende stand ziet zelf dat hij al in staat (hierboven). Een scherm
+  zonder (Somfy RTS) krijgt na een ingreep pas weer een intrekopdracht als (a) er sindsdien in Home Assistant een andere
+  opdracht dan intrekken naar hem ging, van welke bron ook (een regel, een kaart, een dienstaanroep; een doel op ruimte,
+  apparaat, verdieping of label telt voor alle schermen), of (b) `WIND_OPNIEUW_MIN` minuten na de vorige ingreep, omdat
+  uitrollen met de afstandsbediening niet te zien is. Per scherm in de opslag (`wind_schermen`), dus ook na een herstart.
+  Goedgekeurd door de eigenaar, voorstel van de beheersessie.
+
 **Een knikarmscherm dat zich als rolluik meldt.** Somfy (Overkiz) kent een knikarmscherm soms als ExteriorScreen, met
 `device_class: blind`. Dan is `close_cover` de motor omlaag, en dat is bij een knikarm UITROLLEN. Intrekken bij de wind rolde
 ze zo juist uit. Zet zo'n scherm in `omgekeerd` op de kaart; de editor waarschuwt bij een zonnescherm dat zich niet als
@@ -34,6 +42,10 @@ from homeassistant.util.unit_conversion import SpeedConverter
 
 # Een veilige grens voor een gewoon knikarmscherm: windkracht 4 is 20 tot 28 km/h.
 WIND_MAX_STANDAARD = 30
+
+# Een scherm zonder bekende stand krijgt na een ingreep pas weer een intrekopdracht als hij sindsdien uitgerold kan zijn:
+# een opdracht in Home Assistant, of na deze tijd (de afstandsbediening is niet te zien). Zie de kop.
+WIND_OPNIEUW_MIN = 30
 
 # Alleen snelheden: de omrekening van Home Assistant kent ook neerslag in mm/h.
 _SNELHEDEN = {str(e.value) for e in UnitOfSpeed}

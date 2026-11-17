@@ -46,7 +46,18 @@ import logging
 from typing import Any
 
 from homeassistant.components.cover import CoverEntityFeature
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_ON
+from homeassistant.const import (
+    ATTR_AREA_ID,
+    ATTR_DEVICE_ID,
+    ATTR_ENTITY_ID,
+    ATTR_FLOOR_ID,
+    ATTR_LABEL_ID,
+    ENTITY_MATCH_ALL,
+    EVENT_CALL_SERVICE,
+    EVENT_HOMEASSISTANT_STOP,
+    STATE_OFF,
+    STATE_ON,
+)
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, State, callback
 from homeassistant.helpers.event import (
     async_call_later,
@@ -91,6 +102,11 @@ def doelen_van_stap(stap: dict[str, Any], toegestaan: set[str], laat: timedelta)
     if laat > timedelta(minutes=MEDIA_INHAAL_MIN):
         doelen = {lamp: pct for lamp, pct in doelen.items() if pct == 0 or not lamp.startswith("media_player.")}
     return doelen
+
+
+@callback
+def _alleen_cover(event_data: Any) -> bool:
+    return event_data.get("domain") == "cover"
 
 
 def lampen_uit(kaart: dict[str, Any]) -> list[str]:
@@ -144,6 +160,7 @@ class Motor:
         )
         self._uit.append(self.hass.bus.async_listen(EVENT_LOVELACE_UPDATED, self._herlees_tik))
         self._uit.append(self.hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self._bij_stop))
+        self._uit.append(self.hass.bus.async_listen(EVENT_CALL_SERVICE, self._dienst_gezien, event_filter=_alleen_cover))
         self._uit.append(async_at_started(self.hass, self._gestart))
 
     @callback
@@ -471,21 +488,60 @@ class Motor:
 
     @callback
     def _trek_in(self, kmh: float) -> None:
+        nu = dt_util.utcnow()
         schermen = sorted(
-            ident for ident in self.zonneschermen if (st := self.hass.states.get(ident)) is not None and not self._staat_in(ident, st)
+            ident
+            for ident in self.zonneschermen
+            if (st := self.hass.states.get(ident)) is not None and not self._staat_in(ident, st) and self._opnieuw_in(ident, st, nu)
         )
         if not schermen:
             _LOGGER.debug("Wind %s km/h boven de grens van %s: de zonneschermen staan al in", round(kmh, 1), self.wind_max)
             return
         _LOGGER.info("Wind %s km/h boven de grens van %s: zonneschermen in: %s", round(kmh, 1), self.wind_max, schermen)
+        self.opslag.zet_wind_ingetrokken(schermen, nu)
         self._schakel(dict.fromkeys(schermen, 0))
         self._wind_ingreep("ingetrokken", kmh, schermen)
+
+    @callback
+    def _opnieuw_in(self, ident: str, status: State, nu: datetime) -> bool:
+        """Mag een scherm zonder bekende stand na een eerdere ingreep weer een intrekopdracht krijgen? Zie wind.py."""
+        if not status.attributes.get("assumed_state") and status.state in ("open", "closed", "opening", "closing"):
+            return True
+        vorige = self.opslag.wind_scherm(ident)
+        if vorige is None or vorige.get("uit"):
+            return True
+        op = dt_util.parse_datetime(vorige["in"])
+        return op is None or nu - op >= timedelta(minutes=wind.WIND_OPNIEUW_MIN)
+
+    @callback
+    def _dienst_gezien(self, event: Event) -> None:
+        """Een opdracht naar een zonnescherm die geen intrekken is: dan kan hij uit staan, en mag de wind weer."""
+        if not self.zonneschermen:
+            return
+        data = event.data.get("service_data") or {}
+        ids = data.get(ATTR_ENTITY_ID)
+        if ids == ENTITY_MATCH_ALL or (ids is None and any(data.get(k) for k in (ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_FLOOR_ID, ATTR_LABEL_ID))):
+            geraakt = set(self.zonneschermen)
+        else:
+            geraakt = {ids} if isinstance(ids, str) else set(ids or [])
+            geraakt &= self.zonneschermen
+        dienst = event.data.get("service")
+        uit = [ident for ident in geraakt if not self._is_intrekken(ident, dienst, data)]
+        if uit:
+            self.opslag.zet_wind_uitgerold(uit)
+
+    @callback
+    def _is_intrekken(self, ident: str, dienst: str | None, data: dict[str, Any]) -> bool:
+        omgekeerd = ident in self.omgekeerd
+        if dienst == ("open_cover" if omgekeerd else "close_cover"):
+            return True
+        return dienst == "set_cover_position" and data.get("position") == (100 if omgekeerd else 0)
 
     @callback
     def _staat_in(self, ident: str, status: State) -> bool:
         """Staat dit scherm al in, volgens een stand die hij zelf terugmeldt?
 
-        Een motor zonder terugmelding (Somfy RTS) heeft `assumed_state` of een onbekende stand: die gaat altijd in.
+        Een motor zonder terugmelding (Somfy RTS) heeft `assumed_state` of een onbekende stand: dan beslist `_opnieuw_in`.
         """
         if status.attributes.get("assumed_state"):
             return False

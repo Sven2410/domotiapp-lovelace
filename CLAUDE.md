@@ -1001,7 +1001,10 @@ je niet hoort terug te draaien zonder het te vragen:
   is de keuze van de beheerder. Sinds 0.132.0 staat de windbeveiliging als blok OP de kaart (wind nu, grens, sensor, schermen, laatste
   ingreep uit de opslag, `wind` in de stand); de eigenaar zag zijn schermen bij een windstoot bewegen en wist niet waarom. Een scherm
   dat zelf meldt dat hij al in staat, krijgt geen opdracht. Een knikarmscherm dat Somfy als `blind` meldt rolt bij `close_cover` UIT:
-  dat hoort in `omgekeerd`, en de editor waarschuwt erbij (`verdachteSchermen`).
+  dat hoort in `omgekeerd`, en de editor waarschuwt erbij (`verdachteSchermen`). Sinds 0.133.0 is het blok de eerste RIJ onder Automatiseringen
+  (de eigenaar: het is een automatisering die draait), en krijgt een scherm zonder bekende stand na een ingreep pas weer een
+  intrekopdracht na een andere opdracht in Home Assistant of na `WIND_OPNIEUW_MIN` (30) minuten: anders bij elke vlaag
+  opnieuw. Per scherm in de opslag (`wind_schermen`).
 - **Een favoriet kan stappen hebben** (sinds 0.122.0, `daarna` met `na` minuten na de tik). De eigenaar: "na zoveel tijd ook
   iets aan of uit". Bij de tik komt elke stap met zijn TIJDSTIP in de opslag (`gepland`), en pas dan een wekker; na een
   herstart zet de motor ze terug en doet wat gemist is met de grenzen van een regel (`doelen_van_stap`). Alleen een wekker

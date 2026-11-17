@@ -21,6 +21,9 @@
  * wind ingreep. De eigenaar zag zijn schermen bij een windstoot omlaag gaan en wist niet waarom; het stond alleen in de
  * editor. Een tik opent de windsensor. Zie `windBlok` in de logica.
  *
+ * Sinds 0.133.0 is het de eerste rij onder Automatiseringen, en dan staat daar geen "Nog geen automatiseringen". De
+ * eigenaar: het is een automatisering die draait, dus hoort hij in die lijst. Het blok onder Favorieten van 0.132.0 is weg.
+ *
  * ## Wat de kaart doet en wat niet
  *
  * De kaart VOERT NIETS UIT. Dat doet de integratie (`automatisering/`), die ook
@@ -119,18 +122,22 @@ class AutomatiseringCard extends DacCard {
     .nm, .lp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rij[data-aan="false"] .nm { color: var(--dac-ink-2); }
 
-    .wind, .vakantie, .favorieten {
+    .vakantie, .favorieten {
       display: flex; flex-direction: column; gap: 8px;
       padding-top: 10px; border-top: 1px solid var(--dac-border);
     }
-    /* De windbeveiliging (0.132.0): geen schakelaar, alleen wat er is. De regels eronder lopen door op een telefoon. */
-    .wind .rij { align-items: flex-start; }
+    /* De windbeveiliging (0.132.0), sinds 0.133.0 de eerste rij onder Automatiseringen: geen schakelaar, alleen wat er
+       is. De regels eronder lopen door op een telefoon. Staan er regels onder, dan een lijn ertussen, net als tussen rijen. */
+    .wind { align-items: flex-start; padding: 2px 0 9px; }
+    .wind:not([hidden]) + .lijst:not(:empty) { border-top: 1px solid var(--dac-border); }
+    .wind:not([hidden]) + .lijst .rij:first-child { padding-top: 9px; }
     .wind .ico { color: var(--dac-accent-hi); border-color: color-mix(in srgb, var(--dac-accent-hi) 45%, transparent); }
     .wind[data-soort="te_hard"] .ico, .wind[data-soort="geen_meting"] .ico {
       color: var(--dac-warn); border-color: color-mix(in srgb, var(--dac-warn) 45%, transparent);
     }
     .wind[data-soort="geen_sensor"] .ico { color: var(--dac-ink-3); border-color: var(--dac-border); }
-    .wind[data-soort="te_hard"] .nm, .wind[data-soort="geen_meting"] .nm { color: var(--dac-warn); }
+    .wind .wk { font-size: 12px; line-height: 1.3; font-weight: 500; color: var(--dac-ink); }
+    .wind[data-soort="te_hard"] .wk, .wind[data-soort="geen_meting"] .wk { color: var(--dac-warn); }
     .wind .wr { font-size: 11.5px; line-height: 1.3; color: var(--dac-ink-2); overflow-wrap: anywhere; }
     .wind .wr.ink3 { color: var(--dac-ink-3); }
     /* De vakantieregels klappen open als de vakantiemodus aan gaat (0.110.0, vakantieOpen). */
@@ -196,6 +203,10 @@ class AutomatiseringCard extends DacCard {
         </div>
         <div class="pauze" hidden>${escapeHtml(t("Gepauzeerd: de vakantiemodus staat aan."))}</div>
         <div class="leeg" data-groep="gewoon" hidden>${escapeHtml(t("Nog geen automatiseringen. Maak er een met het plusje."))}</div>
+        <div class="rij wind" role="button" tabindex="0" data-aan="true" hidden>
+          <span class="ico">${resolve("awning")}</span>
+          <span class="txt"></span>
+        </div>
         <div class="lijst" data-groep="gewoon"></div>
         ${
           this.metFavorieten_()
@@ -209,13 +220,6 @@ class AutomatiseringCard extends DacCard {
               </div>`
             : ""
         }
-        <div class="wind" hidden>
-          <div class="kop">${titel("wind", t("Windbeveiliging"))}</div>
-          <div class="rij" role="button" tabindex="0">
-            <span class="ico">${resolve("awning")}</span>
-            <span class="txt"></span>
-          </div>
-        </div>
         ${
           this.metVakantie_()
             ? `<div class="vakantie">
@@ -247,7 +251,7 @@ class AutomatiseringCard extends DacCard {
       );
     }
     for (const lijst of this.$$(".lijst")) this.on(lijst, "click", (e) => this.tikOpLijst_(e));
-    const windRij = this.$(".wind .rij");
+    const windRij = this.$(".wind");
     const openSensor = () => {
       const sensor = this.stand_?.wind?.sensor;
       if (sensor) moreInfo(this, sensor);
@@ -418,7 +422,9 @@ class AutomatiseringCard extends DacCard {
       const lampen = this.lampen_();
       const gewoon = regelsVoor(stand.regels, lampen, false);
       this.tekenLijst_(this.$('.lijst[data-groep="gewoon"]'), gewoon);
-      this.$('.leeg[data-groep="gewoon"]').hidden = gewoon.length > 0;
+      // De windbeveiliging is ook een automatisering: staat hij er, dan is de lijst niet leeg.
+      const metWind = this.tekenWind_(stand.wind);
+      this.$('.leeg[data-groep="gewoon"]').hidden = gewoon.length > 0 || metWind;
       const fav = this.$('.lijst[data-groep="favoriet"]');
       if (fav) {
         const favorieten = favorietenVoor(stand.favorieten, lampen);
@@ -434,18 +440,19 @@ class AutomatiseringCard extends DacCard {
         this.$(".vakblok").hidden = !vakantieOpen(stand);
       }
       this.$(".pauze").hidden = !(stand.vakantie === true && gewoon.length);
-      this.tekenWind_(stand.wind);
     }
     meetRaster(this.$(".card"));
   }
 
+  /** De rij Windbeveiliging; geeft terug of hij er staat. */
   tekenWind_(wind) {
     const vak = this.$(".wind");
     const blok = windBlok(wind, this.hass?.states, (id) => this.naamVanLamp_(id));
     vak.hidden = !blok;
-    if (!blok) return;
+    if (!blok) return false;
     const html = `
-      <span class="nm">${escapeHtml(blok.kop)}</span>
+      <span class="nm">${escapeHtml(t("Windbeveiliging"))}</span>
+      <span class="wk">${escapeHtml(blok.kop)}</span>
       <span class="st">${escapeHtml(blok.uitleg)}</span>
       ${blok.regels.map((r, i) => `<span class="wr${i === blok.regels.length - 1 ? " ink3" : ""}">${escapeHtml(r)}</span>`).join("")}`;
     const txt = vak.querySelector(".txt");
@@ -454,7 +461,8 @@ class AutomatiseringCard extends DacCard {
       txt.dataset.html = html;
     }
     vak.dataset.soort = blok.soort;
-    vak.querySelector(".rij").toggleAttribute("aria-disabled", !wind.sensor);
+    vak.toggleAttribute("aria-disabled", !wind.sensor);
+    return true;
   }
 
   getCardSize() {

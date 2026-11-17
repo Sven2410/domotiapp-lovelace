@@ -189,7 +189,8 @@ async def test_zonder_windsensor_op_de_kaart_is_er_geen_grens(hass: HomeAssistan
 # ------------------------------------------------------------------- intrekken
 
 
-async def test_harde_wind_trekt_ze_een_keer_in(hass: HomeAssistant, motor, schermen) -> None:
+async def test_harde_wind_trekt_ze_een_keer_in(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    await tik(hass, freezer, om(3, 14))
     zet_wind(hass, 10)
     await hass.async_block_till_done()
     # Een motor die andersom hangt, gaat in met open_cover; net als op de rolluikkaart.
@@ -200,9 +201,9 @@ async def test_harde_wind_trekt_ze_een_keer_in(hass: HomeAssistant, motor, scher
         zet_wind(hass, waarde)
         await hass.async_block_till_done()
     assert schermen == []
-    # Rustig, en dan weer hard: opnieuw in.
+    # Rustig, en een half uur later weer hard: opnieuw in. Zonder bekende stand pas na dat half uur (0.133.0).
     zet_wind(hass, 3)
-    await hass.async_block_till_done()
+    await tik(hass, freezer, om(3, 14, 31))
     zet_wind(hass, 12)
     await hass.async_block_till_done()
     assert sorted(d for d, _ in schermen) == ["close_cover", "open_cover"]
@@ -349,3 +350,95 @@ async def test_een_kaart_hoort_de_ingreep(ws, motor) -> None:
     zet_wind(motor.hass, 10)
     nieuw = (await ws.receive_json())["event"]
     assert nieuw["wind"]["laatst"]["wat"] == "ingetrokken"
+
+
+
+# ------------------------------------------------- niet bij elke vlaag opnieuw (0.133.0)
+
+
+async def _vlaag(hass: HomeAssistant, freezer, op) -> None:
+    """Even rustig, en dan weer boven de grens."""
+    zet_wind(hass, 3)
+    await tik(hass, freezer, op)
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+
+
+async def test_zonder_stand_niet_bij_elke_vlaag(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: de middag bij de eigenaar, acht overschrijdingen. Zonder bekende stand: binnen het half uur één keer."""
+    await tik(hass, freezer, om(3, 14, 2))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    assert len(schermen) == 2
+    schermen.clear()
+    for minuut in (10, 12, 15, 18, 19):
+        await _vlaag(hass, freezer, om(3, 14, minuut))
+    assert schermen == []
+    # Na een half uur sinds de ingreep wel weer: de afstandsbediening is niet te zien.
+    await _vlaag(hass, freezer, om(3, 14, 32))
+    assert sorted(schermen) == [("close_cover", [KEUKEN, WOONKAMER]), ("open_cover", [ANDERSOM])]
+
+
+async def test_een_uitrolopdracht_mag_meteen_weer(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: ging er sindsdien iets anders dan intrekken naartoe, dan wel; van welke bron ook."""
+    await tik(hass, freezer, om(3, 14))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    # Uitrollen met de hand: bij ANDERSOM is dat close_cover. Intrekken (close_cover op KEUKEN) telt niet.
+    await hass.services.async_call("cover", "close_cover", {"entity_id": [ANDERSOM, KEUKEN]}, blocking=True)
+    await hass.async_block_till_done()
+    schermen.clear()
+    await _vlaag(hass, freezer, om(3, 14, 5))
+    assert schermen == [("open_cover", [ANDERSOM])]
+
+
+async def test_een_opdracht_op_een_ruimte_telt_voor_alle_schermen(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: wie er onder zo'n doel valt, weet de motor niet; dus allemaal."""
+    await tik(hass, freezer, om(3, 14))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    hass.bus.async_fire("call_service", {"domain": "cover", "service": "open_cover", "service_data": {"area_id": "tuin"}})
+    await hass.async_block_till_done()
+    schermen.clear()
+    await _vlaag(hass, freezer, om(3, 14, 5))
+    # Voor ANDERSOM is open_cover juist intrekken: die blijft staan.
+    assert schermen == [("close_cover", [KEUKEN, WOONKAMER])]
+
+
+async def test_intrekken_naar_een_stand_telt_niet_als_uitrollen(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: set_cover_position op 0 (bij omgekeerd 100) is ook intrekken."""
+    await tik(hass, freezer, om(3, 14))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    await hass.services.async_call("cover", "set_cover_position", {"entity_id": KEUKEN, "position": 0}, blocking=True)
+    await hass.services.async_call("cover", "set_cover_position", {"entity_id": ANDERSOM, "position": 100}, blocking=True)
+    await hass.services.async_call("cover", "set_cover_position", {"entity_id": WOONKAMER, "position": 40}, blocking=True)
+    await hass.async_block_till_done()
+    schermen.clear()
+    await _vlaag(hass, freezer, om(3, 14, 5))
+    assert schermen == [("close_cover", [WOONKAMER])]
+
+
+async def test_met_bekende_stand_geldt_het_half_uur_niet(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: een scherm dat zelf zegt dat hij uit staat, gaat in, ook binnen het half uur; het andere niet."""
+    await tik(hass, freezer, om(3, 14))
+    _zet_stand(hass, KEUKEN, "open")
+    await hass.async_block_till_done()
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    schermen.clear()
+    await _vlaag(hass, freezer, om(3, 14, 5))
+    assert ("close_cover", [KEUKEN]) in schermen
+    assert all(WOONKAMER not in ids for _, ids in schermen)
+
+
+async def test_het_half_uur_overleeft_een_herstart(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: na een herstart met harde wind binnen het half uur geen nieuwe opdracht; daarna wel."""
+    await tik(hass, freezer, om(3, 14))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    schermen.clear()
+    await _herstart(hass, freezer, om(3, 14, 10))
+    assert schermen == []
+    await _herstart(hass, freezer, om(3, 14, 40))
+    assert sorted(schermen) == [("close_cover", [KEUKEN, WOONKAMER]), ("open_cover", [ANDERSOM])]

@@ -10,6 +10,7 @@
 | `licht` | per moment op de lichtsterkte: wat de sensor de vorige keer zei (`was`) en de dag dat het gebeurde (`gedaan`); zie licht.py |
 | `gepland` | de stappen van een favoriet die nog moeten komen: `{sleutel, favoriet, op, lampen, helderheden, media}`; zie motor.py |
 | `wind` | de laatste keer dat de wind ingreep: `{op, kmh, wat, schermen}`, `wat` is `ingetrokken` of `niet_uitgerold`; zie wind.py |
+| `wind_schermen` | per zonnescherm de laatste intrekopdracht van de wind (`in`) en of er sindsdien iets anders naartoe ging (`uit`); zie wind.py |
 
 **`laatst` wordt niet elke minuut weggeschreven**, want dat is elke minuut naar de
 schijf van een Raspberry Pi. Hij gaat mee zodra er iets uitgevoerd of gewijzigd
@@ -50,7 +51,7 @@ class AutomatiseringOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": [], "wind": None}
+        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": [], "wind": None, "wind_schermen": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -75,6 +76,10 @@ class AutomatiseringOpslag:
             ]
         if isinstance(rauw.get("wind"), dict) and isinstance(rauw["wind"].get("op"), str):
             self._data["wind"] = rauw["wind"]
+        if isinstance(rauw.get("wind_schermen"), dict):
+            self._data["wind_schermen"] = {
+                str(k): v for k, v in rauw["wind_schermen"].items() if isinstance(v, dict) and isinstance(v.get("in"), str)
+            }
 
     @callback
     def _bewaar(self) -> None:
@@ -240,3 +245,25 @@ class AutomatiseringOpslag:
     def zet_wind(self, ingreep: dict[str, Any]) -> None:
         self._data["wind"] = ingreep
         self._bewaar()
+
+    @callback
+    def wind_scherm(self, ident: str) -> dict[str, Any] | None:
+        """De laatste intrekopdracht van de wind naar dit scherm: `{in, uit}`, of None."""
+        return self._data["wind_schermen"].get(ident)
+
+    @callback
+    def zet_wind_ingetrokken(self, idents: list[str], op: datetime) -> None:
+        for ident in idents:
+            self._data["wind_schermen"][ident] = {"in": op.isoformat(), "uit": False}
+        self._bewaar()
+
+    @callback
+    def zet_wind_uitgerold(self, idents: list[str]) -> None:
+        """Er ging een andere opdracht dan intrekken naar deze schermen: de wind mag ze weer intrekken."""
+        veranderd = False
+        for ident in idents:
+            if (rij := self._data["wind_schermen"].get(ident)) is not None and not rij.get("uit"):
+                rij["uit"] = True
+                veranderd = True
+        if veranderd:
+            self._bewaar()
