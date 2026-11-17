@@ -9,6 +9,7 @@
 | `brandt` | de regels die hun lamp aan zetten en nog niet uit |
 | `licht` | per moment op de lichtsterkte: wat de sensor de vorige keer zei (`was`) en de dag dat het gebeurde (`gedaan`); zie licht.py |
 | `gepland` | de stappen van een favoriet die nog moeten komen: `{sleutel, favoriet, op, lampen, helderheden, media}`; zie motor.py |
+| `wind` | de laatste keer dat de wind ingreep: `{op, kmh, wat, schermen}`, `wat` is `ingetrokken` of `niet_uitgerold`; zie wind.py |
 
 **`laatst` wordt niet elke minuut weggeschreven**, want dat is elke minuut naar de
 schijf van een Raspberry Pi. Hij gaat mee zodra er iets uitgevoerd of gewijzigd
@@ -49,7 +50,7 @@ class AutomatiseringOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": []}
+        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": [], "wind": None}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -72,6 +73,8 @@ class AutomatiseringOpslag:
             self._data["gepland"] = [
                 g for g in rauw["gepland"] if isinstance(g, dict) and g.get("sleutel") and isinstance(g.get("op"), str)
             ]
+        if isinstance(rauw.get("wind"), dict) and isinstance(rauw["wind"].get("op"), str):
+            self._data["wind"] = rauw["wind"]
 
     @callback
     def _bewaar(self) -> None:
@@ -224,4 +227,16 @@ class AutomatiseringOpslag:
     def vergeet_licht(self, regel_id: str) -> None:
         """Na een wijziging begint de regel opnieuw te kijken, net als een nieuwe; een andere grens is een ander moment."""
         self._data["licht"] = {k: v for k, v in self._data["licht"].items() if not _van(k.split("|")[0], regel_id)}
+        self._bewaar()
+
+    # ------------------------------------------------------------------- wind
+
+    @property
+    def wind(self) -> dict[str, Any] | None:
+        """De laatste ingreep van de windbeveiliging, voor de kaart."""
+        return self._data["wind"]
+
+    @callback
+    def zet_wind(self, ingreep: dict[str, Any]) -> None:
+        self._data["wind"] = ingreep
         self._bewaar()

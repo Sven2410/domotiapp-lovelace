@@ -8,6 +8,7 @@
 
 import { locale, nt, t, tn } from "../taal.js";
 import { dienstVoor, keerPositie } from "./cover-logica.js";
+import { relativeDay } from "../ha.js";
 
 export const SOORTEN = [
   { sleutel: "tijd", label: nt("Tijd"), icoon: "clock" },
@@ -914,4 +915,88 @@ export function naarServer(regel, dimt = () => true) {
   if (delen.length === 1) return { ...kop, ...deelNaarServer(delen[0], dimt), ...staart };
   const opTijd = [...delen].sort((a, b) => deelVolgorde(a) - deelVolgorde(b));
   return { ...kop, delen: opTijd.map((d) => ({ ...(d.id ? { id: d.id } : {}), ...deelNaarServer(d, dimt) })), ...staart };
+}
+
+/* ------------------------------------------------------------------ de wind */
+
+/**
+ * De windbeveiliging op de kaart (sinds 0.132.0). De eigenaar zag zijn zonneschermen bij een windstoot bewegen en wist
+ * niet waarom: de beveiliging stond alleen in de editor. De server geeft `wind` in de stand: `{sensor, max, schermen,
+ * laatst}`, met `laatst` = `{op, kmh, wat, schermen}`; zie de kop van `automatisering/wind.py`. De wind van NU leest de
+ * kaart zelf uit de sensor, zodat hij meeloopt zonder dat de server bij elke meting iets stuurt.
+ */
+
+// Wat Home Assistant als snelheid kent, naar km/h. Beaufort is geen snelheid om mee te rekenen: dan geen getal.
+const NAAR_KMH = { "km/h": 1, "m/s": 3.6, mph: 1.609344, kn: 1.852, "ft/s": 1.09728, "mm/s": 0.0036, "cm/s": 0.036 };
+
+/** De wind in km/h, of null als de sensor niets bruikbaars zegt. Dezelfde regel als `kmh_uit` op de server. */
+export function windKmh(status) {
+  const factor = NAAR_KMH[status?.attributes?.unit_of_measurement];
+  if (!factor) return null;
+  const waarde = Number.parseFloat(status.state);
+  if (!Number.isFinite(waarde) || waarde < 0 || String(status.state).trim() === "") return null;
+  return waarde * factor;
+}
+
+/** "vandaag 14:40" */
+function wanneer(iso, nu) {
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return "";
+  const klok = d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+  return `${relativeDay(d, nu)} ${klok}`;
+}
+
+/**
+ * Wat het blok Windbeveiliging zegt. `soort` is `rustig`, `te_hard`, `geen_meting` of `geen_sensor`, en bepaalt de kleur
+ * van het icoon. Null als er geen zonneschermen zijn: dan is er geen blok.
+ */
+export function windBlok(wind, states, naamVan = (id) => id, nu = new Date()) {
+  if (!wind || !Array.isArray(wind.schermen) || !wind.schermen.length) return null;
+  const grens = Math.round(Number(wind.max) || 30);
+  const schermen = t("Schermen: {namen}", { namen: wind.schermen.map(naamVan).join(", ") });
+  const regels = [];
+  let soort, kop, uitleg;
+  if (!wind.sensor) {
+    soort = "geen_sensor";
+    kop = t("Geen windsensor");
+    uitleg = t("De zonneschermen hebben geen windgrens.");
+  } else {
+    regels.push(t("Sensor: {naam}", { naam: naamVan(wind.sensor) }));
+    const kmh = windKmh(states?.[wind.sensor]);
+    if (kmh == null) {
+      soort = "geen_meting";
+      kop = t("Geen windmeting");
+      uitleg = t("Zonder meting rollen de zonneschermen niet uit.");
+    } else if (kmh > Number(wind.max)) {
+      soort = "te_hard";
+      kop = t("Wind {kmh} km/h: te hard", { kmh: Math.round(kmh) });
+      uitleg = t("Boven {grens} km/h rollen de zonneschermen niet uit.", { grens });
+    } else {
+      soort = "rustig";
+      kop = t("Wind {kmh} km/h", { kmh: Math.round(kmh) });
+      uitleg = t("Boven {grens} km/h gaan de zonneschermen in en rollen ze niet uit.", { grens });
+    }
+  }
+  regels.push(schermen);
+  const l = wind.laatst;
+  if (l && typeof l.op === "string") {
+    const bij = l.kmh == null ? t("zonder windmeting") : t("bij {kmh} km/h", { kmh: Math.round(l.kmh) });
+    const vars = { wanneer: wanneer(l.op, nu), bij };
+    regels.push(l.wat === "niet_uitgerold" ? t("Laatst tegengehouden: {wanneer}, {bij}", vars) : t("Laatst ingetrokken: {wanneer}, {bij}", vars));
+  } else if (wind.sensor) {
+    regels.push(t("Nog niet ingegrepen"));
+  }
+  return { soort, kop, uitleg, regels };
+}
+
+/**
+ * Zonneschermen die zich niet als zonnescherm melden en niet omgekeerd staan: voor de waarschuwing in de editor. Somfy kent
+ * een knikarmscherm soms als ExteriorScreen (`blind`), en dan is dicht de motor omlaag: uitrollen.
+ */
+export function verdachteSchermen(zonneschermen, omgekeerd, states) {
+  const lijst = (x) => (Array.isArray(x) ? x : []);
+  const andersom = new Set(lijst(omgekeerd));
+  return lijst(zonneschermen)
+    .map((x) => (typeof x === "string" ? x : x?.entity))
+    .filter((id) => typeof id === "string" && states?.[id] && states[id].attributes?.device_class !== "awning" && !andersom.has(id));
 }

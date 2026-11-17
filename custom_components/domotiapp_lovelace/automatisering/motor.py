@@ -47,7 +47,7 @@ from typing import Any
 
 from homeassistant.components.cover import CoverEntityFeature
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_ON
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, State, callback
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_point_in_utc_time,
@@ -387,6 +387,7 @@ class Motor:
         """
         samen: dict[tuple[str, str, int | None], list[str]] = {}
         spelen: dict[int | None, list[str]] = {}
+        tegengehouden: list[str] = []
         for ident, pct in doelen.items():
             if ident.startswith("media_player."):
                 if pct == 0:
@@ -395,6 +396,7 @@ class Motor:
                     spelen.setdefault(pct, []).append(ident)
             elif ident.startswith("cover."):
                 if pct != 0 and ident in self.zonneschermen and not self._mag_uitrollen(ident):
+                    tegengehouden.append(ident)
                     continue
                 dienst, stand = self._rolluik_dienst(ident, pct)
                 samen.setdefault(("cover", dienst, stand), []).append(ident)
@@ -409,6 +411,8 @@ class Motor:
             self.hass.async_create_task(self._roep_aan(domein, dienst, data))
         if spelen:
             self.hass.async_create_task(self._speel(spelen, media))
+        if tegengehouden:
+            self._wind_ingreep("niet_uitgerold", wind.kmh_van(self.hass, self.wind_sensor) if self.wind_sensor else None, tegengehouden)
 
     async def _speel(self, per_volume: dict[int | None, list[str]], media: dict[str, Any] | None) -> None:
         """Eerst het volume, dan afspelen: anders begint de muziek even op het volume van gisteren.
@@ -467,11 +471,50 @@ class Motor:
 
     @callback
     def _trek_in(self, kmh: float) -> None:
-        schermen = sorted(ident for ident in self.zonneschermen if self.hass.states.get(ident) is not None)
+        schermen = sorted(
+            ident for ident in self.zonneschermen if (st := self.hass.states.get(ident)) is not None and not self._staat_in(ident, st)
+        )
         if not schermen:
+            _LOGGER.debug("Wind %s km/h boven de grens van %s: de zonneschermen staan al in", round(kmh, 1), self.wind_max)
             return
         _LOGGER.info("Wind %s km/h boven de grens van %s: zonneschermen in: %s", round(kmh, 1), self.wind_max, schermen)
         self._schakel(dict.fromkeys(schermen, 0))
+        self._wind_ingreep("ingetrokken", kmh, schermen)
+
+    @callback
+    def _staat_in(self, ident: str, status: State) -> bool:
+        """Staat dit scherm al in, volgens een stand die hij zelf terugmeldt?
+
+        Een motor zonder terugmelding (Somfy RTS) heeft `assumed_state` of een onbekende stand: die gaat altijd in.
+        """
+        if status.attributes.get("assumed_state"):
+            return False
+        return status.state == ("open" if ident in self.omgekeerd else "closed")
+
+    @callback
+    def _wind_ingreep(self, wat: str, kmh: float | None, schermen: list[str]) -> None:
+        """Voor de kaart: wanneer de wind voor het laatst ingreep, en waarom. In de opslag, zodat het een herstart overleeft."""
+        self.opslag.zet_wind(
+            {
+                "op": dt_util.utcnow().isoformat(),
+                "kmh": None if kmh is None else round(kmh, 1),
+                "wat": wat,
+                "schermen": sorted(schermen),
+            }
+        )
+        self._meld()
+
+    @callback
+    def wind_stand(self) -> dict[str, Any] | None:
+        """De windbeveiliging zoals de motor hem nu toepast, voor de kaart. None zonder zonneschermen."""
+        if not self.zonneschermen:
+            return None
+        return {
+            "sensor": self.wind_sensor,
+            "max": self.wind_max,
+            "schermen": sorted(self.zonneschermen),
+            "laatst": self.opslag.wind,
+        }
 
     @callback
     def _rolluik_dienst(self, ident: str, pct: int | None) -> tuple[str, int | None]:

@@ -239,3 +239,113 @@ async def test_een_gewone_gebruiker_kiest_een_zonnescherm(ws, motor) -> None:
     uit = await _vraag(ws, type=f"{T}/opslaan", regel=regel)
     assert uit["success"], uit
     assert motor.opslag.regels[0]["lampen"] == [KEUKEN]
+
+
+# ------------------------------------------------- de windbeveiliging op de kaart (0.132.0)
+
+
+def _zet_stand(hass: HomeAssistant, ident: str, stand: str, **extra: Any) -> None:
+    hass.states.async_set(ident, stand, {"supported_features": int(CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE), **extra})
+
+
+async def test_wat_al_in_staat_krijgt_geen_opdracht(hass: HomeAssistant, motor, schermen) -> None:
+    """NIEUW GEDRAG: in is `closed`, en `open` bij een scherm dat andersom hangt."""
+    _zet_stand(hass, KEUKEN, "closed")
+    _zet_stand(hass, ANDERSOM, "open")
+    _zet_stand(hass, WOONKAMER, "open")
+    await hass.async_block_till_done()
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    assert schermen == [("close_cover", [WOONKAMER])]
+    assert motor.opslag.wind["schermen"] == [WOONKAMER]
+
+
+async def test_zonder_terugmelding_gaat_hij_altijd_in(hass: HomeAssistant, motor, schermen) -> None:
+    """REGRESSIEWACHT: Somfy RTS zegt wat hij denkt (`assumed_state`); daar valt niet op te bouwen."""
+    for ident in (KEUKEN, WOONKAMER):
+        _zet_stand(hass, ident, "closed", assumed_state=True)
+    _zet_stand(hass, ANDERSOM, "open", assumed_state=True)
+    await hass.async_block_till_done()
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    assert sorted(schermen) == [("close_cover", [KEUKEN, WOONKAMER]), ("open_cover", [ANDERSOM])]
+
+
+async def test_alles_al_in_is_geen_ingreep(hass: HomeAssistant, motor, schermen) -> None:
+    """NIEUW GEDRAG"""
+    for ident in (KEUKEN, WOONKAMER):
+        _zet_stand(hass, ident, "closed")
+    _zet_stand(hass, ANDERSOM, "open")
+    await hass.async_block_till_done()
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    assert schermen == []
+    assert motor.opslag.wind is None
+
+
+async def test_de_stand_kent_de_windbeveiliging(hass: HomeAssistant, motor, schermen) -> None:
+    """NIEUW GEDRAG: sensor, grens en schermen, en na een windstoot de ingreep."""
+    from custom_components.domotiapp_lovelace.automatisering.websocket import stand  # noqa: PLC0415
+
+    wind = stand(hass)["wind"]
+    assert wind == {"sensor": WIND, "max": 30, "schermen": sorted([KEUKEN, WOONKAMER, ANDERSOM]), "laatst": None}
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    laatst = stand(hass)["wind"]["laatst"]
+    assert laatst["wat"] == "ingetrokken"
+    assert laatst["kmh"] == 36.0
+    assert laatst["schermen"] == sorted([KEUKEN, WOONKAMER, ANDERSOM])
+    assert isinstance(laatst["op"], str)
+
+
+async def test_zonder_zonneschermen_geen_windbeveiliging(hass: HomeAssistant, motor) -> None:
+    """NIEUW GEDRAG: dan staat er geen blok op de kaart."""
+    from custom_components.domotiapp_lovelace.automatisering.websocket import stand  # noqa: PLC0415
+
+    await _kaart(hass, motor, {**KAART, "rolluiken": [ROLLUIK], "wind_sensor": WIND})
+    assert stand(hass)["wind"] is None
+
+
+async def test_niet_uitgerold_is_ook_een_ingreep(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG"""
+    _maak(motor, [KEUKEN, ROLLUIK])
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    await tik(hass, freezer, om(3, 12))
+    laatst = motor.opslag.wind
+    assert laatst["wat"] == "niet_uitgerold"
+    assert laatst["schermen"] == [KEUKEN]
+    assert laatst["kmh"] == 36.0
+
+
+async def test_niet_uitgerold_zonder_meting(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG: dan is er geen getal."""
+    _maak(motor, [KEUKEN])
+    zet_wind(hass, "unavailable")
+    await hass.async_block_till_done()
+    await tik(hass, freezer, om(3, 12))
+    assert motor.opslag.wind["wat"] == "niet_uitgerold"
+    assert motor.opslag.wind["kmh"] is None
+
+
+async def test_de_laatste_ingreep_overleeft_een_herstart(hass: HomeAssistant, motor, schermen, freezer) -> None:
+    """NIEUW GEDRAG"""
+    await tik(hass, freezer, om(3, 9))
+    zet_wind(hass, 10)
+    await hass.async_block_till_done()
+    voor = dict(hass.data[DOMAIN][DATA_MOTOR].opslag.wind)
+    zet_wind(hass, 2)
+    await hass.async_block_till_done()
+    await _herstart(hass, freezer, om(3, 10))
+    assert hass.data[DOMAIN][DATA_MOTOR].opslag.wind == voor
+
+
+async def test_een_kaart_hoort_de_ingreep(ws, motor) -> None:
+    """NIEUW GEDRAG: het abonnement krijgt de nieuwe stand meteen."""
+    await ws.send_json_auto_id({"type": f"{T}/subscribe"})
+    assert (await ws.receive_json())["success"]
+    eerst = (await ws.receive_json())["event"]
+    assert eerst["wind"]["laatst"] is None
+    zet_wind(motor.hass, 10)
+    nieuw = (await ws.receive_json())["event"]
+    assert nieuw["wind"]["laatst"]["wat"] == "ingetrokken"
