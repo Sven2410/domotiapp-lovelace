@@ -951,12 +951,19 @@ function wanneer(iso, nu) {
  * van het icoon. Null als er geen zonneschermen zijn: dan is er geen blok.
  */
 export function windBlok(wind, states, naamVan = (id) => id, nu = new Date()) {
-  if (!wind || !Array.isArray(wind.schermen) || !wind.schermen.length) return null;
+  const alle = Array.isArray(wind?.kiesbaar) ? wind.kiesbaar : wind?.schermen;
+  if (!wind || !Array.isArray(alle) || !alle.length) return null;
   const grens = Math.round(Number(wind.max) || 30);
-  const schermen = t("Schermen: {namen}", { namen: wind.schermen.map(naamVan).join(", ") });
+  const mee = Array.isArray(wind.schermen) ? wind.schermen : [];
+  const schermen = mee.length ? t("Schermen: {namen}", { namen: mee.map(naamVan).join(", ") }) : t("Er doet geen scherm mee.");
   const regels = [];
   let soort, kop, uitleg;
-  if (!wind.sensor) {
+  if (wind.aan === false) {
+    // Sinds 0.134.0: een beheerder kan hem uitzetten op de kaart.
+    soort = "uit";
+    kop = t("Staat uit");
+    uitleg = t("De zonneschermen rollen ook bij harde wind uit.");
+  } else if (!wind.sensor) {
     soort = "geen_sensor";
     kop = t("Geen windsensor");
     uitleg = t("De zonneschermen hebben geen windgrens.");
@@ -983,10 +990,74 @@ export function windBlok(wind, states, naamVan = (id) => id, nu = new Date()) {
     const bij = l.kmh == null ? t("zonder windmeting") : t("bij {kmh} km/h", { kmh: Math.round(l.kmh) });
     const vars = { wanneer: wanneer(l.op, nu), bij };
     regels.push(l.wat === "niet_uitgerold" ? t("Laatst tegengehouden: {wanneer}, {bij}", vars) : t("Laatst ingetrokken: {wanneer}, {bij}", vars));
-  } else if (wind.sensor) {
+  } else if (wind.sensor && wind.aan !== false) {
     regels.push(t("Nog niet ingegrepen"));
   }
   return { soort, kop, uitleg, regels };
+}
+
+/* ----------------------------------------------- de windbeveiliging wijzigen (0.134.0) */
+
+/**
+ * Wat het dialoog wijzigt, uit de stand van de server; zie de kop van `automatisering/wind.py`. `zonder` zijn de schermen
+ * die NIET meedoen, zodat een scherm dat later op een kaart komt meteen beschermd is. `omgekeerd` per scherm.
+ */
+export function windConcept(wind) {
+  const kiesbaar = Array.isArray(wind?.kiesbaar) ? wind.kiesbaar : [];
+  const mee = new Set(wind?.schermen ?? []);
+  const andersom = new Set(wind?.omgekeerd ?? []);
+  return {
+    aan: wind?.aan !== false,
+    sensor: typeof wind?.sensor === "string" ? wind.sensor : null,
+    max: Math.round(Number(wind?.max) || 30),
+    zonder: kiesbaar.filter((id) => !mee.has(id)),
+    omgekeerd: Object.fromEntries(kiesbaar.map((id) => [id, andersom.has(id)])),
+  };
+}
+
+/** Een stap van de windgrens: naar het volgende veelvoud van 5, tussen 5 en 100 km/h. */
+export function stapGrens(max, richting) {
+  const nu = Math.round(Number(max) || 30);
+  const volgende = richting > 0 ? (Math.floor(nu / 5) + 1) * 5 : (Math.ceil(nu / 5) - 1) * 5;
+  return Math.min(100, Math.max(5, volgende));
+}
+
+/** De sensoren die een windsnelheid kunnen zijn, de gekozen voorop; op naam. */
+export function windSensoren(states, gekozen, naamVan = (id) => id) {
+  const ids = Object.keys(states ?? {}).filter((id) => {
+    if (!id.startsWith("sensor.")) return false;
+    const a = states[id]?.attributes ?? {};
+    return a.device_class === "wind_speed" || (a.device_class === "speed" && Boolean(NAAR_KMH[a.unit_of_measurement]));
+  });
+  if (gekozen && !ids.includes(gekozen)) ids.push(gekozen);
+  return ids.sort((a, b) => (a === gekozen ? -1 : b === gekozen ? 1 : String(naamVan(a)).localeCompare(String(naamVan(b)), locale())));
+}
+
+/**
+ * De naam van elke sensor op een knop. Twee met dezelfde naam (een Shelly-weerstation heeft er twee die "Speed" heten)
+ * krijgen hun entity_id erachter, anders is niet te zien welke de windstoten is.
+ */
+export function sensorNamen(ids, naamVan = (id) => id) {
+  const tel = new Map();
+  for (const id of ids) tel.set(naamVan(id), (tel.get(naamVan(id)) ?? 0) + 1);
+  return new Map(ids.map((id) => [id, tel.get(naamVan(id)) > 1 ? `${naamVan(id)} (${id.split(".").slice(1).join(".")})` : naamVan(id)]));
+}
+
+/** Waarom er niet opgeslagen kan worden, of "". */
+export function windWaaromNiet(concept) {
+  if (concept?.aan && !concept.sensor) return t("Kies een windsensor.");
+  return "";
+}
+
+/** Wat naar `automatisering/wind_opslaan` gaat. */
+export function windNaarServer(concept) {
+  return {
+    aan: concept.aan,
+    sensor: concept.sensor,
+    max: concept.max,
+    zonder: [...concept.zonder],
+    omgekeerd: { ...concept.omgekeerd },
+  };
 }
 
 /**

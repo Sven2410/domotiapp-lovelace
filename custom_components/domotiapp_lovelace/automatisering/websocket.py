@@ -203,6 +203,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_favoriet_opslaan)
     websocket_api.async_register_command(hass, ws_favoriet_verwijder)
     websocket_api.async_register_command(hass, ws_favoriet_uitvoeren)
+    websocket_api.async_register_command(hass, ws_wind_opslaan)
     data[DATA_WS_REGISTERED] = True
 
 
@@ -443,3 +444,30 @@ def ws_favoriet_uitvoeren(hass: HomeAssistant, connection, msg: dict[str, Any]) 
         return
     connection.send_result(msg["id"], {"geschakeld": motor.voer_favoriet_uit(favoriet)})
 
+
+
+# ------------------------------------------------------------------ de wind
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/automatisering/wind_opslaan",
+        vol.Required("aan"): bool,
+        vol.Optional("sensor"): vol.Any(None, vol.All(cv.string, vol.Match(r"^sensor\."))),
+        vol.Required("max"): vol.All(vol.Coerce(float), vol.Range(min=5, max=100)),
+        vol.Optional("zonder", default=[]): [cv.string],
+        vol.Optional("omgekeerd", default={}): {cv.string: bool},
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_wind_opslaan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """De windbeveiliging, vanaf de kaart. Alleen een beheerder: uitzetten is een scherm in de storm (zie wind.py)."""
+    motor = _motor_of_fout(hass, connection, msg)
+    if motor is None:
+        return
+    if msg["aan"] and not msg.get("sensor"):
+        connection.send_error(msg["id"], "invalid_format", t(hass, "Kies een windsensor"))
+        return
+    await motor.async_zet_wind(msg)
+    connection.send_result(msg["id"])

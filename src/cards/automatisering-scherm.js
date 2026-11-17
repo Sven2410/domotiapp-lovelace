@@ -348,6 +348,9 @@ const css = /* css */ `
 
 let sheets = null;
 
+/** Hetzelfde stijlblad voor het dialoog van de windbeveiliging (sinds 0.134.0), zodat ze er hetzelfde uitzien. */
+export const schermSheets = () => (sheets = sheets ?? [sheet(css)]);
+
 const veilig = (tekst) =>
   String(tekst ?? "")
     .replace(/&/g, "&amp;")

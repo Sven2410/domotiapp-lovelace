@@ -10,6 +10,7 @@
 | `licht` | per moment op de lichtsterkte: wat de sensor de vorige keer zei (`was`) en de dag dat het gebeurde (`gedaan`); zie licht.py |
 | `gepland` | de stappen van een favoriet die nog moeten komen: `{sleutel, favoriet, op, lampen, helderheden, media}`; zie motor.py |
 | `wind` | de laatste keer dat de wind ingreep: `{op, kmh, wat, schermen}`, `wat` is `ingetrokken` of `niet_uitgerold`; zie wind.py |
+| `wind_instelling` | de windbeveiliging zoals een beheerder hem op de kaart wijzigde: `{aan, sensor, max, zonder, omgekeerd}`; zie wind.py. Ontbreekt hij, dan geldt de kaartconfig |
 | `wind_schermen` | per zonnescherm de laatste intrekopdracht van de wind (`in`) en of er sindsdien iets anders naartoe ging (`uit`); zie wind.py |
 
 **`laatst` wordt niet elke minuut weggeschreven**, want dat is elke minuut naar de
@@ -51,7 +52,7 @@ class AutomatiseringOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": [], "wind": None, "wind_schermen": {}}
+        self._data: dict[str, Any] = {"regels": [], "favorieten": [], "vakantie": False, "laatst": None, "brandt": [], "licht": {}, "gepland": [], "wind": None, "wind_schermen": {}, "wind_instelling": None}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -76,6 +77,8 @@ class AutomatiseringOpslag:
             ]
         if isinstance(rauw.get("wind"), dict) and isinstance(rauw["wind"].get("op"), str):
             self._data["wind"] = rauw["wind"]
+        if isinstance(rauw.get("wind_instelling"), dict):
+            self._data["wind_instelling"] = rauw["wind_instelling"]
         if isinstance(rauw.get("wind_schermen"), dict):
             self._data["wind_schermen"] = {
                 str(k): v for k, v in rauw["wind_schermen"].items() if isinstance(v, dict) and isinstance(v.get("in"), str)
@@ -267,3 +270,13 @@ class AutomatiseringOpslag:
                 veranderd = True
         if veranderd:
             self._bewaar()
+
+    @property
+    def wind_instelling(self) -> dict[str, Any] | None:
+        """De windbeveiliging van de kaart, of None: dan geldt de kaartconfig."""
+        return self._data["wind_instelling"]
+
+    @callback
+    def zet_wind_instelling(self, instelling: dict[str, Any]) -> None:
+        self._data["wind_instelling"] = instelling
+        self._bewaar()

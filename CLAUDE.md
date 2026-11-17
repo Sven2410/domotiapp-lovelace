@@ -1004,7 +1004,11 @@ je niet hoort terug te draaien zonder het te vragen:
   dat hoort in `omgekeerd`, en de editor waarschuwt erbij (`verdachteSchermen`). Sinds 0.133.0 is het blok de eerste RIJ onder Automatiseringen
   (de eigenaar: het is een automatisering die draait), en krijgt een scherm zonder bekende stand na een ingreep pas weer een
   intrekopdracht na een andere opdracht in Home Assistant of na `WIND_OPNIEUW_MIN` (30) minuten: anders bij elke vlaag
-  opnieuw. Per scherm in de opslag (`wind_schermen`).
+  opnieuw. Per scherm in de opslag (`wind_schermen`). Sinds 0.134.0 opent een tik op die rij een eigen dialoog
+  (`automatisering-wind-scherm.js`): aan of uit, grens, sensor, en per zonnescherm meedoen en omgekeerd. Dat staat in de opslag
+  (`wind_instelling`, voor het hele huis) en gaat voor de kaartconfig; zonder opslag geldt de kaart, dus de overgang gaat vanzelf.
+  `zonder` is een UITSLUITlijst, zodat een nieuw scherm op een kaart meteen beschermd is. Alleen een beheerder mag opslaan
+  (`require_admin`); uitzetten is een scherm in de storm.
 - **Een favoriet kan stappen hebben** (sinds 0.122.0, `daarna` met `na` minuten na de tik). De eigenaar: "na zoveel tijd ook
   iets aan of uit". Bij de tik komt elke stap met zijn TIJDSTIP in de opslag (`gepland`), en pas dan een wekker; na een
   herstart zet de motor ze terug en doet wat gemist is met de grenzen van een regel (`doelen_van_stap`). Alleen een wekker
