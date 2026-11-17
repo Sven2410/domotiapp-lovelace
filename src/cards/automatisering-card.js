@@ -15,6 +15,12 @@
  * lopen de vakantieregels elke dag tot een kwartier vroeger of later. Sinds 0.110.0
  * staan de vakantieregels er pas als de schakelaar aan staat (`vakantieOpen`).
  *
+ * ## De windbeveiliging staat op de kaart
+ *
+ * Sinds 0.132.0, als er zonneschermen op een kaart staan: de wind van nu, de grens, de schermen en de laatste keer dat de
+ * wind ingreep. De eigenaar zag zijn schermen bij een windstoot omlaag gaan en wist niet waarom; het stond alleen in de
+ * editor. Een tik opent de windsensor. Zie `windBlok` in de logica.
+ *
  * ## Wat de kaart doet en wat niet
  *
  * De kaart VOERT NIETS UIT. Dat doet de integratie (`automatisering/`), die ook
@@ -24,7 +30,7 @@
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
-import { nameOf } from "../ha.js";
+import { moreInfo, nameOf } from "../ha.js";
 import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { bindToggle, setToggle, toggleCss, toggleHtml } from "../toggle.js";
@@ -42,6 +48,8 @@ import {
   regelTekst,
   regelsVoor,
   vakantieOpen,
+  verdachteSchermen,
+  windBlok,
 } from "./automatisering-logica.js";
 import { automatiseringScherm, toonAutomatiseringScherm } from "./automatisering-scherm.js";
 import { nt, t } from "../taal.js";
@@ -111,10 +119,20 @@ class AutomatiseringCard extends DacCard {
     .nm, .lp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rij[data-aan="false"] .nm { color: var(--dac-ink-2); }
 
-    .vakantie, .favorieten {
+    .wind, .vakantie, .favorieten {
       display: flex; flex-direction: column; gap: 8px;
       padding-top: 10px; border-top: 1px solid var(--dac-border);
     }
+    /* De windbeveiliging (0.132.0): geen schakelaar, alleen wat er is. De regels eronder lopen door op een telefoon. */
+    .wind .rij { align-items: flex-start; }
+    .wind .ico { color: var(--dac-accent-hi); border-color: color-mix(in srgb, var(--dac-accent-hi) 45%, transparent); }
+    .wind[data-soort="te_hard"] .ico, .wind[data-soort="geen_meting"] .ico {
+      color: var(--dac-warn); border-color: color-mix(in srgb, var(--dac-warn) 45%, transparent);
+    }
+    .wind[data-soort="geen_sensor"] .ico { color: var(--dac-ink-3); border-color: var(--dac-border); }
+    .wind[data-soort="te_hard"] .nm, .wind[data-soort="geen_meting"] .nm { color: var(--dac-warn); }
+    .wind .wr { font-size: 11.5px; line-height: 1.3; color: var(--dac-ink-2); overflow-wrap: anywhere; }
+    .wind .wr.ink3 { color: var(--dac-ink-3); }
     /* De vakantieregels klappen open als de vakantiemodus aan gaat (0.110.0, vakantieOpen). */
     .vakblok { display: flex; flex-direction: column; gap: 8px; }
 
@@ -161,7 +179,8 @@ class AutomatiseringCard extends DacCard {
   }
 
   watched() {
-    return this.lampen_().map((l) => l.entity);
+    const sensor = this.stand_?.wind?.sensor;
+    return [...this.lampen_().map((l) => l.entity), ...(sensor ? [sensor] : [])];
   }
 
   template() {
@@ -190,6 +209,13 @@ class AutomatiseringCard extends DacCard {
               </div>`
             : ""
         }
+        <div class="wind" hidden>
+          <div class="kop">${titel("wind", t("Windbeveiliging"))}</div>
+          <div class="rij" role="button" tabindex="0">
+            <span class="ico">${resolve("awning")}</span>
+            <span class="txt"></span>
+          </div>
+        </div>
         ${
           this.metVakantie_()
             ? `<div class="vakantie">
@@ -221,6 +247,18 @@ class AutomatiseringCard extends DacCard {
       );
     }
     for (const lijst of this.$$(".lijst")) this.on(lijst, "click", (e) => this.tikOpLijst_(e));
+    const windRij = this.$(".wind .rij");
+    const openSensor = () => {
+      const sensor = this.stand_?.wind?.sensor;
+      if (sensor) moreInfo(this, sensor);
+    };
+    this.on(windRij, "click", openSensor);
+    this.on(windRij, "keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openSensor();
+      }
+    });
     const schakelaar = this.$(".vrij .toggle");
     if (schakelaar) {
       bindToggle(schakelaar, {
@@ -396,8 +434,27 @@ class AutomatiseringCard extends DacCard {
         this.$(".vakblok").hidden = !vakantieOpen(stand);
       }
       this.$(".pauze").hidden = !(stand.vakantie === true && gewoon.length);
+      this.tekenWind_(stand.wind);
     }
     meetRaster(this.$(".card"));
+  }
+
+  tekenWind_(wind) {
+    const vak = this.$(".wind");
+    const blok = windBlok(wind, this.hass?.states, (id) => this.naamVanLamp_(id));
+    vak.hidden = !blok;
+    if (!blok) return;
+    const html = `
+      <span class="nm">${escapeHtml(blok.kop)}</span>
+      <span class="st">${escapeHtml(blok.uitleg)}</span>
+      ${blok.regels.map((r, i) => `<span class="wr${i === blok.regels.length - 1 ? " ink3" : ""}">${escapeHtml(r)}</span>`).join("")}`;
+    const txt = vak.querySelector(".txt");
+    if (txt.dataset.html !== html) {
+      txt.innerHTML = html;
+      txt.dataset.html = html;
+    }
+    vak.dataset.soort = blok.soort;
+    vak.querySelector(".rij").toggleAttribute("aria-disabled", !wind.sensor);
   }
 
   getCardSize() {
@@ -537,6 +594,15 @@ class AutomatiseringEditor extends DacEditor {
     );
   }
 
+  /** Met een waarschuwing bij een zonnescherm dat zich als rolluik meldt; zie `verdachteSchermen`. */
+  omgekeerdUitleg_() {
+    const basis = t("Rolluiken en zonneschermen waarvan de motor andersom is aangesloten, net als het vinkje op de rolluikkaart.");
+    const verdacht = verdachteSchermen(this.config_?.zonneschermen, this.config_?.omgekeerd, this.hass?.states);
+    if (!verdacht.length) return basis;
+    const namen = verdacht.map((id) => this.hass.states[id].attributes?.friendly_name ?? id).join(", ");
+    return `${basis} ${t("Let op: {namen} melden zich niet als zonnescherm. Rolt zo'n scherm uit als Home Assistant hem dicht doet, zet hem dan hier. Anders rolt de wind hem juist uit.", { namen })}`;
+  }
+
   helper(s) {
     return {
       name: t("Leeg laten: Automatiseringen."),
@@ -547,7 +613,7 @@ class AutomatiseringEditor extends DacEditor {
       wind_max: t("Boven deze wind rollen de zonneschermen niet uit, en gaan ze in als ze uit stonden. Leeg laten: 30 km/h."),
       speakers: t("Spelers van Music Assistant. De klant kiest wat er speelt en hoe hard; uit is stoppen."),
       lichtsensor: t("Waar de lichtsterkte vandaan komt, bijvoorbeeld het weerstation. Dan kan de klant ook kiezen voor: als het donker wordt, of als het licht wordt."),
-      omgekeerd: t("Rolluiken waarvan de motor andersom is aangesloten, net als het vinkje op de rolluikkaart."),
+      omgekeerd: this.omgekeerdUitleg_(),
       favorieten: t("Hier maakt de klant de knoppen voor de favorietenkaart."),
       alleen_aan_uit: t("Lampen die kunnen dimmen volgens Home Assistant, maar het niet doen, zoals een dimblokje met vaste spots. Die krijgen geen schuif."),
       vakantie_entiteit: t("Leeg laten: de schakelaar die de integratie zelf heeft. Kies hier een stand die er al was, dan volgt de kaart die."),

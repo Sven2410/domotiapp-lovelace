@@ -217,6 +217,8 @@ def stand(hass: HomeAssistant) -> dict[str, Any]:
         "favorieten": opslag.favorieten if opslag else [],
         "vakantie": opslag.vakantie if opslag else False,
         "gekoppeld": motor.gekoppeld if motor else None,
+        # Sinds 0.132.0: de windbeveiliging staat op de kaart. De eigenaar zag zijn schermen bewegen en wist niet waarom.
+        "wind": motor.wind_stand() if motor else None,
     }
 
 

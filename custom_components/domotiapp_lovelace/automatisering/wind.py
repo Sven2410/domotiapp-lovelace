@@ -12,6 +12,16 @@ erbij: de beheerder kiest op de kaart een windsensor (`wind_sensor`) en een gren
   wind weer onder de grens is geweest, zodat wie een scherm zelf weer uitrolt niet elke minuut wordt overruled. Na een herstart
   met harde wind trekt hij ze één keer in: wat er tijdens de herstart gebeurde, weet niemand.
 - **Zonder windsensor** op de kaart is er geen grens. Dat is de keuze van de beheerder, en de editor zegt erbij wat dat betekent.
+- **Wat al in staat, blijft staan** (sinds 0.132.0). Meldt een scherm zelf dat hij in staat (`closed`, of `open` als hij
+  `omgekeerd` is), dan krijgt hij geen opdracht. Zonder terugmelding (`assumed_state`, of een onbekende stand) gaat hij wel.
+- **Op de kaart te zien** (sinds 0.132.0). De eigenaar zag zijn schermen bij een windstoot omlaag gaan en wist niet waarom:
+  de beveiliging stond alleen in de editor. De stand geeft daarom `wind` mee (sensor, grens, schermen, en de laatste ingreep
+  uit de opslag), en de kaart toont dat als blok Windbeveiliging.
+
+**Een knikarmscherm dat zich als rolluik meldt.** Somfy (Overkiz) kent een knikarmscherm soms als ExteriorScreen, met
+`device_class: blind`. Dan is `close_cover` de motor omlaag, en dat is bij een knikarm UITROLLEN. Intrekken bij de wind rolde
+ze zo juist uit. Zet zo'n scherm in `omgekeerd` op de kaart; de editor waarschuwt bij een zonnescherm dat zich niet als
+`awning` meldt.
 
 De eenheid komt van de sensor zelf (`unit_of_measurement`) en wordt omgerekend; een Shelly-weerstation meldt m/s.
 """
