@@ -13,6 +13,7 @@ afbreken; de inhoud staat in:
 | `ruimtes.py` | een ruimte boeken en vrijgeven, met de code |
 | `weer.py` | het laatst bekende weer, en de weerintegratie herladen die blijft hangen |
 | `websocket.py` | de commando's en het abonnement voor de kaarten |
+| `diensten.py` | de dienst `infoscherm_aanwezigheid`, voor een automatisering |
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ import logging
 from homeassistant.core import HomeAssistant, callback
 
 from ..const import DOMAIN
+from . import diensten
 from . import http as infoscherm_http
 from . import websocket as infoscherm_ws
 from .const import DATA_FEEDS, DATA_RUIMTES, DATA_STORE, DATA_WEER
@@ -51,6 +53,7 @@ async def async_zet_op(hass: HomeAssistant) -> None:
         data[DATA_RUIMTES] = Ruimtes(hass, data[DATA_STORE])
 
     infoscherm_ws.async_register(hass)
+    diensten.async_registreer(hass)
     infoscherm_http.async_registreer(hass)
 
     if DATA_FEEDS not in data:
@@ -76,5 +79,6 @@ def async_stop(hass: HomeAssistant) -> None:
         lezer.async_stop()
     if (wacht := data.pop(DATA_WEER, None)) is not None:
         wacht.async_stop()
+    diensten.async_haal_weg(hass)
     data.pop(DATA_RUIMTES, None)
     data.pop(DATA_STORE, None)

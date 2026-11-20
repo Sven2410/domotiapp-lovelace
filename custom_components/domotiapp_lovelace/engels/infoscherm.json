@@ -28,5 +28,7 @@
   "Deze ruimte heeft de installateur gekozen; die haalt hem weg in de kaartinstellingen van het beheer.": "The installer chose this room; they remove it in the card settings of the management.",
   "Dit account mag het infoscherm niet beheren": "This account may not manage the info screen",
   "Deze persoon staat niet (meer) in de lijst": "This person is not (or no longer) in the list",
-  "Dat is geen bestands-ID": "That is not a file ID"
+  "Dat is geen bestands-ID": "That is not a file ID",
+  "Het infoscherm is niet geladen": "The info screen is not loaded",
+  "Niet op het infoscherm: {namen}": "Not on the info screen: {namen}"
 }
