@@ -50,6 +50,9 @@ DATA_WS_REGISTERED: Final = "infoscherm_ws_registered"
 DATA_VIEW_REGISTERED: Final = "infoscherm_view_registered"
 DATA_ABONNEES: Final = "infoscherm_abonnees"
 
+# De dienst voor een automatisering (0.135.0, `diensten.py`).
+DIENST_AANWEZIGHEID: Final = "infoscherm_aanwezigheid"
+
 # Bestanden (logo, foto's, nieuwsafbeeldingen) staan naast de camerabeelden,
 # onder de configuratiemap en niet onder `www/`: alles onder `www/` is zonder
 # inloggen op te vragen, en een personeelsfoto hoort daar niet.

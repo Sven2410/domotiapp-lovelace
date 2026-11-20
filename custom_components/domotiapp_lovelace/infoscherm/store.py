@@ -953,6 +953,45 @@ class InfoStore:
                 return dict(p)
         return None
 
+    @callback
+    def zoek_personen(self, wie: list[str]) -> tuple[list[str], list[str]]:
+        """De ID's bij een lijst ID's of namen, en wat niet te vinden is.
+
+        Een naam telt zonder hoofdletters en spaties eromheen, want die typt
+        iemand met de hand in een automatisering. Een ID gaat voor een naam."""
+        ids, onbekend = [], []
+        for w in wie:
+            sleutel = str(w).strip()
+            treffer = next((p["id"] for p in self._personen if p["id"] == sleutel), None)
+            if treffer is None:
+                treffer = next(
+                    (p["id"] for p in self._personen if p["naam"].casefold() == sleutel.casefold()), None
+                )
+            if treffer is None:
+                onbekend.append(sleutel)
+            elif treffer not in ids:
+                ids.append(treffer)
+        return ids, onbekend
+
+    async def async_zet_aanwezigheid(
+        self, aanwezig: bool, ids: list[str] | None = None
+    ) -> list[dict[str, Any]]:
+        """Meerdere personen tegelijk, voor de dienst. `None` is iedereen.
+
+        Geeft wie er VERANDERDE. Wie al zo stond blijft staan en telt niet mee,
+        zodat een automatisering hem gerust twee keer kan aanroepen (na een
+        herstart nog eens): er gaat dan niets naar de schijf."""
+        veranderd = []
+        for p in self._personen:
+            if ids is not None and p["id"] not in ids:
+                continue
+            if p["aanwezig"] != bool(aanwezig):
+                p["aanwezig"] = bool(aanwezig)
+                veranderd.append(dict(p))
+        if veranderd:
+            await self._async_save()
+        return veranderd
+
     async def async_zet_mededelingen(self, rauw: Any) -> list[dict[str, Any]]:
         self._mededelingen = valideer_mededelingen(rauw)
         await self._async_save()

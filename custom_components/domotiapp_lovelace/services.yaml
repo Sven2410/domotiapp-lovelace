@@ -1,0 +1,13 @@
+infoscherm_aanwezigheid:
+  fields:
+    aanwezig:
+      required: true
+      example: false
+      selector:
+        boolean:
+    personen:
+      required: false
+      example: "Bram Visser"
+      selector:
+        text:
+          multiple: true

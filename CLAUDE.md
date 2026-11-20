@@ -1048,6 +1048,11 @@ klant stond de tablet op een andere tijdzone en het scherm op 8:30 in plaats van
 Elk "nu" in `infoscherm-card.js` is `this.nu_()`. Een tijdstip met tijdzone gaat erin met `wand_`, en wat naar Home Assistant
 gaat (een agenda, de recorder) eruit met `echt_`. Schrijf je er iets bij: nooit een kale `new Date()`.
 
+**De aanwezigheid is ook een dienst** (sinds 0.135.0, `infoscherm/diensten.py`): `domotiapp_lovelace.infoscherm_aanwezigheid`
+met `aanwezig` en optioneel `personen` (naam of id; leeg is iedereen). De eigenaar wilde iedereen afwezig als het alarm aangaat.
+Het scherm zelf zet nog steeds niemand af (de middernachtklok bleef weg); wanneer de dienst draait, bepaalt de automatisering.
+Twee keer is één keer, en een onbekende naam is een fout die niets verandert.
+
 **Valt de weerentiteit weg, dan blijft het laatste weer staan** (sinds 0.105.0, `infoscherm/weer.py`), met "bijgewerkt ...".
 Na tien minuten herlaadt de server de integratie achter die ene entiteit, hooguit eens per uur. Dit geldt niet voor andere
 integraties.
