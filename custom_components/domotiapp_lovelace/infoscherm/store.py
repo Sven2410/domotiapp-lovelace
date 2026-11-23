@@ -623,9 +623,10 @@ def valideer_installatie(rauw: Any) -> dict[str, Any]:
     # niet in het beheer, want het zijn ENTITEITEN -- die kiest de installateur,
     # net als de lampen en de agenda's. Wat de receptie erover te zeggen heeft
     # (staat het blok op het scherm, hoe heet een bak) gaat via de indeling en
-    # de naam van de sensor zelf.
+    # de naam van de sensor zelf. Sinds 0.136.0 mag het ook een agenda zijn,
+    # met de soort als titel van elke ophaling (zie meldingen/afval.py).
     afval = [
-        _entiteit(a, "afval", ("sensor",))
+        _entiteit(a, "afval", ("sensor", "calendar"))
         for a in _lijst(rauw.get("afval"), "afval", MAX_AFVAL)
     ]
     return {

@@ -16,6 +16,14 @@ hoofdletters schrijft, blijft staan.
 
 Dezelfde regels staan voor de kaart in `src/cards/meldingen-logica.js`, met
 dezelfde tests ernaast.
+
+## Een agenda als bron (0.136.0)
+
+Een bedrijf krijgt van zijn verwerker vaak geen huishoudkalender, wel een pdf
+met de ophaaldagen. Beheer zet die in een Lokale agenda: elke ophaling een
+afspraak, met de soort als titel. Een `calendar.*` mag daarom overal staan waar
+een afvalsensor staat; de soorten van een dag zijn dan de titels van de
+afspraken op die dag (`uit_titels`), met dezelfde regels als een toestand.
 """
 
 from __future__ import annotations
@@ -85,6 +93,22 @@ def soorten(toestand: str | None) -> list[str]:
             naam = stuk if stuk[:1].isupper() else stuk[:1].upper() + stuk[1:]
         if naam not in uit:
             uit.append(naam)
+    return uit
+
+
+def uit_titels(titels) -> list[str]:
+    """De soorten in de titels van afspraken in een afvalagenda (0.136.0).
+
+    Elke titel telt als de toestand van een sensor: "Papier" of "Papier,
+    Restafval". Dezelfde soort twee keer telt één keer.
+    """
+    uit: list[str] = []
+    gezien: set[str] = set()
+    for titel in titels:
+        for naam in soorten(titel):
+            if naam.lower() not in gezien:
+                gezien.add(naam.lower())
+                uit.append(naam)
     return uit
 
 
