@@ -25,6 +25,12 @@ import { afvalSoorten } from "./meldingen-logica.js";
 /** Hoe ver vooruit de kaarten kijken. Een gemeente haalt elke soort minstens eens in de acht weken op. */
 export const AGENDA_VOORUIT_DAGEN = 62;
 
+/**
+ * Hoe ver de pagina Afval van het infoscherm vooruit kijkt (0.137.0): de hele kalender. Een
+ * ophaalschema loopt meestal tot het eind van het volgend jaar, dus twee jaar.
+ */
+export const KALENDER_VOORUIT_DAGEN = 731;
+
 export const isAgenda = (id) => typeof id === "string" && id.startsWith("calendar.") && !id.includes("#");
 
 /** Het id van de bak van deze soort in deze agenda. */
@@ -54,13 +60,16 @@ export function ophalingen(events, tz) {
 
 /**
  * Per soort de eerstvolgende ophaling vanaf vandaag: `[{id, soort, datum}]`, op datum.
- * `nu` is de klok waarmee de kaart rekent.
+ * `nu` is de klok waarmee de kaart rekent. Alleen binnen `vooruit` dagen, ook als de
+ * afspraken verder gaan (de pagina van het infoscherm haalt de hele kalender op), zodat
+ * de bakken overal dezelfde zijn.
  */
-export function bakkenUit(agenda, events, tz, nu = new Date()) {
+export function bakkenUit(agenda, events, tz, nu = new Date(), vooruit = AGENDA_VOORUIT_DAGEN) {
   const vandaag = dagBegin(nu);
+  const grens = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() + vooruit);
   const per = new Map();
   for (const o of ophalingen(events, tz)) {
-    if (o.dag < vandaag) continue;
+    if (o.dag < vandaag || o.dag >= grens) continue;
     for (const soort of o.soorten) {
       const sleutel = soort.toLowerCase();
       if (!per.has(sleutel)) per.set(sleutel, { id: bakId(agenda, soort), soort, datum: o.dag });
@@ -78,6 +87,39 @@ export function soortenOp(events, tz, dag) {
     for (const soort of o.soorten) if (!uit.includes(soort)) uit.push(soort);
   }
   return uit.join(", ");
+}
+
+/**
+ * De hele kalender vanaf vandaag: per dag de soorten, uit de afspraken van een of meer
+ * agenda's (`lijsten`, elk een bericht van `calendar/event/subscribe`). `[{dag, soorten}]`, op dag.
+ */
+export function kalenderUit(lijsten, tz, nu = new Date()) {
+  const vandaag = dagBegin(nu);
+  const per = new Map();
+  for (const events of lijsten ?? []) {
+    for (const o of ophalingen(events, tz)) {
+      if (o.dag < vandaag) continue;
+      const dag = per.get(+o.dag) ?? per.set(+o.dag, { dag: o.dag, soorten: [] }).get(+o.dag);
+      for (const soort of o.soorten) {
+        if (!dag.soorten.some((s) => s.toLowerCase() === soort.toLowerCase())) dag.soorten.push(soort);
+      }
+    }
+  }
+  return [...per.values()].sort((a, b) => a.dag - b.dag);
+}
+
+/** De kalender per maand: `[{maand, dagen}]`, met `maand` de eerste van die maand. */
+export function perMaand(kalender) {
+  const uit = [];
+  for (const d of kalender ?? []) {
+    const laatste = uit[uit.length - 1];
+    if (laatste && laatste.maand.getFullYear() === d.dag.getFullYear() && laatste.maand.getMonth() === d.dag.getMonth()) {
+      laatste.dagen.push(d);
+    } else {
+      uit.push({ maand: new Date(d.dag.getFullYear(), d.dag.getMonth(), 1), dagen: [d] });
+    }
+  }
+  return uit;
 }
 
 const twee = (n) => String(n).padStart(2, "0");

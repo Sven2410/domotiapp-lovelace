@@ -3,12 +3,16 @@
  *
  * NIEUW GEDRAG. `src/cards/afval-agenda.js` bestond niet vóór deze ronde; op de code van ervoor faalt dit bestand met
  * ERR_MODULE_NOT_FOUND. Zie de kop van dat bestand.
+ *
+ * De hele kalender (0.137.0, onderaan): NIEUW GEDRAG. `kalenderUit` en `perMaand` bestonden niet; op de code van
+ * 0.136.1 faalt het importeren ("does not provide an export named 'kalenderUit'"). En `bakkenUit` hield geen grens:
+ * met de afspraken van een heel jaar binnen kwam een soort van over drie maanden er ook als bak bij.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { bakId, bakkenUit, isAgenda, ophalingen, soortenOp, staatVan, vouwUit } from "../../src/cards/afval-agenda.js";
+import { bakId, bakkenUit, isAgenda, kalenderUit, ophalingen, perMaand, soortenOp, staatVan, vouwUit } from "../../src/cards/afval-agenda.js";
 import { afvalLijst } from "../../src/cards/infoscherm-afval.js";
 
 const TZ = "Europe/Amsterdam";
@@ -87,6 +91,42 @@ test("het infoscherm leest de bakken van een agenda zoals die van een sensor", (
       ["Papier", 1, null],
       ["Restafval", 1, null],
       ["PMD", 3, null],
+    ]
+  );
+});
+
+test("de bakken blijven binnen 62 dagen, ook als de afspraken van een heel jaar binnen zijn", () => {
+  const ver = [...EVENTS, { start: "2027-02-10", end: "2027-02-11", summary: "Kerstbomen" }];
+  assert.deepEqual(
+    bakkenUit("calendar.afval", ver, TZ, NU).map((b) => b.soort),
+    ["Papier", "Restafval", "PMD"]
+  );
+});
+
+test("de hele kalender: vanaf vandaag, per dag de soorten uit elke agenda, zonder dubbele", () => {
+  const tweede = [ophaling("24", "Papier"), ophaling("30", "Glas"), { start: "2027-01-08", end: "2027-01-09", summary: "Kerstbomen" }];
+  const k = kalenderUit([EVENTS, tweede], TZ, NU);
+  assert.deepEqual(
+    k.map((d) => [d.dag.getMonth() + 1, d.dag.getDate(), d.soorten.join("+")]),
+    [
+      [11, 24, "Papier+Restafval"],
+      [11, 26, "PMD"],
+      [11, 27, "Papier"],
+      [11, 30, "Glas"],
+      [1, 8, "Kerstbomen"],
+    ]
+  );
+  assert.deepEqual(kalenderUit([], TZ, NU), []);
+});
+
+test("de kalender per maand, ook over de jaargrens", () => {
+  const k = kalenderUit([[...EVENTS, { start: "2026-12-01", end: "2026-12-02", summary: "GFT" }, { start: "2027-01-08", end: "2027-01-09", summary: "GFT" }]], TZ, NU);
+  assert.deepEqual(
+    perMaand(k).map((m) => [m.maand.getFullYear(), m.maand.getMonth() + 1, m.dagen.length]),
+    [
+      [2026, 11, 3],
+      [2026, 12, 1],
+      [2027, 1, 1],
     ]
   );
 });

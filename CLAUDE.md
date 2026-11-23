@@ -948,6 +948,8 @@ bedrijf zonder afvalintegratie: beheer zet de ophaaldagen in een Lokale agenda, 
 dag met de soort als titel. De kaarten vouwen de agenda uit tot een bak per soort (`src/cards/afval-agenda.js`, met een
 nagebootste toestand onder `calendar.x#soort`), de server leest de afspraken van de ophaaldag (`_namen_op` in
 `meldingen/motor.py`). De soort uit de titel volgt dezelfde regels als een toestand (`afvalSoorten` en `uit_titels`).
+Sinds 0.137.0 haalt het infoscherm de afspraken van twee jaar op (`KALENDER_VOORUIT_DAGEN`) en toont de pagina Afval alle
+ophalingen per maand; de bakken blijven overal binnen 62 dagen (`bakkenUit`), zodat kaart, scherm en meldingen dezelfde zijn.
 
 ### De automatiseringskaart: regels in de integratie, niet in Home Assistant
 

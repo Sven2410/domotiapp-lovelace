@@ -1,19 +1,24 @@
 /**
  * De afspraken van de afvalagenda's van één kaart, live (0.136.0). Zie de kop van `cards/afval-agenda.js`.
  *
- * Per agenda een `AgendaAbonnement` van vandaag tot `AGENDA_VOORUIT_DAGEN` verder. Home Assistant stuurt een nieuwe
+ * Per agenda een `AgendaAbonnement` van vandaag tot `AGENDA_VOORUIT_DAGEN` verder (of `dagen`, voor de hele
+ * kalender op de pagina van het infoscherm). Home Assistant stuurt een nieuwe
  * lijst zodra de agenda iets wegschrijft, dus een ophaling die beheer of de receptie in de agenda zet, staat er meteen.
  * Na middernacht opnieuw, met de nieuwe dag; na een herverbinding ook (de kaart geeft dan `opnieuw` mee).
  */
 
 import { AgendaAbonnement } from "./infoscherm-client.js";
 import { naarWand, vanWand } from "./wandklok.js";
-import { AGENDA_VOORUIT_DAGEN, bakkenUit, isAgenda, soortenOp, staatVan } from "./cards/afval-agenda.js";
+import { AGENDA_VOORUIT_DAGEN, bakkenUit, isAgenda, kalenderUit, soortenOp, staatVan } from "./cards/afval-agenda.js";
 
 export class AfvalAgendaBron {
-  /** @param {Function} bijWijziging  na elke nieuwe lijst afspraken */
-  constructor(bijWijziging) {
+  /**
+   * @param {Function} bijWijziging  na elke nieuwe lijst afspraken
+   * @param {{dagen?: number}} [opties]  hoe ver vooruit de afspraken opgehaald worden
+   */
+  constructor(bijWijziging, { dagen = AGENDA_VOORUIT_DAGEN } = {}) {
     this.cb_ = bijWijziging;
+    this.dagen_ = dagen;
     this.abos_ = new Map();
     this.events_ = new Map();
     this.sleutel_ = "";
@@ -37,7 +42,7 @@ export class AfvalAgendaBron {
     for (const a of [...this.events_.keys()]) if (!agendas.includes(a)) this.events_.delete(a);
     if (!agendas.length) return;
     const van = vanWand(vandaag, tz);
-    const tot = vanWand(new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() + AGENDA_VOORUIT_DAGEN), tz);
+    const tot = vanWand(new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() + this.dagen_), tz);
     for (const agenda of agendas) {
       const abo = new AgendaAbonnement(agenda, van, tot, (events) => {
         if (this.abos_.get(agenda) !== abo) return;
@@ -54,6 +59,11 @@ export class AfvalAgendaBron {
     const uit = new Map();
     for (const [agenda, events] of this.events_) uit.set(agenda, bakkenUit(agenda, events, this.tz_, nu));
     return uit;
+  }
+
+  /** Alle ophalingen vanaf vandaag, uit elke agenda samen (`kalenderUit`). */
+  kalender(nu = new Date()) {
+    return kalenderUit(this.events_.values(), this.tz_, nu);
   }
 
   /** De nagebootste toestand van elke bak, op id. */
