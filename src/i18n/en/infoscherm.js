@@ -92,6 +92,7 @@ export const INFOSCHERM = {
   "{n} vandaag": "{n} today",
   "hele dag": "all day",
   "Geen ophaaldata gevonden.": "No collection dates found.",
+  "Alle ophalingen": "All collections",
   "Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.":
     "No collection dates found. Check that the chosen sensors have a date as their state.",
   "voorbij": "passed",

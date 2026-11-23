@@ -68,7 +68,7 @@ import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
 import { naarWand, vanWand } from "../wandklok.js";
 import { afvalKomend, afvalLijst, afvalWanneer } from "./infoscherm-afval.js";
 import { eersteOphaaldag } from "./afval-logica.js";
-import { staatVan, vouwUit } from "./afval-agenda.js";
+import { KALENDER_VOORUIT_DAGEN, perMaand, staatVan, vouwUit } from "./afval-agenda.js";
 import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import { opsomming } from "./meldingen-logica.js";
 import {
@@ -150,7 +150,7 @@ import {
   vrijTeller,
 } from "./ruimtes-logica.js";
 import { geenQrReden, netwerkNaam, qrAdres } from "./wifi-logica.js";
-import { nt, t } from "../taal.js";
+import { locale, nt, t } from "../taal.js";
 import { SCHERM } from "./infoscherm-logo.js";
 import { helderheidProcent } from "./light-logica.js";
 import {
@@ -833,6 +833,27 @@ const css = /* css */ `
   .af-pagina .af-eerst .af-n { font-size: calc(26px * var(--s)); }
   .af-pagina .af-uitleg { font-size: calc(13px * var(--s)); color: var(--dac-ink-3); }
 
+  /* De hele kalender (0.137.0): per maand een vak, zoveel naast elkaar als er passen. */
+  .af-kal-kop { font-size: calc(12px * var(--s)); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dac-ink-3); margin-top: calc(6px * var(--s)); }
+  .af-kal { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(230px * var(--s)), 1fr)); gap: calc(12px * var(--s)); align-items: start; }
+  .af-maand {
+    display: flex; flex-direction: column; min-width: 0;
+    padding: calc(12px * var(--s)) calc(16px * var(--s));
+    background: var(--dac-surface); border: 1px solid var(--dac-border); border-radius: var(--dac-radius);
+  }
+  .af-maand-n { font-size: calc(16px * var(--s)); font-weight: 600; padding-bottom: calc(6px * var(--s)); }
+  .af-kd {
+    display: grid; grid-template-columns: calc(56px * var(--s)) minmax(0, 1fr);
+    gap: calc(10px * var(--s)); align-items: baseline;
+    padding: calc(6px * var(--s)) 0; font-size: calc(15px * var(--s));
+  }
+  .af-kd + .af-kd { border-top: 1px solid var(--dac-border); }
+  .af-kd-d { color: var(--dac-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .af-kd[data-eerst="true"] .af-kd-d { color: var(--tone); font-weight: 600; }
+  .af-kd-s { display: flex; flex-wrap: wrap; gap: calc(4px * var(--s)) calc(12px * var(--s)); min-width: 0; }
+  .af-kd-b { display: inline-flex; align-items: center; gap: calc(6px * var(--s)); min-width: 0; }
+  .af-kd-b i { width: calc(10px * var(--s)); height: calc(10px * var(--s)); border-radius: calc(3px * var(--s)); background: var(--bak); flex: 0 0 auto; }
+
   /* ---- de energiepagina uit het energiedashboard van Home Assistant ----
      Gevraagd op 17 september 2026: een heel overzicht van de historie, uit de
      ingestelde waarden van het energiedashboard. Wat hieronder staat is dus
@@ -1238,10 +1259,15 @@ export class InfoschermCard extends DacCard {
     const scherm = this.$(".scherm");
 
     // Een agenda als afvalbron (0.136.0): de afspraken komen los binnen, dan het afvalblok opnieuw.
-    this.afvalBron_ = new AfvalAgendaBron(() => {
-      this.paintRaster_();
-      this.paintPagina_("afval");
-    });
+    // De hele kalender, want de pagina Afval toont alle ophalingen (0.137.0); de bakken blijven binnen
+    // de gewone 62 dagen (zie bakkenUit).
+    this.afvalBron_ = new AfvalAgendaBron(
+      () => {
+        this.paintRaster_();
+        this.paintPagina_("afval");
+      },
+      { dagen: KALENDER_VOORUIT_DAGEN }
+    );
 
     // Elke aanraking is een teken van leven voor de terugvaltimer.
     this.on(scherm, "pointerdown", () => this.leeft_(), { capture: true, passive: true });
@@ -2901,6 +2927,32 @@ export class InfoschermCard extends DacCard {
     </div>`;
   }
 
+  /**
+   * Alle ophalingen per maand, op de pagina (0.137.0). Gevraagd op 23 november 2026: "als ik op de
+   * kalender klik dat ik heel de afvalkalender kan zien". Alleen met een agenda als bron; een
+   * afvalsensor kent alleen de volgende datum, en die staat er al boven.
+   */
+  htmlAfvalKalender_(kalender) {
+    const taal = locale();
+    const hoofd = (s) => s.charAt(0).toLocaleUpperCase(taal) + s.slice(1);
+    let eerste = true;
+    const maanden = perMaand(kalender).map((m) => {
+      const dagen = m.dagen.map((d) => {
+        const html = `<div class="af-kd" data-eerst="${eerste}">
+          <span class="af-kd-d">${escapeHtml(d.dag.toLocaleDateString(taal, { weekday: "short", day: "numeric" }))}</span>
+          <span class="af-kd-s">${d.soorten.map((s) => `<span class="af-kd-b" style="--bak:${this.afvalKleur_(s)}"><i></i>${escapeHtml(s)}</span>`).join("")}</span>
+        </div>`;
+        eerste = false;
+        return html;
+      });
+      return `<section class="af-maand">
+        <div class="af-maand-n">${escapeHtml(hoofd(m.maand.toLocaleDateString(taal, { month: "long", year: "numeric" })))}</div>
+        ${dagen.join("")}
+      </section>`;
+    });
+    return `<div class="af-kal-kop">${t("Alle ophalingen")}</div><div class="af-kal">${maanden.join("")}</div>`;
+  }
+
   /** Een gewone regel in de lijst. */
   htmlAfvalRij_(rij, voluit = false) {
     const ver = (rij.dagen ?? 0) > 21;
@@ -3604,11 +3656,14 @@ export class InfoschermCard extends DacCard {
         const rest = lijst.filter((r) => r.reden);
         const eerst = eersteOphaaldag(komend, (r) => r.dagen);
         const later = komend.filter((r) => !eerst.includes(r));
-        const html = komend.length
+        // Met een agenda als bron is de hele kalender bekend, niet alleen de volgende per bak.
+        const kalender = this.afvalBron_?.kalender(this.nu_()) ?? [];
+        const html = komend.length || kalender.length
           ? `<div class="af-pagina">
-              ${this.htmlAfvalEerst_(eerst)}
+              ${komend.length ? this.htmlAfvalEerst_(eerst) : ""}
               ${later.length ? `<div class="af-lijst">${later.map((r) => this.htmlAfvalRij_(r, true)).join("")}</div>` : ""}
               ${rest.length ? `<div class="af-uitleg">${rest.map((r) => `${escapeHtml(r.naam)}: ${escapeHtml(AFVAL_REDEN[r.reden] ? t(AFVAL_REDEN[r.reden]) : r.reden)}`).join(" · ")}</div>` : ""}
+              ${kalender.length ? this.htmlAfvalKalender_(kalender) : ""}
             </div>`
           : `<div class="leeg">${t("Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.")}</div>`;
         this.vul_(vak, html, false);
