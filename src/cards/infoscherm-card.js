@@ -2500,12 +2500,24 @@ export class InfoschermCard extends DacCard {
       if (nodig > ruimte + 1 && ruimte / nodig >= 0.72) el.style.setProperty("--pas", (ruimte / nodig).toFixed(3));
       uren.hidden = uren.getBoundingClientRect().bottom > onder() + 1;
     }
-    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .aircos, .rlijst, .afspraken, .ot, .vj-lijst");
+    const lijst = bi.querySelector(".tegels, .n-lijst, .lampen, .aircos, .rlijst, .afspraken, .ot, .vj-lijst, .af-lijst");
     if (!lijst) return;
     const kinderen = [...lijst.children];
     for (const kind of kinderen) kind.hidden = false;
     let verborgen = 0;
-    if (lijst.matches(".ot")) {
+    if (lijst.matches(".af-lijst")) {
+      // De afvalkalender: het vlak met de eerstvolgende blijft altijd, de rijen
+      // eronder alleen zolang ze heel passen. In een blok van één rij hoog stond
+      // de tweede bak half onder de rand (gemeld op 23 november 2026).
+      lijst.hidden = false;
+      for (const kind of kinderen) {
+        if (kind.getBoundingClientRect().bottom > onder() + 1) {
+          kind.hidden = true;
+          verborgen += 1;
+        }
+      }
+      lijst.hidden = verborgen === kinderen.length;
+    } else if (lijst.matches(".ot")) {
       // Eerst de week dag voor dag. Valt daar iets van weg, dan de dagen met
       // dezelfde tijden samen (".ot.kort", als die er is), en pas als ook dat
       // niet past valt er onderaan iets weg.

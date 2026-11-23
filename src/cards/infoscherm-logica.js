@@ -458,7 +458,7 @@ export const BLOK_INFO = {
   agenda: { get naam() { return t("Agenda"); }, icoon: "calendar", pagina: "agenda", aantal: true, maat: [2, 2] },
   verjaardagen: { get naam() { return t("Verjaardagen"); }, icoon: "cake", pagina: "verjaardagen", aantal: true, maat: [2, 2] },
   energie: { get naam() { return t("Energie"); }, icoon: "bolt", pagina: "energie", aantal: false, maat: [2, 2] },
-  afval: { get naam() { return t("Afvalkalender"); }, icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
+  afval: { get naam() { return t("Afval"); }, icoon: "bin", pagina: "afval", aantal: false, maat: [2, 2] },
   klimaat: { get naam() { return t("Klimaat"); }, icoon: "airco", pagina: "klimaat", aantal: true, maat: [2, 2] },
   ruimtes: { get naam() { return t("Ruimtes"); }, icoon: "door", pagina: "ruimtes", aantal: true, maat: [2, 2] },
   wifi: { get naam() { return t("Wifi"); }, icoon: "wifi", pagina: "wifi", aantal: false, maat: [2, 2] },
