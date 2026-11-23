@@ -664,6 +664,9 @@ haalt het echte nieuws van internet op.
 
 Sinds 8 november 2026 staat er ook een view `agenda` met de agendakaart (60 dagen vooruit), en via die kaart toegevoegd: de Lokale agenda `Werk Bram` en de Externe agenda `Feestdagen NL` (de openbare Google-agenda met Nederlandse feestdagen; haalt van internet). Apple iCloud is alleen met een verzonnen account geprobeerd.
 
+Sinds 23 november 2026 staat er ook een Lokale agenda `calendar.afval` met ophalingen (de soort als titel), en een view
+`afvalagenda` met twee afvalkaarten en een meldingenkaart (`id: afval-agenda`) die hem als bron hebben.
+
 Sinds 8 november 2026 staat er ook een view `overzicht` met de overzichtskaart, en een Lokale agenda `calendar.gezin` met
 afspraken voor die kaart (in `.storage`). De afvalsensoren, de lekkage in de kelder en de personen thuis zijn er met
 `POST /api/states` gezet en zijn na een herstart weg.
@@ -938,6 +941,13 @@ met `action: DOMOTIAPP_AFVAL_BUITEN|<id>|<ophaaldag>`. De persoon komt uit
 **Testen zonder telefoon:** zet in de YAML `diensten: {person.dev:
 notify.persistent_notification}`. Dan komt de melding als melding in Home
 Assistant zelf binnen, met precies de titel en tekst die een telefoon krijgt.
+
+**Een agenda kan een afvalbron zijn** (sinds 0.136.0): een `calendar.*` mag overal staan waar een afvalsensor staat
+(de afvalkaart, `installatie.afval` van het infoscherm, `afval_vandaag` en `afval_morgen` van de meldingen). Voor een
+bedrijf zonder afvalintegratie: beheer zet de ophaaldagen in een Lokale agenda, elke ophaling een afspraak voor de hele
+dag met de soort als titel. De kaarten vouwen de agenda uit tot een bak per soort (`src/cards/afval-agenda.js`, met een
+nagebootste toestand onder `calendar.x#soort`), de server leest de afspraken van de ophaaldag (`_namen_op` in
+`meldingen/motor.py`). De soort uit de titel volgt dezelfde regels als een toestand (`afvalSoorten` en `uit_titels`).
 
 ### De automatiseringskaart: regels in de integratie, niet in Home Assistant
 

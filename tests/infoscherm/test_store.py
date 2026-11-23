@@ -365,14 +365,22 @@ async def test_de_afvalsensoren_horen_bij_de_installatie(hass: HomeAssistant) ->
     assert store.snapshot()["installatie"]["afval"] == ["sensor.gft", "sensor.rest"]
 
 
-async def test_alleen_sensoren_mogen_afval_zijn(hass: HomeAssistant) -> None:
-    """Een light of een calendar in de afvallijst is een vergissing, en die
-    hoort geweigerd te worden en niet stil te blijven staan."""
+async def test_alleen_sensoren_en_agendas_mogen_afval_zijn(hass: HomeAssistant) -> None:
+    """Een light in de afvallijst is een vergissing, en die hoort geweigerd te
+    worden en niet stil te blijven staan. Een agenda mag sinds 0.136.0 wel."""
     store = InfoStore(hass)
     with pytest.raises(InfoFout):
         await store.async_zet_installatie(
             {"afval": ["light.a"]}, mag_entiteiten_wijzigen=True
         )
+
+
+async def test_een_agenda_mag_een_afvalbron_zijn(hass: HomeAssistant) -> None:
+    """NIEUW GEDRAG (0.136.0): een bedrijf zonder afvalintegratie zet de
+    ophaaldagen in een agenda. Op de code van daarvoor gooit dit een InfoFout."""
+    store = InfoStore(hass)
+    r = await store.async_zet_installatie_van_kaart({"afval": ["calendar.afval", "sensor.gft"]})
+    assert r["installatie"]["afval"] == ["calendar.afval", "sensor.gft"]
 
 
 async def test_de_kaart_stuurt_zijn_installatie_en_de_namen_blijven(hass: HomeAssistant) -> None:

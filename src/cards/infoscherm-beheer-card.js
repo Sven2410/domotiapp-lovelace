@@ -2055,7 +2055,7 @@ export class InfoschermBeheerEditor extends DacEditor {
       { name: "rooms", selector: { entity: { multiple: true, domain: "calendar" } } },
       { name: "wifi", selector: sel.entity("image") },
       { name: "calendars", selector: { entity: { multiple: true, domain: "calendar" } } },
-      { name: "waste", selector: { entity: { multiple: true, domain: "sensor" } } },
+      { name: "waste", selector: { entity: { multiple: true, domain: ["sensor", "calendar"] } } },
     ];
     if (this.gebruikers_?.length) {
       installatie.push({ name: "kiosk_users", selector: { select: { multiple: true, mode: "list", options: this.gebruikers_ } } });

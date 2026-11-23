@@ -68,6 +68,8 @@ import { WEER_NAAM, weerAnimatie, weerAnimatieCss } from "../weer-animatie.js";
 import { naarWand, vanWand } from "../wandklok.js";
 import { afvalKomend, afvalLijst, afvalWanneer } from "./infoscherm-afval.js";
 import { eersteOphaaldag } from "./afval-logica.js";
+import { staatVan, vouwUit } from "./afval-agenda.js";
+import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import { opsomming } from "./meldingen-logica.js";
 import {
   ROLLEN,
@@ -1235,6 +1237,12 @@ export class InfoschermCard extends DacCard {
   wire() {
     const scherm = this.$(".scherm");
 
+    // Een agenda als afvalbron (0.136.0): de afspraken komen los binnen, dan het afvalblok opnieuw.
+    this.afvalBron_ = new AfvalAgendaBron(() => {
+      this.paintRaster_();
+      this.paintPagina_("afval");
+    });
+
     // Elke aanraking is een teken van leven voor de terugvaltimer.
     this.on(scherm, "pointerdown", () => this.leeft_(), { capture: true, passive: true });
 
@@ -1333,8 +1341,9 @@ export class InfoschermCard extends DacCard {
     // met een tijdstip komt of gaat op de minuut.
     const naarDeMinuut = () => {
       this.paintKlok_();
-      // Na middernacht een nieuwe dag voor de ruimtes; anders niets.
+      // Na middernacht een nieuwe dag voor de ruimtes en de afvalagenda's; anders niets.
       this.abonneerRuimtes_();
+      this.afvalBron_.volg(this.hass, this.installatie_().afval);
       this.paintRaster_();
       this.paintPagina_("ruimtes");
       if (this.boek_ && !this.boek_.bezig && !this.boek_.klaar) this.paintBoek_();
@@ -1363,6 +1372,7 @@ export class InfoschermCard extends DacCard {
     this.teardown_.push(() => this.zegWeerOp_());
     this.teardown_.push(() => this.abo_.stop());
     this.teardown_.push(() => this.zegRuimtesOp_());
+    this.teardown_.push(() => this.afvalBron_.stop());
     this.teardown_.push(() => clearTimeout(this.boekTimer_));
     this.teardown_.push(() => {
       for (const timer of this.kTimers_.values()) clearTimeout(timer);
@@ -1435,6 +1445,7 @@ export class InfoschermCard extends DacCard {
     this.laadEnergie_();
     this.haalAgenda_();
     this.abonneerRuimtes_();
+    this.afvalBron_?.volg(this.hass, this.installatie_().afval);
     this.mededelingStart_();
     this.paint();
   }
@@ -1446,6 +1457,7 @@ export class InfoschermCard extends DacCard {
       this.haal_();
       this.abo_.start(hass);
       for (const abo of this.ruimteAbos_.values()) abo.start(hass);
+      this.afvalBron_?.volg(hass, this.installatie_().afval, true);
     }
     this.paintMerkje_();
   }
@@ -2814,12 +2826,15 @@ export class InfoschermCard extends DacCard {
    * informatie. Zie afval-namen.js -- dezelfde behandeling als op de kaart.
    */
   afvalLijst_() {
-    const ids = this.installatie_().afval ?? [];
-    if (!ids.length) return [];
+    const gekozen = this.installatie_().afval ?? [];
+    if (!gekozen.length) return [];
+    // Een agenda wordt per soort een bak, met een nagebootste toestand (zie afval-agenda.js).
+    const bakken = this.afvalBron_?.bakken(this.nu_());
+    const staten = new Map([...(bakken?.values() ?? [])].flat().map((b) => [b.id, staatVan(b)]));
     return afvalLijst(
-      ids,
-      (id) => stateOf(this.hass, id),
-      (id) => attrsOf(this.hass, id).friendly_name ?? id,
+      vouwUit(gekozen, bakken),
+      (id) => staten.get(id) ?? stateOf(this.hass, id),
+      (id) => staten.get(id)?.attributes.friendly_name ?? attrsOf(this.hass, id).friendly_name ?? id,
       this.nu_()
     );
   }

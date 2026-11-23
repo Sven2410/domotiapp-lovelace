@@ -14,7 +14,8 @@ export const MELDINGEN = {
   "is geweest": "has passed",
   "sensor ontbreekt": "sensor missing",
   "vandaag": "today",
-  "Kies minstens één afvalsensor waarvan de status een datum is.": "Choose at least one waste sensor whose state is a date.",
+  "Kies minstens één afvalsensor waarvan de status een datum is, of een agenda met de ophaaldagen.":
+    "Choose at least one waste sensor whose state is a date, or a calendar with the collection days.",
   "Geen ophaaldata gevonden. Controleer of de gekozen sensoren een datum als toestand hebben.":
     "No collection dates found. Check that the chosen sensors have a date as their state.",
   "Afvalkalender": "Waste calendar",
@@ -26,8 +27,8 @@ export const MELDINGEN = {
   "Overige data tonen": "Show other dates",
   "Over de breedte zet alle bakken naast elkaar in plaats van onder elkaar. Vier bakken passen dan op één rasterrij in plaats van vier — dat scheelt bijna tweehonderd pixels. De eerstvolgende licht op.":
     "Full width puts all bins side by side instead of below each other. Four bins then fit on one grid row instead of four, which saves almost two hundred pixels. The next one is highlighted.",
-  "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen.":
-    "Sensors whose state is a date, for example 18-08-2026. The card sorts them itself; leave a colour empty to let the name choose the bin colour.",
+  "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026, of een agenda met elke ophaling als afspraak en de soort als titel. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen.":
+    "Sensors whose state is a date, for example 18-08-2026, or a calendar with each collection as an event and the type as its title. The card sorts them itself; leave a colour empty to let the name choose the bin colour.",
   "DomotiApp Afvalkalender": "DomotiApp Waste Calendar",
   "Eerstvolgende ophaling als hero, de rest eronder. Kleur per fractie.":
     "The next collection up front, the rest below. A colour per waste type.",
@@ -139,11 +140,11 @@ export const MELDINGEN = {
     "Who is on the card. With the pencil, everyone chooses which notifications they get. The phone is looked up from the person (the Home Assistant app); if the card finds none, the row says so.",
   "Een herinnering om de container buiten te zetten: de avond ervoor en de ochtend zelf, met een knop 'Staat buiten' in de melding.":
     "A reminder to put the bin out: the evening before and the morning itself, with a 'Put out' button in the notification.",
-  "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen. Leeg laten: geen melding de avond ervoor.":
-    "The sensor that says what is collected TOMORROW, such as sensor.mijnafvalwijzer_morgen. Leave empty: no notification the evening before.",
+  "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen, of een agenda met elke ophaling als afspraak en de soort als titel. Leeg laten: geen melding de avond ervoor.":
+    "The sensor that says what is collected TOMORROW, such as sensor.mijnafvalwijzer_morgen, or a calendar with each collection as an event and the type as its title. Leave empty: no notification the evening before.",
   "Standaard 19:30.": "Default 19:30.",
-  "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf.":
-    "The sensor that says what is collected TODAY. Leave empty: no notification on the day itself.",
+  "De sensor die zegt wat er VANDAAG opgehaald wordt, of dezelfde agenda. Leeg laten: geen melding op de dag zelf.":
+    "The sensor that says what is collected TODAY, or the same calendar. Leave empty: no notification on the day itself.",
   "Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte.":
     "Default 07:30. Skipped if someone tapped 'Put out' in the notification the evening before.",
   "DomotiApp Meldingen": "DomotiApp Notifications",

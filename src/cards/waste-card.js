@@ -25,7 +25,9 @@ import { korteNamen } from "./afval-namen.js";
 import { buitenTekst, eersteOphaaldag, heroWoorden } from "./afval-logica.js";
 import { BlijvendAbonnement, Verbindingswacht } from "../herkansing.js";
 import { opsomming } from "./meldingen-logica.js";
-import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { meetRaster, vraagOpnieuw, volgRaster } from "../rasterhoogte.js";
+import { isAgenda, staatVan } from "./afval-agenda.js";
+import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import { nt, t } from "../taal.js";
 
 /** Bin colours, matched on what the sensor happens to be called. */
@@ -249,7 +251,7 @@ class WasteCard extends DacCard {
   validate(config) {
     const list = config.sensors ?? config.entities ?? (config.entity ? [config.entity] : []);
     if (!list.length) {
-      return { ...config, [INCOMPLETE]: t("Kies minstens één afvalsensor waarvan de status een datum is.") };
+      return { ...config, [INCOMPLETE]: t("Kies minstens één afvalsensor waarvan de status een datum is, of een agenda met de ophaaldagen.") };
     }
     return {
       show_hero: true,
@@ -267,6 +269,8 @@ class WasteCard extends DacCard {
     const terug = (this.verbinding_ ??= new Verbindingswacht()).herverbonden(hass);
     super.hass = hass;
     if (terug && this.wired_) this.buitenAbo_?.start(hass);
+    // Elke hass: na middernacht een nieuwe dag (de bron doet anders niets).
+    if (this.wired_) this.agendaBron_?.volg(hass, this.watched(), terug);
   }
 
   get hass() {
@@ -287,6 +291,19 @@ class WasteCard extends DacCard {
     );
     this.buitenAbo_.start(this.hass);
     this.teardown_.push(() => this.buitenAbo_.stop());
+
+    // Een agenda als bron (0.136.0): per soort een bak, uit de afspraken. Komt
+    // er een bak bij, dan is de kaart in de lijstvorm een rij hoger, en dat
+    // vraagt Home Assistant niet uit zichzelf opnieuw (valkuil 8).
+    this.agendaBron_ = new AfvalAgendaBron(() => {
+      if (!this.hass) return;
+      this.paint();
+      const rijen = this.rows_();
+      if (rijen !== this.rijenGemeld_) vraagOpnieuw(this.$(".card"));
+      this.rijenGemeld_ = rijen;
+    });
+    this.agendaBron_.volg(this.hass, this.watched());
+    this.teardown_.push(() => this.agendaBron_.stop());
 
     // Alleen de brede vorm groeit; de lijstvorm staat vast op zijn rijen.
     if (this.breed_()) this.teardown_.push(volgRaster(this.$(".card")));
@@ -338,8 +355,8 @@ class WasteCard extends DacCard {
    */
   read_() {
     const now = new Date();
-    const ruw = this.config.sensors.map((cfg) => {
-      const st = stateOf(this.hass, cfg.entity);
+    const ruw = this.bronnen_(now).map((cfg) => {
+      const st = cfg.staat ?? stateOf(this.hass, cfg.entity);
       // De toestand eerst, en dan de attributen waar integraties de datum nog
       // eens kaal in zetten. `Year_month_day_date` is die van Afvalbeheer
       // (Circulus en zo'n dertig andere gemeenten); de eigenaar wees er op
@@ -389,6 +406,22 @@ class WasteCard extends DacCard {
         if (!b.reden) return 1;
         return a.label.localeCompare(b.label);
       });
+  }
+
+  /**
+   * De sensoren uit de config, met elke agenda vervangen door een bak per soort
+   * (zie afval-agenda.js). Een agenda zonder afspraken (of die nog laadt) blijft
+   * zelf staan, met "geen datum".
+   */
+  bronnen_(nu = new Date()) {
+    const bakken = this.agendaBron_?.bakken(nu);
+    return this.config.sensors.flatMap((cfg) => {
+      const eigen = isAgenda(cfg.entity) ? bakken?.get(cfg.entity) : null;
+      if (!eigen?.length) return [cfg];
+      return [...eigen]
+        .sort((a, b) => a.soort.localeCompare(b.soort))
+        .map((b) => ({ entity: b.id, name: b.soort, staat: staatVan(b) }));
+    });
   }
 
   /** Alleen de bakken die nog opgehaald worden. */
@@ -581,7 +614,7 @@ class WasteCard extends DacCard {
    * regels wat meer lucht krijgen.
    */
   rows_() {
-    const n = this.config?.sensors?.length ?? 1;
+    const n = this.config?.sensors ? this.bronnen_().length : 1;
     // De brede vorm is één rasterrij zolang de bakken naast elkaar passen. Of
     // dat zo is hangt van de breedte af en wordt gemeten; dit is de schatting
     // zolang er nog niets gemeten is.
@@ -602,6 +635,7 @@ class WasteCard extends DacCard {
    * zie CLAUDE.md valkuil 8 en 12.
    */
   getGridOptions() {
+    this.rijenGemeld_ = this.rows_();
     if (this.breed_()) {
       return { columns: 12, rows: "auto", min_columns: 6, min_rows: this.rows_() };
     }
@@ -659,7 +693,8 @@ class WasteEditor extends DacEditor {
   ids_() {
     return (this.config_?.sensors ?? [])
       .map((s) => (typeof s === "string" ? s : s.entity))
-      .filter(Boolean);
+      // Een agenda heeft geen kleur van zichzelf: zijn bakken krijgen die op de naam.
+      .filter((id) => id && !isAgenda(id));
   }
 
   /**
@@ -689,7 +724,7 @@ class WasteEditor extends DacEditor {
 
   schema() {
     return [
-      { name: "sensors", selector: { entity: { domain: "sensor", multiple: true } } },
+      { name: "sensors", selector: { entity: { domain: ["sensor", "calendar"], multiple: true } } },
       {
         name: "layout",
         selector: sel.select([
@@ -718,7 +753,7 @@ class WasteEditor extends DacEditor {
       );
     if (s.name === "sensors")
       return t(
-        "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen."
+        "Sensoren waarvan de status een datum is, bijvoorbeeld 18-08-2026, of een agenda met elke ophaling als afspraak en de soort als titel. De kaart sorteert zelf; laat een kleur leeg om de bakkleur op de naam te laten kiezen."
       );
     return undefined;
   }

@@ -49,6 +49,9 @@ import { resolve } from "../icons.js";
 import { nameOf, pictureOf, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
+import { naarWand } from "../wandklok.js";
+import { isAgenda } from "./afval-agenda.js";
+import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import {
   AFVAL_MOMENTEN,
   afvalBakken,
@@ -201,6 +204,25 @@ class MeldingenCard extends DacCard {
       if (scherm?.isVan(this)) scherm.sluit();
     });
     this.luister_();
+
+    // Een agenda als afvalbron (0.136.0): wat er vandaag en morgen komt, uit de afspraken.
+    this.agendaBron_ = new AfvalAgendaBron(() => {
+      if (this.hass) this.paint();
+    });
+    this.agendaBron_.volg(this.hass, this.afvalBronnen_());
+    this.teardown_.push(() => this.agendaBron_.stop());
+  }
+
+  afvalBronnen_() {
+    const c = this.config;
+    return soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : [];
+  }
+
+  /** Wat er `plus` dagen na vandaag opgehaald wordt, als toestand van een sensor. Bij een agenda uit de afspraken. */
+  afvalToestand_(id, plus) {
+    if (!isAgenda(id)) return stateOf(this.hass, id)?.state;
+    const nu = naarWand(new Date(), this.hass?.config?.time_zone);
+    return this.agendaBron_?.soortenOp(id, new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() + plus)) ?? "";
   }
 
   set hass(hass) {
@@ -212,6 +234,7 @@ class MeldingenCard extends DacCard {
       this.luistert_ = false;
       this.luister_();
     }
+    if (this.built_) this.agendaBron_?.volg(hass, this.afvalBronnen_(), terug);
   }
 
   get hass() {
@@ -512,8 +535,8 @@ class MeldingenCard extends DacCard {
       config: c,
       stand,
       persoon,
-      vandaag: stateOf(this.hass, c.afval_vandaag)?.state,
-      morgen: stateOf(this.hass, c.afval_morgen)?.state,
+      vandaag: this.afvalToestand_(c.afval_vandaag, 0),
+      morgen: this.afvalToestand_(c.afval_morgen, 1),
       door: door ? voornaam(nameOf(this.hass, door)) : "",
     });
   }
@@ -638,9 +661,9 @@ class MeldingenEditor extends DacEditor {
               t("Sensoren en tijden"),
               "mdi:trash-can-outline",
               [
-                { name: "afval_morgen", selector: sel.entity(["sensor"]) },
+                { name: "afval_morgen", selector: sel.entity(["sensor", "calendar"]) },
                 { name: "tijd_morgen", selector: { time: {} } },
-                { name: "afval_vandaag", selector: sel.entity(["sensor"]) },
+                { name: "afval_vandaag", selector: sel.entity(["sensor", "calendar"]) },
                 { name: "tijd_vandaag", selector: { time: {} } },
                 {
                   name: "afval_bakken",
@@ -714,11 +737,11 @@ class MeldingenEditor extends DacEditor {
         "Een herinnering om de container buiten te zetten: de avond ervoor en de ochtend zelf, met een knop 'Staat buiten' in de melding."
       ),
       afval_morgen: t(
-        "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen. Leeg laten: geen melding de avond ervoor."
+        "De sensor die zegt wat er MORGEN opgehaald wordt, zoals sensor.mijnafvalwijzer_morgen, of een agenda met elke ophaling als afspraak en de soort als titel. Leeg laten: geen melding de avond ervoor."
       ),
       tijd_morgen: t("Standaard 19:30."),
       afval_vandaag: t(
-        "De sensor die zegt wat er VANDAAG opgehaald wordt. Leeg laten: geen melding op de dag zelf."
+        "De sensor die zegt wat er VANDAAG opgehaald wordt, of dezelfde agenda. Leeg laten: geen melding op de dag zelf."
       ),
       tijd_vandaag: t("Standaard 07:30. Vervalt als iemand de avond ervoor in de melding op 'Staat buiten' tikte."),
       afval_bakken: t(

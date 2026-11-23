@@ -43,6 +43,13 @@ station, onderhoud) gaat één keer uit als hij begint, met een tag per robot en
 per ding, en wordt van de telefoons gehaald (`clear_notification`) als het weer
 in orde is. "Klaar" wacht tien tellen: Dreame zet het oppervlak en de duur van
 de beurt soms net na de taak.
+
+## Een agenda als afvalbron
+
+Sinds 0.136.0 mag `afval_vandaag` of `afval_morgen` een `calendar.*` zijn (zie
+de kop van `afval.py`). Dan zegt niet de toestand welke bakken het zijn, maar
+de afspraken op de ophaaldag zelf (`_namen_op`). De pop-up leert de bakken van
+een agenda meteen kennen: de afspraken van de komende `AGENDA_VOORUIT_DAGEN`.
 """
 
 from __future__ import annotations
@@ -52,6 +59,7 @@ from datetime import date, datetime, timedelta
 import logging
 from typing import Any
 
+from homeassistant.components.calendar.const import DATA_COMPONENT as AGENDA_COMPONENT
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.event import (
@@ -81,6 +89,10 @@ from .kaarten import Melding
 from .store import MeldingOpslag
 
 _LOGGER = logging.getLogger(__name__)
+
+# Hoe ver de pop-up vooruitkijkt in een afvalagenda om de bakken te leren
+# kennen. Een gemeente haalt elke soort minstens eens in de acht weken op.
+AGENDA_VOORUIT_DAGEN = 62
 
 EVENT_LOVELACE_UPDATED = "lovelace_updated"
 
@@ -160,23 +172,62 @@ class Motor:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
         self._onthoud_wijzigingen(gelezen)
         self.meldingen = kaarten.voeg_samen(gelezen, self.opslag.alle_leidend())
-        self._onthoud_bakken()
+        await self._onthoud_bakken()
         self._volg_stofzuigers()
         self._meld(None)
 
-    @callback
-    def _onthoud_bakken(self) -> None:
+    async def _onthoud_bakken(self) -> None:
         """Welke bakken de afvalsensoren nu noemen: zo leert de pop-up ze kennen.
 
         Er wordt elk uur gelezen, en de sensor van morgen noemt een hele dag de
         bak van morgen; na een paar weken staan ze er dus allemaal (0.87.0).
+        Een agenda noemt ze meteen: alles wat de komende weken komt.
         """
+        vandaag = dt_util.now().date()
         for melding in self.meldingen.values():
             if melding.soort != SOORT_AFVAL:
                 continue
-            for sensor in melding.sensoren.values():
-                if (st := self.hass.states.get(sensor)) is not None:
-                    self.opslag.voeg_gezien(melding.id, afval.soorten(st.state))
+            for bron in dict.fromkeys(melding.sensoren.values()):
+                if _is_agenda(bron):
+                    namen = await self._namen_uit_agenda(
+                        bron, vandaag, vandaag + timedelta(days=AGENDA_VOORUIT_DAGEN)
+                    )
+                elif (st := self.hass.states.get(bron)) is not None:
+                    namen = afval.soorten(st.state)
+                else:
+                    namen = None
+                if namen:
+                    self.opslag.voeg_gezien(melding.id, namen)
+
+    async def _namen_op(self, bron: str, dag: date) -> list[str]:
+        """De bakken die deze sensor of agenda voor `dag` noemt; leeg = niets."""
+        if _is_agenda(bron):
+            return await self._namen_uit_agenda(bron, dag, dag + timedelta(days=1)) or []
+        st = self.hass.states.get(bron)
+        return afval.soorten(st.state) if st is not None else []
+
+    async def _namen_uit_agenda(self, bron: str, van: date, tot: date) -> list[str] | None:
+        """De soorten in de titels van de afspraken van `van` tot `tot`. None als de agenda er niet is.
+
+        Een afspraak voor de hele dag loopt tot middernacht erna; die van gisteren
+        raakt vandaag dus net, en telt niet mee.
+        """
+        component = self.hass.data.get(AGENDA_COMPONENT)
+        agenda = component.get_entity(bron) if component is not None else None
+        if agenda is None:
+            return None
+        begin = dt_util.start_of_local_day(van)
+        einde = dt_util.start_of_local_day(tot)
+        try:
+            afspraken = await agenda.async_get_events(self.hass, begin, einde)
+        except Exception as fout:  # noqa: BLE001 - een agenda die hapert houdt de melding niet tegen
+            _LOGGER.warning("Afvalagenda %s niet te lezen: %s", bron, fout)
+            return None
+        afspraken = sorted(
+            (a for a in afspraken if a.start_datetime_local < einde and a.end_datetime_local > begin),
+            key=lambda a: a.start_datetime_local,
+        )
+        return afval.uit_titels(a.summary for a in afspraken)
 
     @callback
     def _onthoud_wijzigingen(self, gelezen: list[tuple[str, dict[str, Any]]]) -> None:
@@ -254,9 +305,7 @@ class Motor:
         ophaaldag = vandaag if moment == MOMENT_VANDAAG else vandaag + timedelta(days=1)
 
         sensor = melding.sensoren.get(moment)
-        namen: list[str] = []
-        if sensor and (st := self.hass.states.get(sensor)) is not None:
-            namen = afval.soorten(st.state)
+        namen = await self._namen_op(sensor, ophaaldag) if sensor else []
         if not proef:
             if not sensor:
                 if moment == MOMENT_VANDAAG:
@@ -769,3 +818,7 @@ def robot_delen(hass: HomeAssistant, robot: str) -> dict[str, tuple[str, str]]:
             if eenheid == "%":
                 uit[e.entity_id] = ("onderhoud", tk)
     return uit
+
+
+def _is_agenda(bron: str) -> bool:
+    return bron.startswith("calendar.")
