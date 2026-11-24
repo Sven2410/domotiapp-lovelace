@@ -174,7 +174,8 @@ describe("het scherm", () => {
   });
 
   it("gaat naar onderen bij openen en na je eigen bericht, en bij een antwoord alleen als je al onderaan stond", () => {
-    assert.match(BRON, /const omlaag = vers \|\| \(nieuw && \(isEigen\(laatste, uid\) \|\| onderaan\)\);/);
+    // Sinds 0.138.0 ook bij de puntjes van Coach Assist, en dan ook alleen als je al onderaan stond.
+    assert.match(BRON, /const omlaag = vers \|\| \(nieuw && \(isEigen\(laatste, uid\) \|\| onderaan\)\) \|\| \(puntjesErbij && onderaan\);/);
     assert.match(BRON, /vak\.scrollTop = omlaag \? vak\.scrollHeight : plek;/);
   });
 

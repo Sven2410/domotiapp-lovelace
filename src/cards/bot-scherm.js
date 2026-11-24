@@ -30,11 +30,13 @@ import { coachMerk, coachMerkCss, resolve } from "../icons.js";
 import { zetScrollSlot } from "../scrollslot.js";
 import { t } from "../taal.js";
 import {
+  ASSIST,
   GESPREK,
   MAX_FOTOS,
   MAX_TEKST,
   SOORTEN,
   afzender,
+  bezigTot,
   foutTekst,
   inDagen,
   isEigen,
@@ -258,6 +260,14 @@ const css = /* css */ `
   .bericht .tk:empty { display: none; }
   .bericht .tijd { align-self: flex-end; font-size: 11px; line-height: 1.2; color: var(--dac-ink-3); font-variant-numeric: tabular-nums; }
   .bericht .fotos { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* Coach Assist is bezig (coach v0.243.0): drie puntjes die om de beurt opveren, stil met minder beweging. */
+  .bericht.bezig .blok { padding: 11px 13px; }
+  .puntjes { display: flex; gap: 4px; align-items: center; height: 10px; }
+  .puntjes i { width: 7px; height: 7px; border-radius: 50%; background: var(--dac-ink-3); animation: puntje 1.2s infinite ease-in-out; }
+  .puntjes i:nth-child(2) { animation-delay: .15s; }
+  .puntjes i:nth-child(3) { animation-delay: .3s; }
+  @keyframes puntje { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-3px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .puntjes i { animation: none; opacity: .7; } }
   .foto-weg { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-style: italic; color: var(--dac-ink-3); }
   .foto-weg .icon { width: 15px; height: 15px; flex: 0 0 auto; }
   ${coachMerkCss}
@@ -623,6 +633,7 @@ class BotScherm extends HTMLElement {
 
   sluit() {
     clearTimeout(this.middernacht_);
+    clearTimeout(this.bezigKlok_);
     this.scrollLos_?.();
     this.scrollLos_ = null;
     this.removeAttribute("open");
@@ -915,11 +926,18 @@ class BotScherm extends HTMLElement {
    * (naar_ wist `sig`), na je eigen bericht, en bij een antwoord alleen als je al onderaan stond: wie terugleest, wordt
    * niet weggetrokken. Een dag kiezen in de lijst schuift naar het begin van die dag. De foto's hebben een vaste maat,
    * dus een plaatje dat later laadt duwt niets weg.
+   *
+   * Zolang Coach Assist bezig is (`bezigTot`), staan onderaan drie puntjes aan zijn kant. Komen ze erbij terwijl je
+   * onderaan stond, dan schuift het mee. Gaat `tot` voorbij zonder dat er iets binnenkomt, dan tekent een wekker het
+   * opnieuw, zolang het scherm open is.
    */
   tekenBerichten_(vak, ticket, ontvangen, invouwen) {
     const berichten = ticket.berichten ?? [];
     const uid = this.bron.userId_();
     const nu = new Date();
+    const bezig = bezigTot(ticket, nu.getTime());
+    clearTimeout(this.bezigKlok_);
+    if (bezig) this.bezigKlok_ = setTimeout(() => this.teken(), Math.min(bezig - nu.getTime() + 500, 2 ** 31 - 1));
     const { dagen, keuzes, keuze } = inDagen(ticket, { userId: uid, nu, invouwen, vast: this.vast_, keuze: this.keuze_ });
     // Een dag met een ongelezen antwoord blijft in beeld, ook nadat `read` terugkomt.
     for (const d of dagen) if (d.ongelezen) this.vast_.add(d.sleutel);
@@ -927,6 +945,7 @@ class BotScherm extends HTMLElement {
     const vorige = vak.dataset.sig;
     const sig = [
       ticket.id, berichten.map((b) => b.id).join(","), ontvangen, uid, nu.toDateString(), dagen.map((d) => d.sleutel).join(","),
+      bezig ? "bezig" : "",
     ].join(":");
     const naarKeuze = this.naarKeuze_ && invouwen;
     this.naarKeuze_ = false;
@@ -935,7 +954,8 @@ class BotScherm extends HTMLElement {
     const onderaan = vak.scrollHeight - vak.scrollTop - vak.clientHeight < 40;
     const laatste = berichten.at(-1);
     const nieuw = Number(laatste?.id) > Number(vak.dataset.laatste ?? 0);
-    const omlaag = vers || (nieuw && (isEigen(laatste, uid) || onderaan));
+    const puntjesErbij = Boolean(bezig) && !vak.querySelector(".bericht.bezig");
+    const omlaag = vers || (nieuw && (isEigen(laatste, uid) || onderaan)) || (puntjesErbij && onderaan);
     const plek = vak.scrollTop;
     vak.dataset.sig = sig;
     vak.dataset.laatste = String(laatste?.id ?? 0);
@@ -957,6 +977,7 @@ class BotScherm extends HTMLElement {
       zin.textContent = t("Ontvangen, we kijken ernaar.");
       vak.append(zin);
     }
+    if (bezig) vak.append(this.bezigEl_());
     const gekozen = naarKeuze && dagen.find((d) => !d.vast);
     if (gekozen) {
       const kop = vak.querySelector(`.dag[data-dag="${gekozen.sleutel}"]`);
@@ -984,6 +1005,20 @@ class BotScherm extends HTMLElement {
       );
     }
     lijst.value = keuze;
+  }
+
+  /** De puntjes van Coach Assist: links, met zijn naam en merkje, zoals een antwoord. */
+  bezigEl_() {
+    const el = document.createElement("div");
+    el.className = "bericht bezig";
+    el.dataset.van = "domotitech";
+    el.dataset.zij = "ander";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-label", t("Coach Assist is bezig"));
+    el.innerHTML = `<span class="wie2">${coachMerk()}<span class="nm"></span></span>
+      <div class="blok"><span class="puntjes" aria-hidden="true"><i></i><i></i><i></i></span></div>`;
+    el.querySelector(".nm").textContent = ASSIST;
+    return el;
   }
 
   /** Eén bericht: de naam erboven, in het blok de tekst, de foto's en de tijd. */
