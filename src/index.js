@@ -38,6 +38,7 @@ import "./cards/climate-card.js";
 import "./cards/hvac-card.js";
 import "./cards/airco-card.js";
 import "./cards/stofzuiger-card.js";
+import "./cards/stofzuiger-kamer-card.js";
 import "./cards/boiler-card.js";
 import "./cards/vriezer-card.js";
 import "./cards/kantoorprinter-card.js";

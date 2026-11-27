@@ -224,4 +224,40 @@ export const APPARATEN = {
   "DomotiApp Warmtepompboiler": "DomotiApp Heat Pump Water Heater",
   "De warmtepompboiler voor het tapwater: de watertemperatuur, het doel, de stand (Warmtepomp, Auto, Turbo, Vakantie) en een grafiek van de afgelopen 24 uur.":
     "The heat pump water heater for hot tap water: the water temperature, the target, the mode (Heat pump, Auto, Turbo, Holiday) and a graph of the last 24 hours.",
+
+  // Stofzuiger per kamer (0.138.0)
+  "Kies in de editor een kamer.": "Choose a room in the editor.",
+  "Gepauzeerd hier": "Paused here",
+  "Bezig hier": "Cleaning here",
+  "Gepauzeerd in {waar}": "Paused in {waar}",
+  "Bezig in {waar}": "Cleaning {waar}",
+  "Bezig met een andere beurt": "Busy with another job",
+  "{naam} (staat niet op deze kaart)": "{naam} (not on this map)",
+  "De kaart (verdieping) waar de kamer op staat. Staat de robot op een andere kaart, dan start hij niets.":
+    "The map (floor) the room is on. If the robot is on another map, nothing starts.",
+  "Twee kamers gaan samen in één beurt. De kaart kiest ze op naam: een kamer die in de app een andere naam krijgt, start niets meer.":
+    "Two rooms are cleaned together in one job. The card picks them by name: a room that gets another name in the app no longer starts.",
+  "Leeg laten: de naam van de kamer.": "Leave empty: the name of the room.",
+  "DomotiApp Stofzuiger per kamer": "DomotiApp Vacuum per Room",
+  "Eén rij voor een kamer: laat de robotstofzuiger alleen deze kamer doen, en zie of hij er bezig is.":
+    "One row for a room: let the robot vacuum clean just this room, and see whether it is cleaning there.",
+  "Deze robot kan geen losse kamers doen.": "This robot cannot clean single rooms.",
+  "De robot meldt geen kamers.": "The robot reports no rooms.",
+  "De robot meldt geen kaarten.": "The robot reports no maps.",
+  "Kies in de editor een kaart.": "Choose a map in the editor.",
+  "Kaart {kaart} bestaat niet meer.": "Map {kaart} no longer exists.",
+  "De robot meldt niet op welke kaart hij staat.": "The robot does not report which map it is on.",
+  "Robot staat op een andere kaart ({kaart}).": "The robot is on another map ({kaart}).",
+  "Kamer {naam} staat {n} keer op de kaart.": "Room {naam} is on the map {n} times.",
+  "Kamer {naam} staat niet meer op de kaart; nummer {id} is nu {ander}.": "Room {naam} is no longer on the map; number {id} is now {ander}.",
+  "Kamer {naam} staat niet meer op de kaart.": "Room {naam} is no longer on the map.",
+  "{lijst} en {laatste}": "{lijst} and {laatste}",
+  "Lopende beurt afbreken?": "Stop the current job?",
+  "{robot} is nu bezig in {waar}. Als je {kamers} start, breekt hij die beurt af.":
+    "{robot} is now cleaning {waar}. If you start {kamers}, it stops that job.",
+  "{robot} is nu met een andere beurt bezig. Als je {kamers} start, breekt hij die beurt af.":
+    "{robot} is busy with another job. If you start {kamers}, it stops that job.",
+  "Afbreken en starten": "Stop and start",
+  "{kamers} stofzuigen?": "Vacuum {kamers}?",
+  "{robot} gaat {kamers} schoonmaken.": "{robot} will clean {kamers}.",
 };

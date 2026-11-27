@@ -657,14 +657,12 @@ class EntitiesCard extends DacCard {
       const chip = el.querySelector(".chip");
       if (chip) {
         const pic = pictureOf(this.hass, item.entity, item.icon);
-        const wanted =
-          item.icon || (pic ? `pic:${pic}` : defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
+        const eigen = item.icon || defaultIcon(item.entity, attrsOf(this.hass, item.entity), stateOf(this.hass, item.entity)?.state);
+        const wanted = item.icon || (pic ? `pic:${pic}` : eigen);
         if (chip.dataset.icon !== wanted) {
           chip.dataset.icon = wanted;
           chip.classList.toggle("pic", Boolean(pic));
-          chip.innerHTML = pic
-            ? `<img src="${pic}" alt="" loading="lazy" />`
-            : resolve(item.icon || defaultIcon(item.entity, attrsOf(this.hass, item.entity)));
+          chip.innerHTML = pic ? `<img src="${pic}" alt="" loading="lazy" />` : resolve(eigen);
         }
         // Een afbeelding heeft de kleur van zichzelf; alleen een icoon kleurt mee.
         chip.style.setProperty("--tone", pic ? "var(--dac-ink-3)" : on ? tone : "var(--dac-ink-3)");

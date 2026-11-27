@@ -1,0 +1,412 @@
+{
+ "_bron": "Twee Dreame-robots (dreame_vacuum) bij een klant, 27 november 2026. Geanonimiseerd: kaart- en kamernamen met een plaats of een persoon zijn vervangen. 'nu' is de live stand, 'live_tijdens_kamerbeurt' een live stand midden in een kamerbeurt, 'geschiedenis_kamerbeurt' dezelfde beurt uit de recorder (die bewaart status, current_segment, segment_cleaning en cleaning_progress niet).",
+ "nu": {
+  "vacuum.x50_ultra_complete": {
+   "state": "docked",
+   "rooms": {
+    "Begane grond": [
+     {
+      "id": 2,
+      "name": "Office",
+      "icon": "mdi:monitor-shimmer",
+      "type": 12,
+      "index": 0
+     },
+     {
+      "id": 7,
+      "name": "Hallway",
+      "icon": "mdi:foot-print",
+      "type": 8,
+      "index": 0
+     },
+     {
+      "id": 11,
+      "name": "Master Bedroom",
+      "icon": "mdi:bed-king-outline",
+      "type": 2,
+      "index": 0
+     },
+     {
+      "id": 12,
+      "name": "Social toilet",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 13,
+      "name": "Kitchen",
+      "icon": "mdi:chef-hat",
+      "type": 4,
+      "index": 0
+     },
+     {
+      "id": 14,
+      "name": "Living Room",
+      "icon": "mdi:sofa-outline",
+      "type": 1,
+      "index": 0
+     },
+     {
+      "id": 15,
+      "name": "Dining Room",
+      "icon": "mdi:room-service-outline",
+      "type": 5,
+      "index": 0
+     }
+    ],
+    "Map 2": [
+     {
+      "id": 1,
+      "name": "Bathroom",
+      "icon": "mdi:toilet",
+      "type": 6,
+      "index": 0
+     },
+     {
+      "id": 2,
+      "name": "Room 2",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 3,
+      "name": "Room 3",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 4,
+      "name": "Master Bedroom",
+      "icon": "mdi:bed-king-outline",
+      "type": 2,
+      "index": 0
+     },
+     {
+      "id": 5,
+      "name": "Room 5",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 6,
+      "name": "Bathroom 2",
+      "icon": "mdi:toilet",
+      "type": 6,
+      "index": 1
+     },
+     {
+      "id": 7,
+      "name": "Master Bedroom 2",
+      "icon": "mdi:bed-king-outline",
+      "type": 2,
+      "index": 1
+     }
+    ],
+    "Map 3": [
+     {
+      "id": 1,
+      "name": "Bedroom Tom",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 3,
+      "name": "Hallway",
+      "icon": "mdi:foot-print",
+      "type": 8,
+      "index": 0
+     },
+     {
+      "id": 6,
+      "name": "Bedroom Anna",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     }
+    ]
+   },
+   "selected_map": "Begane grond",
+   "status": "charging",
+   "active_segments": null,
+   "current_segment": 15,
+   "segment_cleaning": false,
+   "cleaning_progress": 0,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": true,
+   "cleaned_area": 21,
+   "task_type": 0
+  },
+  "vacuum.dreame_boven": {
+   "state": "docked",
+   "rooms": {
+    "Map 1": [
+     {
+      "id": 1,
+      "name": "Bathroom Tom",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 2,
+      "name": "Tom",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 4,
+      "name": "Stairs",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 5,
+      "name": "Living Room",
+      "icon": "mdi:sofa-outline",
+      "type": 1,
+      "index": 0
+     },
+     {
+      "id": 6,
+      "name": "Bathroom Anna",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     },
+     {
+      "id": 7,
+      "name": "Anna",
+      "icon": "mdi:home-outline",
+      "type": 0,
+      "index": 0
+     }
+    ]
+   },
+   "selected_map": "Map 1",
+   "status": "sleeping",
+   "active_segments": null,
+   "current_segment": 5,
+   "segment_cleaning": false,
+   "cleaning_progress": 0,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": true,
+   "cleaned_area": 0,
+   "task_type": 0
+  }
+ },
+ "live_tijdens_kamerbeurt": {
+  "state": "cleaning",
+  "status": "room_cleaning",
+  "active_segments": [
+   15
+  ],
+  "current_segment": 15,
+  "segment_cleaning": true,
+  "cleaning_progress": 89,
+  "running": true,
+  "started": true,
+  "paused": false,
+  "returning": false,
+  "docked": false,
+  "task_type": 1,
+  "cleaned_area": 21,
+  "selected_map": "Begane grond"
+ },
+ "geschiedenis_kamerbeurt": [
+  {
+   "tijd": "2026-11-27T06:00:00",
+   "state": "docked",
+   "selected_map": null,
+   "status": null,
+   "active_segments": null,
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:00:03",
+   "state": "cleaning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": true,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:22:52",
+   "state": "returning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": true,
+   "started": true,
+   "paused": false,
+   "returning": true,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:23:53",
+   "state": "cleaning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": true,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:26:18",
+   "state": "docked",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": true,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:26:19",
+   "state": "cleaning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": true,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:47:02",
+   "state": "returning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": [
+    15
+   ],
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": true,
+   "started": true,
+   "paused": false,
+   "returning": true,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:48:10",
+   "state": "docked",
+   "selected_map": null,
+   "status": null,
+   "active_segments": null,
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:48:35",
+   "state": "cleaning",
+   "selected_map": null,
+   "status": null,
+   "active_segments": null,
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  },
+  {
+   "tijd": "2026-11-27T08:50:13",
+   "state": "docked",
+   "selected_map": null,
+   "status": null,
+   "active_segments": null,
+   "current_segment": null,
+   "segment_cleaning": null,
+   "cleaning_progress": null,
+   "running": false,
+   "started": false,
+   "paused": false,
+   "returning": false,
+   "docked": null,
+   "cleaned_area": null,
+   "task_type": null
+  }
+ ]
+}

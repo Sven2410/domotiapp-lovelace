@@ -69,6 +69,7 @@ import {
   stofzuigerStand,
   typeKeuzes,
 } from "./stofzuiger-logica.js";
+import { beurtKamers, beurtLoopt } from "./stofzuiger-kamer-logica.js";
 import { metType } from "./productfoto.js";
 
 const domeinVan = (id) => String(id ?? "").split(".")[0];
@@ -561,7 +562,9 @@ class StofzuigerCard extends DacCard {
     // ----- de kamers (vóór de bediening: die hangt van de keuze af)
     const kamers = blokAan(c, "kamers") && this.segmentDienst_() ? kamersVan(st) : [];
     for (const id of [...this.kiezen_]) if (!kamers.some((k) => k.id === id)) this.kiezen_.delete(id);
-    if (s.bezig || s.pauze) this.kiezen_.clear();
+    // Ook als hij midden in een beurt in het station de pads wast (zie
+    // `beurtLoopt`): dan is er niets te kiezen.
+    if (s.bezig || s.pauze || beurtLoopt(st)) this.kiezen_.clear();
     this.paintKamers_(kamers, st, s);
 
     // ----- de bediening, en de hoofdknop in de kop
@@ -679,8 +682,8 @@ class StofzuigerCard extends DacCard {
         )
         .join("");
     }
-    const bezig = s.bezig || s.pauze;
-    const actief = bezig ? actieveKamers(st) : this.kiezen_;
+    const bezig = s.bezig || s.pauze || beurtLoopt(st);
+    const actief = bezig ? new Set([...actieveKamers(st), ...beurtKamers(st)]) : this.kiezen_;
     for (const chip of chips.children) {
       chip.setAttribute("aria-pressed", String(actief.has(Number(chip.dataset.id))));
       chip.disabled = bezig || !s.beschikbaar;

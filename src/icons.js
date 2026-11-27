@@ -993,8 +993,14 @@ export function resolve(name, fallback = "question") {
  *
  * Cover is deliberately split by device_class: a shutter and an awning are
  * different objects, and drawing both as a rectangle loses that.
+ *
+ * Een binary_sensor van een garagedeur, deur, raam of slot krijgt sinds
+ * 0.138.0 zijn eigen tekening, en bij de garagedeur en het slot volgt die de
+ * toestand (`on` is open). Gevraagd via de beheersessie op 27 november 2026:
+ * een magneetcontact op de garagedeur stond als schild op de kaart, en een
+ * vast icoon kon niet laten zien of hij open stond.
  */
-export function defaultIcon(entityId, attrs = {}) {
+export function defaultIcon(entityId, attrs = {}, state) {
   const domain = String(entityId ?? "").split(".")[0];
   switch (domain) {
     case "light":
@@ -1012,7 +1018,22 @@ export function defaultIcon(entityId, attrs = {}) {
     case "climate":
       return "thermo";
     case "binary_sensor":
-      return attrs.device_class === "smoke" ? "smoke" : "shield";
+      switch (attrs.device_class) {
+        case "smoke":
+          return "smoke";
+        case "garage_door":
+          return state === "on" ? "garageOpen" : "garageClosed";
+        case "door":
+        case "opening":
+          return "door";
+        case "window":
+          return "window";
+        // Bij een slot is `on` OPEN (niet op slot), net als bij een deur.
+        case "lock":
+          return state === "on" ? "lockOpen" : "lock";
+        default:
+          return "shield";
+      }
     case "alarm_control_panel":
       return "shield";
     case "scene":
