@@ -134,6 +134,8 @@ export const SOORTEN = [
   { id: "stofzuiger", naam: nt("Robotstofzuiger"), icoon: "stofzuiger" },
   // Sinds 0.109.0: de meldingen van de camerakaart. Wie wat krijgt staat in meldingen/camera.py.
   { id: "camera", naam: nt("Camerameldingen"), icoon: "cctv" },
+  // Sinds 0.139.0: een garagedeur die openstaat. Wanneer en hoe staat in meldingen/garage.py.
+  { id: "garage", naam: nt("Garagedeur"), icoon: "garageOpen" },
 ];
 
 /**
@@ -461,4 +463,49 @@ export function proefUitkomst(uitkomst, naam) {
     return { tekst: t("Niet verstuurd: geen werkende telefoon gevonden voor {naam}.", { naam }), fout: true };
   }
   return { tekst: t("Niet verstuurd."), fout: true };
+}
+
+/**
+ * De knop om de garagemelding te negeren: "Negeer 15 min", "Negeer 1 uur". Zelfde woorden als
+ * `negeer_label` in meldingen/garage.py, zodat de kaart en de telefoon hetzelfde zeggen.
+ */
+export function negeerNaam(minuten) {
+  const uren = minuten / 60;
+  if (uren === 1) return t("Negeer 1 uur");
+  if (Number.isInteger(uren)) return t("Negeer {n} uur", { n: uren });
+  return t("Negeer {n} min", { n: minuten });
+}
+
+/**
+ * De regel onder de garagedeur in de pop-up (0.139.0). `tijd` maakt van een moment "14:05", op de
+ * klok van Home Assistant; `naam` maakt van een persoon een voornaam.
+ */
+export function garageRegel({ stand, tijd = (iso) => iso, naam = (id) => id } = {}) {
+  if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
+  const g = stand?.garage;
+  if (!g?.contact) return t("Nog geen contact gekozen");
+  if (g.open === true) {
+    if (g.negeer_tot) {
+      return g.negeer_door
+        ? t("Open · genegeerd tot {tijd} door {naam}", { tijd: tijd(g.negeer_tot), naam: naam(g.negeer_door) })
+        : t("Open · genegeerd tot {tijd}", { tijd: tijd(g.negeer_tot) });
+    }
+    return g.open_sinds ? t("Open sinds {tijd}", { tijd: tijd(g.open_sinds) }) : t("Open");
+  }
+  if (g.open === false) return t("Dicht · melding na {n} min open", { n: g.minuten ?? 5 });
+  return t("Contact niet bereikbaar");
+}
+
+/**
+ * De knoppen onder de garagedeur: negeren zolang hij open staat, en weer melden als er genegeerd
+ * wordt. Dicht staat er niets: negeren vervalt dan toch. Sluiten staat hier met opzet niet; dat is
+ * de knop op het dashboard zelf.
+ *
+ * @returns {Array<{id: string, naam: string}>}
+ */
+export function garageKnoppen(stand) {
+  const g = stand?.garage;
+  if (!stand?.bekend || g?.open !== true) return [];
+  if (g.negeer_tot) return [{ id: "hervat", naam: t("Weer melden") }];
+  return (g.negeer ?? []).map((n) => ({ id: `negeer:${n}`, naam: negeerNaam(n) }));
 }

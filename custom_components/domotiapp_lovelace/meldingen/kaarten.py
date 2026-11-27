@@ -72,9 +72,11 @@ from .const import (
     MOMENT_VANDAAG,
     SOORT_AFVAL,
     SOORT_CAMERA,
+    SOORT_GARAGE,
     SOORT_STOFZUIGER,
     STANDAARD_TIJD,
 )
+from .garage import Instelling as GarageInstelling, instelling_uit as garage_instelling
 from .stofzuiger import GEBEURTENISSEN
 
 _LOGGER = logging.getLogger(__name__)
@@ -102,6 +104,8 @@ class Melding:
     # Alleen bij afval (sinds 0.87.0): de bakken die in de editor vooraf zijn
     # ingevuld, zodat ze in de pop-up te kiezen zijn voordat ze voorbijkomen.
     bakken: list[str] = field(default_factory=list)
+    # Alleen bij de garagedeur (sinds 0.139.0): wat er op de kaart staat.
+    garage: GarageInstelling | None = None
 
     def vergelijkbaar(self) -> tuple[Any, ...]:
         """Wat twee kaarten gelijk moeten hebben om hetzelfde te doen."""
@@ -111,6 +115,7 @@ class Melding:
             tuple(sorted(self.tijden.items())),
             tuple(self.stofzuigers),
             tuple(self.gebeurtenissen),
+            self.garage.vergelijkbaar() if self.garage else (),
         )
 
 
@@ -242,6 +247,25 @@ def camera_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     )
 
 
+def garage_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
+    """De garagedeurmelding uit één kaartconfig, of None als die daar niet aan staat.
+
+    Sinds 0.139.0. `garage: true` zet hem aan, de rest staat in `garage_*` (zie
+    `instelling_uit` in garage.py). Het id is altijd `garage`: één per huis.
+    """
+    if kaart.get(SOORT_GARAGE) is not True:
+        return None
+    return Melding(
+        id=SOORT_GARAGE,
+        soort=SOORT_GARAGE,
+        titel=str(kaart.get("name") or ""),
+        personen=_personen(kaart),
+        diensten=_diensten(kaart),
+        dashboards=[dashboard],
+        garage=garage_instelling(kaart),
+    )
+
+
 def _personen(kaart: dict[str, Any]) -> list[str]:
     personen: list[str] = []
     for p in kaart.get("personen") or []:
@@ -265,7 +289,7 @@ def meldingen_per_kaart(kaarten: list[tuple[str, dict[str, Any]]]) -> list[Meldi
     """Elke soort op elke kaart als melding, in de volgorde waarin ze staan."""
     uit: list[Melding] = []
     for dashboard, kaart in kaarten:
-        for lees in (melding_uit, stofzuiger_uit, camera_uit):
+        for lees in (melding_uit, stofzuiger_uit, camera_uit, garage_uit):
             if (m := lees(kaart, dashboard)) is not None:
                 uit.append(m)
     return uit

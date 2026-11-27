@@ -6,6 +6,7 @@
 | `meldingen/aan` | iedere ingelogde gebruiker |
 | `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0; sinds 0.109.0 ook de camera) |
 | `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
+| `meldingen/garage` | iedere ingelogde gebruiker: de garagemelding negeren of weer laten komen (sinds 0.139.0) |
 
 Omzetten mag iedereen: de kaart hangt op een tablet met een kioskaccount, en
 daar hoort Anna haar eigen meldingen uit te kunnen zetten. Een proefmelding
@@ -28,7 +29,7 @@ from ..taal import t
 from ..bewaking import meldingen as telefoons
 from ..const import DOMAIN
 from . import camera
-from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN, SOORT_CAMERA
+from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN, SOORT_CAMERA, SOORT_GARAGE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_aan)
     websocket_api.async_register_command(hass, ws_keuze)
     websocket_api.async_register_command(hass, ws_proef)
+    websocket_api.async_register_command(hass, ws_garage)
     data[DATA_WS_REGISTERED] = True
 
 
@@ -80,6 +82,8 @@ def stand(hass: HomeAssistant, ident: str) -> dict[str, Any]:
             for p in telefoons.overzicht(hass)
         },
     }
+    if ident == SOORT_GARAGE and motor is not None:
+        uit["garage"] = motor.garage_stand()
     if ident == SOORT_CAMERA and motor is not None:
         # Wat er te kiezen is komt van de camerakaarten, niet van deze kaart. En
         # `aan` en `keuzes` zijn hier wat iemand KRIJGT, ook als hij nooit iets
@@ -198,5 +202,32 @@ async def ws_proef(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None
     await motor.async_herlees()
     uitkomst = await motor.async_verstuur(
         msg["melding"], msg["moment"], proef=True, alleen=msg.get("persoon")
+    )
+    connection.send_result(msg["id"], uitkomst)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/meldingen/garage",
+        vol.Required("melding"): cv.string,
+        vol.Required("actie"): vol.In(("negeer", "hervat")),
+        vol.Optional("minuten"): vol.All(int, vol.Range(min=1, max=7 * 24 * 60)),
+    }
+)
+@websocket_api.async_response
+async def ws_garage(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Negeren vanaf de kaart, zonder op een melding te wachten. Net als `aan` mag iedereen dit.
+
+    Sluiten staat hier met opzet niet: dat is een knop op het dashboard zelf.
+    """
+    motor = hass.data.get(DOMAIN, {}).get(DATA_MOTOR)
+    if motor is None:
+        connection.send_error(msg["id"], "not_allowed", t(hass, "De meldingen zijn nog niet geladen"))
+        return
+    if msg["actie"] == "negeer" and "minuten" not in msg:
+        connection.send_error(msg["id"], "invalid_format", t(hass, "Hoe lang negeren?"))
+        return
+    uitkomst = await motor.async_garage_knop(
+        msg["melding"], msg["actie"], str(msg.get("minuten", "")), connection.user.id if connection.user else None
     )
     connection.send_result(msg["id"], uitkomst)

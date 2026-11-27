@@ -171,8 +171,8 @@ export const MELDINGEN = {
     "What everyone can choose in their pop-up. Each person picks what about and which robot there; whoever picks nothing gets everything switched on here. Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
   "Te kiezen": "To choose from",
   "Van welke robot": "Which robot",
-  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger en de camera.":
-    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste, the robot vacuum and the camera.",
+  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera en de garagedeur.":
+    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste, the robot vacuum, the camera and the garage door.",
   "Klaar met schoonmaken": "Finished cleaning",
   "klaar": "finished",
   "Water en stofzak": "Water and dust bag",
@@ -196,4 +196,43 @@ export const MELDINGEN = {
   "Nog geen camera met snapshots en meldingen": "No camera with snapshots and notifications yet",
   "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt.":
     "The notifications of the camera cards with Snapshots and notifications. Each person ticks in their own pop-up whether they get them, from which camera and what about (person, vehicle, doorbell...). Whoever has not chosen yet gets what the camera card already gave them. Whoever is not on this card keeps what the camera card says.",
+
+  // Garagedeur (0.139.0)
+  "Garagedeur": "Garage door",
+  "Negeer 1 uur": "Ignore for 1 hour",
+  "Negeer {n} uur": "Ignore for {n} hours",
+  "Negeer {n} min": "Ignore for {n} min",
+  "Nog geen contact gekozen": "No contact chosen yet",
+  "Open · genegeerd tot {tijd} door {naam}": "Open · ignored until {tijd} by {naam}",
+  "Open · genegeerd tot {tijd}": "Open · ignored until {tijd}",
+  "Open sinds {tijd}": "Open since {tijd}",
+  "Dicht · melding na {n} min open": "Closed · notification after {n} min open",
+  "Contact niet bereikbaar": "Contact unavailable",
+  "Weer melden": "Notify again",
+  "Deur, bediening en tijden": "Door, control and times",
+  "Contact van de deur": "Door contact",
+  "Naam in de melding": "Name in the notification",
+  "Eerste melding na (minuten open)": "First notification after (minutes open)",
+  "Daarna elke (minuten)": "Then every (minutes)",
+  "Negeren": "Ignore",
+  "Avondmelding": "Evening notification",
+  "Avondmelding om": "Evening notification at",
+  "Tot morgen betekent tot": "Until tomorrow means until",
+  "Pad bij een tik op de melding": "Path when the notification is tapped",
+  "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder zet hem in zijn pop-up aan of uit; negeren geldt voor het hele huis.":
+    "A notification when the garage door is left open, with Close and ignore in it. Everyone turns it on or off in their pop-up; ignoring counts for the whole house.",
+  "Het magneetcontact op de deur: aan is open. Dit is de waarheid, ook als de deur met een gewone afstandsbediening dichtgaat.":
+    "The magnetic contact on the door: on is open. This is the truth, also when the door is closed with an ordinary remote.",
+  "Wat de deur laat bewegen, zoals een schakelaar met een puls. Sluiten stuurt alleen iets als het contact open zegt. Leeg laten: geen knop Sluiten in de melding.":
+    "What moves the door, such as a switch with a pulse. Close only sends something when the contact says open. Leave empty: no Close button in the notification.",
+  "Leeg laten: Garagedeur.": "Leave empty: Garage door.",
+  "Standaard 5.": "Default 5.",
+  "Zolang hij open staat. Standaard 60; 0 is geen herinnering.": "As long as it is open. Default 60; 0 is no reminder.",
+  "De knoppen om de melding een tijd te negeren, in minuten. Op Android passen er twee naast Sluiten; de rest staat in de pop-up van de kaart.":
+    "The buttons to ignore the notification for a while, in minutes. On Android two fit next to Close; the rest are in the pop-up of the card.",
+  "Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen.":
+    "If the door is open at this time, a notification comes regardless, even while ignored, with an Until tomorrow button.",
+  "Standaard 07:00.": "Default 07:00.",
+  "Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon.":
+    "Where a tap on the notification goes, such as /dashboard-home/0#garage. Leave empty: the app just opens.",
 };
