@@ -9,9 +9,9 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `buiten` | per melding: voor welke ophaaldag iemand "Staat buiten" tikte, en wie |
 | `verstuurd` | per melding, per moment: op welke dag hij al is uitgegaan |
 | `leidend` | per melding: van welk dashboard de instellingen gelden |
-| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval; sinds 0.109.0 de camera) |
+| `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval; sinds 0.109.0 de camera; sinds 0.145.0 de tijden van de garagedeur) |
 | `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
-| `garage` | per garagemelding (sinds 0.139.0): sinds wanneer de deur open staat, de laatste melding, negeren tot wanneer en door wie, en een Sluiten die nog nagekeken wordt. Zie garage.py |
+| `garage` | per garagemelding (sinds 0.139.0): sinds wanneer de deur open staat, de laatste melding (sinds 0.145.0 ook per persoon, `per`), negeren tot wanneer en door wie, en een Sluiten die nog nagekeken wordt. Zie garage.py |
 | `auto` | per berichtensensor (sinds 0.141.0): de berichten die al gemeld zijn of er al stonden toen hij voor het eerst gelezen werd. Zie auto.py |
 | `auto_laden` | per berichtensensor (sinds 0.142.0): laadt hij, sinds wanneer gestopt, sinds wanneer de accu laag is, en of dat al gemeld is. Zie auto.py |
 

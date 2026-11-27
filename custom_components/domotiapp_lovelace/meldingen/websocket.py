@@ -4,7 +4,7 @@
 |---|---|
 | `meldingen/subscribe` | iedere ingelogde gebruiker |
 | `meldingen/aan` | iedere ingelogde gebruiker |
-| `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0; sinds 0.109.0 ook de camera) |
+| `meldingen/keuze` | iedere ingelogde gebruiker (sinds 0.86.0; sinds 0.109.0 ook de camera, sinds 0.145.0 de tijden van de garagedeur) |
 | `meldingen/proef` | alleen beheerders; met `persoon` alleen naar die persoon |
 | `meldingen/garage` | iedere ingelogde gebruiker: de garagemelding negeren of weer laten komen (sinds 0.139.0) |
 
@@ -28,7 +28,7 @@ from homeassistant.helpers import config_validation as cv
 from ..taal import t
 from ..bewaking import meldingen as telefoons
 from ..const import DOMAIN
-from . import camera
+from . import camera, garage
 from .const import DATA_ABONNEES, DATA_MOTOR, DATA_OPSLAG, DATA_WS_REGISTERED, MOMENTEN, SOORT_CAMERA, SOORT_GARAGE
 
 _LOGGER = logging.getLogger(__name__)
@@ -161,9 +161,9 @@ def ws_aan(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         vol.Required("melding"): cv.string,
         vol.Required("persoon"): vol.All(cv.string, vol.Match(r"^person\.")),
         # gebeurtenissen/robots: de stofzuiger; momenten/bakken_niet: afval (0.87.0);
-        # cameras/soorten: de camera (0.109.0).
+        # cameras/soorten: de camera (0.109.0); de tijden van de garagedeur (0.145.0, garage.KEUZES).
         vol.Required("soort"): vol.In(
-            ("gebeurtenissen", "robots", "momenten", "bakken_niet", "cameras", "soorten")
+            ("gebeurtenissen", "robots", "momenten", "bakken_niet", "cameras", "soorten", *garage.KEUZES)
         ),
         # None: alles (weer de standaard).
         vol.Required("waarden"): vol.Any(None, [cv.string]),

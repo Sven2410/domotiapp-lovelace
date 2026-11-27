@@ -17,7 +17,20 @@ relais dat de deur met een puls laat bewegen.
 
 Negeren geldt voor het hele huis en vervalt zodra de deur dichtgaat. De volgende
 keer open begint weer bij de eerste melding. "Tot morgen" (bij de avondmelding) is
-negeren tot `morgen` (standaard 07:00).
+negeren tot `morgen` (standaard 07:00). Na het negeren krijgt wie al een melding had
+`na_negeer`; wie er nog geen had, gaat gewoon verder met zijn eerste melding.
+
+## Per persoon (sinds 0.145.0)
+
+De eigenaar, 27 november 2026: "maar personen kunnen niet instellen dus na hoeveel
+minuten etc etc?". Ieder kiest in zijn pop-up na hoeveel minuten de eerste melding
+komt, hoe vaak daarna, en de avondmelding (uit of een eigen tijd). Dat staat in
+`keuzes` van de opslag, als lijst van één waarde (`KEUZES`), net als de keuzes van
+afval en de stofzuiger; zie `voor_persoon`. Wat iemand niet koos, komt van de kaart:
+die waarden zijn de standaard, dus wie niets doet krijgt hetzelfde als voor 0.145.0.
+De knoppen, negeren en "Tot morgen" blijven van het hele huis. Daarom houdt de motor
+per persoon bij wanneer hij de laatste melding kreeg (`per` in de opslag), en vraagt
+hij `volgende` per persoon.
 
 ## Het contact is de waarheid
 
@@ -30,7 +43,8 @@ ID (de eigenaar: niet gebruiken); de deur stopt zelf als er iets onder staat.
 ## Wat in de opslag staat
 
 Alles wat de klok nodig heeft: sinds wanneer hij open staat, de laatste melding,
-negeren tot wanneer en door wie, en een Sluiten die nog nagekeken moet worden. Een
+negeren tot wanneer en door wie, per persoon de laatste melding en avondmelding
+(`per`), en een Sluiten die nog nagekeken moet worden. Een
 herstart midden in een open deur gaat dus gewoon verder. Staat de deur bij het
 opstarten open en weet de opslag niet sinds wanneer, dan telt het vanaf de start:
 `last_changed` is na een herstart het moment van de herstart, en dus niet beter.
@@ -38,7 +52,7 @@ opstarten open en weet de opslag niet sinds wanneer, dan telt het vanaf de start
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -55,6 +69,13 @@ STANDAARD_HERHAAL = 60
 STANDAARD_NEGEER = (15, 60, 240)
 STANDAARD_AVOND = "22:00"
 STANDAARD_MORGEN = "07:00"
+
+# De keuzes per persoon in de opslag (sinds 0.145.0), elk een lijst van één waarde. Avond is een tijd of `AVOND_UIT`.
+KEUZE_MINUTEN = "garage_minuten"
+KEUZE_HERHAAL = "garage_herhaal"
+KEUZE_AVOND = "garage_avond"
+KEUZES = (KEUZE_MINUTEN, KEUZE_HERHAAL, KEUZE_AVOND)
+AVOND_UIT = "uit"
 
 # Na zoveel seconden wordt nagekeken of de deur na Sluiten echt dicht is.
 SLUIT_CONTROLE = 90
@@ -135,6 +156,26 @@ def instelling_uit(kaart: dict[str, Any]) -> Instelling:
     )
 
 
+def voor_persoon(inst: Instelling, keuze: dict[str, list[str]]) -> Instelling:
+    """De instellingen van de kaart met wat deze persoon zelf koos erover (sinds 0.145.0).
+
+    Een keuze die er niet is, of niet deugt, laat de waarde van de kaart staan.
+    """
+
+    def een(sleutel: str) -> str | None:
+        waarden = keuze.get(sleutel)
+        return str(waarden[0]) if isinstance(waarden, list) and waarden else None
+
+    minuten, herhaal, avond = een(KEUZE_MINUTEN), een(KEUZE_HERHAAL), een(KEUZE_AVOND)
+    return replace(
+        inst,
+        negeer=list(inst.negeer),
+        minuten=_getal(minuten, inst.minuten, 1, 24 * 60) if minuten is not None else inst.minuten,
+        herhaal=_getal(herhaal, inst.herhaal, 0, 24 * 60) if herhaal is not None else inst.herhaal,
+        avond=inst.avond if avond is None else None if avond == AVOND_UIT else (tijd_geldig(avond) or inst.avond),
+    )
+
+
 def is_open(toestand: str | None) -> bool | None:
     """True open, False dicht, None onbekend (`unavailable`, een herstart)."""
     if toestand in OPEN:
@@ -190,7 +231,11 @@ def volgende(stand: dict[str, Any], inst: Instelling, nu: datetime, open_: bool)
             return "avond"
 
     if negeer_tot is not None:
-        return "na_negeer" if nu >= negeer_tot else None
+        if nu < negeer_tot:
+            return None
+        # Wie voor het negeren nog geen melding had, gaat verder met zijn eerste.
+        if gemeld is not None:
+            return "na_negeer"
     if gemeld is None:
         return "eerste" if nu - sinds >= timedelta(minutes=inst.minuten) else None
     if inst.herhaal and nu - gemeld >= timedelta(minutes=inst.herhaal):

@@ -480,9 +480,10 @@ export function negeerNaam(minuten) {
 
 /**
  * De regel onder de garagedeur in de pop-up (0.139.0). `tijd` maakt van een moment "14:05", op de
- * klok van Home Assistant; `naam` maakt van een persoon een voornaam.
+ * klok van Home Assistant; `naam` maakt van een persoon een voornaam. Met `persoon` diens eigen
+ * minuten (0.145.0).
  */
-export function garageRegel({ stand, tijd = (iso) => iso, naam = (id) => id } = {}) {
+export function garageRegel({ stand, tijd = (iso) => iso, naam = (id) => id, persoon } = {}) {
   if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
   const g = stand?.garage;
   if (!g?.contact) return t("Nog geen contact gekozen");
@@ -494,7 +495,9 @@ export function garageRegel({ stand, tijd = (iso) => iso, naam = (id) => id } = 
     }
     return g.open_sinds ? t("Open sinds {tijd}", { tijd: tijd(g.open_sinds) }) : t("Open");
   }
-  if (g.open === false) return t("Dicht · melding na {n} min open", { n: g.minuten ?? 5 });
+  if (g.open === false) {
+    return t("Dicht · melding na {n} min open", { n: persoon ? garageKeuze(stand, persoon).minuten : g.minuten ?? 5 });
+  }
   return t("Contact niet bereikbaar");
 }
 
@@ -510,6 +513,104 @@ export function garageKnoppen(stand) {
   if (!stand?.bekend || g?.open !== true) return [];
   if (g.negeer_tot) return [{ id: "hervat", naam: t("Weer melden") }];
   return (g.negeer ?? []).map((n) => ({ id: `negeer:${n}`, naam: negeerNaam(n) }));
+}
+
+/* --------------------------------------------- de garagedeur per persoon (0.145.0) */
+
+/**
+ * Ieder kiest in zijn pop-up na hoeveel minuten, hoe vaak daarna en de avondmelding. De eigenaar, 27 november 2026:
+ * "maar personen kunnen niet instellen dus na hoeveel minuten etc etc?". In de opslag een lijst van één waarde, onder
+ * dezelfde sleutels als `KEUZES` in meldingen/garage.py. Wat iemand niet koos, komt van de kaart; de server stuurt die
+ * standaard mee in `stand.garage` (`minuten`, `herhaal`, `avond`, met `null` voor geen avondmelding).
+ */
+export const GARAGE_AVOND_UIT = "uit";
+const GARAGE_MINUTEN = [5, 10, 15, 30, 60];
+const GARAGE_HERHAAL = [0, 15, 30, 60, 120];
+const GARAGE_AVOND = ["21:00", "22:00", "23:00"];
+
+/** "5 min", "1 uur", "1 uur 30 min". */
+export function duurNaam(minuten) {
+  const uren = Math.floor(minuten / 60);
+  const rest = minuten % 60;
+  if (!uren) return t("{n} min", { n: minuten });
+  const u = uren === 1 ? t("1 uur") : t("{n} uur", { n: uren });
+  return rest ? t("{uur} {n} min", { uur: u, n: rest }) : u;
+}
+
+const geheel = (waarde, laag, hoog) => {
+  const n = Math.trunc(Number(waarde));
+  return Number.isFinite(n) && String(waarde ?? "").trim() !== "" ? Math.max(laag, Math.min(hoog, n)) : null;
+};
+
+const klokGeldig = (tijd) => {
+  const m = /^\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*$/.exec(String(tijd ?? ""));
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+};
+
+/** Wat de kaart zegt, zoals de server het meestuurt. */
+export function garageStandaard(stand) {
+  const g = stand?.garage ?? {};
+  return {
+    minuten: geheel(g.minuten, 1, 24 * 60) ?? 5,
+    herhaal: geheel(g.herhaal, 0, 24 * 60) ?? 60,
+    avond: g.avond === null ? null : klokGeldig(g.avond) ?? "22:00",
+  };
+}
+
+/** Wat deze persoon krijgt: zijn keuze, anders de kaart. Dezelfde regels als `voor_persoon` in meldingen/garage.py. */
+export function garageKeuze(stand, persoon) {
+  const std = garageStandaard(stand);
+  const eigen = stand?.keuzes?.[persoon] ?? {};
+  const een = (sleutel) => (Array.isArray(eigen[sleutel]) && eigen[sleutel].length ? String(eigen[sleutel][0]) : null);
+  const [minuten, herhaal, avond] = [een("garage_minuten"), een("garage_herhaal"), een("garage_avond")];
+  return {
+    minuten: minuten === null ? std.minuten : geheel(minuten, 1, 24 * 60) ?? std.minuten,
+    herhaal: herhaal === null ? std.herhaal : geheel(herhaal, 0, 24 * 60) ?? std.herhaal,
+    avond: avond === null ? std.avond : avond === GARAGE_AVOND_UIT ? null : klokGeldig(avond) ?? std.avond,
+  };
+}
+
+/** Een rijtje waarvan er één aan staat: de vaste waarden, plus de standaard en wat er gekozen is als die er niet in staan. */
+function rijtje(vast, standaard, gekozen, naam) {
+  const waarden = [...new Set([...vast, standaard, gekozen])].sort((a, b) => a - b);
+  return waarden.map((w) => ({ id: String(w), naam: naam(w), aan: w === gekozen }));
+}
+
+/**
+ * De keuzes onder de garagedeur in de pop-up. `enkel`: er staat er altijd één aan, en een tik kiest die (zie
+ * meldingen-scherm.js).
+ */
+export function garageKeuzes(stand, persoon) {
+  const std = garageStandaard(stand);
+  const nu = garageKeuze(stand, persoon);
+  const avonden = [...new Set([...GARAGE_AVOND, std.avond, nu.avond].filter(Boolean))].sort();
+  return [
+    { groep: "garage_minuten", kop: t("Eerste melding na"), enkel: true, opties: rijtje(GARAGE_MINUTEN, std.minuten, nu.minuten, duurNaam) },
+    {
+      groep: "garage_herhaal",
+      kop: t("Daarna elke"),
+      enkel: true,
+      opties: rijtje(GARAGE_HERHAAL, std.herhaal, nu.herhaal, (n) => (n ? duurNaam(n) : t("Niet herhalen"))),
+    },
+    {
+      groep: "garage_avond",
+      kop: t("Avondmelding"),
+      enkel: true,
+      opties: [
+        { id: GARAGE_AVOND_UIT, naam: t("Geen"), aan: nu.avond === null },
+        ...avonden.map((a) => ({ id: a, naam: a, aan: a === nu.avond })),
+      ],
+    },
+  ];
+}
+
+/** Wat er in de opslag komt als iemand `waarde` kiest: null als dat de standaard is, zodat hij de kaart blijft volgen. */
+export function nieuweGarageKeuze(stand, groep, waarde) {
+  const std = garageStandaard(stand);
+  const standaard =
+    groep === "garage_minuten" ? String(std.minuten) : groep === "garage_herhaal" ? String(std.herhaal) : std.avond ?? GARAGE_AVOND_UIT;
+  return String(waarde) === standaard ? null : [String(waarde)];
 }
 
 /** De berichtensensoren op deze kaart, zoals `auto_uit` in kaarten.py ze leest. */
