@@ -19,6 +19,11 @@ CARD_URL_PATH: Final = f"/{DOMAIN}/{CARD_FILENAME}"
 AFBEELDINGEN_MAP: Final = "afbeeldingen"
 AFBEELDINGEN_URL_PATH: Final = f"/{DOMAIN}/{AFBEELDINGEN_MAP}"
 
+# Gegevens die de integratie meelevert (sinds 0.144.0): de tankstations van Nederland voor de brandstofkaart, uit de map
+# `gegevens/`. Openbare gegevens (ODbL), dus net als de afbeeldingen zonder inloggen. Zie gegevens/LEESMIJ.md.
+GEGEVENS_MAP: Final = "gegevens"
+GEGEVENS_URL_PATH: Final = f"/{DOMAIN}/{GEGEVENS_MAP}"
+
 # Sleutels in hass.data[DOMAIN]. Het aantal entries is nodig omdat de
 # frontend-registratie hoort te verdwijnen zodra de laatste entry weg is.
 DATA_STATIC_PATH_REGISTERED: Final = "static_path_registered"

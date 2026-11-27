@@ -51,6 +51,9 @@ const result = await build({
   legalComments: "none",
   sourcemap: false,
   write: false,
+  // De CSS van Leaflet als tekst, voor de kaart met tankstations (0.144.0): die hoort in de shadow root van de kaart,
+  // niet in de pagina. Geen eigen .css in src/: alle CSS van de kaarten staat in hun sjabloon.
+  loader: { ".css": "text" },
   define: {
     // Enige bron van het versienummer: manifest.json.
     __CARD_VERSION__: JSON.stringify(version),

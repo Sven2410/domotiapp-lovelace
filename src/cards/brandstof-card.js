@@ -20,6 +20,11 @@
  * wordt, en elk half uur. De server haalt pas op als het langer dan een uur geleden is; tien tablets met de kaart halen de
  * bron dus één keer per uur op. Na een herstart kent Home Assistant het commando even niet (valkuil 28): dan straks
  * opnieuw.
+ *
+ * ## De tankstations (sinds 0.144.0)
+ *
+ * Onder de borden een kaart met alle tankstations van Nederland en een zoekbalk (`kaart`, standaard aan). Hoe en waarom
+ * staat in de kop van `brandstof-kaart.js`.
  */
 
 import { DacCard, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
@@ -29,6 +34,7 @@ import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import { resolve } from "../icons.js";
 import { locale, nt, t } from "../taal.js";
 import { BRANDSTOFFEN, cijferSvg, datumRegel, gekozen, lijnPad, prijsDelen, prijsTekst, trend } from "./brandstof-logica.js";
+import { Pompenkaart, pompenCss } from "./brandstof-kaart.js";
 
 const COMMANDO = "domotiapp_lovelace/brandstof/prijzen";
 const VERVERS_MS = 30 * 60 * 1000;
@@ -83,6 +89,8 @@ class BrandstofCard extends DacCard {
     .lijn { display: block; width: 100%; height: 22px; overflow: visible; }
     .lijn path { fill: none; stroke: var(--dac-accent-hi); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 
+    ${pompenCss}
+
     .status { font-size: 12.5px; color: var(--dac-ink-3); text-align: center; padding: 8px 0; }
     .status:empty { display: none; }
     .bron { font-size: 10.5px; color: var(--dac-ink-3); }
@@ -98,7 +106,7 @@ class BrandstofCard extends DacCard {
   }
 
   validate(config) {
-    return { name: "", grafiek: true, ...config };
+    return { name: "", grafiek: true, kaart: true, ...config };
   }
 
   watched() {
@@ -115,6 +123,7 @@ class BrandstofCard extends DacCard {
         <div class="borden"></div>
         <div class="status"></div>
         <div class="bron"></div>
+        ${this.config.kaart !== false ? `<div class="pompen"></div>` : ""}
       </div>`;
   }
 
@@ -128,6 +137,19 @@ class BrandstofCard extends DacCard {
     }, 60000);
     this.teardown_.push(() => clearInterval(klok), () => this.herkansing_.stop());
     this.haal_();
+    const pompen = this.$(".pompen");
+    if (pompen) {
+      this.pompen_ = new Pompenkaart(pompen, this);
+      this.teardown_.push(() => {
+        this.pompen_?.stop();
+        this.pompen_ = null;
+      });
+    }
+  }
+
+  /** Voor de pompenkaart: na een zoekuitkomst of een gekozen station is de kaart hoger. */
+  meet() {
+    meetRaster(this.$(".card"));
   }
 
   set hass(hass) {
@@ -180,6 +202,7 @@ class BrandstofCard extends DacCard {
       !leeg ? "" : this.fout_ ?? (stand?.fout ? t("De prijzen konden niet opgehaald worden.") : stand ? t("Geen prijzen voor deze brandstoffen.") : t("Prijzen ophalen…"))
     );
     this.text(".bron", stand && !leeg ? t("Bron: {bron}", { bron: stand.bron }) : "");
+    this.pompen_?.bij();
     meetRaster(this.$(".card"));
   }
 
@@ -223,7 +246,7 @@ class BrandstofCard extends DacCard {
 
 class BrandstofEditor extends DacEditor {
   defaults() {
-    return { grafiek: true };
+    return { grafiek: true, kaart: true };
   }
 
   pickers() {
@@ -238,12 +261,13 @@ class BrandstofEditor extends DacEditor {
         selector: { select: { multiple: true, mode: "list", options: BRANDSTOFFEN.map((b) => ({ value: b.slug, label: b.naam })) } },
       },
       { name: "grafiek", selector: sel.bool() },
+      { name: "kaart", selector: sel.bool() },
     ];
   }
 
   label(s) {
     return (
-      { name: t("Titel"), brandstoffen: t("Brandstoffen"), grafiek: t("Verloop van een maand") }[s.name] ?? super.label(s)
+      { name: t("Titel"), brandstoffen: t("Brandstoffen"), grafiek: t("Verloop van een maand"), kaart: t("Kaart met tankstations") }[s.name] ?? super.label(s)
     );
   }
 
@@ -252,6 +276,7 @@ class BrandstofEditor extends DacEditor {
       name: t("Leeg laten: Brandstofprijzen."),
       brandstoffen: t("Niets aangevinkt: Euro95, Diesel, LPG en Super. De prijs is de landelijke adviesprijs van die dag, eens per uur opgehaald."),
       grafiek: t("Een lijntje onder elke prijs met de laatste dertig dagen."),
+      kaart: t("Onder de prijzen een kaart met alle tankstations van Nederland en een zoekbalk. De stations komen uit OpenStreetMap."),
     }[s.name];
   }
 }
@@ -259,7 +284,9 @@ class BrandstofEditor extends DacEditor {
 registerEditor("domotiapp-brandstof-card-editor", BrandstofEditor);
 registerCard("domotiapp-brandstof-card", BrandstofCard, {
   name: nt("DomotiApp Brandstof"),
-  description: nt("De landelijke adviesprijzen van brandstof in Nederland, als prijsborden zoals bij een tankstation, met de trend tegenover gisteren."),
+  description: nt(
+    "De landelijke adviesprijzen van brandstof in Nederland, als prijsborden zoals bij een tankstation, met de trend tegenover gisteren, en een kaart met alle tankstations."
+  ),
 });
 
 export { BrandstofCard };
