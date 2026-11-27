@@ -13,6 +13,7 @@
  * robotstofzuiger ook waarover en van welke robot (de keuzes onder het vinkje).
  * Sinds 0.111.0 staan die keuzes dicht tot je op het pijltje naast het vinkje
  * tikt (`klapStand`): met afval, stofzuiger en camera werd het één lange lijst.
+ * Sinds 0.145.0 kan een groep `enkel` zijn: één waarde uit een rijtje (de tijden van de garagedeur), als radio.
  * De instellingen van een soort -- welke sensor, hoe laat, wat er te kiezen
  * valt -- staan in de editor van de kaart, want die gelden voor iedereen. Onder elke soort staat wel wat er komt ("Morgen GFT ·
  * melding om 19:30"): dat stond eerst in de kop van de kaart, en die kop is
@@ -414,11 +415,11 @@ class MeldingenScherm extends HTMLElement {
             <div class="keuzes" data-voor="${veilig(s.id)}" hidden>${(s.keuzes ?? [])
               .map(
                 (g) => `
-              <div class="groep" role="group" aria-label="${veilig(g.kop)}">
+              <div class="groep" role="${g.enkel ? "radiogroup" : "group"}" aria-label="${veilig(g.kop)}">
                 <span class="kop">${veilig(g.kop)}</span>
                 <div class="opties">${g.opties
                   .map(
-                    (o) => `<div class="keus" role="checkbox" tabindex="0" aria-checked="false" data-soort="${veilig(s.id)}" data-groep="${veilig(g.groep)}" data-waarde="${veilig(o.id)}"><span class="v">${resolve("check")}</span><span class="tk">${veilig(o.naam)}</span></div>`
+                    (o) => `<div class="keus" role="${g.enkel ? "radio" : "checkbox"}" tabindex="0" aria-checked="false" data-soort="${veilig(s.id)}" data-groep="${veilig(g.groep)}" data-waarde="${veilig(o.id)}"><span class="v">${resolve("check")}</span><span class="tk">${veilig(o.naam)}</span></div>`
                   )
                   .join("")}</div>
               </div>`

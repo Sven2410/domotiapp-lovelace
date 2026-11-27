@@ -209,6 +209,15 @@ export const MELDINGEN = {
   "Dicht · melding na {n} min open": "Closed · notification after {n} min open",
   "Contact niet bereikbaar": "Contact unavailable",
   "Weer melden": "Notify again",
+  // Per persoon (0.145.0)
+  "Eerste melding na": "First notification after",
+  "Daarna elke": "Then every",
+  "Niet herhalen": "Don't repeat",
+  "Geen": "None",
+  "1 uur": "1 hour",
+  "{n} uur": "{n} hours",
+  "{n} min": "{n} min",
+  "{uur} {n} min": "{uur} {n} min",
   "Deur, bediening en tijden": "Door, control and times",
   "Contact van de deur": "Door contact",
   "Naam in de melding": "Name in the notification",
@@ -219,19 +228,20 @@ export const MELDINGEN = {
   "Avondmelding om": "Evening notification at",
   "Tot morgen betekent tot": "Until tomorrow means until",
   "Pad bij een tik op de melding": "Path when the notification is tapped",
-  "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder zet hem in zijn pop-up aan of uit; negeren geldt voor het hele huis.":
-    "A notification when the garage door is left open, with Close and ignore in it. Everyone turns it on or off in their pop-up; ignoring counts for the whole house.",
+  "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder kiest in zijn pop-up of hij hem krijgt, na hoeveel minuten, hoe vaak daarna en de avondmelding; wat hieronder staat is de standaard voor wie niets kiest. Negeren geldt voor het hele huis.":
+    "A notification when the garage door is left open, with Close and ignore in it. Everyone chooses in their pop-up whether they get it, after how many minutes, how often after that and the evening notification; what is below is the default for whoever chooses nothing. Ignoring counts for the whole house.",
   "Het magneetcontact op de deur: aan is open. Dit is de waarheid, ook als de deur met een gewone afstandsbediening dichtgaat.":
     "The magnetic contact on the door: on is open. This is the truth, also when the door is closed with an ordinary remote.",
   "Wat de deur laat bewegen, zoals een schakelaar met een puls. Sluiten stuurt alleen iets als het contact open zegt. Leeg laten: geen knop Sluiten in de melding.":
     "What moves the door, such as a switch with a pulse. Close only sends something when the contact says open. Leave empty: no Close button in the notification.",
   "Leeg laten: Garagedeur.": "Leave empty: Garage door.",
-  "Standaard 5.": "Default 5.",
-  "Zolang hij open staat. Standaard 60; 0 is geen herinnering.": "As long as it is open. Default 60; 0 is no reminder.",
+  "De standaard voor wie in zijn pop-up niets kiest; leeg is 5.": "The default for whoever chooses nothing in their pop-up; empty is 5.",
+  "Zolang hij open staat. De standaard voor wie in zijn pop-up niets kiest; leeg is 60, 0 is geen herinnering.":
+    "As long as it is open. The default for whoever chooses nothing in their pop-up; empty is 60, 0 is no reminder.",
   "De knoppen om de melding een tijd te negeren, in minuten. Op Android passen er twee naast Sluiten; de rest staat in de pop-up van de kaart.":
     "The buttons to ignore the notification for a while, in minutes. On Android two fit next to Close; the rest are in the pop-up of the card.",
-  "Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen.":
-    "If the door is open at this time, a notification comes regardless, even while ignored, with an Until tomorrow button.",
+  "Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen. De standaard: ieder kan in zijn pop-up een andere tijd kiezen, of geen.":
+    "If the door is open at this time, a notification comes regardless, even while ignored, with an Until tomorrow button. The default: everyone can choose a different time in their pop-up, or none.",
   "Standaard 07:00.": "Default 07:00.",
   "Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon.":
     "Where a tap on the notification goes, such as /dashboard-home/0#garage. Leave empty: the app just opens.",

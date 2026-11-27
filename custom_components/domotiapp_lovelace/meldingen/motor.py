@@ -50,7 +50,9 @@ Sinds 0.139.0. Wat er gemeld wordt en wanneer staat in `garage.py`; hier staat H
 De motor volgt het contact. Gaat het open, dan komt `open_sinds` in de opslag;
 gaat het dicht, dan verdwijnt alles van de telefoons en uit de opslag. Elke minuut
 vraagt de klok `garage.volgende` of er nu een melding moet. Alles wat die nodig
-heeft staat in de opslag, dus een herstart gaat gewoon verder. De knoppen in de
+heeft staat in de opslag, dus een herstart gaat gewoon verder. Sinds 0.145.0 kiest
+ieder zijn eigen tijden (`garage.voor_persoon`); de klok vraagt het dan per persoon,
+met per persoon de laatste melding uit `per` in de opslag. De knoppen in de
 melding komen binnen als `mobile_app_notification_action`, net als "Staat
 buiten". Sluiten wordt na `SLUIT_CONTROLE` seconden nagekeken; staat de wekker er
 na een herstart niet meer, dan doet de klok het.
@@ -891,6 +893,7 @@ class Motor:
                 negeer_door=None,
                 negeer_om=None,
                 sluit=None,
+                per=None,
                 dicht_om=nu,
                 dicht_door=sluit.get("door"),
             )
@@ -915,9 +918,36 @@ class Motor:
         if open_ is True and not stand.get("open_sinds"):
             self._garage_toestand(True)
             return
-        wat = garage.volgende(stand, melding.garage, nu, open_ is True)
-        if wat:
-            await self._stuur_garage(melding, wat, nu)
+        ontvangers = [p for p in melding.personen if self.opslag.aan(melding.id, p)]
+        if "per" not in stand and stand.get("gemeld"):
+            # Een opslag van voor 0.145.0 midden in een open deur: wat het huis kreeg, kreeg ieder.
+            eerder = {"gemeld": stand["gemeld"], **({"avond": stand["avond_gemeld"]} if stand.get("avond_gemeld") else {})}
+            self.opslag.zet_garage(melding.id, per={p: dict(eerder) for p in ontvangers})
+            stand = self.opslag.garage(melding.id)
+        per = stand.get("per") or {}
+        groepen: dict[str, list[str]] = {}
+        for persoon in ontvangers:
+            eigen = per.get(persoon) or {}
+            wat = garage.volgende(
+                {**stand, "gemeld": eigen.get("gemeld"), "avond_gemeld": eigen.get("avond")},
+                self._garage_inst(melding, persoon),
+                nu,
+                open_ is True,
+            )
+            if wat:
+                groepen.setdefault(wat, []).append(persoon)
+        for wat, personen in groepen.items():
+            await self._stuur_garage(melding, wat, nu, personen=personen)
+        # Negeren is om: voor iedereen tegelijk, ook voor wie er nu niets kreeg.
+        negeer_tot = _tijd(stand.get("negeer_tot"))
+        if negeer_tot is not None and nu >= negeer_tot and self.opslag.garage(melding.id).get("negeer_tot"):
+            self.opslag.zet_garage(melding.id, negeer_tot=None, negeer_door=None, negeer_om=None)
+            self._meld(melding.id)
+
+    @callback
+    def _garage_inst(self, melding: Melding, persoon: str) -> garage.Instelling:
+        """De instellingen van de kaart met wat deze persoon zelf koos (sinds 0.145.0)."""
+        return garage.voor_persoon(melding.garage, self.opslag.keuze(melding.id, persoon))
 
     @callback
     def _is_android(self, dienst: str) -> bool:
@@ -929,21 +959,35 @@ class Motor:
         return False
 
     async def _stuur_garage(
-        self, melding: Melding, wat: str, nu: datetime, *, alleen: str | None = None, proef: bool = False
+        self,
+        melding: Melding,
+        wat: str,
+        nu: datetime,
+        *,
+        alleen: str | None = None,
+        proef: bool = False,
+        personen: list[str] | None = None,
     ) -> dict[str, Any]:
-        inst = melding.garage
+        """Stuur deze melding naar `personen` (standaard: wie hem aan heeft), elk met zijn eigen instellingen."""
         stand = self.opslag.garage(melding.id)
         sinds = _tijd(stand.get("open_sinds")) or nu
-        minuten = inst.minuten if proef else int((nu - sinds).total_seconds() // 60)
         taal = taal_van(self.hass)
-        titel, tekst = garage.bericht(wat, inst.naam, minuten, taal, klok=inst.avond or "")
-        if proef:
-            titel = t(self.hass, "Proef · {titel}", titel=titel)
         tag = garage_tag("proef" if proef else melding.id)
-        ontvangers = [alleen] if alleen is not None else [p for p in melding.personen if self.opslag.aan(melding.id, p)]
+        if alleen is not None:
+            ontvangers = [alleen]
+        elif personen is not None:
+            ontvangers = list(personen)
+        else:
+            ontvangers = [p for p in melding.personen if self.opslag.aan(melding.id, p)]
         gelukt: list[str] = []
         zonder: list[str] = []
+        titel = tekst = ""
         for persoon in ontvangers:
+            inst = self._garage_inst(melding, persoon)
+            minuten = inst.minuten if proef else int((nu - sinds).total_seconds() // 60)
+            titel, tekst = garage.bericht(wat, inst.naam, minuten, taal, klok=inst.avond or "")
+            if proef:
+                titel = t(self.hass, "Proef · {titel}", titel=titel)
             dienst = melding.diensten.get(persoon) or telefoons.dienst_voor(self.hass, persoon)
             if not dienst:
                 zonder.append(persoon)
@@ -968,7 +1012,14 @@ class Motor:
         if zonder:
             _LOGGER.warning("Geen telefoon gevonden voor %s; die krijgt geen garagemelding", ", ".join(zonder))
         if not proef:
-            velden: dict[str, Any] = {"gemeld": nu.isoformat(), "laatste_melding": wat}
+            # Ook wie geen telefoon had telt als gemeld: anders elke minuut opnieuw, met een waarschuwing erbij.
+            per = {p: dict(v) for p, v in (stand.get("per") or {}).items()}
+            for persoon in ontvangers:
+                eigen = per.setdefault(persoon, {})
+                eigen["gemeld"] = nu.isoformat()
+                if wat == "avond":
+                    eigen["avond"] = nu.date().isoformat()
+            velden: dict[str, Any] = {"gemeld": nu.isoformat(), "laatste_melding": wat, "per": per}
             if wat == "na_negeer":
                 velden.update(negeer_tot=None, negeer_door=None, negeer_om=None)
             if wat == "avond":
@@ -1096,7 +1147,10 @@ class Motor:
             "dicht_om": stand.get("dicht_om"),
             "dicht_door": stand.get("dicht_door"),
             "negeer": list(melding.garage.negeer),
+            # De standaard voor wie in zijn pop-up niets koos (sinds 0.145.0 ook herhaal en avond).
             "minuten": melding.garage.minuten,
+            "herhaal": melding.garage.herhaal,
+            "avond": melding.garage.avond,
         }
 
     # ------------------------------------------------------------------ de auto

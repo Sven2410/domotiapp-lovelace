@@ -71,8 +71,10 @@ import {
   cameraKeuze,
   cameraRegel,
   cameraSoortNaam,
+  garageKeuzes,
   garageKnoppen,
   garageRegel,
+  nieuweGarageKeuze,
   negeerNaam,
   nieuweCameraKeuze,
   nieuwNiet,
@@ -334,9 +336,12 @@ class MeldingenCard extends DacCard {
    * robot aan of uit (sinds 0.86.0). De pop-up roept dit aan; net als `zet`
    * meteen bewaard, zonder Opslaan.
    *
-   * @param {string} soort  "stofzuiger", "afval" of "camera"
+   * Bij een groep met `enkel` (de garagedeur, 0.145.0) kiest een tik die ene waarde; een tik op wat al gekozen is doet
+   * niets.
+   *
+   * @param {string} soort  "stofzuiger", "afval", "camera", "auto" of "garage"
    * @param {string} persoon
-   * @param {"gebeurtenissen"|"robots"|"momenten"|"bakken_niet"|"cameras"|"soorten"} groep
+   * @param {string} groep  "gebeurtenissen", "robots", "momenten", "bakken_niet", "cameras", "soorten", of een van garage.KEUZES
    * @param {string} waarde
    * @param {boolean} aan
    */
@@ -345,7 +350,10 @@ class MeldingenCard extends DacCard {
     if (!vorig || !this.hass?.connection) return;
     const c = this.config;
     let waarden;
-    if (soort === "camera") {
+    if (soort === "garage") {
+      if (!aan) return;
+      waarden = nieuweGarageKeuze(vorig, groep, waarde);
+    } else if (soort === "camera") {
       waarden = nieuweCameraKeuze(vorig, persoon, groep, waarde, aan);
     } else if (soort === "auto") {
       waarden = nieuweKeuze(autoGebeurtenissen(c), autoKeuze(c, vorig, persoon), waarde, aan);
@@ -384,7 +392,7 @@ class MeldingenCard extends DacCard {
    */
   keuzes_(soort, stand, persoon) {
     const c = this.config;
-    if (soort === "garage") return [];
+    if (soort === "garage") return garageKeuzes(stand, persoon);
     if (soort === "auto") return this.autoKeuzes_(stand, persoon);
     if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
     if (soort === "camera") return this.cameraKeuzes_(stand, persoon);
@@ -526,7 +534,7 @@ class MeldingenCard extends DacCard {
               : soort.id === "camera"
                 ? cameraRegel({ stand, persoon, naam: (id) => nameOf(this.hass, id) })
                 : soort.id === "garage"
-                  ? garageRegel({ stand, tijd: (iso) => this.klok_(iso), naam: (id) => voornaam(nameOf(this.hass, id)) })
+                  ? garageRegel({ stand, persoon, tijd: (iso) => this.klok_(iso), naam: (id) => voornaam(nameOf(this.hass, id)) })
                   : soort.id === "auto"
                     ? autoRegel({ config: this.config, stand, persoon, namen: autosUit(this.config).map((id) => autoNaamVan(this.hass, id)) })
                     : this.stofzuigerRegel_(stand, persoon),
@@ -918,17 +926,17 @@ class MeldingenEditor extends DacEditor {
         "Wat iedereen in zijn pop-up kan kiezen. Ieder kiest daar zelf waarover en van welke robot; wie niets kiest krijgt alles wat hier aan staat. Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
       ),
       garage: t(
-        "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder zet hem in zijn pop-up aan of uit; negeren geldt voor het hele huis."
+        "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder kiest in zijn pop-up of hij hem krijgt, na hoeveel minuten, hoe vaak daarna en de avondmelding; wat hieronder staat is de standaard voor wie niets kiest. Negeren geldt voor het hele huis."
       ),
       garage_contact: t("Het magneetcontact op de deur: aan is open. Dit is de waarheid, ook als de deur met een gewone afstandsbediening dichtgaat."),
       garage_bediening: t(
         "Wat de deur laat bewegen, zoals een schakelaar met een puls. Sluiten stuurt alleen iets als het contact open zegt. Leeg laten: geen knop Sluiten in de melding."
       ),
       garage_naam: t("Leeg laten: Garagedeur."),
-      garage_minuten: t("Standaard 5."),
-      garage_herhaal: t("Zolang hij open staat. Standaard 60; 0 is geen herinnering."),
+      garage_minuten: t("De standaard voor wie in zijn pop-up niets kiest; leeg is 5."),
+      garage_herhaal: t("Zolang hij open staat. De standaard voor wie in zijn pop-up niets kiest; leeg is 60, 0 is geen herinnering."),
       garage_negeer: t("De knoppen om de melding een tijd te negeren, in minuten. Op Android passen er twee naast Sluiten; de rest staat in de pop-up van de kaart."),
-      garage_avond_aan: t("Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen."),
+      garage_avond_aan: t("Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen. De standaard: ieder kan in zijn pop-up een andere tijd kiezen, of geen."),
       garage_morgen: t("Standaard 07:00."),
       garage_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon."),
       auto: t(
