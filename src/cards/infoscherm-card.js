@@ -809,9 +809,12 @@ const css = /* css */ `
     color: var(--bak); background: color-mix(in srgb, var(--bak) 18%, transparent);
   }
   .af-eerst .af-ico svg { width: calc(21px * var(--s)); height: calc(21px * var(--s)); }
-  .af-eerst .af-t { min-width: 0; flex: 1 1 auto; }
+  /* Naam boven, datum eronder, elk op een eigen regel. Als losse woorden op één regel brak een smal blok
+     midden in de datum af: "Restafval 27" met "nov" eronder (gemeld op 27 november 2026). */
+  .af-eerst .af-t { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
   .af-eerst .af-n { font-size: calc(19px * var(--s)); font-weight: 600; letter-spacing: -.02em; }
-  .af-eerst .af-w { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); }
+  .af-eerst .af-t .af-w { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .af-eerst .af-d .af-w { font-size: calc(13px * var(--s)); color: var(--dac-ink-2); }
   .af-eerst .af-d { font-size: calc(19px * var(--s)); font-weight: 600; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
 
   .af-lijst { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
