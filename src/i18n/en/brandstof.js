@@ -40,4 +40,6 @@ export const BRANDSTOF = {
   "Route": "Directions",
   "Tankstation": "Petrol station",
   "Dag en nacht open": "Open day and night",
+  "Openingstijden onbekend": "Opening hours unknown",
+  "Brandstoffen onbekend": "Fuels unknown",
 };

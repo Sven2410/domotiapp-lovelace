@@ -23,7 +23,9 @@ describe("de tankstations", () => {
     });
     assert.equal(B.stationNaam({ naam: "", merk: "" }), "Tankstation");
     assert.equal(B.openingstijden("24/7"), "Dag en nacht open");
-    assert.equal(B.openingstijden("Mo-Su 06:00-23:00"), "Open: Mo-Su 06:00-23:00");
+    assert.equal(B.openingstijden("Mo-Su 06:00-23:00"), "Open: ma-zo 06:00-23:00");
+    assert.equal(B.openingstijden("PH,Mo-Su 07:00-21:00"), "Open: feestdagen, ma-zo 07:00-21:00");
+    assert.equal(B.openingstijden("Mo-Fr 06:00-22:00; Sa,Su 08:00-20:00; PH off"), "Open: ma-vr 06:00-22:00; za, zo 08:00-20:00; feestdagen dicht");
     assert.equal(B.openingstijden(""), "");
     assert.equal(B.routeLink(s), "https://www.google.com/maps/dir/?api=1&destination=52,5.8");
   });
@@ -48,5 +50,18 @@ describe("de tankstations", () => {
       { naam: "BP", merk: "BP", adres: "Tangostraat 2", plaats: "Ergens", postcode: "" },
     ], "tango").map((s) => s.merk);
     assert.deepEqual(uit, ["Tango", "BP"]);
+  });
+
+  it("NIEUW GEDRAG (0.144.1): weet OpenStreetMap het niet, dan staat er onbekend", () => {
+    const leeg = STATIONS.find((x) => !x.open && !x.brandstoffen.length && x.plaats);
+    assert.ok(leeg, "er is een station zonder openingstijden en brandstoffen");
+    assert.deepEqual(B.stationRegels(leeg), {
+      open: { tekst: "Openingstijden onbekend", bekend: false },
+      brandstoffen: { soorten: [], tekst: "Brandstoffen onbekend", bekend: false },
+    });
+    const vol = STATIONS.find((x) => x.open === "24/7" && x.brandstoffen.includes("LPG"));
+    const regels = B.stationRegels(vol);
+    assert.deepEqual(regels.open, { tekst: "Dag en nacht open", bekend: true });
+    assert.ok(regels.brandstoffen.bekend && regels.brandstoffen.soorten.includes("LPG") && regels.brandstoffen.tekst === "");
   });
 });

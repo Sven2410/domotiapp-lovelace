@@ -9,7 +9,7 @@
  * zoals op een tankstation ("2,37" en dan "7"), cijfers van zeven segmenten, en de trend tegenover gisteren.
  */
 
-import { nt, t } from "../taal.js";
+import { nt, t, taal } from "../taal.js";
 
 /** Wat er te kiezen is, met de slugs van `brandstof.py`. De namen op het bord komen van de bron. */
 export const BRANDSTOFFEN = [
@@ -220,11 +220,37 @@ export function zoekStations(stations, tekst, { max = 8, bij = null } = {}) {
   return uit.slice(0, max).map((x) => x.s);
 }
 
-/** De regel met de openingstijden van OpenStreetMap: "24/7" in gewone woorden, de rest zoals het is. Leeg: geen regel. */
+const DAGEN_NL = { Mo: "ma", Tu: "di", We: "wo", Th: "do", Fr: "vr", Sa: "za", Su: "zo", PH: "feestdagen", off: "dicht" };
+
+/**
+ * De regel met de openingstijden van OpenStreetMap. "24/7" in gewone woorden; in het Nederlands ook de dagen
+ * ("PH,Mo-Su 07:00-21:00" wordt "feestdagen, ma-zo 07:00-21:00"). In het Engels zoals OpenStreetMap het schrijft. Leeg:
+ * geen regel.
+ */
 export function openingstijden(open) {
-  const tekst = String(open ?? "").trim();
+  let tekst = String(open ?? "").trim();
   if (!tekst) return "";
-  return tekst === "24/7" ? t("Dag en nacht open") : t("Open: {tijden}", { tijden: tekst });
+  if (tekst === "24/7") return t("Dag en nacht open");
+  if (taal() !== "en") {
+    tekst = tekst
+      .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\b/g, (w) => DAGEN_NL[w])
+      .replace(/\s*([,;])\s*/g, "$1 ")
+      .trim();
+  }
+  return t("Open: {tijden}", { tijden: tekst });
+}
+
+/**
+ * Wat er onder een gekozen station staat over openingstijden en brandstoffen (0.144.1). Weet OpenStreetMap het niet, dan
+ * "onbekend" (`bekend: false`) in plaats van niets: de eigenaar vroeg *"waarom geen openingstijden en welke brandstof?"*.
+ */
+export function stationRegels(s) {
+  const open = openingstijden(s?.open);
+  const soorten = s?.brandstoffen ?? [];
+  return {
+    open: { tekst: open || t("Openingstijden onbekend"), bekend: Boolean(open) },
+    brandstoffen: { soorten, tekst: soorten.length ? "" : t("Brandstoffen onbekend"), bekend: soorten.length > 0 },
+  };
 }
 
 /** Een routelink die op een telefoon de kaarten-app opent. */
