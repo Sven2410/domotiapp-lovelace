@@ -241,10 +241,21 @@ export const MELDINGEN = {
   "Auto's": "Cars",
   "Nog geen auto gekozen": "No car chosen yet",
   "Bij elk nieuw bericht van {namen}": "On every new message from {namen}",
-  "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning. Ieder zet hem in zijn pop-up aan of uit. Wat er al stond als je hem aanzet, komt niet als melding.":
-    "A notification for every new message from the car, such as a tyre pressure warning. Everyone switches it on or off in their pop-up. Messages already there when you switch it on do not come as a notification.",
-  "De sensor met de berichten van de fabrikant, per auto één. Werkt met FordPass.":
-    "The sensor with the manufacturer's messages, one per car. Works with FordPass.",
+  "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning, als hij klaar is met laden, en als de accu laag is. Ieder kiest in zijn pop-up zelf waarover. Wat er al stond als je hem aanzet, komt niet als melding.":
+    "A notification for every new message from the car, such as a tyre pressure warning, when it has finished charging, and when the battery is low. Everyone chooses in their pop-up what about. Messages already there when you switch it on do not come as a notification.",
+  "De sensor met de berichten van de fabrikant, per auto één. Laadstatus, stekker en accu zoekt de kaart zelf op dezelfde auto. Werkt met FordPass.":
+    "The sensor with the manufacturer's messages, one per car. The card finds the charging status, plug and battery of the same car itself. Works with FordPass.",
+  "Wat iedereen in zijn pop-up kan kiezen. Klaar met laden: 15 minuten niet meer laden terwijl de stekker erin zit. Accu laag: 5 minuten onder de grens zonder stekker, één keer tot hij weer 5% boven de grens is geweest.":
+    "What everyone can choose in their pop-up. Finished charging: 15 minutes without charging while still plugged in. Battery low: 5 minutes below the limit without the plug, once until it has been 5% above the limit again.",
+  "Accu laag onder (%)": "Battery low below (%)",
+  "Standaard 20.": "Default 20.",
+  "Berichten van de fabrikant": "Messages from the manufacturer",
+  "berichten": "messages",
+  "Klaar met laden": "Finished charging",
+  "klaar met laden": "finished charging",
+  "Accu laag": "Battery low",
+  "accu laag": "battery low",
+  "accu laag (onder {pct}%)": "battery low (below {pct}%)",
   "Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#auto. Leeg laten: de app opent gewoon.":
     "Where a tap on the notification goes, such as /dashboard-home/0#auto. Leave empty: the app just opens.",
 };

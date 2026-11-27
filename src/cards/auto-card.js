@@ -40,7 +40,7 @@
 import { DacCard, INCOMPLETE, TONES, registerCard, registerEditor } from "../base.js";
 import { DacEditor, sel } from "../editor/base.js";
 import { resolve } from "../icons.js";
-import { isOn, moreInfo, nameOf, stateOf } from "../ha.js";
+import { isOn, localizeState, moreInfo, nameOf, stateOf } from "../ha.js";
 import { meetRaster, volgRaster } from "../rasterhoogte.js";
 import {
   AANDRIJVING,
@@ -57,6 +57,7 @@ import {
   pct,
   staatOpen,
   statusregel,
+  tegelWaarde,
 } from "./auto-logica.js";
 import { nt, t, tc } from "../taal.js";
 import { aantalVan, berichtenVan, berichtSensoren, drukDienst, merkVan, wisKnopVan } from "./auto-berichten.js";
@@ -501,12 +502,11 @@ class AutoCard extends DacCard {
     const voegToe = (id, label) => {
       const st = stateOf(this.hass, id);
       if (!st || st.state === "unavailable" || st.state === "unknown") return;
-      const eenheid = st.attributes?.unit_of_measurement ?? "";
-      const n = Number(st.state);
-      const waarde = Number.isFinite(n)
-        ? `${Math.round(n * 10) / 10}${eenheid ? ` ${eenheid}` : ""}`
-        : st.state;
-      uit.push({ id, w: waarde, l: label ?? nameOf(this.hass, id, id) });
+      // De waarde zoals Home Assistant hem zou tonen, en een tijd als "vandaag 16:50". Zie `tegelWaarde`.
+      const waarde = tegelWaarde(st, { opmaak: (s) => localizeState(this.hass, s), tz: this.hass?.config?.time_zone });
+      // De naam uit Home Assistant. Tot 0.142.0 stond hier `nameOf(hass, id, id)`, en het derde argument is de
+      // ingevulde naam: dan kwam er altijd het entity_id op de tegel.
+      uit.push({ id, w: waarde, l: label ?? nameOf(this.hass, id) });
     };
 
     // Waar hij staat. De afstand komt erbij als hij NIET thuis is en we hem

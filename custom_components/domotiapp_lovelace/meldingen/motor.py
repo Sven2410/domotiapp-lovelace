@@ -63,6 +63,10 @@ opslag (`auto`), dus een herstart meldt niets dubbel, en een bericht dat tijdens
 alsnog bij de eerste lezing erna. Een bericht dat verdwijnt (gewist bij de fabrikant, op de kaart of in de app)
 gaat ook van de telefoons af: elk bericht heeft een eigen tag.
 
+Sinds 0.142.0 ook laden klaar en accu laag, van de sensoren op hetzelfde apparaat (`auto_delen`). Een verandering zet
+alleen de stand in de opslag (`_auto_laden`); de klok van elke minuut (`_auto_tik`) kijkt of de wachttijd om is en
+stuurt dan. Zo gaat een herstart midden in het wachten gewoon verder. Zie de kop van `auto.py` waarom er gewacht wordt.
+
 ## Een agenda als afvalbron
 
 Sinds 0.136.0 mag `afval_vandaag` of `afval_morgen` een `calendar.*` zijn (zie
@@ -175,6 +179,8 @@ class Motor:
         # De auto: de gevolgde berichtensensoren.
         self._auto_sensoren: tuple[str, ...] = ()
         self._auto_uit: CALLBACK_TYPE | None = None
+        # Per gevolgde entiteit: (berichtensensor van die auto, rol). Rol is berichten, laden, stekker of accu.
+        self._auto_rollen: dict[str, tuple[str, str]] = {}
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -297,6 +303,10 @@ class Motor:
             await self._garage_tik(nu)
         except Exception:  # noqa: BLE001 - de garage houdt het afval niet tegen
             _LOGGER.exception("Garagemelding: de klok liep vast")
+        try:
+            await self._auto_tik(nu)
+        except Exception:  # noqa: BLE001 - de auto houdt het afval niet tegen
+            _LOGGER.exception("Automelding: de klok liep vast")
         klok = nu.strftime("%H:%M")
         if not any(m.tijden.get(mo) == klok for m in self.meldingen.values() for mo in MOMENTEN):
             return
@@ -1093,28 +1103,143 @@ class Motor:
 
     @callback
     def _volg_auto(self) -> None:
-        """Volg de berichtensensoren van de kaart; opnieuw als het andere zijn. Daarna kijken wat er nu staat."""
+        """Volg de auto's van de kaart: de berichten, en de laadstatus, stekker en accu van hetzelfde apparaat.
+
+        Opnieuw als het andere entiteiten zijn. Daarna kijken wat er nu staat: wat er tijdens een herstart binnenkwam.
+        """
         melding = self.meldingen.get(SOORT_AUTO)
-        sensoren = tuple(melding.autos) if melding is not None else ()
+        rollen: dict[str, tuple[str, str]] = {}
+        for sensor in melding.autos if melding is not None else []:
+            rollen[sensor] = (sensor, "berichten")
+            for rol, eid in auto_delen(self.hass, sensor).items():
+                rollen[eid] = (sensor, rol)
+        sensoren = tuple(sorted(rollen))
         if sensoren == self._auto_sensoren and (self._auto_uit is not None or not sensoren):
             return
         if self._auto_uit is not None:
             self._auto_uit()
             self._auto_uit = None
         self._auto_sensoren = sensoren
+        self._auto_rollen = rollen
         if not sensoren:
             return
         self._auto_uit = async_track_state_change_event(self.hass, list(sensoren), self._auto_verandert)
-        # Wat er tijdens een herstart binnenkwam, of sinds de sensor op de kaart kwam.
-        for sensor in sensoren:
+        for sensor in melding.autos:
             if (st := self.hass.states.get(sensor)) is not None:
                 self._auto_berichten(sensor, None, st)
+            self._auto_laden(sensor)
 
     @callback
     def _auto_verandert(self, event: Event) -> None:
         nieuw = event.data.get("new_state")
-        if nieuw is not None:
-            self._auto_berichten(event.data["entity_id"], event.data.get("old_state"), nieuw)
+        if nieuw is None or (wat := self._auto_rollen.get(event.data["entity_id"])) is None:
+            return
+        sensor, rol = wat
+        if rol == "berichten":
+            self._auto_berichten(sensor, event.data.get("old_state"), nieuw)
+        else:
+            self._auto_laden(sensor)
+
+    @callback
+    def _auto_staat(self, sensor: str, rol: str) -> str | None:
+        eid = next((e for e, (s, r) in self._auto_rollen.items() if s == sensor and r == rol), None)
+        st = self.hass.states.get(eid) if eid else None
+        return st.state if st is not None else None
+
+    @callback
+    def _auto_laden(self, sensor: str) -> None:
+        """Laadt hij, is hij gestopt, is de accu laag? Alleen de stand in de opslag; versturen doet `_auto_tik`.
+
+        `unavailable` verandert niets: elke ochtend om 07:00 staat alles een paar tellen zo. De laadstatus van Ford
+        verandert elke paar minuten van attributen; wat er al zo staat, wordt niet opnieuw gezet of gewist.
+        """
+        laden = auto.laad_stand(self._auto_staat(sensor, "laden"))
+        stekker = auto.stekker_erin(self._auto_staat(sensor, "stekker"))
+        pct = auto.procent(self._auto_staat(sensor, "accu"))
+        stand = self.opslag.auto_laden(sensor)
+        nu = dt_util.now().isoformat()
+        velden: dict[str, Any] = {}
+        wis: list[str] = []
+        if laden == "laadt":
+            velden.update(laadt=True, gestopt_om=None, laden_op_telefoon=None, accu_op_telefoon=None)
+            # Hij laadt (weer): wat er over klaar of laag op de telefoons stond, klopt niet meer.
+            wis += [s for s, k in (("laden", "laden_op_telefoon"), ("accu", "accu_op_telefoon")) if stand.get(k)]
+        elif stekker is False or laden == "los":
+            # De stekker is eruit: iemand heeft hem gehaald, en weet dus dat hij klaar is.
+            velden.update(laadt=None, gestopt_om=None, laden_op_telefoon=None)
+            wis += ["laden"] if stand.get("laden_op_telefoon") else []
+        elif laden in ("aan", "klaar") and stand.get("laadt"):
+            velden.update(laadt=None, gestopt_om=nu)
+        if pct is not None:
+            melding = self.meldingen.get(SOORT_AUTO)
+            grens = melding.accu_grens if melding is not None else auto.ACCU_GRENS
+            aan_lader = laden in ("laadt", "aan", "klaar") or stekker is True
+            if pct >= grens + auto.ACCU_MARGE:
+                velden.update(laag_sinds=None, laag_gemeld=None, accu_op_telefoon=None)
+                wis += ["accu"] if stand.get("accu_op_telefoon") and "accu" not in wis else []
+            elif pct < grens and not aan_lader:
+                if not stand.get("laag_sinds") and not stand.get("laag_gemeld"):
+                    velden.update(laag_sinds=nu)
+            else:
+                velden.update(laag_sinds=None)
+        if wis:
+            self.hass.async_create_task(self._wis_auto_tags(sensor, wis))
+        if velden and self.opslag.zet_auto_laden(sensor, **velden):
+            self._meld(SOORT_AUTO)
+
+    async def _auto_tik(self, nu: datetime) -> None:
+        """Elke minuut: is een auto lang genoeg gestopt met laden, of lang genoeg laag? Dan de melding.
+
+        Eerst opnieuw zoeken welke sensoren er op de auto staan. Na een herstart laadt de integratie van de auto vaak
+        NA deze: dan stonden laadstatus, stekker en accu er bij het eerste zoeken nog niet. Gemeten in de testinstance
+        op 27 november 2026. Is er niets veranderd, dan doet `_volg_auto` niets.
+        """
+        melding = self.meldingen.get(SOORT_AUTO)
+        if melding is None:
+            return
+        self._volg_auto()
+        taal = taal_van(self.hass)
+        for sensor in melding.autos:
+            stand = self.opslag.auto_laden(sensor)
+            pct = auto.procent(self._auto_staat(sensor, "accu"))
+            gestopt = _tijd(stand.get("gestopt_om"))
+            if gestopt is not None and nu - gestopt >= timedelta(minutes=auto.LADEN_WACHT):
+                self.opslag.zet_auto_laden(sensor, gestopt_om=None, laden_op_telefoon=True)
+                if "laden" in melding.gebeurtenissen:
+                    titel, tekst = auto.laden_melding(auto_naam(self.hass, sensor), pct, taal)
+                    await self._stuur_auto_stand(melding, sensor, "laden", titel, tekst)
+            laag = _tijd(stand.get("laag_sinds"))
+            if laag is not None and nu - laag >= timedelta(minutes=auto.ACCU_WACHT):
+                if pct is None or pct >= melding.accu_grens:
+                    self.opslag.zet_auto_laden(sensor, laag_sinds=None)
+                    continue
+                self.opslag.zet_auto_laden(sensor, laag_sinds=None, laag_gemeld=True, accu_op_telefoon=True)
+                if "accu" in melding.gebeurtenissen:
+                    titel, tekst = auto.accu_melding(auto_naam(self.hass, sensor), pct, taal)
+                    await self._stuur_auto_stand(melding, sensor, "accu", titel, tekst)
+
+    async def _stuur_auto_stand(
+        self, melding: Melding, sensor: str, soort: str, titel: str, tekst: str, *, alleen: str | None = None
+    ) -> dict[str, Any]:
+        """Laden klaar of accu laag: één regel per auto en per soort, een nieuwe vervangt de vorige."""
+        data: dict[str, Any] = {"tag": auto_tag(sensor, "proef" if alleen else soort), "group": "domotiapp-auto"}
+        if melding.pad:
+            data["url"] = data["clickAction"] = melding.pad
+        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, soort)
+        gelukt, zonder = await self._stuur(melding, ontvangers, {"title": titel, "message": tekst, "data": data})
+        if ontvangers and alleen is None:
+            _LOGGER.info("Automelding %s (%s): %s", sensor, soort, tekst)
+        return {"verstuurd": gelukt, "zonder_telefoon": zonder, "titel": titel, "tekst": tekst}
+
+    async def _wis_auto_tags(self, sensor: str, soorten: list[str]) -> None:
+        melding = self.meldingen.get(SOORT_AUTO)
+        if melding is None:
+            return
+        ontvangers = [p for p in melding.personen if melding.diensten.get(p) != "persistent_notification"]
+        for s in soorten:
+            await self._stuur(
+                melding, ontvangers, {"message": "clear_notification", "data": {"tag": auto_tag(sensor, s)}}, stil=True
+            )
 
     @callback
     def _auto_berichten(self, sensor: str, oud: Any, nieuw: Any) -> None:
@@ -1156,7 +1281,7 @@ class Motor:
         taal = taal_van(self.hass)
         # Eén melding per bericht, met zijn eigen tag; vanaf `SAMEN_VANAF` één melding met het aantal.
         groepen = [nieuwe] if len(nieuwe) >= auto.SAMEN_VANAF else [[b] for b in reversed(nieuwe)]
-        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, None)
+        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, "berichten")
         gelukt: list[str] = []
         zonder: list[str] = []
         titel = tekst = ""
@@ -1210,6 +1335,25 @@ class Motor:
 def auto_tag(sensor: str, sleutel: str) -> str:
     """Eén regel per bericht: als het bericht verdwijnt, gaat de melding mee."""
     return f"domotiapp-auto-{sensor.split('.', 1)[-1]}-{slugify(sleutel)}"
+
+
+def auto_delen(hass: HomeAssistant, sensor: str) -> dict[str, str]:
+    """Laadstatus, stekker en accu op het apparaat van deze berichtensensor: rol -> entiteit.
+
+    Op APPARAAT, platform en de `translation_key` van het merk (`MERKEN` in auto.py), net als `robot_delen`. Een
+    uitgeschakelde entiteit telt niet.
+    """
+    reg = er.async_get(hass)
+    eigen = reg.async_get(sensor)
+    merk = auto.MERKEN.get(eigen.platform) if eigen is not None else None
+    if merk is None or not eigen.device_id:
+        return {}
+    zoek = {tk: rol for rol, tk in (("laden", merk.laden), ("stekker", merk.stekker), ("accu", merk.accu)) if tk}
+    uit: dict[str, str] = {}
+    for e in er.async_entries_for_device(reg, eigen.device_id):
+        if e.platform == eigen.platform and e.disabled_by is None and (rol := zoek.get(str(e.translation_key or ""))):
+            uit[rol] = e.entity_id
+    return uit
 
 
 def auto_platform(hass: HomeAssistant, sensor: str) -> str | None:

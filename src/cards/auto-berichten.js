@@ -72,7 +72,7 @@ function leesFord(attr) {
 
 /** Per `platform`. Een volgend merk is een lezer en een regel, met een echte dump als testinvoer. */
 export const MERKEN = {
-  fordpass: { naam: "Ford", lees: leesFord, sensor: "messages", wisKnop: "msgdeleteall" },
+  fordpass: { naam: "Ford", lees: leesFord, sensor: "messages", wisKnop: "msgdeleteall", laden: "elvehcharging", stekker: "elvehplug", accu: "soc" },
 };
 
 /** Het merk achter deze sensor, of null. */

@@ -17,6 +17,8 @@
  */
 
 import { nt, t } from "../taal.js";
+import { relativeDay } from "../ha.js";
+import { naarWand } from "../wandklok.js";
 
 /** De drie aandrijvingen. Ze bepalen welke balken er op de kaart staan. */
 export const AANDRIJVING = {
@@ -37,9 +39,11 @@ export const heeftTank = (soort) => soort === "fuel" || soort === "hybrid";
  * Per integratie anders, en soms is het een `binary_sensor` (on/off), soms een
  * `sensor` met een woord erin. Allebei komen hier binnen.
  */
-const LAADT = ["charging", "charge", "fast_charging", "dc_charging", "on", "true", "laden"];
+// IN_PROGRESS en PAUSED (hieronder) komen uit de dump van FordPass, 27 november 2026
+// (`tests/js/vaste-invoer/fordpass-laden.json`). Zonder die twee stond er "In progress" op de kaart.
+const LAADT = ["charging", "charge", "fast_charging", "dc_charging", "in_progress", "on", "true", "laden"];
 const KLAAR = ["complete", "completed", "fully_charged", "full", "done", "finished"];
-const AAN_LADER = ["connected", "plugged", "plugged_in", "cable_connected", "ready_to_charge"];
+const AAN_LADER = ["connected", "plugged", "plugged_in", "cable_connected", "ready_to_charge", "paused"];
 // De stekker zit er niet in. Zijn Ford meldt dat als `NOT_PLUGGED_IN`, gemeten
 // op zijn eigen installatie op 27 augustus 2026 -- en zonder dat woord viel het
 // door naar "iets dat we niet kennen", waarna er niets op de kaart stond. Dat
@@ -404,4 +408,45 @@ export function opSlot(st) {
  */
 export function slotIsBedienbaar(entityId) {
   return String(entityId ?? "").split(".")[0] === "lock";
+}
+
+/* ------------------------------------------------------ de extra tegels
+ *
+ * Gemeld op 27 november 2026, met de bus van de eigenaar: de tegels uit "Extra sensoren" toonden het entity_id als
+ * naam ("sensor.fordpass_..."), een tijdstip als ISO-tekst ("2026-11-27T15:50:12+00:00") en de stekker als
+ * "CONNECTED". De naam is die uit Home Assistant (`nameOf`, zonder iets ingevuld); dit is de waarde.
+ */
+
+const ISO = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * De waarde op een extra tegel.
+ *
+ * - een getal: afgerond op één decimaal, met de eenheid van de sensor;
+ * - een tijdstip (`device_class: timestamp`, of een ISO-tijd met tijdzone): "vandaag 16:50", "gisteren 08:10",
+ *   op de klok van Home Assistant (`tz`);
+ * - anders wat Home Assistant ervan maakt (`opmaak`, `localizeState`); vertaalt die niets, dan een woord in
+ *   hoofdletters leesbaar ("CONNECTED" wordt "Connected"), en de rest zoals het staat.
+ */
+export function tegelWaarde(st, { opmaak, tz, nu = new Date() } = {}) {
+  const ruw = String(st?.state ?? "");
+  const n = Number(ruw);
+  if (ruw.trim() !== "" && Number.isFinite(n)) {
+    const eenheid = st?.attributes?.unit_of_measurement ?? "";
+    return `${Math.round(n * 10) / 10}${eenheid ? ` ${eenheid}` : ""}`;
+  }
+  if (st?.attributes?.device_class === "timestamp" || ISO.test(ruw)) {
+    const tijd = new Date(ruw);
+    if (!Number.isNaN(tijd.getTime())) {
+      const w = naarWand(tijd, tz);
+      const vandaag = naarWand(nu, tz);
+      const klok = `${String(w.getHours()).padStart(2, "0")}:${String(w.getMinutes()).padStart(2, "0")}`;
+      return `${relativeDay(w, vandaag)} ${klok}`;
+    }
+  }
+  // Een woord in hoofdletters dat Home Assistant niet vertaalt ("CONNECTED"): leesbaar, zoals bij de laadstatus.
+  const vertaald = opmaak?.(st);
+  if (vertaald && vertaald !== ruw) return vertaald;
+  if (/^[A-Z0-9_]+$/.test(ruw) && /[A-Z]/.test(ruw)) return laadTekst("onbekend", st);
+  return ruw;
 }
