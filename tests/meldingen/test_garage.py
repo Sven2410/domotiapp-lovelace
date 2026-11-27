@@ -8,6 +8,7 @@ dicht is alles weg; en een herstart gaat gewoon verder.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -143,6 +144,8 @@ async def zet_op(hass: HomeAssistant, freezer, wanneer: datetime, kaart: dict[st
 
         async def puls(call: ServiceCall) -> None:
             pulsen.append(dict(call.data))
+            # Een echte schakelaar (via de cloud) antwoordt niet meteen.
+            await asyncio.sleep(0)
 
         hass.services.async_register("switch", "toggle", puls)
     await zet_dashboard(hass, [kaart])
@@ -253,6 +256,45 @@ async def test_sluiten_stuurt_alleen_een_puls_als_hij_open_staat(hass: HomeAssis
     assert pulsen == [{"entity_id": PULS}]
 
 
+async def test_geen_tweede_puls_terwijl_hij_dichtgaat(hass: HomeAssistant, freezer, telefoons, pulsen) -> None:
+    """NIEUW GEDRAG (0.140.1). Tijdens het sluiten zegt het contact nog open (bij een klant gemeten: 18 s), en een
+    tweede puls zet een pulsdeur dan halverwege stil."""
+    hass.states.async_set(CONTACT, "off")
+    motor = await zet_op(hass, freezer, om(27, 13, 0), pulsen=pulsen)
+    await doe_open(hass, freezer, om(27, 14, 0))
+    await motor._tik(om(27, 14, 5))
+
+    # Bram tikt, en tien tellen later Anna, op haar eigen telefoon: het contact zegt nog open.
+    freezer.move_to(om(27, 14, 5))
+    await knop(hass, "DOMOTIAPP_GARAGE|garage|sluit|", "gebruiker-bram")
+    freezer.move_to(om(27, 14, 5) + timedelta(seconds=10))
+    assert await motor.async_garage_knop("garage", garage.CMD_SLUIT, "", "gebruiker-anna") == {
+        "gedaan": False,
+        "reden": "De deur gaat al dicht",
+    }
+    assert pulsen == [{"entity_id": PULS}]
+    assert motor.opslag.garage("garage")["sluit"]["door"] == BRAM
+
+    # Twee tikken die tegelijk binnenkomen: de tweede ziet de eerste, ook terwijl die nog op de schakelaar wacht.
+    hass.states.async_set(CONTACT, "off")
+    await hass.async_block_till_done()
+    await doe_open(hass, freezer, om(27, 15, 0))
+    pulsen.clear()
+    uitkomst = await asyncio.gather(
+        motor.async_garage_knop("garage", garage.CMD_SLUIT, "", "gebruiker-bram"),
+        motor.async_garage_knop("garage", garage.CMD_SLUIT, "", "gebruiker-anna"),
+    )
+    assert [u["gedaan"] for u in uitkomst] == [True, False]
+    assert pulsen == [{"entity_id": PULS}]
+
+    # Na de controle mag het weer: de deur ging niet dicht, en dan moet je opnieuw kunnen sluiten.
+    freezer.move_to(om(27, 15, 0) + timedelta(seconds=garage.SLUIT_CONTROLE + 1))
+    async_fire_time_changed(hass, dt_util.now())
+    await hass.async_block_till_done()
+    assert (await motor.async_garage_knop("garage", garage.CMD_SLUIT, "", "gebruiker-anna"))["gedaan"] is True
+    assert len(pulsen) == 2
+
+
 async def test_niet_dicht_na_sluiten_is_een_melding(hass: HomeAssistant, freezer, telefoons, pulsen) -> None:
     hass.states.async_set(CONTACT, "off")
     motor = await zet_op(hass, freezer, om(27, 13, 0), pulsen=pulsen)
@@ -349,6 +391,96 @@ async def test_dicht_gegaan_tijdens_een_herstart_wist_de_telefoons(hass: HomeAss
     await hass.async_block_till_done()
     assert gewist(telefoons) == ["test_anna", "test_bram"]
     assert "open_sinds" not in motor.opslag.garage("garage")
+
+
+# De eigenaar, 27-11-2026: "Als ik op ignore heb gedrukt moet hij ook een ha restart daarna overleven!" De code deed dat
+# al; deze proeven zijn REGRESSIEWACHT, behalve de laatste. Een herstart is hier: wat de vorige keer in de opslag kwam, en
+# een nieuwe start.
+
+
+async def test_negeren_komt_op_schijf(hass: HomeAssistant, freezer, telefoons, hass_storage) -> None:
+    hass.states.async_set(CONTACT, "off")
+    motor = await zet_op(hass, freezer, om(27, 14, 0))
+    await doe_open(hass, freezer, om(27, 14, 0))
+    await motor._tik(om(27, 14, 5))
+    freezer.move_to(om(27, 14, 6))
+    await knop(hass, "DOMOTIAPP_GARAGE|garage|negeer|60", "gebruiker-anna")
+    freezer.move_to(om(27, 14, 6) + timedelta(seconds=5))
+    async_fire_time_changed(hass, dt_util.now())
+    await hass.async_block_till_done()
+    op_schijf = hass_storage[STORAGE_KEY]["data"]["garage"]["garage"]
+    assert op_schijf["negeer_tot"] == om(27, 15, 6).isoformat()
+    assert op_schijf["negeer_door"] == ANNA
+    assert op_schijf["open_sinds"] == om(27, 14, 0).isoformat()
+
+
+@pytest.mark.parametrize("eerst", [[], ["unavailable", "unknown"]])
+async def test_negeren_overleeft_een_herstart(hass: HomeAssistant, freezer, telefoons, hass_storage, eerst) -> None:
+    """Genegeerd tot 16:00, herstart om 15:30. Ook als het contact na de start eerst niets weet."""
+    hass_storage[STORAGE_KEY] = {"version": 1, "data": {"garage": {"garage": {
+        "open_sinds": om(27, 14, 0).isoformat(), "gemeld": om(27, 14, 5).isoformat(),
+        "negeer_tot": om(27, 16, 0).isoformat(), "negeer_door": ANNA, "negeer_om": om(27, 15, 0).isoformat(),
+    }}}}
+    hass.states.async_set(CONTACT, eerst[0] if eerst else "on")
+    motor = await zet_op(hass, freezer, om(27, 15, 30))
+    for toestand in [*eerst[1:], "on"]:
+        hass.states.async_set(CONTACT, toestand)
+        await hass.async_block_till_done()
+        await motor._tik(om(27, 15, 31))
+    stand = motor.opslag.garage("garage")
+    assert stand["negeer_tot"] == om(27, 16, 0).isoformat()
+    assert stand["open_sinds"] == om(27, 14, 0).isoformat()
+    assert motor.garage_stand()["negeer_door"] == ANNA
+    await motor._tik(om(27, 15, 59))
+    assert meldingen(telefoons) == []
+    await motor._tik(om(27, 16, 0))
+    assert len(meldingen(telefoons)) == 2
+
+
+async def test_negeren_dat_tijdens_een_herstart_afliep(hass: HomeAssistant, freezer, telefoons, hass_storage) -> None:
+    hass_storage[STORAGE_KEY] = {"version": 1, "data": {"garage": {"garage": {
+        "open_sinds": om(27, 14, 0).isoformat(), "gemeld": om(27, 14, 5).isoformat(), "negeer_tot": om(27, 15, 0).isoformat(),
+    }}}}
+    hass.states.async_set(CONTACT, "on")
+    motor = await zet_op(hass, freezer, om(27, 15, 10))
+    await motor._tik(om(27, 15, 10))
+    assert len(meldingen(telefoons)) == 2
+    telefoons.clear()
+    await motor._tik(om(27, 15, 11))
+    await motor._tik(om(27, 15, 30))
+    assert meldingen(telefoons) == []
+
+
+async def test_tot_morgen_overleeft_een_herstart_in_de_nacht(hass: HomeAssistant, freezer, telefoons, hass_storage) -> None:
+    hass_storage[STORAGE_KEY] = {"version": 1, "data": {"garage": {"garage": {
+        "open_sinds": om(27, 21, 0).isoformat(), "gemeld": om(27, 22, 0).isoformat(),
+        "avond_gemeld": "2026-11-27", "negeer_tot": om(28, 7, 0).isoformat(), "negeer_door": BRAM,
+    }}}}
+    hass.states.async_set(CONTACT, "on")
+    motor = await zet_op(hass, freezer, om(27, 23, 0))
+    for nu in (om(27, 23, 0), om(27, 23, 30), om(28, 3, 0), om(28, 6, 59)):
+        await motor._tik(nu)
+    assert meldingen(telefoons) == []
+    await motor._tik(om(28, 7, 0))
+    assert len(meldingen(telefoons)) == 2
+
+
+async def test_een_sluiten_van_voor_de_herstart(hass: HomeAssistant, freezer, telefoons, hass_storage, pulsen) -> None:
+    """NIEUW GEDRAG (0.140.1). Sluiten om 14:10:00, herstart om 14:10:30 met het contact nog open: geen tweede puls,
+    en de klok kijkt na."""
+    hass_storage[STORAGE_KEY] = {"version": 1, "data": {"garage": {"garage": {
+        "open_sinds": om(27, 14, 0).isoformat(), "gemeld": om(27, 14, 5).isoformat(),
+        "sluit": {"door": BRAM, "om": om(27, 14, 10).isoformat()},
+    }}}}
+    hass.states.async_set(CONTACT, "on")
+    motor = await zet_op(hass, freezer, om(27, 14, 10) + timedelta(seconds=30), pulsen=pulsen)
+    assert (await motor.async_garage_knop("garage", garage.CMD_SLUIT, "", "gebruiker-anna"))["gedaan"] is False
+    assert pulsen == []
+    await motor._tik(om(27, 14, 11))
+    assert meldingen(telefoons) == []
+    await motor._tik(om(27, 14, 12))
+    assert [m for _, m in meldingen(telefoons)] == ["De garagedeur is niet dichtgegaan. Hij staat nog open."] * 2
+    assert "sluit" not in motor.opslag.garage("garage")
 
 
 async def test_android_krijgt_drie_knoppen(hass: HomeAssistant, freezer, telefoons) -> None:

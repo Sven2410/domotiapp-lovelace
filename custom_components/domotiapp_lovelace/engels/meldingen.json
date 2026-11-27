@@ -67,6 +67,7 @@
   "De garagedeur staat al {duur} open.": "The garage door has been open for {duur}.",
   "Een garagemelding komt niet op een tijd": "A garage door notification does not come at a set time",
   "De deur staat niet open": "The door is not open",
+  "De deur gaat al dicht": "The door is already closing",
   "Er is geen bediening gekozen": "No control has been chosen",
   "Hoe lang negeren?": "Ignore for how long?"
 }
