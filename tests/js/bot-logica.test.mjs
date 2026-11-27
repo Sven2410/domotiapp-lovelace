@@ -210,7 +210,7 @@ describe("de coach", () => {
 });
 
 // Coach Assist is bezig (coach v0.243.0): `bezig` = {sinds, tot} op het gesprek of een ticket. De vorm komt uit de bron
-// van de coach (`zet_bezig` in tickets.py van v0.243.0); een echte dump volgt.
+// van de coach (`zet_bezig` in tickets.py van v0.243.0); de echte dump staat in `bot-dump-0249.test.mjs`.
 describe("Coach Assist is bezig", () => {
   const BEZIG = { sinds: "2026-11-25T10:00:00+01:00", tot: "2026-11-25T10:15:00+01:00" };
   const op = (iso) => Date.parse(iso);
