@@ -29,6 +29,12 @@
  * de STAND en niet de identiteit -- onder de 20% oranje, onder de 10% rood. Dat
  * mag hier, want dit is precies het geval waarvoor rood en groen in deze familie
  * gereserveerd zijn (zie theme.js): status, geen identiteit.
+ *
+ * ## Berichten (sinds 0.141.0)
+ *
+ * De eigenaar, 27 november 2026: *"een berichten melding in de kaart en berichten wissen"*, voor elk merk. Een tegel
+ * met het aantal; een tik opent de berichten (`auto-berichten-scherm.js`), met Alles wissen als het merk een wisknop
+ * heeft. Hoe de berichten per merk gelezen worden staat in `auto-berichten.js`.
  */
 
 import { DacCard, INCOMPLETE, TONES, registerCard, registerEditor } from "../base.js";
@@ -53,6 +59,9 @@ import {
   statusregel,
 } from "./auto-logica.js";
 import { nt, t, tc } from "../taal.js";
+import { aantalVan, berichtenVan, berichtSensoren, drukDienst, merkVan, wisKnopVan } from "./auto-berichten.js";
+import { autoBerichtenScherm, toonAutoBerichten } from "./auto-berichten-scherm.js";
+import { naarWand } from "../wandklok.js";
 
 const TOON = {
   good: TONES.good,
@@ -127,7 +136,11 @@ class AutoCard extends DacCard {
 
        Dat past ook bij wat zijn auto levert: sensor..._doorlock vertelt de
        stand maar neemt geen opdrachten aan. Een knop die niets doet is erger
-       dan geen knop. */
+       dan geen knop.
+
+       De ene uitzondering is Alles wissen bij de berichten (0.141.0), op zijn
+       eigen vraag. Die staat niet op de kaart maar in het berichtenscherm, met
+       een bevestiging ervoor. */
 
     /* ---- balken ---- */
     .balken { display: flex; flex-direction: column; gap: 8px; }
@@ -208,7 +221,7 @@ class AutoCard extends DacCard {
   validate(config) {
     const c = { name: "", icon: "car", drivetrain: "electric", photo_size: "klein", ...config };
     const iets =
-      c.battery || c.fuel || c.range || c.range_electric || c.sensors?.length || c.lock || c.image;
+      c.battery || c.fuel || c.range || c.range_electric || c.sensors?.length || c.lock || c.image || c.messages;
     if (!iets) {
       c[INCOMPLETE] = t("Kies de aandrijving en vul minstens één sensor in — de accu, de tank of de actieradius.");
     }
@@ -232,6 +245,8 @@ class AutoCard extends DacCard {
       c.odometer,
       c.climate,
       c.location,
+      c.messages,
+      c.messages && wisKnopVan(this.hass, c.messages, c.messages_clear),
       ...(Array.isArray(c.sensors) ? c.sensors : []),
     ].filter(Boolean);
   }
@@ -272,8 +287,38 @@ class AutoCard extends DacCard {
 
     this.on(this.$(".tegels"), "click", (e) => {
       const tegel = e.target.closest?.("[data-id]");
-      if (tegel) moreInfo(this, tegel.dataset.id);
+      if (!tegel) return;
+      // De berichten van een merk dat we kunnen lezen openen ons eigen scherm; anders de kaart van Home Assistant.
+      if (tegel.dataset.berichten !== undefined && merkVan(this.hass, tegel.dataset.id)) toonAutoBerichten(this);
+      else moreInfo(this, tegel.dataset.id);
     });
+    this.teardown_.push(() => {
+      const scherm = autoBerichtenScherm();
+      if (scherm?.isVan(this)) scherm.sluit();
+    });
+  }
+
+  /** Wat het berichtenscherm laat zien. Zie auto-berichten-scherm.js. */
+  berichtenInhoud_() {
+    const c = this.config;
+    if (!c?.messages) return null;
+    return {
+      naam: c.name || nameOf(this.hass, c.battery || c.range || c.lock, tc("voertuig", "Auto")),
+      merk: merkVan(this.hass, c.messages)?.naam ?? "",
+      berichten: berichtenVan(this.hass, c.messages),
+      knop: wisKnopVan(this.hass, c.messages, c.messages_clear),
+      // Op de klok van Home Assistant, niet die van het toestel.
+      tijd: (ms) => naarWand(new Date(ms), this.hass?.config?.time_zone),
+    };
+  }
+
+  /** Alles wissen, bij de fabrikant. Het scherm vraagt het eerst. */
+  async wis_() {
+    const c = this.config;
+    const knop = wisKnopVan(this.hass, c.messages, c.messages_clear);
+    const dienst = drukDienst(knop);
+    if (!dienst) throw new Error(t("Geen knop om te wissen"));
+    await this.hass.callService(dienst[0], dienst[1], { entity_id: knop });
   }
 
   paint() {
@@ -318,6 +363,9 @@ class AutoCard extends DacCard {
     this.paintFoto_();
     this.paintBalken_({ accu, tank, radius, laden, soort });
     this.paintTegels_(waar, laden, { slot, deurOpen, raamOpen });
+
+    const scherm = autoBerichtenScherm();
+    if (scherm?.isVan(this)) scherm.teken();
 
     meetRaster(this.$(".card"));
   }
@@ -521,6 +569,12 @@ class AutoCard extends DacCard {
     }
     if (c.climate) voegToe(c.climate, t("Voorverwarmen"));
 
+    // De berichten van de fabrikant (0.141.0). Oranje zolang er iets staat: het zijn waarschuwingen.
+    if (c.messages) {
+      const n = aantalVan(this.hass, c.messages);
+      if (n !== null) uit.push({ id: c.messages, w: String(n), l: t("Berichten"), toon: n > 0 ? "warn" : null, berichten: true });
+    }
+
     if (c.odometer) voegToe(c.odometer, t("Kilometerstand"));
     if (c.charging_power) voegToe(c.charging_power, t("Laadvermogen"));
     for (const id of Array.isArray(c.sensors) ? c.sensors : []) voegToe(id, null);
@@ -528,13 +582,13 @@ class AutoCard extends DacCard {
     vak.hidden = !uit.length;
     if (!uit.length) return;
 
-    const sig = uit.map((tg) => `${tg.id}|${tg.w}|${tg.toon ?? ""}`).join(",");
+    const sig = uit.map((tg) => `${tg.id}|${tg.w}|${tg.toon ?? ""}|${tg.berichten ? 1 : 0}`).join(",");
     if (vak.dataset.sig === sig) return;
     vak.dataset.sig = sig;
     vak.innerHTML = uit
       .map(
         (tg) =>
-          `<div class="tegel" data-id="${this.veilig_(tg.id)}" role="button" tabindex="0"` +
+          `<div class="tegel" data-id="${this.veilig_(tg.id)}"${tg.berichten ? " data-berichten" : ""} role="button" tabindex="0"` +
           `${tg.toon ? ` style="--tegeltoon:${TOON[tg.toon] ?? TONES.neutral}"` : ""}>` +
           `<span class="w">${this.veilig_(tg.w)}</span>` +
           `<span class="l">${this.veilig_(tg.l)}</span></div>`
@@ -639,9 +693,21 @@ class AutoEditor extends DacEditor {
       { name: "location", selector: sel.entity(["device_tracker", "sensor", "person"]) },
       { name: "home_radius", selector: sel.number(10, 2000, 10) },
       { name: "odometer", selector: sel.entity(["sensor"]) },
+      // De berichten (0.141.0). Alleen de sensoren van een merk dat we kunnen lezen, als die er zijn; de knop
+      // zoekt de kaart zelf, dus dat veld is alleen voor wie een andere wil.
+      { name: "messages", selector: this.berichtKiezer_() },
+      ...(this.config_?.messages
+        ? [{ name: "messages_clear", selector: sel.entity(["button", "input_button", "script"]) }]
+        : []),
       { name: "sensors", selector: { entity: { multiple: true } } }
     );
     return velden;
+  }
+
+  /** Een entiteitkiezer met de berichtensensoren van bekende merken; zijn die er niet, dan elke sensor. */
+  berichtKiezer_() {
+    const bekend = berichtSensoren(this.hass_ ?? this.hass);
+    return bekend.length ? { entity: { include_entities: bekend } } : sel.entity(["sensor"]);
   }
 
   label(s) {
@@ -666,6 +732,8 @@ class AutoEditor extends DacEditor {
         location: t("Waar hij staat"),
         home_radius: t("Hoe dichtbij is thuis (meter)"),
         odometer: t("Kilometerstand"),
+        messages: t("Berichten van de auto"),
+        messages_clear: t("Knop om de berichten te wissen"),
         sensors: t("Extra sensoren als tegel"),
       }[s.name] ?? super.label(s)
     );
@@ -690,6 +758,12 @@ class AutoEditor extends DacEditor {
         t("Een device_tracker die home of not_home meldt, of een sensor met een coordinaat — beide worden gelezen. Bij een coordinaat rekent de kaart de afstand tot de locatie van je Home Assistant uit en maakt daar Thuis of Afwezig van."),
       home_radius:
         t("Alleen van belang bij een sensor met een coordinaat. Binnen deze afstand van je huis heet de auto thuis. Leeg laten is 100 meter — ruim genoeg voor een oprit of een parkeerplaats om de hoek."),
+      messages: t(
+        "De sensor met de berichten van de fabrikant, zoals sensor.fordpass_..._messages. Op de kaart komt een tegel met het aantal; een tik toont de berichten. Werkt met FordPass."
+      ),
+      messages_clear: t(
+        "Leeg laten: de kaart zoekt zelf de knop die alles wist, bij FordPass Berichten: Alles verwijderen. Zonder knop kun je ze niet wissen."
+      ),
       sensors:
         t("Alles wat je verder nog kwijt wilt: bandenspanning, buitentemperatuur, de volgende beurt. Ze komen als tegels onderaan te staan, met de naam uit Home Assistant."),
     };

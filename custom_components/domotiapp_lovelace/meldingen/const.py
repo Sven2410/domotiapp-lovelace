@@ -46,7 +46,9 @@ SOORT_STOFZUIGER = "stofzuiger"
 SOORT_CAMERA = "camera"
 # Sinds 0.139.0: een garagedeur die openstaat. Zie `garage.py`.
 SOORT_GARAGE = "garage"
-SOORTEN = (SOORT_AFVAL, SOORT_STOFZUIGER, SOORT_CAMERA, SOORT_GARAGE)
+# Sinds 0.141.0: de berichten van een auto (FordPass). Zie `auto.py`.
+SOORT_AUTO = "auto"
+SOORTEN = (SOORT_AFVAL, SOORT_STOFZUIGER, SOORT_CAMERA, SOORT_GARAGE, SOORT_AUTO)
 
 # De twee momenten van een afvalmelding. "morgen" is de avond ervoor, over wat
 # er de volgende dag opgehaald wordt; "vandaag" is de ochtend zelf.

@@ -55,6 +55,14 @@ melding komen binnen als `mobile_app_notification_action`, net als "Staat
 buiten". Sluiten wordt na `SLUIT_CONTROLE` seconden nagekeken; staat de wekker er
 na een herstart niet meer, dan doet de klok het.
 
+## De auto
+
+Sinds 0.141.0. Wat een bericht is staat in `auto.py`; hier staat HOE. De motor volgt de berichtensensoren van de
+kaart. Wat er al gemeld is (of er al stond toen een sensor voor het eerst gelezen werd) staat per sensor in de
+opslag (`auto`), dus een herstart meldt niets dubbel, en een bericht dat tijdens een herstart binnenkwam komt
+alsnog bij de eerste lezing erna. Een bericht dat verdwijnt (gewist bij de fabrikant, op de kaart of in de app)
+gaat ook van de telefoons af: elk bericht heeft een eigen tag.
+
 ## Een agenda als afvalbron
 
 Sinds 0.136.0 mag `afval_vandaag` of `afval_morgen` een `calendar.*` zijn (zie
@@ -85,7 +93,7 @@ from ..bewaking import meldingen as telefoons
 from ..bewaking.const import DATA_INDEX as BEWAKING_INDEX, DATA_REGELS as BEWAKING_REGELS
 from ..const import DOMAIN
 from ..taal import t, taal_van
-from . import afval, camera, garage, kaarten, stofzuiger
+from . import afval, auto, camera, garage, kaarten, stofzuiger
 from .const import (
     ACTIE_BUITEN,
     EVENT_ACTIE,
@@ -93,6 +101,7 @@ from .const import (
     MOMENT_VANDAAG,
     MOMENTEN,
     SOORT_AFVAL,
+    SOORT_AUTO,
     SOORT_CAMERA,
     SOORT_GARAGE,
     SOORT_STOFZUIGER,
@@ -163,6 +172,9 @@ class Motor:
         self._garage_contact: str | None = None
         self._garage_uit: CALLBACK_TYPE | None = None
         self._sluit_later: CALLBACK_TYPE | None = None
+        # De auto: de gevolgde berichtensensoren.
+        self._auto_sensoren: tuple[str, ...] = ()
+        self._auto_uit: CALLBACK_TYPE | None = None
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -183,10 +195,11 @@ class Motor:
         for weg in self._wacht.values():
             weg()
         self._wacht.clear()
-        for weg in (self._garage_uit, self._sluit_later):
+        for weg in (self._garage_uit, self._sluit_later, self._auto_uit):
             if weg is not None:
                 weg()
-        self._garage_uit = self._sluit_later = None
+        self._garage_uit = self._sluit_later = self._auto_uit = None
+        self._auto_sensoren = ()
 
     async def async_herlees(self) -> None:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
@@ -195,6 +208,7 @@ class Motor:
         await self._onthoud_bakken()
         self._volg_stofzuigers()
         self._volg_garage()
+        self._volg_auto()
         self._meld(None)
 
     async def _onthoud_bakken(self) -> None:
@@ -329,6 +343,10 @@ class Motor:
             if alleen is None:
                 return {"reden": t(self.hass, "Een proef gaat naar één persoon")}
             return await self._stuur_garage(melding, "eerste", nu, alleen=alleen, proef=True)
+        if melding.soort == SOORT_AUTO:
+            if not proef:
+                return {"reden": t(self.hass, "Een automelding komt niet op een tijd")}
+            return await self.async_proef_auto(melding, alleen)
         if melding.soort != SOORT_AFVAL:
             return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
 
@@ -702,12 +720,12 @@ class Motor:
                 await self.hass.services.async_call("notify", dienst, bericht, blocking=True)
             except Exception as fout:  # noqa: BLE001 - één telefoon houdt de rest niet tegen
                 if not stil:
-                    _LOGGER.warning("Stofzuigermelding naar %s (%s) mislukte: %s", persoon, dienst, fout)
+                    _LOGGER.warning("Melding (%s) naar %s (%s) mislukte: %s", melding.soort, persoon, dienst, fout)
                 zonder.append(persoon)
                 continue
             gelukt.append(persoon)
         if zonder and not stil:
-            _LOGGER.warning("Geen telefoon gevonden voor %s; die krijgt geen stofzuigermelding", ", ".join(zonder))
+            _LOGGER.warning("Geen telefoon gevonden voor %s; die krijgt geen melding (%s)", ", ".join(zonder), melding.soort)
         return gelukt, zonder
 
     async def async_proef_stofzuiger(self, melding: kaarten.Melding, alleen: str | None) -> dict[str, Any]:
@@ -1071,6 +1089,145 @@ class Motor:
             "minuten": melding.garage.minuten,
         }
 
+    # ------------------------------------------------------------------ de auto
+
+    @callback
+    def _volg_auto(self) -> None:
+        """Volg de berichtensensoren van de kaart; opnieuw als het andere zijn. Daarna kijken wat er nu staat."""
+        melding = self.meldingen.get(SOORT_AUTO)
+        sensoren = tuple(melding.autos) if melding is not None else ()
+        if sensoren == self._auto_sensoren and (self._auto_uit is not None or not sensoren):
+            return
+        if self._auto_uit is not None:
+            self._auto_uit()
+            self._auto_uit = None
+        self._auto_sensoren = sensoren
+        if not sensoren:
+            return
+        self._auto_uit = async_track_state_change_event(self.hass, list(sensoren), self._auto_verandert)
+        # Wat er tijdens een herstart binnenkwam, of sinds de sensor op de kaart kwam.
+        for sensor in sensoren:
+            if (st := self.hass.states.get(sensor)) is not None:
+                self._auto_berichten(sensor, None, st)
+
+    @callback
+    def _auto_verandert(self, event: Event) -> None:
+        nieuw = event.data.get("new_state")
+        if nieuw is not None:
+            self._auto_berichten(event.data["entity_id"], event.data.get("old_state"), nieuw)
+
+    @callback
+    def _auto_berichten(self, sensor: str, oud: Any, nieuw: Any) -> None:
+        """Nieuwe berichten melden, weggehaalde van de telefoons halen.
+
+        Een sensor die voor het eerst gelezen wordt, meldt niets: wat er dan staat is oud nieuws, en anders
+        krijgt het hele huis bij het aanzetten acht keer de bandenspanning. `unavailable` verandert niets.
+        """
+        platform = auto_platform(self.hass, sensor)
+        nu_lijst = auto.berichten(platform, nieuw.state, dict(nieuw.attributes))
+        if nu_lijst is None:
+            return
+        sleutels = [b["sleutel"] for b in nu_lijst]
+        gezien = self.opslag.auto_gezien(sensor)
+        if gezien is None:
+            _LOGGER.info("Autoberichten %s: voor het eerst gelezen, %d bericht(en) staan er al", sensor, len(sleutels))
+            self.opslag.zet_auto_gezien(sensor, sleutels, auto.GEZIEN_MAX)
+        else:
+            al = set(gezien)
+            nieuwe = [b for b in nu_lijst if b["sleutel"] not in al]
+            if nieuwe:
+                # Eerst in de opslag, dan versturen: een herstart halverwege meldt liever niets dan dubbel.
+                self.opslag.zet_auto_gezien(sensor, gezien + [b["sleutel"] for b in reversed(nieuwe)], auto.GEZIEN_MAX)
+                self.hass.async_create_task(self._stuur_auto(sensor, nieuwe))
+        oud_lijst = auto.berichten(platform, oud.state, dict(oud.attributes)) if oud is not None else None
+        if oud_lijst:
+            weg = {b["sleutel"] for b in oud_lijst} - set(sleutels)
+            if weg:
+                self.hass.async_create_task(self._wis_auto(sensor, sorted(weg)))
+        self._meld(SOORT_AUTO)
+
+    async def _stuur_auto(
+        self, sensor: str, nieuwe: list[dict[str, Any]], *, alleen: str | None = None, proef: bool = False
+    ) -> dict[str, Any]:
+        melding = self.meldingen.get(SOORT_AUTO)
+        if melding is None or (sensor not in melding.autos and not proef):
+            return {"verstuurd": [], "zonder_telefoon": []}
+        naam = auto_naam(self.hass, sensor)
+        taal = taal_van(self.hass)
+        # Eén melding per bericht, met zijn eigen tag; vanaf `SAMEN_VANAF` één melding met het aantal.
+        groepen = [nieuwe] if len(nieuwe) >= auto.SAMEN_VANAF else [[b] for b in reversed(nieuwe)]
+        ontvangers = [alleen] if alleen is not None else self._ontvangers(melding, None)
+        gelukt: list[str] = []
+        zonder: list[str] = []
+        titel = tekst = ""
+        for groep in groepen:
+            titel, tekst = auto.melding(naam, groep, taal)
+            if proef:
+                titel = t(self.hass, "Proef · {titel}", titel=titel)
+            data: dict[str, Any] = {
+                "tag": auto_tag(sensor, "proef" if proef else (groep[0]["sleutel"] if len(groep) == 1 else "samen")),
+                "group": "domotiapp-auto",
+            }
+            if melding.pad:
+                # `url` voor iOS, `clickAction` voor Android.
+                data["url"] = data["clickAction"] = melding.pad
+            gelukt, zonder = await self._stuur(melding, ontvangers, {"title": titel, "message": tekst, "data": data})
+        if ontvangers and not proef:
+            _LOGGER.info("Automelding %s: %d nieuw bericht(en)", sensor, len(nieuwe))
+        return {"verstuurd": gelukt, "zonder_telefoon": zonder, "titel": titel, "tekst": tekst}
+
+    async def _wis_auto(self, sensor: str, sleutels: list[str]) -> None:
+        """Weggehaalde berichten van de telefoons. Zie `_wis_robot` waarom niet bij de proefdienst."""
+        melding = self.meldingen.get(SOORT_AUTO)
+        if melding is None:
+            return
+        ontvangers = [p for p in melding.personen if melding.diensten.get(p) != "persistent_notification"]
+        for s in [*sleutels, "samen"]:
+            await self._stuur(
+                melding, ontvangers, {"message": "clear_notification", "data": {"tag": auto_tag(sensor, s)}}, stil=True
+            )
+
+    async def async_proef_auto(self, melding: Melding, alleen: str | None) -> dict[str, Any]:
+        """Een proef: het nieuwste bericht van de eerste auto, of een voorbeeld als er geen is."""
+        if not melding.autos:
+            return {"reden": t(self.hass, "Nog geen auto gekozen")}
+        if alleen is None:
+            return {"reden": t(self.hass, "Een proef gaat naar één persoon")}
+        sensor = melding.autos[0]
+        st = self.hass.states.get(sensor)
+        lijst = auto.berichten(auto_platform(self.hass, sensor), st.state, dict(st.attributes)) if st is not None else None
+        if not lijst:
+            lijst = [{
+                "sleutel": "proef",
+                "onderwerp": t(self.hass, "Een bericht van de auto"),
+                "tekst": t(self.hass, "Zo ziet een bericht van de auto eruit."),
+                "datum": None,
+                "gelezen": None,
+            }]
+        return await self._stuur_auto(sensor, lijst[:1], alleen=alleen, proef=True)
+
+
+def auto_tag(sensor: str, sleutel: str) -> str:
+    """Eén regel per bericht: als het bericht verdwijnt, gaat de melding mee."""
+    return f"domotiapp-auto-{sensor.split('.', 1)[-1]}-{slugify(sleutel)}"
+
+
+def auto_platform(hass: HomeAssistant, sensor: str) -> str | None:
+    """Het merk van deze berichtensensor: de integratie erachter. Zie `MERKEN` in auto.py."""
+    reg = er.async_get(hass).async_get(sensor)
+    return reg.platform if reg is not None else None
+
+
+def auto_naam(hass: HomeAssistant, sensor: str) -> str:
+    """De naam van de auto: het APPARAAT, niet de sensor (die heet "Berichten")."""
+    reg = er.async_get(hass).async_get(sensor)
+    if reg is not None and reg.device_id and (apparaat := dr.async_get(hass).async_get(reg.device_id)) is not None:
+        naam = (apparaat.name_by_user or apparaat.name or "").strip()
+        if naam:
+            return naam
+    st = hass.states.get(sensor)
+    naam = " ".join(str(st.attributes.get("friendly_name") or "").split()) if st else ""
+    return naam or sensor
 
 
 def garage_tag(ident: str) -> str:

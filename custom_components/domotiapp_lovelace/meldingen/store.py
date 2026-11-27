@@ -12,6 +12,7 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval; sinds 0.109.0 de camera) |
 | `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
 | `garage` | per garagemelding (sinds 0.139.0): sinds wanneer de deur open staat, de laatste melding, negeren tot wanneer en door wie, en een Sluiten die nog nagekeken wordt. Zie garage.py |
+| `auto` | per berichtensensor (sinds 0.141.0): de berichten die al gemeld zijn of er al stonden toen hij voor het eerst gelezen werd. Zie auto.py |
 
 `keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
 gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger wilt
@@ -49,7 +50,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}, "garage": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}, "garage": {}, "auto": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -72,6 +73,9 @@ class MeldingOpslag:
         # Sinds 0.139.0, idem.
         if isinstance(rauw.get("garage"), dict):
             self._data["garage"] = rauw["garage"]
+        # Sinds 0.141.0, idem.
+        if isinstance(rauw.get("auto"), dict):
+            self._data["auto"] = rauw["auto"]
 
     @callback
     def _bewaar(self) -> None:
@@ -200,4 +204,18 @@ class MeldingOpslag:
                 stand.pop(k, None)
             else:
                 stand[k] = v
+        self._bewaar()
+
+    # ------------------------------------------------------------------- auto
+
+    @callback
+    def auto_gezien(self, sensor: str) -> list[str] | None:
+        """De berichten van deze sensor die al gemeld zijn (of er al stonden). None: nog nooit gelezen."""
+        waarde = self._data["auto"].get(sensor)
+        return list(waarde) if isinstance(waarde, list) else None
+
+    @callback
+    def zet_auto_gezien(self, sensor: str, sleutels: list[str], hoogstens: int) -> None:
+        """Meteen weggeschreven (binnen een seconde): na een herstart hoort een bericht niet opnieuw te komen."""
+        self._data["auto"][sensor] = list(dict.fromkeys(sleutels))[-hoogstens:]
         self._bewaar()

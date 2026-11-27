@@ -1,0 +1,202 @@
+{
+ "_toelichting": "FordPass (marq24, 'fordpass 2025'), 27-11-2026, een echte installatie: sensor ..._messages en de knop ..._msgdeleteall. `live_8` is de toestand met json_src zoals hij live stond (de eerste 6 van de 8 berichten; het lezen was afgekapt), `geschiedenis_8` een rij uit de recorder (daar staat json_src NIET in, alleen de platte msgNNN_), `nu_0` na het wissen (geen json_src en geen msgNNN_), `herstart` een rij rond een herstart. VIN en messageId zijn vervangen; de rest is echt.",
+ "live_8": {
+  "entity_id": "sensor.fordpass_voorbeeld_messages",
+  "state": "8",
+  "attributes": {
+   "json_src": [
+    {
+     "id": "1",
+     "messageId": "100000001",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "11/10/2026 06:50:04 AM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    },
+    {
+     "id": "2",
+     "messageId": "100000002",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "11/08/2026 09:44:53 PM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    },
+    {
+     "id": "3",
+     "messageId": "100000003",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "11/06/2026 09:22:18 AM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    },
+    {
+     "id": "4",
+     "messageId": "100000004",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "10/12/2026 05:24:21 AM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    },
+    {
+     "id": "5",
+     "messageId": "100000005",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "10/02/2026 06:20:00 AM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    },
+    {
+     "id": "6",
+     "messageId": "100000006",
+     "messageSubject": "Waarschuwing controlesysteem bandenspanning",
+     "messageBody": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+     "messageType": "EXTERNALNOTIFICATIONREQUEST",
+     "createdDate": "09/24/2026 08:43:09 AM",
+     "priority": 2,
+     "messageTypeId": 10001,
+     "highlighted": true,
+     "relevantVin": "WF0XXXXXXX0000000",
+     "contentType": "Html",
+     "metadata": "{\"wilCode\":\"600E27\",\"dtcCode\":null,\"failureCode\":null,\"displaySequence\":4000,\"severity\":\"1\",\"components\":{\"version\":\"1.0\",\"headline\":{\"enable\":\"1\"},\"icon\":{\"assetLocation\":\"Local\",\"icon\":\"tire_pressure_monitor\"},\"actions\":{\"roadSideAssistance\":\"1\",\"scheduleService\":\"1\"}}}",
+     "templateID": null,
+     "isRead": false
+    }
+   ]
+  }
+ },
+ "geschiedenis_8": {
+  "entity_id": "sensor.fordpass_voorbeeld_messages",
+  "state": "8",
+  "attributes": {
+   "msg001_Date": "11/10/2026 06:50:04 AM",
+   "msg001_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg001_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg001_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg002_Date": "11/08/2026 09:44:53 PM",
+   "msg002_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg002_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg002_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg003_Date": "11/06/2026 09:22:18 AM",
+   "msg003_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg003_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg003_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg004_Date": "10/12/2026 05:24:21 AM",
+   "msg004_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg004_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg004_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg005_Date": "10/02/2026 06:20:00 AM",
+   "msg005_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg005_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg005_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg006_Date": "09/24/2026 08:43:09 AM",
+   "msg006_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg006_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg006_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg007_Date": "09/18/2026 07:01:10 AM",
+   "msg007_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg007_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg007_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "msg008_Date": "09/16/2026 07:15:29 PM",
+   "msg008_Type": "EXTERNALNOTIFICATIONREQUEST",
+   "msg008_Subject": "Waarschuwing controlesysteem bandenspanning",
+   "msg008_Content": "Het Controlesysteem Bandenspanning heeft gedetecteerd dat een of meerdere banden veel te weinig opgepompt is/zijn.",
+   "unit_of_measurement": "messages",
+   "icon": "mdi:message-text",
+   "friendly_name": "Berichten"
+  }
+ },
+ "herstart": {
+  "entity_id": "sensor.fordpass_voorbeeld_messages",
+  "state": "unavailable",
+  "attributes": {
+   "icon": "mdi:message-text",
+   "friendly_name": "Ford Transit Connect Berichten",
+   "unit_of_measurement": "messages"
+  }
+ },
+ "nu_0": {
+  "entity_id": "sensor.fordpass_voorbeeld_messages",
+  "state": "0",
+  "attributes": {
+   "unit_of_measurement": "messages",
+   "icon": "mdi:message-text",
+   "friendly_name": "Berichten"
+  },
+  "last_changed": "2026-11-27T15:19:01.794892+00:00",
+  "last_updated": "2026-11-27T15:19:01.794892+00:00"
+ },
+ "sensor_register": {
+  "disabled_by": null,
+  "entity_category": "diagnostic",
+  "entity_id": "sensor.fordpass_voorbeeld_messages",
+  "original_name": "Berichten",
+  "platform": "fordpass",
+  "translation_key": "messages"
+ },
+ "knop_alles": {
+  "entity_id": "button.fordpass_voorbeeld_msgdeleteall",
+  "state": "2026-11-27T15:15:04.839949+00:00",
+  "attributes": {
+   "icon": "mdi:delete-alert",
+   "friendly_name": "Berichten: Alles verwijderen"
+  },
+  "last_changed": "2026-11-27T15:19:01.782504+00:00",
+  "last_updated": "2026-11-27T15:19:01.782504+00:00"
+ },
+ "knop_alles_register": {
+  "disabled_by": null,
+  "entity_category": "diagnostic",
+  "entity_id": "button.fordpass_voorbeeld_msgdeleteall",
+  "original_name": "Berichten: Alles verwijderen",
+  "platform": "fordpass",
+  "translation_key": "msgdeleteall"
+ },
+ "knop_laatste_register": {
+  "disabled_by": "user",
+  "entity_category": "diagnostic",
+  "entity_id": "button.fordpass_voorbeeld_msgdeletelast",
+  "original_name": "Berichten: Laatst verwijderde",
+  "platform": "fordpass",
+  "translation_key": "msgdeletelast"
+ }
+}

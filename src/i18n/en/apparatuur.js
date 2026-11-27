@@ -124,6 +124,28 @@ export const APPARATUUR = {
 
   // auto-card.js
   "Auto|voertuig": "Car",
+  "Geen knop om te wissen": "No button to clear them",
+  "Berichten": "Messages",
+  "Berichten van de auto": "Messages from the car",
+  "Knop om de berichten te wissen": "Button that clears the messages",
+  "De sensor met de berichten van de fabrikant, zoals sensor.fordpass_..._messages. Op de kaart komt een tegel met het aantal; een tik toont de berichten. Werkt met FordPass.":
+    "The sensor with the manufacturer's messages, such as sensor.fordpass_..._messages. The card shows a tile with the count; tap it to read them. Works with FordPass.",
+  "Leeg laten: de kaart zoekt zelf de knop die alles wist, bij FordPass Berichten: Alles verwijderen. Zonder knop kun je ze niet wissen.":
+    "Leave empty: the card finds the button that clears them all itself, with FordPass the one to delete all messages. Without a button they cannot be cleared.",
+
+  // auto-berichten-scherm.js
+  "Geen berichten": "No messages",
+  "Berichten van {naam}": "Messages from {naam}",
+  "Bericht": "Message",
+  "Er staan geen berichten van de auto.": "There are no messages from the car.",
+  "De auto zegt nu niets. Probeer het straks nog eens.": "The car is not responding right now. Try again later.",
+  "Alles wissen": "Clear all",
+  "Alle berichten wissen?": "Clear all messages?",
+  "Ze worden bij {merk} gewist. Dat is niet terug te draaien.": "They are deleted at {merk}. This cannot be undone.",
+  "Ze worden bij de fabrikant gewist. Dat is niet terug te draaien.": "They are deleted at the manufacturer. This cannot be undone.",
+  "Bezig met wissen…": "Clearing…",
+  "Gewist. De lijst wordt leeg zodra de auto het bevestigt.": "Cleared. The list empties as soon as the car confirms it.",
+  "Wissen mislukt: {fout}": "Clearing failed: {fout}",
   "Kies de aandrijving en vul minstens één sensor in — de accu, de tank of de actieradius.":
     "Choose the drivetrain and fill in at least one sensor: the battery, the tank or the range.",
   "De auto": "The car",
