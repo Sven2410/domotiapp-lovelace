@@ -208,3 +208,38 @@ describe("de coach", () => {
     assert.equal(B.heeftCoach(undefined), false);
   });
 });
+
+// Coach Assist is bezig (coach v0.243.0): `bezig` = {sinds, tot} op het gesprek of een ticket. De vorm komt uit de bron
+// van de coach (`zet_bezig` in tickets.py van v0.243.0); de echte dump staat in `bot-dump-0249.test.mjs`.
+describe("Coach Assist is bezig", () => {
+  const BEZIG = { sinds: "2026-11-25T10:00:00+01:00", tot: "2026-11-25T10:15:00+01:00" };
+  const op = (iso) => Date.parse(iso);
+
+  it("NIEUW GEDRAG: tot `tot`, en daarna niet meer, ook zonder antwoord", () => {
+    const g = gesprek({ bezig: BEZIG });
+    assert.equal(B.bezigTot(g, op("2026-11-25T10:05:00+01:00")), op(BEZIG.tot));
+    // Een andere tijdzone is hetzelfde moment: 09:14 UTC is 10:14 in Nederland.
+    assert.equal(B.bezigTot(g, op("2026-11-25T09:14:00Z")), op(BEZIG.tot));
+    assert.equal(B.bezigTot(g, op("2026-11-25T10:15:00+01:00")), null);
+    assert.equal(B.bezigTot(g, op("2026-11-25T11:00:00+01:00")), null);
+  });
+
+  it("NIEUW GEDRAG: zonder `bezig`, of met iets wat geen moment is, niet", () => {
+    assert.equal(B.bezigTot(gesprek()), null);
+    assert.equal(B.bezigTot(ticket(3, { bezig: {} })), null);
+    assert.equal(B.bezigTot(ticket(3, { bezig: { tot: "straks" } })), null);
+    assert.equal(B.bezigTot(null), null);
+  });
+
+  it("REGRESSIEWACHT: het abonnement neemt `bezig` over, en een antwoord zonder `bezig` haalt het weg", () => {
+    const nu = op("2026-11-25T10:01:00+01:00");
+    let stand = B.verwerk(null, { contract: 1, gesprek: gesprek(), tickets: [ticket(2)] });
+    stand = B.verwerk(stand, { ticket: gesprek({ bezig: BEZIG }) });
+    assert.equal(B.bezigTot(stand.gesprek, nu), op(BEZIG.tot));
+    stand = B.verwerk(stand, { ticket: ticket(2, { bezig: BEZIG }) });
+    assert.equal(B.bezigTot(stand.tickets.find((x) => x.id === 2), nu), op(BEZIG.tot));
+    stand = B.verwerk(stand, { ticket: gesprek() });
+    assert.equal(B.bezigTot(stand.gesprek, nu), null);
+    assert.equal(B.bezigTot(stand.tickets.find((x) => x.id === 2), nu), op(BEZIG.tot));
+  });
+});

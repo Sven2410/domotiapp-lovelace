@@ -43,6 +43,7 @@ export const BOT = {
   "Tickets ophalen…": "Fetching tickets…",
   "nieuw antwoord": "new answer",
   "Ontvangen, we kijken ernaar.": "Received, we are looking into it.",
+  "Coach Assist is bezig": "Coach Assist is working on it",
 
   "Vragen": "Questions",
   "Tickets": "Tickets",

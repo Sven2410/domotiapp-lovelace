@@ -1,0 +1,383 @@
+{
+ "_toelichting": "Coach v0.249.0 (contract 1), 27-11-2026 rond 11:48, een echte installatie: domotiapp_coach/tickets/busy op het gesprek (ticket_id 0, minuten 2) en weer uit (minuten 0), met tickets/list ervoor, tijdens en erna. tickets/read gaf elke keer {} terug (het zet alleen gelezen). Er stond geen open ticket. Namen, user_id's en de tekst van de berichten zijn verzonnen; tijden, ids, van, de vorm en het pakket zijn echt.",
+ "lijst_voor": {
+  "contract": 1,
+  "gesprek": {
+   "id": 0,
+   "soort": "vraag",
+   "berichten": [
+    {
+     "id": 1,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Waarom laadt de batterij vannacht niet?",
+     "at": "2026-11-13T07:47:14+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 2,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-13T07:47:27+01:00"
+    },
+    {
+     "id": 3,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Dank je, en morgen?",
+     "at": "2026-11-13T10:05:17+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 4,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "Morgen is het weer zo.",
+     "at": "2026-11-13T10:09:19+01:00"
+    },
+    {
+     "id": 5,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "Ja, hij start om 13:00.",
+     "at": "2026-11-15T21:58:18+01:00"
+    },
+    {
+     "id": 6,
+     "van": "klant",
+     "naam": "Anna",
+     "tekst": "Kan de vaatwasser later?",
+     "at": "2026-11-15T22:02:57+01:00",
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+    },
+    {
+     "id": 7,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-15T22:03:28+01:00"
+    }
+   ],
+   "gelezen": {
+    "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 7,
+    "1a2b3c4d5e6f708192a3b4c5d6e7f809": 7,
+    "2b3c4d5e6f708192a3b4c5d6e7f8091a": 7,
+    "3c4d5e6f708192a3b4c5d6e7f8091a2b": 7
+   },
+   "bijgewerkt": "2026-11-15T22:03:28+01:00"
+  },
+  "tickets": [],
+  "pakket": {
+   "naam": "DomotiCare Onbeperkt",
+   "coach_assist": true,
+   "vragen_per_dag": null,
+   "vragen_vandaag": 0,
+   "vragen_over": null,
+   "tickets_per_dag": null,
+   "tickets_vandaag": 0,
+   "tickets_over": null,
+   "opnieuw": "2026-11-28T00:00:00+01:00"
+  }
+ },
+ "busy_aan": {
+  "id": 0,
+  "soort": "vraag",
+  "berichten": [
+   {
+    "id": 1,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "Waarom laadt de batterij vannacht niet?",
+    "at": "2026-11-13T07:47:14+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+   },
+   {
+    "id": 2,
+    "van": "domotitech",
+    "naam": "DomotiTech",
+    "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+    "at": "2026-11-13T07:47:27+01:00"
+   },
+   {
+    "id": 3,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "Dank je, en morgen?",
+    "at": "2026-11-13T10:05:17+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+   },
+   {
+    "id": 4,
+    "van": "domotitech",
+    "naam": "DomotiTech",
+    "tekst": "Morgen is het weer zo.",
+    "at": "2026-11-13T10:09:19+01:00"
+   },
+   {
+    "id": 5,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "Ja, hij start om 13:00.",
+    "at": "2026-11-15T21:58:18+01:00"
+   },
+   {
+    "id": 6,
+    "van": "klant",
+    "naam": "Anna",
+    "tekst": "Kan de vaatwasser later?",
+    "at": "2026-11-15T22:02:57+01:00",
+    "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+   },
+   {
+    "id": 7,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+    "at": "2026-11-15T22:03:28+01:00"
+   }
+  ],
+  "gelezen": {
+   "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 7,
+   "1a2b3c4d5e6f708192a3b4c5d6e7f809": 7,
+   "2b3c4d5e6f708192a3b4c5d6e7f8091a": 7,
+   "3c4d5e6f708192a3b4c5d6e7f8091a2b": 7
+  },
+  "bijgewerkt": "2026-11-15T22:03:28+01:00",
+  "bezig": {
+   "sinds": "2026-11-27T11:47:58+01:00",
+   "tot": "2026-11-27T11:49:58+01:00"
+  }
+ },
+ "lijst_bezig": {
+  "contract": 1,
+  "gesprek": {
+   "id": 0,
+   "soort": "vraag",
+   "berichten": [
+    {
+     "id": 1,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Waarom laadt de batterij vannacht niet?",
+     "at": "2026-11-13T07:47:14+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 2,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-13T07:47:27+01:00"
+    },
+    {
+     "id": 3,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Dank je, en morgen?",
+     "at": "2026-11-13T10:05:17+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 4,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "Morgen is het weer zo.",
+     "at": "2026-11-13T10:09:19+01:00"
+    },
+    {
+     "id": 5,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "Ja, hij start om 13:00.",
+     "at": "2026-11-15T21:58:18+01:00"
+    },
+    {
+     "id": 6,
+     "van": "klant",
+     "naam": "Anna",
+     "tekst": "Kan de vaatwasser later?",
+     "at": "2026-11-15T22:02:57+01:00",
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+    },
+    {
+     "id": 7,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-15T22:03:28+01:00"
+    }
+   ],
+   "gelezen": {
+    "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 7,
+    "1a2b3c4d5e6f708192a3b4c5d6e7f809": 7,
+    "2b3c4d5e6f708192a3b4c5d6e7f8091a": 7,
+    "3c4d5e6f708192a3b4c5d6e7f8091a2b": 7
+   },
+   "bijgewerkt": "2026-11-15T22:03:28+01:00",
+   "bezig": {
+    "sinds": "2026-11-27T11:47:58+01:00",
+    "tot": "2026-11-27T11:49:58+01:00"
+   }
+  },
+  "tickets": [],
+  "pakket": {
+   "naam": "DomotiCare Onbeperkt",
+   "coach_assist": true,
+   "vragen_per_dag": null,
+   "vragen_vandaag": 0,
+   "vragen_over": null,
+   "tickets_per_dag": null,
+   "tickets_vandaag": 0,
+   "tickets_over": null,
+   "opnieuw": "2026-11-28T00:00:00+01:00"
+  }
+ },
+ "read_bezig": {},
+ "busy_uit": {
+  "id": 0,
+  "soort": "vraag",
+  "berichten": [
+   {
+    "id": 1,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "Waarom laadt de batterij vannacht niet?",
+    "at": "2026-11-13T07:47:14+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+   },
+   {
+    "id": 2,
+    "van": "domotitech",
+    "naam": "DomotiTech",
+    "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+    "at": "2026-11-13T07:47:27+01:00"
+   },
+   {
+    "id": 3,
+    "van": "klant",
+    "naam": "Bram",
+    "tekst": "Dank je, en morgen?",
+    "at": "2026-11-13T10:05:17+01:00",
+    "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+   },
+   {
+    "id": 4,
+    "van": "domotitech",
+    "naam": "DomotiTech",
+    "tekst": "Morgen is het weer zo.",
+    "at": "2026-11-13T10:09:19+01:00"
+   },
+   {
+    "id": 5,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "Ja, hij start om 13:00.",
+    "at": "2026-11-15T21:58:18+01:00"
+   },
+   {
+    "id": 6,
+    "van": "klant",
+    "naam": "Anna",
+    "tekst": "Kan de vaatwasser later?",
+    "at": "2026-11-15T22:02:57+01:00",
+    "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+   },
+   {
+    "id": 7,
+    "van": "domotitech",
+    "naam": "Coach Assist",
+    "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+    "at": "2026-11-15T22:03:28+01:00"
+   }
+  ],
+  "gelezen": {
+   "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 7,
+   "1a2b3c4d5e6f708192a3b4c5d6e7f809": 7,
+   "2b3c4d5e6f708192a3b4c5d6e7f8091a": 7,
+   "3c4d5e6f708192a3b4c5d6e7f8091a2b": 7
+  },
+  "bijgewerkt": "2026-11-15T22:03:28+01:00"
+ },
+ "lijst_na": {
+  "contract": 1,
+  "gesprek": {
+   "id": 0,
+   "soort": "vraag",
+   "berichten": [
+    {
+     "id": 1,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Waarom laadt de batterij vannacht niet?",
+     "at": "2026-11-13T07:47:14+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 2,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-13T07:47:27+01:00"
+    },
+    {
+     "id": 3,
+     "van": "klant",
+     "naam": "Bram",
+     "tekst": "Dank je, en morgen?",
+     "at": "2026-11-13T10:05:17+01:00",
+     "user_id": "9f1c2d3e4b5a69788796a5b4c3d2e1f0"
+    },
+    {
+     "id": 4,
+     "van": "domotitech",
+     "naam": "DomotiTech",
+     "tekst": "Morgen is het weer zo.",
+     "at": "2026-11-13T10:09:19+01:00"
+    },
+    {
+     "id": 5,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "Ja, hij start om 13:00.",
+     "at": "2026-11-15T21:58:18+01:00"
+    },
+    {
+     "id": 6,
+     "van": "klant",
+     "naam": "Anna",
+     "tekst": "Kan de vaatwasser later?",
+     "at": "2026-11-15T22:02:57+01:00",
+     "user_id": "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+    },
+    {
+     "id": 7,
+     "van": "domotitech",
+     "naam": "Coach Assist",
+     "tekst": "De prijs is morgenvroeg lager, dus hij wacht tot 04:00.",
+     "at": "2026-11-15T22:03:28+01:00"
+    }
+   ],
+   "gelezen": {
+    "9f1c2d3e4b5a69788796a5b4c3d2e1f0": 7,
+    "1a2b3c4d5e6f708192a3b4c5d6e7f809": 7,
+    "2b3c4d5e6f708192a3b4c5d6e7f8091a": 7,
+    "3c4d5e6f708192a3b4c5d6e7f8091a2b": 7
+   },
+   "bijgewerkt": "2026-11-15T22:03:28+01:00"
+  },
+  "tickets": [],
+  "pakket": {
+   "naam": "DomotiCare Onbeperkt",
+   "coach_assist": true,
+   "vragen_per_dag": null,
+   "vragen_vandaag": 0,
+   "vragen_over": null,
+   "tickets_per_dag": null,
+   "tickets_vandaag": 0,
+   "tickets_over": null,
+   "opnieuw": "2026-11-28T00:00:00+01:00"
+  }
+ },
+ "read_na": {}
+}

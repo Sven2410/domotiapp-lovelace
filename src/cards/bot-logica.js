@@ -61,6 +61,18 @@ export const soortVan = (id) => SOORTEN.find((s) => s.id === id) ?? { id, naam: 
 export const ASSIST = "Coach Assist";
 
 /**
+ * Tot wanneer Coach Assist aan dit gesprek of ticket werkt (coach v0.243.0), in milliseconden, of `null`. De eigenaar
+ * op 25-11-2026: "Laat ook zien dat een bericht in behandeling is met 3 puntjes die bewegen". De coach zet `bezig` =
+ * {sinds, tot}, met tijdzone, haalt het weg bij een antwoord, en laat een verlopen `bezig` zelf weg. Maar een scherm
+ * dat lang openstaat krijgt geen bericht als `tot` voorbijgaat, dus de kaart kijkt zelf ook. `tot` is een echt moment:
+ * naast `Date.now()`, niet naast de klok van het huis.
+ */
+export function bezigTot(ticket, nu = Date.now()) {
+  const tot = Date.parse(ticket?.bezig?.tot ?? "");
+  return Number.isFinite(tot) && tot > nu ? tot : null;
+}
+
+/**
  * Wie een bericht schreef, zoals de klant het leest. De coach zet bij een antwoord `naam`; tot 13 november 2026 was
  * dat "DomotiTech", en die oude berichten blijven zo in zijn opslag staan. Die en een antwoord zonder naam heten
  * "Coach Assist", net als in het paneel van de coach, zodat oude en nieuwe antwoorden er gelijk uitzien.
