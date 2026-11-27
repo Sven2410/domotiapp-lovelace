@@ -69,5 +69,10 @@
   "De deur staat niet open": "The door is not open",
   "De deur gaat al dicht": "The door is already closing",
   "Er is geen bediening gekozen": "No control has been chosen",
-  "Hoe lang negeren?": "Ignore for how long?"
+  "Hoe lang negeren?": "Ignore for how long?",
+  "{n} nieuwe berichten. Het laatste: {onderwerp}": "{n} new messages. The latest: {onderwerp}",
+  "Een automelding komt niet op een tijd": "A car notification is not sent at a set time",
+  "Nog geen auto gekozen": "No car chosen yet",
+  "Een bericht van de auto": "A message from the car",
+  "Zo ziet een bericht van de auto eruit.": "This is what a message from the car looks like."
 }

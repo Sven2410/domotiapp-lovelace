@@ -136,6 +136,8 @@ export const SOORTEN = [
   { id: "camera", naam: nt("Camerameldingen"), icoon: "cctv" },
   // Sinds 0.139.0: een garagedeur die openstaat. Wanneer en hoe staat in meldingen/garage.py.
   { id: "garage", naam: nt("Garagedeur"), icoon: "garageOpen" },
+  // Sinds 0.141.0: de berichten van de auto. Welk merk en hoe staat in meldingen/auto.py.
+  { id: "auto", naam: nt("Autoberichten"), icoon: "car" },
 ];
 
 /**
@@ -508,4 +510,18 @@ export function garageKnoppen(stand) {
   if (!stand?.bekend || g?.open !== true) return [];
   if (g.negeer_tot) return [{ id: "hervat", naam: t("Weer melden") }];
   return (g.negeer ?? []).map((n) => ({ id: `negeer:${n}`, naam: negeerNaam(n) }));
+}
+
+/** De berichtensensoren op deze kaart, zoals `auto_uit` in kaarten.py ze leest. */
+export function autosUit(config) {
+  const r = config?.auto_berichten;
+  const lijst = Array.isArray(r) ? r : r ? [r] : [];
+  return [...new Set(lijst.filter((id) => typeof id === "string" && id.startsWith("sensor.")))];
+}
+
+/** De regel onder de auto in de pop-up (0.141.0): waarover, en van welke auto. `namen` zijn de namen van de auto's. */
+export function autoRegel({ config, stand, namen = [] } = {}) {
+  if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
+  if (!autosUit(config).length) return t("Nog geen auto gekozen");
+  return t("Bij elk nieuw bericht van {namen}", { namen: opsomming(namen) });
 }

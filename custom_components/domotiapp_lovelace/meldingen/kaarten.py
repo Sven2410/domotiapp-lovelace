@@ -71,6 +71,7 @@ from .const import (
     MOMENT_MORGEN,
     MOMENT_VANDAAG,
     SOORT_AFVAL,
+    SOORT_AUTO,
     SOORT_CAMERA,
     SOORT_GARAGE,
     SOORT_STOFZUIGER,
@@ -106,6 +107,9 @@ class Melding:
     bakken: list[str] = field(default_factory=list)
     # Alleen bij de garagedeur (sinds 0.139.0): wat er op de kaart staat.
     garage: GarageInstelling | None = None
+    # Alleen bij de auto (sinds 0.141.0): de berichtensensoren, en waar een tik op de melding heen gaat.
+    autos: list[str] = field(default_factory=list)
+    pad: str = ""
 
     def vergelijkbaar(self) -> tuple[Any, ...]:
         """Wat twee kaarten gelijk moeten hebben om hetzelfde te doen."""
@@ -116,6 +120,8 @@ class Melding:
             tuple(self.stofzuigers),
             tuple(self.gebeurtenissen),
             self.garage.vergelijkbaar() if self.garage else (),
+            tuple(self.autos),
+            self.pad,
         )
 
 
@@ -266,6 +272,35 @@ def garage_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     )
 
 
+def auto_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
+    """De automelding uit één kaartconfig, of None als die daar niet aan staat.
+
+    Sinds 0.141.0. `auto: true` zet hem aan, `auto_berichten` zijn de berichtensensoren (FordPass
+    `..._messages`, zie auto.py). Het id is altijd `auto`, net als bij de stofzuiger: één per huis, met de
+    auto's van alle kaarten.
+    """
+    if kaart.get(SOORT_AUTO) is not True:
+        return None
+    rauw = kaart.get("auto_berichten")
+    if isinstance(rauw, str):
+        rauw = [rauw]
+    autos: list[str] = []
+    for s in rauw or []:
+        if isinstance(s, str) and s.startswith("sensor.") and s not in autos:
+            autos.append(s)
+    return Melding(
+        id=SOORT_AUTO,
+        soort=SOORT_AUTO,
+        titel=str(kaart.get("name") or ""),
+        personen=_personen(kaart),
+        diensten=_diensten(kaart),
+        dashboards=[dashboard],
+        autos=autos,
+        # Een melding opent alleen een pad binnen Home Assistant, net als bij de garage.
+        pad=pad if (pad := str(kaart.get("auto_pad") or "").strip()).startswith("/") and not pad.startswith("//") else "",
+    )
+
+
 def _personen(kaart: dict[str, Any]) -> list[str]:
     personen: list[str] = []
     for p in kaart.get("personen") or []:
@@ -289,7 +324,7 @@ def meldingen_per_kaart(kaarten: list[tuple[str, dict[str, Any]]]) -> list[Meldi
     """Elke soort op elke kaart als melding, in de volgorde waarin ze staan."""
     uit: list[Melding] = []
     for dashboard, kaart in kaarten:
-        for lees in (melding_uit, stofzuiger_uit, camera_uit, garage_uit):
+        for lees in (melding_uit, stofzuiger_uit, camera_uit, garage_uit, auto_uit):
             if (m := lees(kaart, dashboard)) is not None:
                 uit.append(m)
     return uit
@@ -346,6 +381,9 @@ def voeg_samen(
         for s in melding.stofzuigers:
             if s not in bestaand.stofzuigers:
                 bestaand.stofzuigers.append(s)
+        for s in melding.autos:
+            if s not in bestaand.autos:
+                bestaand.autos.append(s)
         bestaand.dashboards.append(dashboard)
     return uit
 

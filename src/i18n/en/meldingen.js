@@ -171,8 +171,8 @@ export const MELDINGEN = {
     "What everyone can choose in their pop-up. Each person picks what about and which robot there; whoever picks nothing gets everything switched on here. Water and dust bag: the clean water tank, the dirty water tank and the dust bag. Maintenance: a part with 10 % or less left.",
   "Te kiezen": "To choose from",
   "Van welke robot": "Which robot",
-  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera en de garagedeur.":
-    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste, the robot vacuum, the camera and the garage door.",
+  "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera, de garagedeur en de auto.":
+    "The people of the house, each with a pencil: choose which reminders they get on their phone. Waste, the robot vacuum, the camera, the garage door and the car.",
   "Klaar met schoonmaken": "Finished cleaning",
   "klaar": "finished",
   "Water en stofzak": "Water and dust bag",
@@ -235,4 +235,16 @@ export const MELDINGEN = {
   "Standaard 07:00.": "Default 07:00.",
   "Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon.":
     "Where a tap on the notification goes, such as /dashboard-home/0#garage. Leave empty: the app just opens.",
+
+  // De auto (0.141.0)
+  "Autoberichten": "Car messages",
+  "Auto's": "Cars",
+  "Nog geen auto gekozen": "No car chosen yet",
+  "Bij elk nieuw bericht van {namen}": "On every new message from {namen}",
+  "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning. Ieder zet hem in zijn pop-up aan of uit. Wat er al stond als je hem aanzet, komt niet als melding.":
+    "A notification for every new message from the car, such as a tyre pressure warning. Everyone switches it on or off in their pop-up. Messages already there when you switch it on do not come as a notification.",
+  "De sensor met de berichten van de fabrikant, per auto één. Werkt met FordPass.":
+    "The sensor with the manufacturer's messages, one per car. Works with FordPass.",
+  "Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#auto. Leeg laten: de app opent gewoon.":
+    "Where a tap on the notification goes, such as /dashboard-home/0#auto. Leave empty: the app just opens.",
 };

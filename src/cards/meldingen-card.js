@@ -23,7 +23,8 @@
  *   keuze van welke camera en waarover (zie meldingen/camera.py). Sinds 0.139.0
  *   de garagedeur: een melding als hij openstaat, met Sluiten en negeren erin
  *   (zie meldingen/garage.py). In de pop-up staat dan ook of hij open is, en
- *   negeren kan daar zonder op een melding te wachten.
+ *   negeren kan daar zonder op een melding te wachten. Sinds 0.141.0 de auto: een
+ *   melding bij elk nieuw bericht van de fabrikant (zie meldingen/auto.py).
  *
  * ## Wat de kaart doet en wat niet
  *
@@ -48,6 +49,7 @@
 import { DacCard, INCOMPLETE, TONES, escapeHtml, registerCard, registerEditor } from "../base.js";
 import { DacEditor, section, sel } from "../editor/base.js";
 import { naamVan } from "./stofzuiger-logica.js";
+import { autoNaamVan, berichtSensoren } from "./auto-berichten.js";
 import { resolve } from "../icons.js";
 import { nameOf, pictureOf, stateOf } from "../ha.js";
 import { Herkansing, Verbindingswacht, nogNietGereed } from "../herkansing.js";
@@ -57,6 +59,8 @@ import { isAgenda } from "./afval-agenda.js";
 import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import {
   AFVAL_MOMENTEN,
+  autoRegel,
+  autosUit,
   afvalBakken,
   afvalKeuze,
   afvalMomenten,
@@ -167,6 +171,7 @@ class MeldingenCard extends DacCard {
       ...(soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : []),
       ...(soortAan(c, "stofzuiger") ? stofzuigersUit(c) : []),
       ...(soortAan(c, "garage") ? [c.garage_contact] : []),
+      ...(soortAan(c, "auto") ? autosUit(c) : []),
       ...c.personen,
     ].filter(Boolean);
   }
@@ -374,7 +379,7 @@ class MeldingenCard extends DacCard {
    */
   keuzes_(soort, stand, persoon) {
     const c = this.config;
-    if (soort === "garage") return [];
+    if (soort === "garage" || soort === "auto") return [];
     if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
     if (soort === "camera") return this.cameraKeuzes_(stand, persoon);
     const nu = persoonKeuze(c, stand, persoon);
@@ -497,7 +502,9 @@ class MeldingenCard extends DacCard {
                 ? cameraRegel({ stand, persoon, naam: (id) => nameOf(this.hass, id) })
                 : soort.id === "garage"
                   ? garageRegel({ stand, tijd: (iso) => this.klok_(iso), naam: (id) => voornaam(nameOf(this.hass, id)) })
-                  : this.stofzuigerRegel_(stand, persoon),
+                  : soort.id === "auto"
+                    ? autoRegel({ config: this.config, stand, namen: autosUit(this.config).map((id) => autoNaamVan(this.hass, id)) })
+                    : this.stofzuigerRegel_(stand, persoon),
           keuzes: stand?.bekend ? this.keuzes_(soort.id, stand, persoon) : [],
           knoppen: soort.id === "garage" ? garageKnoppen(stand) : [],
         };
@@ -786,7 +793,28 @@ class MeldingenEditor extends DacEditor {
             ),
           ]
         : []),
+      // Sinds 0.141.0: de berichten van de auto.
+      { name: "auto", selector: sel.bool() },
+      ...(this.config_?.auto
+        ? [
+            section(
+              t("Auto's"),
+              "mdi:car",
+              [
+                { name: "auto_berichten", selector: this.autoKiezer_() },
+                { name: "auto_pad", selector: sel.text() },
+              ],
+              true
+            ),
+          ]
+        : []),
     ];
+  }
+
+  /** De berichtensensoren van bekende merken; zijn die er niet, dan elke sensor. */
+  autoKiezer_() {
+    const bekend = berichtSensoren(this.hass);
+    return { entity: { multiple: true, ...(bekend.length ? { include_entities: bekend } : { domain: "sensor" }) } };
   }
 
   label(s) {
@@ -814,6 +842,9 @@ class MeldingenEditor extends DacEditor {
         garage_avond: t("Avondmelding om"),
         garage_morgen: t("Tot morgen betekent tot"),
         garage_pad: t("Pad bij een tik op de melding"),
+        auto: t("Autoberichten"),
+        auto_berichten: t("Berichten van de auto"),
+        auto_pad: t("Pad bij een tik op de melding"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -858,6 +889,11 @@ class MeldingenEditor extends DacEditor {
       garage_avond_aan: t("Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen."),
       garage_morgen: t("Standaard 07:00."),
       garage_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon."),
+      auto: t(
+        "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning. Ieder zet hem in zijn pop-up aan of uit. Wat er al stond als je hem aanzet, komt niet als melding."
+      ),
+      auto_berichten: t("De sensor met de berichten van de fabrikant, per auto één. Werkt met FordPass."),
+      auto_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#auto. Leeg laten: de app opent gewoon."),
       camera: t(
         "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt."
       ),
@@ -869,7 +905,7 @@ registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
   name: nt("DomotiApp Meldingen"),
   description: nt(
-    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera en de garagedeur."
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera, de garagedeur en de auto."
   ),
 });
 
