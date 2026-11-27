@@ -983,16 +983,27 @@ class Motor:
             if self._garage_open(melding) is not True:
                 _LOGGER.info("Garagedeur: Sluiten door %s, maar het contact zegt niet open; niets gedaan", door or "onbekend")
                 return {"gedaan": False, "reden": t(self.hass, "De deur staat niet open")}
+            # Tijdens het sluiten zegt het contact nog open (gemeten: 18 s). Een
+            # tweede puls in die tijd zet een pulsdeur halverwege stil, dus na
+            # een Sluiten geen puls meer tot de controle geweest is. Twee
+            # telefoons die vlak na elkaar tikken, of één die twee keer tikt.
+            eerder = _tijd((self.opslag.garage(ident).get("sluit") or {}).get("om"))
+            if eerder is not None and nu - eerder < timedelta(seconds=garage.SLUIT_CONTROLE):
+                _LOGGER.info("Garagedeur: Sluiten door %s, maar hij gaat al dicht; niets gedaan", door or "onbekend")
+                return {"gedaan": False, "reden": t(self.hass, "De deur gaat al dicht")}
             oproep = garage.bediening_oproep(inst.bediening)
             if oproep is None:
                 return {"gedaan": False, "reden": t(self.hass, "Er is geen bediening gekozen")}
+            # Vóór de puls in de opslag: een tweede tik die binnenkomt terwijl de
+            # dienst nog loopt, ziet hem dan al.
+            self.opslag.zet_garage(ident, sluit={"door": door, "om": nu.isoformat()})
             try:
                 await self.hass.services.async_call(*oproep, blocking=True)
             except Exception as fout:  # noqa: BLE001
                 _LOGGER.warning("Garagedeur sluiten (%s) mislukte: %s", inst.bediening, fout)
+                self.opslag.zet_garage(ident, sluit=None)
                 return {"gedaan": False, "reden": str(fout)}
             _LOGGER.info("Garagedeur: Sluiten door %s (%s.%s)", door or "onbekend", oproep[0], oproep[1])
-            self.opslag.zet_garage(ident, sluit={"door": door, "om": nu.isoformat()})
             if self._sluit_later is not None:
                 self._sluit_later()
 
