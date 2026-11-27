@@ -61,6 +61,7 @@ import "./cards/favorieten-card.js";
 import "./cards/bot-card.js";
 import "./cards/overzicht-card.js";
 import "./cards/nieuws-card.js";
+import "./cards/brandstof-card.js";
 import "./cards/agenda-card.js";
 import "./cards/weerstation-card.js";
 import "./cards/printer-card.js";
