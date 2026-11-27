@@ -32,6 +32,11 @@
  * Op naam, merk, straat, postcode en plaats (`zoekStations`); bij gelijke stand het dichtst bij huis. Een tik op een
  * uitkomst of een punt zoomt erheen en zet de gegevens onder de kaart: adres, openingstijden, brandstoffen en een route.
  * Een prijs per pomp is er niet; daar is in Nederland geen open bron voor, en de eigenaar wil hem niet.
+ *
+ * Weet OpenStreetMap de openingstijden of de brandstoffen niet, dan staat er "onbekend" en niet niets (sinds 0.144.1).
+ * De eigenaar zag bij een pomp alleen naam, adres en Route, en vroeg: *"waarom geen openingstijden en welke
+ * brandstof?"* Een lege plek zegt niet dát het ontbreekt. Een derde van de stations heeft geen openingstijden, twee
+ * derde geen brandstoffen.
  */
 
 import * as L from "leaflet/dist/leaflet-src.esm.js";
@@ -39,7 +44,7 @@ import leafletCss from "leaflet/dist/leaflet.css";
 import { escapeHtml } from "../base.js";
 import { resolve } from "../icons.js";
 import { t } from "../taal.js";
-import { normaal, openingstijden, routeLink, stationNaam, stationUit, zoekStations } from "./brandstof-logica.js";
+import { normaal, routeLink, stationNaam, stationRegels, stationUit, zoekStations } from "./brandstof-logica.js";
 
 export const STATIONS_URL = "/domotiapp_lovelace/gegevens/tankstations-nl.json";
 const NEDERLAND = { lat: 52.2, lon: 5.3, zoom: 7 };
@@ -125,6 +130,8 @@ export const pompenCss = /* css */ `
   }
   .pompen .station .t { font-size: 14px; font-weight: 600; }
   .pompen .station .a, .pompen .station .o { font-size: 12.5px; color: var(--dac-ink-2); }
+  /* Wat OpenStreetMap niet weet, staat er wel: dan is te zien dat het ontbreekt (de eigenaar, 27 november 2026). */
+  .pompen .station .o[data-onbekend] { color: var(--dac-ink-3); font-style: italic; }
   .pompen .station .soorten { display: flex; flex-wrap: wrap; gap: 5px; }
   .pompen .station .soort {
     font-size: 11.5px; padding: 2px 8px; border-radius: var(--dac-radius-pill);
@@ -296,15 +303,19 @@ export class Pompenkaart {
       this.merk_ = L.circleMarker([s.lat, s.lon], { radius: 10, weight: 3, color: this.kleur, fill: false, interactive: false }).addTo(kaart);
     }
     const vak = this.vak.querySelector(".station");
-    const open = openingstijden(s.open);
+    const regels = stationRegels(s);
     const adres = [s.adres, [s.postcode, s.plaats].filter(Boolean).join(" ")].filter(Boolean).join(", ");
     vak.hidden = false;
     vak.innerHTML = `
       <span class="t">${escapeHtml(stationNaam(s))}</span>
       ${s.merk && s.merk !== stationNaam(s) ? `<span class="a">${escapeHtml(s.merk)}</span>` : ""}
       ${adres ? `<span class="a">${escapeHtml(adres)}</span>` : ""}
-      ${open ? `<span class="o">${escapeHtml(open)}</span>` : ""}
-      ${s.brandstoffen.length ? `<span class="soorten">${s.brandstoffen.map((b) => `<span class="soort">${escapeHtml(b)}</span>`).join("")}</span>` : ""}
+      <span class="o"${regels.open.bekend ? "" : " data-onbekend"}>${escapeHtml(regels.open.tekst)}</span>
+      ${
+        regels.brandstoffen.bekend
+          ? `<span class="soorten">${regels.brandstoffen.soorten.map((b) => `<span class="soort">${escapeHtml(b)}</span>`).join("")}</span>`
+          : `<span class="o" data-onbekend>${escapeHtml(regels.brandstoffen.tekst)}</span>`
+      }
       <a class="route" href="${escapeHtml(routeLink(s))}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("Route"))}</a>`;
     this.kaart.meet?.();
   }
