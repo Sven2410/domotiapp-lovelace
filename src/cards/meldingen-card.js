@@ -59,6 +59,9 @@ import { isAgenda } from "./afval-agenda.js";
 import { AfvalAgendaBron } from "../afval-agenda-bron.js";
 import {
   AFVAL_MOMENTEN,
+  AUTO_GEBEURTENISSEN,
+  autoGebeurtenissen,
+  autoKeuze,
   autoRegel,
   autosUit,
   afvalBakken,
@@ -344,6 +347,8 @@ class MeldingenCard extends DacCard {
     let waarden;
     if (soort === "camera") {
       waarden = nieuweCameraKeuze(vorig, persoon, groep, waarde, aan);
+    } else if (soort === "auto") {
+      waarden = nieuweKeuze(autoGebeurtenissen(c), autoKeuze(c, vorig, persoon), waarde, aan);
     } else if (groep === "bakken_niet") {
       waarden = nieuwNiet(afvalKeuze(c, vorig, persoon).bakkenNiet, waarde, aan);
     } else if (groep === "momenten") {
@@ -379,7 +384,8 @@ class MeldingenCard extends DacCard {
    */
   keuzes_(soort, stand, persoon) {
     const c = this.config;
-    if (soort === "garage" || soort === "auto") return [];
+    if (soort === "garage") return [];
+    if (soort === "auto") return this.autoKeuzes_(stand, persoon);
     if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
     if (soort === "camera") return this.cameraKeuzes_(stand, persoon);
     const nu = persoonKeuze(c, stand, persoon);
@@ -405,6 +411,25 @@ class MeldingenCard extends DacCard {
       });
     }
     return groepen;
+  }
+
+  /** De keuzes onder de auto (0.142.0): waarover. Eén keuze staat er niet: die zegt hetzelfde als het vinkje erboven. */
+  autoKeuzes_(stand, persoon) {
+    const c = this.config;
+    const aangeboden = autoGebeurtenissen(c);
+    if (aangeboden.length < 2) return [];
+    const nu = autoKeuze(c, stand, persoon);
+    return [
+      {
+        groep: "gebeurtenissen",
+        kop: t("Waarover"),
+        opties: AUTO_GEBEURTENISSEN.filter((g) => aangeboden.includes(g.id)).map((g) => ({
+          id: g.id,
+          naam: t(g.naam),
+          aan: nu.includes(g.id),
+        })),
+      },
+    ];
   }
 
   /**
@@ -503,7 +528,7 @@ class MeldingenCard extends DacCard {
                 : soort.id === "garage"
                   ? garageRegel({ stand, tijd: (iso) => this.klok_(iso), naam: (id) => voornaam(nameOf(this.hass, id)) })
                   : soort.id === "auto"
-                    ? autoRegel({ config: this.config, stand, namen: autosUit(this.config).map((id) => autoNaamVan(this.hass, id)) })
+                    ? autoRegel({ config: this.config, stand, persoon, namen: autosUit(this.config).map((id) => autoNaamVan(this.hass, id)) })
                     : this.stofzuigerRegel_(stand, persoon),
           keuzes: stand?.bekend ? this.keuzes_(soort.id, stand, persoon) : [],
           knoppen: soort.id === "garage" ? garageKnoppen(stand) : [],
@@ -682,6 +707,8 @@ class MeldingenEditor extends DacEditor {
     if (c.stofzuiger && !Array.isArray(c.stofzuiger_meldingen)) {
       c.stofzuiger_meldingen = STOFZUIGER_GEBEURTENISSEN.map((g) => g.id);
     }
+    if (c.auto && !Array.isArray(c.auto_meldingen)) c.auto_meldingen = AUTO_GEBEURTENISSEN.map((g) => g.id);
+    if (c.auto) c.auto_accu_grens ??= 20;
     // De standaard van meldingen/garage.py, zodat de editor laat zien wat de server doet.
     if (c.garage) {
       c.garage_minuten ??= 5;
@@ -802,6 +829,19 @@ class MeldingenEditor extends DacEditor {
               "mdi:car",
               [
                 { name: "auto_berichten", selector: this.autoKiezer_() },
+                {
+                  name: "auto_meldingen",
+                  selector: {
+                    select: {
+                      multiple: true,
+                      mode: "list",
+                      options: AUTO_GEBEURTENISSEN.map((g) => ({ value: g.id, label: t(g.naam) })),
+                    },
+                  },
+                },
+                ...(autoGebeurtenissen(this.config_).includes("accu")
+                  ? [{ name: "auto_accu_grens", selector: sel.number(5, 90) }]
+                  : []),
                 { name: "auto_pad", selector: sel.text() },
               ],
               true
@@ -844,6 +884,8 @@ class MeldingenEditor extends DacEditor {
         garage_pad: t("Pad bij een tik op de melding"),
         auto: t("Autoberichten"),
         auto_berichten: t("Berichten van de auto"),
+        auto_meldingen: t("Te kiezen"),
+        auto_accu_grens: t("Accu laag onder (%)"),
         auto_pad: t("Pad bij een tik op de melding"),
       }[s.name] ?? super.label(s)
     );
@@ -890,9 +932,15 @@ class MeldingenEditor extends DacEditor {
       garage_morgen: t("Standaard 07:00."),
       garage_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon."),
       auto: t(
-        "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning. Ieder zet hem in zijn pop-up aan of uit. Wat er al stond als je hem aanzet, komt niet als melding."
+        "Een melding bij elk nieuw bericht van de auto, zoals een waarschuwing over de bandenspanning, als hij klaar is met laden, en als de accu laag is. Ieder kiest in zijn pop-up zelf waarover. Wat er al stond als je hem aanzet, komt niet als melding."
       ),
-      auto_berichten: t("De sensor met de berichten van de fabrikant, per auto één. Werkt met FordPass."),
+      auto_berichten: t(
+        "De sensor met de berichten van de fabrikant, per auto één. Laadstatus, stekker en accu zoekt de kaart zelf op dezelfde auto. Werkt met FordPass."
+      ),
+      auto_meldingen: t(
+        "Wat iedereen in zijn pop-up kan kiezen. Klaar met laden: 15 minuten niet meer laden terwijl de stekker erin zit. Accu laag: 5 minuten onder de grens zonder stekker, één keer tot hij weer 5% boven de grens is geweest."
+      ),
+      auto_accu_grens: t("Standaard 20."),
       auto_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#auto. Leeg laten: de app opent gewoon."),
       camera: t(
         "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt."

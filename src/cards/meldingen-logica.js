@@ -519,9 +519,48 @@ export function autosUit(config) {
   return [...new Set(lijst.filter((id) => typeof id === "string" && id.startsWith("sensor.")))];
 }
 
-/** De regel onder de auto in de pop-up (0.141.0): waarover, en van welke auto. `namen` zijn de namen van de auto's. */
-export function autoRegel({ config, stand, namen = [] } = {}) {
+/**
+ * Waarover de auto meldt (sinds 0.142.0), in de volgorde van de editor. Dezelfde sleutels als `GEBEURTENISSEN` in
+ * meldingen/auto.py. `kort` is het woord in de regel onder de soort in de pop-up.
+ */
+export const AUTO_GEBEURTENISSEN = [
+  { id: "berichten", naam: nt("Berichten van de fabrikant"), kort: nt("berichten") },
+  { id: "laden", naam: nt("Klaar met laden"), kort: nt("klaar met laden") },
+  { id: "accu", naam: nt("Accu laag"), kort: nt("accu laag") },
+];
+
+/** Wat de kaart aanbiedt; zonder `auto_meldingen` alles, net als `auto_uit` in kaarten.py. */
+export function autoGebeurtenissen(config) {
+  const gekozen = config?.auto_meldingen;
+  const alle = AUTO_GEBEURTENISSEN.map((g) => g.id);
+  return Array.isArray(gekozen) ? alle.filter((id) => gekozen.includes(id)) : alle;
+}
+
+/** Wat deze persoon van de auto wil, binnen wat de kaart aanbiedt. Wie niets koos, krijgt alles. */
+export function autoKeuze(config, stand, persoon) {
+  const eigen = stand?.keuzes?.[persoon]?.gebeurtenissen;
+  const aangeboden = autoGebeurtenissen(config);
+  return Array.isArray(eigen) ? aangeboden.filter((g) => eigen.includes(g)) : aangeboden;
+}
+
+/** Onder welk percentage de accu laag is, zoals `_accu_grens` in kaarten.py. */
+export function autoAccuGrens(config) {
+  const n = Math.trunc(Number(config?.auto_accu_grens));
+  return Number.isFinite(n) && n >= 1 && n <= 90 ? n : 20;
+}
+
+/**
+ * De regel onder de auto in de pop-up: waarover, en van welke auto. "Berichten, klaar met laden en accu laag (onder
+ * 20%) · Bus". Met `persoon` wat die persoon zelf koos.
+ */
+export function autoRegel({ config, stand, namen = [], persoon } = {}) {
   if (stand && !stand.bekend) return t("Actief zodra het dashboard is opgeslagen");
   if (!autosUit(config).length) return t("Nog geen auto gekozen");
-  return t("Bij elk nieuw bericht van {namen}", { namen: opsomming(namen) });
+  const ids = persoon ? autoKeuze(config, stand, persoon) : autoGebeurtenissen(config);
+  if (!ids.length) return t("Niets gekozen om te melden");
+  const woorden = AUTO_GEBEURTENISSEN.filter((g) => ids.includes(g.id)).map((g) =>
+    g.id === "accu" ? t("accu laag (onder {pct}%)", { pct: autoAccuGrens(config) }) : t(g.kort)
+  );
+  const wat = opsomming(woorden);
+  return `${wat[0].toUpperCase()}${wat.slice(1)} · ${opsomming(namen)}`;
 }

@@ -38,6 +38,23 @@ daarom geen sleutel. Hetzelfde onderwerp komt vaak terug (acht keer de bandenspa
 `createdDate` is "11/10/2026 06:50:04 AM": maand eerst, in UTC (volgens de beheersessie; niet nagemeten).
 `contentType` is "Html"; de tekst gaat hier zonder tags door, want een melding op een telefoon is platte tekst.
 De knop `button.*_msgdeleteall` (`translation_key: msgdeleteall`) wist ze bij Ford; beproefd: 8 naar 0 in 20 s.
+
+## Laden klaar en accu laag (0.142.0)
+
+De eigenaar, op de vraag of die erbij moesten: *"ja ook laden klaar en accu laag erbij"*. De sensoren staan op hetzelfde
+apparaat als de berichten, met een `translation_key` per merk (`laden`, `stekker`, `accu` in `MERKEN`). De dump staat in
+`tests/js/vaste-invoer/fordpass-laden.json`: drie dagen laadstatus, stekker en laadtoestand van een elektrische bus.
+
+| wat de dump liet zien | wat het hier betekent |
+|---|---|
+| de laadstatus kent `NOT_PLUGGED_IN`, `IN_PROGRESS` en `PAUSED`; een woord voor vol kwam niet voor | een beurt tot het doel (80 %) eindigt met `PAUSED`, met de stekker erin |
+| `PAUSED` komt ook vlak na het inpluggen, en 5,5 minuut tussendoor (de coach die stopt en start) | **laden klaar** pas als het `LADEN_WACHT` minuten niet laden blijft, met de stekker erin |
+| bij het inpluggen sprong de laadtoestand van 35 naar 23, 34 s VOOR de stekker `CONNECTED` zei | **accu laag** pas als hij `ACCU_WACHT` minuten onder de grens blijft zonder stekker |
+| elke ochtend om 07:00 en bij herladen staat alles een paar tellen op `unavailable` | `unavailable` verandert niets |
+
+De stand (laadt hij, sinds wanneer gestopt, sinds wanneer laag, al gemeld) staat in de opslag, en de klok van elke minuut
+kijkt of het tijd is: zo gaat een herstart midden in het wachten gewoon verder. Accu laag komt één keer, en pas weer
+als de accu eerst `ACCU_MARGE` boven de grens is geweest.
 """
 
 from __future__ import annotations
@@ -127,12 +144,72 @@ class Merk:
     lees: Callable[[dict[str, Any]], list[dict[str, Any]]]
     sensor: str
     wis_knop: str | None = None
+    # Op hetzelfde apparaat: de laadstatus, de stekker en de laadtoestand in %. None: dat merk meldt het niet.
+    laden: str | None = None
+    stekker: str | None = None
+    accu: str | None = None
 
 
 # Op `platform` uit het entiteitenregister. Zie de kop.
 MERKEN: dict[str, Merk] = {
-    "fordpass": Merk("Ford", _lees_ford, sensor="messages", wis_knop="msgdeleteall"),
+    "fordpass": Merk("Ford", _lees_ford, sensor="messages", wis_knop="msgdeleteall", laden="elvehcharging", stekker="elvehplug", accu="soc"),
 }
+
+# Waarover de auto meldt, in de volgorde van de editor. Dezelfde sleutels als `AUTO_GEBEURTENISSEN` op de kaart.
+GEBEURTENISSEN = ("berichten", "laden", "accu")
+
+LADEN_WACHT = 15  # minuten niet laden met de stekker erin, voordat het "klaar" is
+ACCU_WACHT = 5  # minuten onder de grens zonder stekker
+ACCU_GRENS = 20  # %, zoals de oranje balk op de autokaart
+ACCU_MARGE = 5  # % boven de grens voordat er weer een melding kan komen
+
+# De woorden van een laadstatus, zoals `laadStand` in auto-logica.js. IN_PROGRESS en PAUSED komen uit de dump van Ford.
+_LAADT = {"charging", "charge", "fast_charging", "dc_charging", "in_progress", "on", "true", "laden"}
+_KLAAR = {"complete", "completed", "fully_charged", "full", "done", "finished"}
+_AAN = {"connected", "plugged", "plugged_in", "cable_connected", "ready_to_charge", "paused"}
+_LOS = {"not_plugged_in", "not_plugged", "notpluggedin", "unplugged", "disconnected", "not_charging", "notcharging", "off", "false", "idle", "no"}
+
+
+def laad_stand(toestand: str | None) -> str | None:
+    """"laadt", "klaar", "aan" (aan de lader, niet ladend), "los", of None (niets te zeggen of een onbekend woord)."""
+    if not bruikbaar(toestand):
+        return None
+    w = str(toestand).strip().lower()
+    for stand, woorden in (("laadt", _LAADT), ("klaar", _KLAAR), ("aan", _AAN), ("los", _LOS)):
+        if w in woorden:
+            return stand
+    return None
+
+
+def stekker_erin(toestand: str | None) -> bool | None:
+    """CONNECTED of DISCONNECTED (Ford), of None."""
+    if not bruikbaar(toestand):
+        return None
+    w = str(toestand).strip().lower()
+    if w in ("connected", "plugged", "plugged_in", "on", "true"):
+        return True
+    if w in ("disconnected", "not_plugged_in", "unplugged", "off", "false"):
+        return False
+    return None
+
+
+def procent(toestand: str | None) -> float | None:
+    try:
+        n = float(toestand)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return n if 0 <= n <= 100 else None
+
+
+def laden_melding(auto: str, pct: float | None, taal: str) -> tuple[str, str]:
+    titel = vertaal(taal, "{auto}: klaar met laden", auto=auto)
+    if pct is None:
+        return titel, vertaal(taal, "Hij laadt niet meer en de stekker zit er nog in.")
+    return titel, vertaal(taal, "De accu staat op {pct}% en laadt niet meer. De stekker zit er nog in.", pct=round(pct))
+
+
+def accu_melding(auto: str, pct: float, taal: str) -> tuple[str, str]:
+    return vertaal(taal, "{auto}: accu laag", auto=auto), vertaal(taal, "De accu staat op {pct}%.", pct=round(pct))
 
 
 def berichten(platform: str | None, toestand: str | None, attributen: dict[str, Any] | None) -> list[dict[str, Any]] | None:

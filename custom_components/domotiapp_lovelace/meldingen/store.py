@@ -13,6 +13,7 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
 | `garage` | per garagemelding (sinds 0.139.0): sinds wanneer de deur open staat, de laatste melding, negeren tot wanneer en door wie, en een Sluiten die nog nagekeken wordt. Zie garage.py |
 | `auto` | per berichtensensor (sinds 0.141.0): de berichten die al gemeld zijn of er al stonden toen hij voor het eerst gelezen werd. Zie auto.py |
+| `auto_laden` | per berichtensensor (sinds 0.142.0): laadt hij, sinds wanneer gestopt, sinds wanneer de accu laag is, en of dat al gemeld is. Zie auto.py |
 
 `keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
 gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger wilt
@@ -50,7 +51,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}, "garage": {}, "auto": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}, "garage": {}, "auto": {}, "auto_laden": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -76,6 +77,9 @@ class MeldingOpslag:
         # Sinds 0.141.0, idem.
         if isinstance(rauw.get("auto"), dict):
             self._data["auto"] = rauw["auto"]
+        # Sinds 0.142.0, idem.
+        if isinstance(rauw.get("auto_laden"), dict):
+            self._data["auto_laden"] = rauw["auto_laden"]
 
     @callback
     def _bewaar(self) -> None:
@@ -219,3 +223,24 @@ class MeldingOpslag:
         """Meteen weggeschreven (binnen een seconde): na een herstart hoort een bericht niet opnieuw te komen."""
         self._data["auto"][sensor] = list(dict.fromkeys(sleutels))[-hoogstens:]
         self._bewaar()
+
+    @callback
+    def auto_laden(self, sensor: str) -> dict[str, Any]:
+        """De laad- en accustand van deze auto; leeg als er niets loopt."""
+        waarde = self._data["auto_laden"].get(sensor)
+        return dict(waarde) if isinstance(waarde, dict) else {}
+
+    @callback
+    def zet_auto_laden(self, sensor: str, **velden: Any) -> bool:
+        """Velden bijwerken; None haalt een veld weg. Alleen wegschrijven als er iets verandert; zegt of dat zo was."""
+        stand = self._data["auto_laden"].setdefault(sensor, {})
+        oud = dict(stand)
+        for k, v in velden.items():
+            if v is None:
+                stand.pop(k, None)
+            else:
+                stand[k] = v
+        if stand == oud:
+            return False
+        self._bewaar()
+        return True

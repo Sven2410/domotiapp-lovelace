@@ -2,6 +2,7 @@
  * De berichten van de auto (0.141.0), uit de echte dump van FordPass (`vaste-invoer/fordpass-berichten.json`): live
  * met `json_src` (de eerste 6 van 8), uit de recorder met alleen de platte `msgNNN_`, en na het wissen. VIN en
  * messageId zijn vervangen, de rest is echt. Alles **NIEUW GEDRAG**: `auto-berichten.js` bestaat op 0.140.1 niet.
+ * Sinds 0.142.0 ook laden klaar en accu laag, met `vaste-invoer/fordpass-laden.json`: die proeven vallen op 0.141.0 om.
  * Het versturen staat aan de serverkant (tests/meldingen/test_auto.py).
  */
 
@@ -10,7 +11,8 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import * as A from "../../src/cards/auto-berichten.js";
-import { autoRegel, autosUit, soortenVan } from "../../src/cards/meldingen-logica.js";
+import { autoAccuGrens, autoGebeurtenissen, autoKeuze, autoRegel, autosUit, soortenVan } from "../../src/cards/meldingen-logica.js";
+import { laadStand } from "../../src/cards/auto-logica.js";
 
 const DUMP = JSON.parse(readFileSync(new URL("./vaste-invoer/fordpass-berichten.json", import.meta.url), "utf8"));
 const SENSOR = DUMP.live_8.entity_id;
@@ -104,11 +106,17 @@ describe("per merk", () => {
 
   it("MERKEN is aan beide kanten gelijk: platform, sensor en wisknop", () => {
     for (const [platform, merk] of Object.entries(A.MERKEN)) {
-      const regel = AUTO_PY.match(new RegExp(`"${platform}": Merk\\("([^"]+)", _lees_\\w+, sensor="([^"]+)", wis_knop=(None|"([^"]+)")\\)`));
+      const regel = AUTO_PY.match(new RegExp(`"${platform}": Merk\\("([^"]+)", _lees_\\w+, ([^)]*)\\)`));
       assert.ok(regel, `${platform} staat niet in MERKEN van auto.py`);
       assert.equal(regel[1], merk.naam);
-      assert.equal(regel[2], merk.sensor);
-      assert.equal(regel[4] ?? null, merk.wisKnop ?? null);
+      const velden = Object.fromEntries([...regel[2].matchAll(/(\w+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
+      assert.deepEqual(velden, {
+        sensor: merk.sensor,
+        ...(merk.wisKnop ? { wis_knop: merk.wisKnop } : {}),
+        ...(merk.laden ? { laden: merk.laden } : {}),
+        ...(merk.stekker ? { stekker: merk.stekker } : {}),
+        ...(merk.accu ? { accu: merk.accu } : {}),
+      });
     }
     const inPython = [...AUTO_PY.matchAll(/^ {4}"(\w+)": Merk\(/gm)].map((m) => m[1]);
     assert.deepEqual(inPython.sort(), Object.keys(A.MERKEN).sort());
@@ -139,6 +147,44 @@ describe("de meldingenkaart", () => {
   it("de regel in de pop-up", () => {
     assert.equal(autoRegel({ config: {}, stand: { bekend: true } }), "Nog geen auto gekozen");
     assert.equal(autoRegel({ config: { auto_berichten: [SENSOR] }, stand: { bekend: false } }), "Actief zodra het dashboard is opgeslagen");
-    assert.equal(autoRegel({ config: { auto_berichten: [SENSOR] }, stand: { bekend: true }, namen: ["Bus"] }), "Bij elk nieuw bericht van Bus");
+    assert.equal(
+      autoRegel({ config: { auto_berichten: [SENSOR] }, stand: { bekend: true }, namen: ["Bus"] }),
+      "Berichten, klaar met laden en accu laag (onder 20%) · Bus"
+    );
+  });
+});
+
+describe("laden klaar en accu laag (0.142.0)", () => {
+  const LADEN = JSON.parse(readFileSync(new URL("./vaste-invoer/fordpass-laden.json", import.meta.url), "utf8"));
+
+  it("de autokaart kent de woorden van Ford: IN_PROGRESS laadt, PAUSED hangt aan de lader", () => {
+    const woorden = new Set(LADEN.tijdlijn.filter(([, rol]) => rol === "laden").map(([, , s]) => s));
+    assert.deepEqual([...woorden].sort(), ["IN_PROGRESS", "NOT_PLUGGED_IN", "PAUSED", "unavailable"]);
+    assert.equal(laadStand({ state: "IN_PROGRESS" }), "charging");
+    assert.equal(laadStand({ state: "PAUSED" }), "connected");
+    assert.equal(laadStand({ state: "NOT_PLUGGED_IN" }), "idle");
+    assert.equal(laadStand(LADEN.toestand.laden), "charging");
+  });
+
+  it("MERKEN noemt de laadstatus, de stekker en de accu met de translation_key uit het register", () => {
+    const ford = A.MERKEN.fordpass;
+    assert.deepEqual([ford.laden, ford.stekker, ford.accu], ["laden", "stekker", "accu"].map((r) => LADEN.register[r].translation_key));
+  });
+
+  it("wat de kaart aanbiedt, wat iemand kiest, en de grens", () => {
+    assert.deepEqual(autoGebeurtenissen({}), ["berichten", "laden", "accu"]);
+    assert.deepEqual(autoGebeurtenissen({ auto_meldingen: ["accu", "iets"] }), ["accu"]);
+    const stand = { bekend: true, keuzes: { "person.anna": { gebeurtenissen: ["berichten"] } } };
+    assert.deepEqual(autoKeuze({}, stand, "person.anna"), ["berichten"]);
+    assert.deepEqual(autoKeuze({}, stand, "person.bram"), ["berichten", "laden", "accu"]);
+    assert.equal(autoAccuGrens({ auto_accu_grens: "25" }), 25);
+    assert.equal(autoAccuGrens({ auto_accu_grens: 0 }), 20);
+    const config = { auto_berichten: [SENSOR], auto_accu_grens: 25 };
+    assert.equal(autoRegel({ config, stand, persoon: "person.anna", namen: ["Bus"] }), "Berichten · Bus");
+    assert.equal(autoRegel({ config, stand, persoon: "person.bram", namen: ["Bus"] }), "Berichten, klaar met laden en accu laag (onder 25%) · Bus");
+    assert.equal(
+      autoRegel({ config, stand: { bekend: true, keuzes: { "person.anna": { gebeurtenissen: [] } } }, persoon: "person.anna" }),
+      "Niets gekozen om te melden"
+    );
   });
 });

@@ -78,6 +78,7 @@ from .const import (
     STANDAARD_TIJD,
 )
 from .garage import Instelling as GarageInstelling, instelling_uit as garage_instelling
+from .auto import ACCU_GRENS as AUTO_ACCU_GRENS, GEBEURTENISSEN as AUTO_GEBEURTENISSEN
 from .stofzuiger import GEBEURTENISSEN
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,6 +111,8 @@ class Melding:
     # Alleen bij de auto (sinds 0.141.0): de berichtensensoren, en waar een tik op de melding heen gaat.
     autos: list[str] = field(default_factory=list)
     pad: str = ""
+    # Sinds 0.142.0: onder welk percentage "accu laag".
+    accu_grens: int = 20
 
     def vergelijkbaar(self) -> tuple[Any, ...]:
         """Wat twee kaarten gelijk moeten hebben om hetzelfde te doen."""
@@ -122,6 +125,7 @@ class Melding:
             self.garage.vergelijkbaar() if self.garage else (),
             tuple(self.autos),
             self.pad,
+            self.accu_grens,
         )
 
 
@@ -278,6 +282,9 @@ def auto_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
     Sinds 0.141.0. `auto: true` zet hem aan, `auto_berichten` zijn de berichtensensoren (FordPass
     `..._messages`, zie auto.py). Het id is altijd `auto`, net als bij de stofzuiger: één per huis, met de
     auto's van alle kaarten.
+
+    Sinds 0.142.0 zegt `auto_meldingen` waarover (berichten, laden, accu; zonder die sleutel: alles), en
+    `auto_accu_grens` onder welk percentage de accu laag is (standaard 20).
     """
     if kaart.get(SOORT_AUTO) is not True:
         return None
@@ -296,9 +303,23 @@ def auto_uit(kaart: dict[str, Any], dashboard: str = "") -> Melding | None:
         diensten=_diensten(kaart),
         dashboards=[dashboard],
         autos=autos,
+        gebeurtenissen=(
+            [g for g in AUTO_GEBEURTENISSEN if g in gekozen]
+            if isinstance(gekozen := kaart.get("auto_meldingen"), list)
+            else list(AUTO_GEBEURTENISSEN)
+        ),
+        accu_grens=_accu_grens(kaart.get("auto_accu_grens")),
         # Een melding opent alleen een pad binnen Home Assistant, net als bij de garage.
         pad=pad if (pad := str(kaart.get("auto_pad") or "").strip()).startswith("/") and not pad.startswith("//") else "",
     )
+
+
+def _accu_grens(waarde: Any) -> int:
+    try:
+        n = int(float(waarde))
+    except (TypeError, ValueError):
+        return AUTO_ACCU_GRENS
+    return n if 1 <= n <= 90 else AUTO_ACCU_GRENS
 
 
 def _personen(kaart: dict[str, Any]) -> list[str]:

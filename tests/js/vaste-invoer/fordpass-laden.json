@@ -1,0 +1,521 @@
+{
+ "_toelichting": "FordPass (marq24, 'fordpass 2025'), een echte installatie, 24-11 t/m 27-11-2026: de laadstatus (elvehcharging), de stekker (elvehplug) en de laadtoestand (soc) van een elektrische bus. `toestand` en `register` zijn van 27-11 rond 16:40 lokale tijd; `tijdlijn` is elke verandering uit de recorder (UTC; dezelfde laadstatus of stekker twee keer achter elkaar is weggelaten, de accu niet). Op 25-11 een beurt tot 80% (het doel van de coach), die eindigt met PAUSED en de stekker erin; op 27-11 een PAUSED tussendoor van 5,5 minuut. Het VIN is vervangen.",
+ "toestand": {
+  "laden": {
+   "entity_id": "sensor.fordpass_voorbeeld_elvehcharging",
+   "state": "IN_PROGRESS",
+   "attributes": {
+    "plugStatus": "CONNECTED",
+    "chargingStatus": "IN_PROGRESS",
+    "chargingType": "UNKNOWN",
+    "chargingVoltage": 230.0,
+    "chargingAmperage": 43.04347826086956,
+    "stateOfCharge": 40.0,
+    "chargerEnergyOutput": 5.2512083333333335,
+    "chargingkW": 9.9,
+    "estimatedEndTime": "2026-11-27T17:23:30+01:00",
+    "chargePowerKw": 9.9,
+    "icon": "mdi:ev-station",
+    "friendly_name": "EV oplaadstatus"
+   },
+   "last_changed": "2026-11-27T15:28:11.033478+00:00",
+   "last_updated": "2026-11-27T15:38:36.056440+00:00"
+  },
+  "stekker": {
+   "entity_id": "sensor.fordpass_voorbeeld_elvehplug",
+   "state": "CONNECTED",
+   "attributes": {
+    "ChargingType": "UNKNOWN",
+    "icon": "mdi:connection",
+    "friendly_name": "EV stekker"
+   },
+   "last_changed": "2026-11-27T15:28:11.034011+00:00",
+   "last_updated": "2026-11-27T15:28:11.034011+00:00"
+  },
+  "accu": {
+   "entity_id": "sensor.fordpass_voorbeeld_soc",
+   "state": "40.0",
+   "attributes": {
+    "state_class": "measurement",
+    "batteryRange": 28.0,
+    "unit_of_measurement": "%",
+    "device_class": "battery",
+    "icon": "mdi:battery-charging-40",
+    "friendly_name": "Laadtoestand"
+   },
+   "last_changed": "2026-11-27T15:38:35.058438+00:00",
+   "last_updated": "2026-11-27T15:38:35.058438+00:00"
+  }
+ },
+ "register": {
+  "laden": {
+   "entity_id": "sensor.fordpass_voorbeeld_elvehcharging",
+   "platform": "fordpass",
+   "translation_key": "elvehcharging",
+   "device_class": null,
+   "original_device_class": null,
+   "unit_of_measurement": null,
+   "disabled_by": null
+  },
+  "stekker": {
+   "entity_id": "sensor.fordpass_voorbeeld_elvehplug",
+   "platform": "fordpass",
+   "translation_key": "elvehplug",
+   "device_class": null,
+   "original_device_class": null,
+   "unit_of_measurement": null,
+   "disabled_by": null
+  },
+  "accu": {
+   "entity_id": "sensor.fordpass_voorbeeld_soc",
+   "platform": "fordpass",
+   "translation_key": "soc",
+   "device_class": null,
+   "original_device_class": "battery",
+   "unit_of_measurement": null,
+   "disabled_by": null
+  }
+ },
+ "tijdlijn": [
+  [
+   "2026-11-24T20:15:35+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-24T20:15:35+00:00",
+   "laden",
+   "NOT_PLUGGED_IN"
+  ],
+  [
+   "2026-11-24T20:15:35+00:00",
+   "stekker",
+   "DISCONNECTED"
+  ],
+  [
+   "2026-11-24T22:24:48+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-24T22:38:06+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-24T23:05:28+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-24T23:33:06+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-25T00:16:50+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-25T06:00:01+00:00",
+   "accu",
+   "unavailable"
+  ],
+  [
+   "2026-11-25T06:00:01+00:00",
+   "laden",
+   "unavailable"
+  ],
+  [
+   "2026-11-25T06:00:01+00:00",
+   "stekker",
+   "unavailable"
+  ],
+  [
+   "2026-11-25T06:00:04+00:00",
+   "accu",
+   "49.0"
+  ],
+  [
+   "2026-11-25T06:00:04+00:00",
+   "laden",
+   "NOT_PLUGGED_IN"
+  ],
+  [
+   "2026-11-25T06:00:04+00:00",
+   "stekker",
+   "DISCONNECTED"
+  ],
+  [
+   "2026-11-25T08:49:17+00:00",
+   "accu",
+   "48.0"
+  ],
+  [
+   "2026-11-25T09:00:24+00:00",
+   "accu",
+   "36.0"
+  ],
+  [
+   "2026-11-25T11:03:22+00:00",
+   "accu",
+   "35.0"
+  ],
+  [
+   "2026-11-25T11:13:02+00:00",
+   "accu",
+   "23.0"
+  ],
+  [
+   "2026-11-25T11:13:36+00:00",
+   "laden",
+   "PAUSED"
+  ],
+  [
+   "2026-11-25T11:13:36+00:00",
+   "stekker",
+   "CONNECTED"
+  ],
+  [
+   "2026-11-25T11:14:24+00:00",
+   "accu",
+   "23.0"
+  ],
+  [
+   "2026-11-25T11:14:24+00:00",
+   "laden",
+   "IN_PROGRESS"
+  ],
+  [
+   "2026-11-25T11:16:21+00:00",
+   "accu",
+   "25.0"
+  ],
+  [
+   "2026-11-25T11:22:04+00:00",
+   "accu",
+   "30.0"
+  ],
+  [
+   "2026-11-25T11:33:30+00:00",
+   "accu",
+   "40.0"
+  ],
+  [
+   "2026-11-25T11:44:53+00:00",
+   "accu",
+   "50.0"
+  ],
+  [
+   "2026-11-25T11:56:13+00:00",
+   "accu",
+   "60.0"
+  ],
+  [
+   "2026-11-25T12:07:45+00:00",
+   "accu",
+   "70.0"
+  ],
+  [
+   "2026-11-25T12:19:10+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-25T12:19:11+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-25T12:19:11+00:00",
+   "laden",
+   "PAUSED"
+  ],
+  [
+   "2026-11-25T12:34:24+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-25T17:31:00+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-25T17:31:01+00:00",
+   "laden",
+   "NOT_PLUGGED_IN"
+  ],
+  [
+   "2026-11-25T17:31:01+00:00",
+   "stekker",
+   "DISCONNECTED"
+  ],
+  [
+   "2026-11-25T17:42:07+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-26T06:00:00+00:00",
+   "accu",
+   "unavailable"
+  ],
+  [
+   "2026-11-26T06:00:00+00:00",
+   "laden",
+   "unavailable"
+  ],
+  [
+   "2026-11-26T06:00:00+00:00",
+   "stekker",
+   "unavailable"
+  ],
+  [
+   "2026-11-26T06:00:04+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-26T06:00:04+00:00",
+   "laden",
+   "NOT_PLUGGED_IN"
+  ],
+  [
+   "2026-11-26T06:00:04+00:00",
+   "stekker",
+   "DISCONNECTED"
+  ],
+  [
+   "2026-11-26T07:40:54+00:00",
+   "accu",
+   "80.0"
+  ],
+  [
+   "2026-11-26T08:08:47+00:00",
+   "accu",
+   "54.0"
+  ],
+  [
+   "2026-11-26T10:10:08+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-26T14:53:13+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-26T15:30:43+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-26T18:57:44+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-26T19:36:25+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-26T20:59:05+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T06:00:00+00:00",
+   "accu",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T06:00:00+00:00",
+   "laden",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T06:00:00+00:00",
+   "stekker",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T06:00:03+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T06:00:03+00:00",
+   "laden",
+   "NOT_PLUGGED_IN"
+  ],
+  [
+   "2026-11-27T06:00:03+00:00",
+   "stekker",
+   "DISCONNECTED"
+  ],
+  [
+   "2026-11-27T09:24:45+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T09:52:32+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T11:03:53+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T11:52:56+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T11:55:40+00:00",
+   "accu",
+   "32.0"
+  ],
+  [
+   "2026-11-27T12:02:49+00:00",
+   "accu",
+   "25.0"
+  ],
+  [
+   "2026-11-27T12:25:55+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T12:26:08+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T12:31:45+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T13:10:30+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T14:10:05+00:00",
+   "accu",
+   "18.0"
+  ],
+  [
+   "2026-11-27T14:54:19+00:00",
+   "accu",
+   "15.0"
+  ],
+  [
+   "2026-11-27T14:59:27+00:00",
+   "accu",
+   "13.0"
+  ],
+  [
+   "2026-11-27T15:00:05+00:00",
+   "laden",
+   "PAUSED"
+  ],
+  [
+   "2026-11-27T15:00:05+00:00",
+   "stekker",
+   "CONNECTED"
+  ],
+  [
+   "2026-11-27T15:00:45+00:00",
+   "accu",
+   "13.0"
+  ],
+  [
+   "2026-11-27T15:00:45+00:00",
+   "laden",
+   "IN_PROGRESS"
+  ],
+  [
+   "2026-11-27T15:01:36+00:00",
+   "accu",
+   "13.0"
+  ],
+  [
+   "2026-11-27T15:01:36+00:00",
+   "laden",
+   "PAUSED"
+  ],
+  [
+   "2026-11-27T15:07:12+00:00",
+   "accu",
+   "13.0"
+  ],
+  [
+   "2026-11-27T15:07:12+00:00",
+   "laden",
+   "IN_PROGRESS"
+  ],
+  [
+   "2026-11-27T15:09:03+00:00",
+   "accu",
+   "15.0"
+  ],
+  [
+   "2026-11-27T15:15:02+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T15:18:58+00:00",
+   "accu",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T15:18:58+00:00",
+   "laden",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T15:18:58+00:00",
+   "stekker",
+   "unavailable"
+  ],
+  [
+   "2026-11-27T15:19:01+00:00",
+   "accu",
+   "20.0"
+  ],
+  [
+   "2026-11-27T15:19:01+00:00",
+   "laden",
+   "IN_PROGRESS"
+  ],
+  [
+   "2026-11-27T15:19:01+00:00",
+   "stekker",
+   "CONNECTED"
+  ],
+  [
+   "2026-11-27T15:26:50+00:00",
+   "accu",
+   "30.0"
+  ],
+  [
+   "2026-11-27T15:28:11+00:00",
+   "accu",
+   "30.0"
+  ],
+  [
+   "2026-11-27T15:38:35+00:00",
+   "accu",
+   "40.0"
+  ]
+ ]
+}

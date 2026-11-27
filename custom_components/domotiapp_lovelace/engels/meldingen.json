@@ -74,5 +74,10 @@
   "Een automelding komt niet op een tijd": "A car notification is not sent at a set time",
   "Nog geen auto gekozen": "No car chosen yet",
   "Een bericht van de auto": "A message from the car",
-  "Zo ziet een bericht van de auto eruit.": "This is what a message from the car looks like."
+  "Zo ziet een bericht van de auto eruit.": "This is what a message from the car looks like.",
+  "{auto}: klaar met laden": "{auto}: finished charging",
+  "Hij laadt niet meer en de stekker zit er nog in.": "It has stopped charging and is still plugged in.",
+  "De accu staat op {pct}% en laadt niet meer. De stekker zit er nog in.": "The battery is at {pct}% and has stopped charging. It is still plugged in.",
+  "{auto}: accu laag": "{auto}: battery low",
+  "De accu staat op {pct}%.": "The battery is at {pct}%."
 }
