@@ -11,6 +11,7 @@ Hier staat alleen wat de kaart niet kan bewaren:
 | `leidend` | per melding: van welk dashboard de instellingen gelden |
 | `keuzes` | per melding, per persoon: wat hij ervan wil (sinds 0.86.0, de robotstofzuiger; sinds 0.87.0 ook afval; sinds 0.109.0 de camera) |
 | `gezien` | per afvalmelding: elke bak die de sensor ooit noemde (sinds 0.87.0), om uit te kunnen kiezen |
+| `garage` | per garagemelding (sinds 0.139.0): sinds wanneer de deur open staat, de laatste melding, negeren tot wanneer en door wie, en een Sluiten die nog nagekeken wordt. Zie garage.py |
 
 `keuzes` is er omdat de eigenaar op 25 oktober 2026 vroeg: *"ik wil dat de
 gebruiker ook zelf kan kiezen welke meldingen hij van de stofzuiger wilt
@@ -48,7 +49,7 @@ class MeldingOpslag:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}}
+        self._data: dict[str, Any] = {"aan": {}, "buiten": {}, "verstuurd": {}, "leidend": {}, "keuzes": {}, "gezien": {}, "garage": {}}
 
     async def async_load(self) -> None:
         rauw = await self._store.async_load()
@@ -68,6 +69,9 @@ class MeldingOpslag:
             self._data["keuzes"] = rauw["keuzes"]
         if isinstance(rauw.get("gezien"), dict):
             self._data["gezien"] = rauw["gezien"]
+        # Sinds 0.139.0, idem.
+        if isinstance(rauw.get("garage"), dict):
+            self._data["garage"] = rauw["garage"]
 
     @callback
     def _bewaar(self) -> None:
@@ -178,3 +182,22 @@ class MeldingOpslag:
         lijst.extend(nieuw)
         self._bewaar()
         return True
+
+    # ----------------------------------------------------------------- garage
+
+    @callback
+    def garage(self, melding: str) -> dict[str, Any]:
+        """De stand van deze garagemelding; leeg als de deur dicht is en er niets loopt."""
+        waarde = self._data["garage"].get(melding)
+        return dict(waarde) if isinstance(waarde, dict) else {}
+
+    @callback
+    def zet_garage(self, melding: str, **velden: Any) -> None:
+        """Velden bijwerken; None haalt een veld weg. Meteen weggeschreven (binnen een seconde)."""
+        stand = self._data["garage"].setdefault(melding, {})
+        for k, v in velden.items():
+            if v is None:
+                stand.pop(k, None)
+            else:
+                stand[k] = v
+        self._bewaar()

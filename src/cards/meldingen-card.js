@@ -20,7 +20,10 @@
  * - welke soorten er zijn, staat in de editor: per soort een schakelaar met de
  *   instellingen eronder. Afval, sinds 0.85.0 de robotstofzuiger, en sinds
  *   0.109.0 de camera: de meldingen van de camerakaart, met per persoon een
- *   keuze van welke camera en waarover (zie meldingen/camera.py).
+ *   keuze van welke camera en waarover (zie meldingen/camera.py). Sinds 0.139.0
+ *   de garagedeur: een melding als hij openstaat, met Sluiten en negeren erin
+ *   (zie meldingen/garage.py). In de pop-up staat dan ook of hij open is, en
+ *   negeren kan daar zonder op een melding te wachten.
  *
  * ## Wat de kaart doet en wat niet
  *
@@ -61,6 +64,9 @@ import {
   cameraKeuze,
   cameraRegel,
   cameraSoortNaam,
+  garageKnoppen,
+  garageRegel,
+  negeerNaam,
   nieuweCameraKeuze,
   nieuwNiet,
   krijgtIets,
@@ -160,6 +166,7 @@ class MeldingenCard extends DacCard {
     return [
       ...(soortAan(c, "afval") ? [c.afval_vandaag, c.afval_morgen] : []),
       ...(soortAan(c, "stofzuiger") ? stofzuigersUit(c) : []),
+      ...(soortAan(c, "garage") ? [c.garage_contact] : []),
       ...c.personen,
     ].filter(Boolean);
   }
@@ -367,6 +374,7 @@ class MeldingenCard extends DacCard {
    */
   keuzes_(soort, stand, persoon) {
     const c = this.config;
+    if (soort === "garage") return [];
     if (soort === "afval") return this.afvalKeuzes_(stand, persoon);
     if (soort === "camera") return this.cameraKeuzes_(stand, persoon);
     const nu = persoonKeuze(c, stand, persoon);
@@ -487,8 +495,11 @@ class MeldingenCard extends DacCard {
               ? this.afvalRegel_(stand, persoon)
               : soort.id === "camera"
                 ? cameraRegel({ stand, persoon, naam: (id) => nameOf(this.hass, id) })
-                : this.stofzuigerRegel_(stand, persoon),
+                : soort.id === "garage"
+                  ? garageRegel({ stand, tijd: (iso) => this.klok_(iso), naam: (id) => voornaam(nameOf(this.hass, id)) })
+                  : this.stofzuigerRegel_(stand, persoon),
           keuzes: stand?.bekend ? this.keuzes_(soort.id, stand, persoon) : [],
+          knoppen: soort.id === "garage" ? garageKnoppen(stand) : [],
         };
       }),
     };
@@ -520,6 +531,31 @@ class MeldingenCard extends DacCard {
     }
     if (!uit.length) return { tekst: t("Niet verstuurd."), fout: true };
     return { tekst: uit.map((u) => u.tekst).join(" "), fout: uit.every((u) => u.fout) };
+  }
+
+  /** "14:05" op de klok van Home Assistant, niet die van het toestel. */
+  klok_(iso) {
+    const w = naarWand(new Date(iso), this.hass?.config?.time_zone);
+    if (Number.isNaN(w.getTime())) return "";
+    return `${String(w.getHours()).padStart(2, "0")}:${String(w.getMinutes()).padStart(2, "0")}`;
+  }
+
+  /**
+   * Een knop onder een soort in de pop-up (0.139.0): de garagemelding negeren of weer laten komen.
+   * Voor het hele huis, net als de knoppen in de melding zelf; de server zegt via het abonnement
+   * hoe het nu staat.
+   */
+  knop(soort, id) {
+    if (soort !== "garage" || !this.hass?.connection) return;
+    const [actie, minuten] = String(id).split(":");
+    this.hass.connection
+      .sendMessagePromise({
+        type: "domotiapp_lovelace/meldingen/garage",
+        melding: meldingId(this.config, soort),
+        actie,
+        ...(minuten ? { minuten: Number(minuten) } : {}),
+      })
+      .catch((fout) => console.warn("DomotiApp Meldingen: negeren mislukte", fout));
   }
 
   stofzuigerRegel_(stand, persoon) {
@@ -639,6 +675,15 @@ class MeldingenEditor extends DacEditor {
     if (c.stofzuiger && !Array.isArray(c.stofzuiger_meldingen)) {
       c.stofzuiger_meldingen = STOFZUIGER_GEBEURTENISSEN.map((g) => g.id);
     }
+    // De standaard van meldingen/garage.py, zodat de editor laat zien wat de server doet.
+    if (c.garage) {
+      c.garage_minuten ??= 5;
+      c.garage_herhaal ??= 60;
+      c.garage_negeer ??= ["15", "60", "240"];
+      c.garage_avond_aan ??= true;
+      c.garage_avond ??= "22:00:00";
+      c.garage_morgen ??= "07:00:00";
+    }
     super.setConfig(c);
   }
 
@@ -707,6 +752,40 @@ class MeldingenEditor extends DacEditor {
       // Sinds 0.109.0. Geen blok eronder: welke camera's en melders er zijn,
       // staat op de camerakaart (Snapshots en meldingen).
       { name: "camera", selector: sel.bool() },
+      // Sinds 0.139.0. Alles hier, ook voor de klant zelf (de eigenaar: "alles via lovelace in te
+      // kunnen stellen ook de klant").
+      { name: "garage", selector: sel.bool() },
+      ...(this.config_?.garage
+        ? [
+            section(
+              t("Deur, bediening en tijden"),
+              "mdi:garage",
+              [
+                { name: "garage_contact", selector: sel.entity(["binary_sensor", "cover"]) },
+                { name: "garage_bediening", selector: sel.entity(["switch", "button", "input_button", "script", "cover"]) },
+                { name: "garage_naam", selector: sel.text() },
+                { name: "garage_minuten", selector: sel.number(1, 240) },
+                { name: "garage_herhaal", selector: sel.number(0, 720) },
+                {
+                  name: "garage_negeer",
+                  selector: {
+                    select: {
+                      multiple: true,
+                      custom_value: true,
+                      mode: "dropdown",
+                      options: ["15", "30", "60", "120", "240", "480"].map((n) => ({ value: n, label: negeerNaam(Number(n)) })),
+                    },
+                  },
+                },
+                { name: "garage_avond_aan", selector: sel.bool() },
+                ...(this.config_?.garage_avond_aan !== false ? [{ name: "garage_avond", selector: { time: {} } }] : []),
+                { name: "garage_morgen", selector: { time: {} } },
+                { name: "garage_pad", selector: sel.text() },
+              ],
+              true
+            ),
+          ]
+        : []),
     ];
   }
 
@@ -724,6 +803,17 @@ class MeldingenEditor extends DacEditor {
         stofzuigers: t("Robots"),
         stofzuiger_meldingen: t("Te kiezen"),
         camera: t("Camerameldingen"),
+        garage: t("Garagedeur"),
+        garage_contact: t("Contact van de deur"),
+        garage_bediening: t("Bediening"),
+        garage_naam: t("Naam in de melding"),
+        garage_minuten: t("Eerste melding na (minuten open)"),
+        garage_herhaal: t("Daarna elke (minuten)"),
+        garage_negeer: t("Negeren"),
+        garage_avond_aan: t("Avondmelding"),
+        garage_avond: t("Avondmelding om"),
+        garage_morgen: t("Tot morgen betekent tot"),
+        garage_pad: t("Pad bij een tik op de melding"),
       }[s.name] ?? super.label(s)
     );
   }
@@ -754,6 +844,20 @@ class MeldingenEditor extends DacEditor {
       stofzuiger_meldingen: t(
         "Wat iedereen in zijn pop-up kan kiezen. Ieder kiest daar zelf waarover en van welke robot; wie niets kiest krijgt alles wat hier aan staat. Water en stofzak: de schoonwatertank, de vuilwatertank en de stofzak. Onderhoud: een onderdeel met 10 % of minder over."
       ),
+      garage: t(
+        "Een melding als de garagedeur openstaat, met Sluiten en negeren erin. Ieder zet hem in zijn pop-up aan of uit; negeren geldt voor het hele huis."
+      ),
+      garage_contact: t("Het magneetcontact op de deur: aan is open. Dit is de waarheid, ook als de deur met een gewone afstandsbediening dichtgaat."),
+      garage_bediening: t(
+        "Wat de deur laat bewegen, zoals een schakelaar met een puls. Sluiten stuurt alleen iets als het contact open zegt. Leeg laten: geen knop Sluiten in de melding."
+      ),
+      garage_naam: t("Leeg laten: Garagedeur."),
+      garage_minuten: t("Standaard 5."),
+      garage_herhaal: t("Zolang hij open staat. Standaard 60; 0 is geen herinnering."),
+      garage_negeer: t("De knoppen om de melding een tijd te negeren, in minuten. Op Android passen er twee naast Sluiten; de rest staat in de pop-up van de kaart."),
+      garage_avond_aan: t("Staat de deur om deze tijd open, dan komt er hoe dan ook een melding, ook als er genegeerd wordt, met een knop Tot morgen."),
+      garage_morgen: t("Standaard 07:00."),
+      garage_pad: t("Waar een tik op de melding naartoe gaat, zoals /dashboard-home/0#garage. Leeg laten: de app opent gewoon."),
       camera: t(
         "De meldingen van de camerakaarten met Snapshots en meldingen. Ieder vinkt in zijn pop-up zelf aan of hij ze krijgt, van welke camera en waarover (mens, voertuig, aanbellen...). Wie nog niets koos, krijgt wat de camerakaart hem al gaf. Wie niet op deze kaart staat, houdt wat de camerakaart zegt."
       ),
@@ -765,7 +869,7 @@ registerEditor("domotiapp-meldingen-card-editor", MeldingenEditor);
 registerCard("domotiapp-meldingen-card", MeldingenCard, {
   name: nt("DomotiApp Meldingen"),
   description: nt(
-    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger en de camera."
+    "De personen van het huis, met per persoon een potlood: kies welke herinneringen hij op zijn telefoon krijgt. Afval, de robotstofzuiger, de camera en de garagedeur."
   ),
 });
 

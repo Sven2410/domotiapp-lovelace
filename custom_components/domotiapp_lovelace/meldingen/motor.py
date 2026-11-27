@@ -44,6 +44,17 @@ per ding, en wordt van de telefoons gehaald (`clear_notification`) als het weer
 in orde is. "Klaar" wacht tien tellen: Dreame zet het oppervlak en de duur van
 de beurt soms net na de taak.
 
+## De garagedeur
+
+Sinds 0.139.0. Wat er gemeld wordt en wanneer staat in `garage.py`; hier staat HOE.
+De motor volgt het contact. Gaat het open, dan komt `open_sinds` in de opslag;
+gaat het dicht, dan verdwijnt alles van de telefoons en uit de opslag. Elke minuut
+vraagt de klok `garage.volgende` of er nu een melding moet. Alles wat die nodig
+heeft staat in de opslag, dus een herstart gaat gewoon verder. De knoppen in de
+melding komen binnen als `mobile_app_notification_action`, net als "Staat
+buiten". Sluiten wordt na `SLUIT_CONTROLE` seconden nagekeken; staat de wekker er
+na een herstart niet meer, dan doet de klok het.
+
 ## Een agenda als afvalbron
 
 Sinds 0.136.0 mag `afval_vandaag` of `afval_morgen` een `calendar.*` zijn (zie
@@ -68,13 +79,13 @@ from homeassistant.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
 )
-from homeassistant.util import dt as dt_util
+from homeassistant.util import dt as dt_util, slugify
 
 from ..bewaking import meldingen as telefoons
 from ..bewaking.const import DATA_INDEX as BEWAKING_INDEX, DATA_REGELS as BEWAKING_REGELS
 from ..const import DOMAIN
 from ..taal import t, taal_van
-from . import afval, camera, kaarten, stofzuiger
+from . import afval, camera, garage, kaarten, stofzuiger
 from .const import (
     ACTIE_BUITEN,
     EVENT_ACTIE,
@@ -83,6 +94,7 @@ from .const import (
     MOMENTEN,
     SOORT_AFVAL,
     SOORT_CAMERA,
+    SOORT_GARAGE,
     SOORT_STOFZUIGER,
 )
 from .kaarten import Melding
@@ -147,6 +159,10 @@ class Motor:
         # nog wacht: een tank die bij het bijvullen even uit staat (0.85.1).
         self._gemeld: set[tuple[str, str]] = set()
         self._wacht: dict[tuple[str, str], CALLBACK_TYPE] = {}
+        # De garagedeur: het gevolgde contact, en de wekker die Sluiten nakijkt.
+        self._garage_contact: str | None = None
+        self._garage_uit: CALLBACK_TYPE | None = None
+        self._sluit_later: CALLBACK_TYPE | None = None
 
     async def async_start(self) -> None:
         await self.async_herlees()
@@ -167,6 +183,10 @@ class Motor:
         for weg in self._wacht.values():
             weg()
         self._wacht.clear()
+        for weg in (self._garage_uit, self._sluit_later):
+            if weg is not None:
+                weg()
+        self._garage_uit = self._sluit_later = None
 
     async def async_herlees(self) -> None:
         gelezen = await kaarten.async_lees_kaarten(self.hass)
@@ -174,6 +194,7 @@ class Motor:
         self.meldingen = kaarten.voeg_samen(gelezen, self.opslag.alle_leidend())
         await self._onthoud_bakken()
         self._volg_stofzuigers()
+        self._volg_garage()
         self._meld(None)
 
     async def _onthoud_bakken(self) -> None:
@@ -258,6 +279,10 @@ class Motor:
         await self.async_herlees()
 
     async def _tik(self, nu: datetime) -> None:
+        try:
+            await self._garage_tik(nu)
+        except Exception:  # noqa: BLE001 - de garage houdt het afval niet tegen
+            _LOGGER.exception("Garagemelding: de klok liep vast")
         klok = nu.strftime("%H:%M")
         if not any(m.tijden.get(mo) == klok for m in self.meldingen.values() for mo in MOMENTEN):
             return
@@ -298,6 +323,12 @@ class Motor:
             if not proef:
                 return {"reden": t(self.hass, "Een cameramelding komt niet op een tijd")}
             return await self.async_proef_camera(melding, alleen)
+        if melding.soort == SOORT_GARAGE:
+            if not proef:
+                return {"reden": t(self.hass, "Een garagemelding komt niet op een tijd")}
+            if alleen is None:
+                return {"reden": t(self.hass, "Een proef gaat naar één persoon")}
+            return await self._stuur_garage(melding, "eerste", nu, alleen=alleen, proef=True)
         if melding.soort != SOORT_AFVAL:
             return {"reden": t(self.hass, "Deze melding staat op geen enkel opgeslagen dashboard")}
 
@@ -395,6 +426,9 @@ class Motor:
         return None
 
     async def _actie(self, event: Event) -> None:
+        if (knop := garage.lees_actie(event.data.get("action"))) is not None:
+            await self.async_garage_knop(*knop, event.context.user_id)
+            return
         gelezen = lees_actie(event.data.get("action"))
         if gelezen is None:
             return
@@ -771,6 +805,273 @@ class Motor:
             "titel": titel,
             "tekst": tekst,
         }
+
+    # ------------------------------------------------------------ de garagedeur
+
+    @callback
+    def _garage(self) -> Melding | None:
+        melding = self.meldingen.get(SOORT_GARAGE)
+        return melding if melding is not None and melding.garage is not None else None
+
+    @callback
+    def _garage_open(self, melding: Melding) -> bool | None:
+        st = self.hass.states.get(melding.garage.contact) if melding.garage.contact else None
+        return garage.is_open(st.state) if st is not None else None
+
+    @callback
+    def _volg_garage(self) -> None:
+        """Volg het contact van de kaart; opnieuw als het een ander is."""
+        melding = self._garage()
+        contact = melding.garage.contact if melding is not None else ""
+        if contact == (self._garage_contact or "") and (self._garage_uit is not None or not contact):
+            return
+        if self._garage_uit is not None:
+            self._garage_uit()
+            self._garage_uit = None
+        self._garage_contact = contact or None
+        if not contact:
+            return
+        self._garage_uit = async_track_state_change_event(self.hass, [contact], self._garage_verandert)
+        # Hoe staat hij NU? Na een herstart: open telt vanaf nu, als de opslag
+        # niet weet sinds wanneer; dicht wist wat er nog op de telefoons stond.
+        self._garage_toestand(self._garage_open(melding))
+
+    @callback
+    def _garage_verandert(self, event: Event) -> None:
+        nieuw = event.data.get("new_state")
+        if nieuw is not None:
+            self._garage_toestand(garage.is_open(nieuw.state))
+
+    @callback
+    def _garage_toestand(self, open_: bool | None) -> None:
+        """Het contact zegt open, dicht of niets (`unavailable`: dan blijft alles staan)."""
+        stand = self.opslag.garage(SOORT_GARAGE)
+        nu = dt_util.now().isoformat()
+        if open_ is True and not stand.get("open_sinds"):
+            self.opslag.zet_garage(SOORT_GARAGE, open_sinds=nu)
+            self._meld(SOORT_GARAGE)
+        elif open_ is False and (stand.get("open_sinds") or stand.get("gemeld") or stand.get("negeer_tot")):
+            # Dicht, op welke manier ook: niets meer op de telefoons, en een
+            # negeertijd vervalt. De volgende keer open begint weer vooraan.
+            sluit = stand.get("sluit") or {}
+            self.opslag.zet_garage(
+                SOORT_GARAGE,
+                open_sinds=None,
+                gemeld=None,
+                laatste_melding=None,
+                negeer_tot=None,
+                negeer_door=None,
+                negeer_om=None,
+                sluit=None,
+                dicht_om=nu,
+                dicht_door=sluit.get("door"),
+            )
+            if self._sluit_later is not None:
+                self._sluit_later()
+                self._sluit_later = None
+            if stand.get("gemeld"):
+                self.hass.async_create_task(self._wis_garage())
+            self._meld(SOORT_GARAGE)
+
+    async def _garage_tik(self, nu: datetime) -> None:
+        melding = self._garage()
+        if melding is None:
+            return
+        stand = self.opslag.garage(SOORT_GARAGE)
+        # Een Sluiten van voor een herstart: de wekker is weg, dus de klok kijkt na.
+        sluit = stand.get("sluit")
+        if sluit and (om := _tijd(sluit.get("om"))) and nu - om >= timedelta(seconds=garage.SLUIT_CONTROLE + 30):
+            await self._controleer_sluit()
+            stand = self.opslag.garage(SOORT_GARAGE)
+        open_ = self._garage_open(melding)
+        if open_ is True and not stand.get("open_sinds"):
+            self._garage_toestand(True)
+            return
+        wat = garage.volgende(stand, melding.garage, nu, open_ is True)
+        if wat:
+            await self._stuur_garage(melding, wat, nu)
+
+    @callback
+    def _is_android(self, dienst: str) -> bool:
+        """Draait deze notify-dienst op Android? Dan passen er drie knoppen."""
+        for entry in self.hass.config_entries.async_entries("mobile_app"):
+            naam = entry.data.get("device_name")
+            if naam and slugify(f"mobile_app_{naam}") == dienst:
+                return str(entry.data.get("os_name") or "").lower() == "android"
+        return False
+
+    async def _stuur_garage(
+        self, melding: Melding, wat: str, nu: datetime, *, alleen: str | None = None, proef: bool = False
+    ) -> dict[str, Any]:
+        inst = melding.garage
+        stand = self.opslag.garage(melding.id)
+        sinds = _tijd(stand.get("open_sinds")) or nu
+        minuten = inst.minuten if proef else int((nu - sinds).total_seconds() // 60)
+        taal = taal_van(self.hass)
+        titel, tekst = garage.bericht(wat, inst.naam, minuten, taal, klok=inst.avond or "")
+        if proef:
+            titel = t(self.hass, "Proef · {titel}", titel=titel)
+        tag = garage_tag("proef" if proef else melding.id)
+        ontvangers = [alleen] if alleen is not None else [p for p in melding.personen if self.opslag.aan(melding.id, p)]
+        gelukt: list[str] = []
+        zonder: list[str] = []
+        for persoon in ontvangers:
+            dienst = melding.diensten.get(persoon) or telefoons.dienst_voor(self.hass, persoon)
+            if not dienst:
+                zonder.append(persoon)
+                continue
+            data: dict[str, Any] = {
+                "tag": tag,
+                "group": "domotiapp-garage",
+                "actions": garage.knoppen(melding.id, inst, wat, taal, android=self._is_android(dienst), proef=proef),
+            }
+            if inst.pad:
+                # `url` voor iOS, `clickAction` voor Android.
+                data["url"] = data["clickAction"] = inst.pad
+            try:
+                await self.hass.services.async_call(
+                    "notify", dienst, {"title": titel, "message": tekst, "data": data}, blocking=True
+                )
+            except Exception as fout:  # noqa: BLE001 - één telefoon houdt de rest niet tegen
+                _LOGGER.warning("Garagemelding naar %s (%s) mislukte: %s", persoon, dienst, fout)
+                zonder.append(persoon)
+                continue
+            gelukt.append(persoon)
+        if zonder:
+            _LOGGER.warning("Geen telefoon gevonden voor %s; die krijgt geen garagemelding", ", ".join(zonder))
+        if not proef:
+            velden: dict[str, Any] = {"gemeld": nu.isoformat(), "laatste_melding": wat}
+            if wat == "na_negeer":
+                velden.update(negeer_tot=None, negeer_door=None, negeer_om=None)
+            if wat == "avond":
+                velden["avond_gemeld"] = nu.date().isoformat()
+            self.opslag.zet_garage(melding.id, **velden)
+            _LOGGER.info("Garagemelding (%s): %s", wat, tekst)
+            self._meld(melding.id)
+        return {"verstuurd": gelukt, "zonder_telefoon": zonder, "titel": titel, "tekst": tekst}
+
+    async def _wis_garage(self) -> None:
+        """De melding van alle telefoons halen. Zie `_wis_robot` waarom niet bij de proefdienst."""
+        melding = self._garage()
+        if melding is None:
+            return
+        for persoon in melding.personen:
+            if melding.diensten.get(persoon) == "persistent_notification":
+                continue
+            dienst = melding.diensten.get(persoon) or telefoons.dienst_voor(self.hass, persoon)
+            if not dienst:
+                continue
+            try:
+                await self.hass.services.async_call(
+                    "notify", dienst, {"message": "clear_notification", "data": {"tag": garage_tag(melding.id)}}, blocking=False
+                )
+            except Exception as fout:  # noqa: BLE001
+                _LOGGER.debug("Wissen bij %s lukte niet: %s", persoon, fout)
+
+    async def async_garage_knop(self, ident: str, cmd: str, arg: str, user_id: str | None) -> dict[str, Any]:
+        """Een knop in de melding, of dezelfde keuze op de kaart. Geeft terug wat er gebeurde."""
+        melding = self._garage()
+        if ident == "proef" or melding is None or melding.id != ident:
+            # Een knop in een proefmelding doet niets.
+            return {"gedaan": False}
+        door = self._persoon_van(user_id)
+        nu = dt_util.now()
+        inst = melding.garage
+        if cmd == garage.CMD_SLUIT:
+            # Alleen een puls als het contact OPEN zegt: op een dichte deur zet
+            # dezelfde puls hem juist open.
+            if self._garage_open(melding) is not True:
+                _LOGGER.info("Garagedeur: Sluiten door %s, maar het contact zegt niet open; niets gedaan", door or "onbekend")
+                return {"gedaan": False, "reden": t(self.hass, "De deur staat niet open")}
+            oproep = garage.bediening_oproep(inst.bediening)
+            if oproep is None:
+                return {"gedaan": False, "reden": t(self.hass, "Er is geen bediening gekozen")}
+            try:
+                await self.hass.services.async_call(*oproep, blocking=True)
+            except Exception as fout:  # noqa: BLE001
+                _LOGGER.warning("Garagedeur sluiten (%s) mislukte: %s", inst.bediening, fout)
+                return {"gedaan": False, "reden": str(fout)}
+            _LOGGER.info("Garagedeur: Sluiten door %s (%s.%s)", door or "onbekend", oproep[0], oproep[1])
+            self.opslag.zet_garage(ident, sluit={"door": door, "om": nu.isoformat()})
+            if self._sluit_later is not None:
+                self._sluit_later()
+
+            @callback
+            def kijk(_: Any) -> None:
+                self._sluit_later = None
+                self.hass.async_create_task(self._controleer_sluit())
+
+            self._sluit_later = async_call_later(self.hass, garage.SLUIT_CONTROLE, kijk)
+        elif cmd in (garage.CMD_NEGEER, garage.CMD_MORGEN):
+            if cmd == garage.CMD_MORGEN:
+                tot = garage.morgen_moment(nu, inst.morgen)
+            else:
+                try:
+                    minuten = int(arg)
+                except ValueError:
+                    return {"gedaan": False}
+                if not 0 < minuten <= 7 * 24 * 60:
+                    return {"gedaan": False}
+                tot = nu + timedelta(minutes=minuten)
+            self.opslag.zet_garage(ident, negeer_tot=tot.isoformat(), negeer_door=door, negeer_om=nu.isoformat())
+            _LOGGER.info("Garagemelding genegeerd tot %s door %s", tot.isoformat(), door or "onbekend")
+        elif cmd == "hervat":
+            self.opslag.zet_garage(ident, negeer_tot=None, negeer_door=None, negeer_om=None)
+        else:
+            return {"gedaan": False}
+        # Wie op een knop drukte, haalt de melding bij de anderen weg.
+        if cmd != "hervat":
+            await self._wis_garage()
+        self._meld(ident)
+        return {"gedaan": True}
+
+    async def _controleer_sluit(self) -> None:
+        """Na Sluiten: is hij dicht? Zo niet, dan een melding."""
+        melding = self._garage()
+        stand = self.opslag.garage(SOORT_GARAGE)
+        if melding is None or not stand.get("sluit"):
+            return
+        self.opslag.zet_garage(SOORT_GARAGE, sluit=None)
+        if self._garage_open(melding) is True:
+            _LOGGER.warning("Garagedeur: na Sluiten staat het contact nog open")
+            await self._stuur_garage(melding, "niet_dicht", dt_util.now())
+        self._meld(SOORT_GARAGE)
+
+    @callback
+    def garage_stand(self) -> dict[str, Any] | None:
+        """Wat de kaart van de garagedeur laat zien."""
+        melding = self._garage()
+        if melding is None:
+            return None
+        stand = self.opslag.garage(melding.id)
+        negeer_tot = _tijd(stand.get("negeer_tot"))
+        return {
+            "contact": melding.garage.contact,
+            "bediening": bool(melding.garage.bediening),
+            "open": self._garage_open(melding),
+            "open_sinds": stand.get("open_sinds"),
+            "gemeld": stand.get("gemeld"),
+            "negeer_tot": stand.get("negeer_tot") if negeer_tot and negeer_tot > dt_util.now() else None,
+            "negeer_door": stand.get("negeer_door"),
+            "sluit": stand.get("sluit"),
+            "dicht_om": stand.get("dicht_om"),
+            "dicht_door": stand.get("dicht_door"),
+            "negeer": list(melding.garage.negeer),
+            "minuten": melding.garage.minuten,
+        }
+
+
+
+def garage_tag(ident: str) -> str:
+    """Eén regel per garagemelding: een herinnering vervangt de vorige."""
+    return f"domotiapp-garage-{ident}"
+
+
+def _tijd(waarde: Any) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(waarde)) if waarde else None
+    except ValueError:
+        return None
 
 
 def robot_tag(robot: str, sleutel: str) -> str:

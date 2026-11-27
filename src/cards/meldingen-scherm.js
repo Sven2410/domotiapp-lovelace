@@ -207,6 +207,18 @@ const css = /* css */ `
     background: var(--dac-accent-hi); border-color: var(--dac-accent-hi); color: var(--dac-on-accent-hi);
   }
 
+  /* Knoppen onder een soort (0.139.0): de garagemelding negeren of weer laten komen. Altijd
+     zichtbaar zolang ze er zijn, niet achter het pijltje: wie de deur open ziet staan, wil meteen
+     kunnen negeren. Een gewone knop, geen vinkje: hij zet iets voor het hele huis. */
+  .knoppen { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px 4px 12px; }
+  .kn {
+    min-height: 34px; padding: 0 12px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
+    border-radius: var(--dac-radius-pill); color: var(--dac-ink-2);
+    background: var(--dac-surface); border: 1px solid var(--dac-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .kn:hover { background: var(--dac-surface-hi); border-color: var(--dac-border-hi); color: var(--dac-ink); } }
+
   .leeg { font-size: 13px; line-height: 1.45; color: var(--dac-ink-2); padding: 4px 2px; }
 
   /* De proef: een gewone knop, rustiger dan een vinkje, want hij verandert
@@ -290,6 +302,8 @@ class MeldingenScherm extends HTMLElement {
 
     const lijst = this.$(".lijst");
     const tik = (doel) => {
+      const kn = doel.closest(".kn");
+      if (kn) return this.bron?.knop?.(kn.dataset.soort, kn.dataset.id);
       const klap = doel.closest(".klap");
       if (klap) return this.klap_(klap.closest(".soort"));
       const keus = doel.closest(".keus");
@@ -396,6 +410,7 @@ class MeldingenScherm extends HTMLElement {
               <button class="klap" type="button" aria-expanded="false" hidden>${resolve("chevronDown")}</button>
               <span class="vink">${resolve("check")}</span>
             </div>
+            <div class="knoppen" data-voor="${veilig(s.id)}" hidden></div>
             <div class="keuzes" data-voor="${veilig(s.id)}" hidden>${(s.keuzes ?? [])
               .map(
                 (g) => `
@@ -427,6 +442,19 @@ class MeldingenScherm extends HTMLElement {
         "aria-label",
         `${s.aan ? t("{soort} voor {naam}: aan", waarden) : t("{soort} voor {naam}: uit", waarden)}${s.regel ? `. ${s.regel}` : ""}`
       );
+
+      // De knoppen: alleen opnieuw bouwen als ze veranderen, zodat een knop zijn focus houdt.
+      const knoppen = lijst.querySelector(`.knoppen[data-voor="${CSS.escape(s.id)}"]`);
+      if (knoppen) {
+        const ksig = (s.knoppen ?? []).map((k) => `${k.id}=${k.naam}`).join("|");
+        if (knoppen.dataset.sig !== ksig) {
+          knoppen.dataset.sig = ksig;
+          knoppen.innerHTML = (s.knoppen ?? [])
+            .map((k) => `<button class="kn" type="button" data-soort="${veilig(s.id)}" data-id="${veilig(k.id)}">${veilig(k.naam)}</button>`)
+            .join("");
+        }
+        knoppen.hidden = !(s.knoppen ?? []).length;
+      }
 
       // De keuzes alleen als de soort aan staat (wie hem uit heeft, krijgt toch
       // niets), en sinds 0.111.0 pas als iemand ze openklapt.
