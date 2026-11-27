@@ -62,6 +62,8 @@ from .const import (
     DATA_STATIC_PATH_REGISTERED,
     DATA_STORE,
     DOMAIN,
+    GEGEVENS_MAP,
+    GEGEVENS_URL_PATH,
     HASH_LENGTE,
     LEGACY_STORAGE_KEY,
     LOADER_URL_PATH,
@@ -186,6 +188,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 StaticPathConfig(
                     AFBEELDINGEN_URL_PATH,
                     str(Path(integration.file_path) / AFBEELDINGEN_MAP),
+                    cache_headers=False,
+                ),
+                # De tankstations voor de brandstofkaart (0.144.0). Ook zonder cacheheaders: een uitgave ververst het
+                # bestand onder hetzelfde adres, en de ETag zegt de browser dat.
+                StaticPathConfig(
+                    GEGEVENS_URL_PATH,
+                    str(Path(integration.file_path) / GEGEVENS_MAP),
                     cache_headers=False,
                 ),
             ]

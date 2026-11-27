@@ -1,0 +1,137 @@
+{
+ "_toelichting": "Zes elementen uit het echte antwoord van Overpass voor amenity=fuel in NL, 27-11-2026 (ODbL, © OpenStreetMap-bijdragers): een TinQ (Utrecht), een pomp met LPG die dag en nacht open is, een als way met center, een privépomp, een in Caribisch Nederland en een zonder naam of merk.",
+ "osm3s": {
+  "timestamp_osm_base": "2026-11-27T16:50:51Z",
+  "timestamp_areas_base": "2026-11-27T10:13:20Z",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 5735876111,
+   "lat": 52.0995889,
+   "lon": 5.0691832,
+   "tags": {
+    "addr:city": "Utrecht",
+    "addr:housenumber": "2",
+    "addr:postcode": "3542AB",
+    "addr:street": "Thoriumweg",
+    "amenity": "fuel",
+    "brand": "TinQ",
+    "brand:wikidata": "Q2132028",
+    "brand:wikipedia": "nl:Tinq",
+    "compressed_air": "yes",
+    "fuel:diesel": "yes",
+    "fuel:octane_95": "yes",
+    "fuel:octane_98": "yes",
+    "name": "TinQ",
+    "opening_hours": "24/7",
+    "operator": "TinQ",
+    "payment:credit_cards": "yes",
+    "payment:debit_cards": "yes",
+    "source": "BAG;survey",
+    "source:date": "2018-07-03"
+   }
+  },
+  {
+   "type": "node",
+   "id": 27297334,
+   "lat": 52.1789017,
+   "lon": 5.9837109,
+   "tags": {
+    "addr:city": "Apeldoorn",
+    "addr:housenumber": "66",
+    "addr:postcode": "7332BR",
+    "addr:street": "Lange Amerikaweg",
+    "amenity": "fuel",
+    "brand": "Shell",
+    "brand:wikidata": "Q110716465",
+    "check_date": "2026-04-25",
+    "fuel:diesel": "yes",
+    "fuel:electricity": "yes",
+    "fuel:lpg": "yes",
+    "fuel:octane_95": "yes",
+    "fuel:octane_98": "yes",
+    "fuel:propane": "yes",
+    "name": "Shell Lange Amerikaweg",
+    "opening_hours": "24/7",
+    "operator": "Shell",
+    "operator:wikidata": "Q110716465",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "payment:mastercard": "yes",
+    "phone": "+31 55 538 0452",
+    "source": "BAG",
+    "source:date": "2014-02-11",
+    "website": "https://find.shell.com/nl/fuel/10050950-shell-station-lange-amerikaweg"
+   }
+  },
+  {
+   "type": "way",
+   "id": 32776688,
+   "center": {
+    "lat": 52.1376106,
+    "lon": 5.074264
+   },
+   "tags": {
+    "amenity": "fuel",
+    "brand": "Shell",
+    "brand:wikidata": "Q110716465",
+    "building": "industrial",
+    "building:levels": "1",
+    "fuel:GTL_diesel": "yes",
+    "fuel:cng": "yes",
+    "fuel:diesel": "yes",
+    "fuel:lpg": "yes",
+    "fuel:octane_91": "yes",
+    "fuel:octane_95": "yes",
+    "name": "Tankstation Stam",
+    "opening_hours": "Mo-Fr 06:00-22:00, Sa 07:00-22:00, Su 08:00-22:00",
+    "operator": "Stam",
+    "ref:bag": "0333100000020987",
+    "roof:levels": "0",
+    "shop": "kiosk",
+    "source": "survey and gps",
+    "source:date": "2014-05-07",
+    "start_date": "2005",
+    "toilets:wheelchair": "no",
+    "wheelchair": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 264363507,
+   "lat": 51.6223962,
+   "lon": 4.8791316,
+   "tags": {
+    "access": "no",
+    "amenity": "fuel",
+    "hgv": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 295125483,
+   "lat": 12.1608594,
+   "lon": -68.9642143,
+   "tags": {
+    "addr:country": "CW",
+    "addr:street": "Weg naar Westpunt",
+    "amenity": "fuel",
+    "name": "Curoil Juan Domingo",
+    "operator": "Curoil",
+    "source": "CurOil"
+   }
+  },
+  {
+   "type": "node",
+   "id": 42671310,
+   "lat": 51.4546476,
+   "lon": 5.7946562,
+   "tags": {
+    "amenity": "fuel",
+    "source": "AND"
+   }
+  }
+ ]
+}

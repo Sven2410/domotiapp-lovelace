@@ -149,3 +149,83 @@ export function datumRegel(datum, locale) {
 }
 
 const GLA = nt("Landelijke adviesprijs");
+
+/* ------------------------------------------------------- de tankstations
+ *
+ * Sinds 0.144.0. De eigenaar: *"ik wil alleen een map dan met tankstations en dan gewoon de gemiddelde adviesprijs
+ * bovenaan. Geen prijzen in de buurt"*. De stations komen uit OpenStreetMap, als momentopname in de integratie
+ * (`gegevens/tankstations-nl.json`, zie `scripts/tankstations.py` waarom niet live).
+ */
+
+/** De brandstoffen van een station, als letters in het bestand. */
+export const BRANDSTOF_LETTERS = { d: "Diesel", 9: "Euro95", 8: "98", l: "LPG", a: "AdBlue", c: "CNG" };
+
+/** Van een rij uit het bestand naar een station, op de namen in `velden`. */
+export function stationUit(rij, velden) {
+  const s = Object.fromEntries((velden ?? []).map((v, i) => [v, rij?.[i]]));
+  return {
+    lat: Number(s.breedte),
+    lon: Number(s.lengte),
+    naam: String(s.naam ?? ""),
+    merk: String(s.merk ?? ""),
+    adres: String(s.adres ?? ""),
+    postcode: String(s.postcode ?? ""),
+    plaats: String(s.plaats ?? ""),
+    open: String(s.open ?? ""),
+    brandstoffen: [...String(s.brandstoffen ?? "")].map((l) => BRANDSTOF_LETTERS[l]).filter(Boolean),
+  };
+}
+
+/** Kleine letters, zonder accenten en leestekens: "Café 's-Hertogenbosch" wordt "cafe s hertogenbosch". */
+export const normaal = (tekst) =>
+  String(tekst ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/** De titel van een station: zijn naam, anders het merk, anders "Tankstation". */
+export const stationNaam = (s) => s.naam || s.merk || t("Tankstation");
+
+/**
+ * Zoeken op naam, merk, straat, postcode en plaats. Elk woord moet ergens voorkomen; een woord waar een naam, merk of
+ * plaats mee BEGINT telt zwaarder. Bij gelijke stand het dichtst bij `bij` (het huis), zodat "shell" eerst de Shell in de
+ * buurt geeft.
+ *
+ * @returns {object[]} hoogstens `max` stations
+ */
+export function zoekStations(stations, tekst, { max = 8, bij = null } = {}) {
+  const woorden = normaal(tekst).split(" ").filter(Boolean);
+  if (!woorden.length) return [];
+  const uit = [];
+  for (const s of stations ?? []) {
+    s._zoek ??= {
+      kop: ` ${normaal(`${s.naam} ${s.merk}`)}`,
+      plaats: ` ${normaal(s.plaats)}`,
+      alles: ` ${normaal(`${s.naam} ${s.merk} ${s.adres} ${s.plaats}`)} ${normaal(s.postcode).replace(/ /g, "")}`,
+    };
+    let score = 0;
+    let past = true;
+    for (const w of woorden) {
+      if (!s._zoek.alles.includes(w)) {
+        past = false;
+        break;
+      }
+      score += s._zoek.kop.includes(` ${w}`) ? 3 : s._zoek.plaats.includes(` ${w}`) ? 2 : 1;
+    }
+    if (past) uit.push({ s, score, afstand: bij ? (s.lat - bij.lat) ** 2 + ((s.lon - bij.lon) * 0.62) ** 2 : 0 });
+  }
+  uit.sort((a, b) => b.score - a.score || a.afstand - b.afstand);
+  return uit.slice(0, max).map((x) => x.s);
+}
+
+/** De regel met de openingstijden van OpenStreetMap: "24/7" in gewone woorden, de rest zoals het is. Leeg: geen regel. */
+export function openingstijden(open) {
+  const tekst = String(open ?? "").trim();
+  if (!tekst) return "";
+  return tekst === "24/7" ? t("Dag en nacht open") : t("Open: {tijden}", { tijden: tekst });
+}
+
+/** Een routelink die op een telefoon de kaarten-app opent. */
+export const routeLink = (s) => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
